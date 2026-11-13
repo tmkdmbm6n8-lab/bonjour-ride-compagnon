@@ -32,6 +32,8 @@ use the editor.
 - Preserve imported UI modules and their CSS while adapting framework boundaries to TanStack file routes; this avoids replacing the source experience.
 - Keep a non-executed source archive under `original-source/` for capabilities requiring incompatible runtimes; track every remaining port in the migration ledger.
 
-- Maps, address search and routing use keyless free services (OpenStreetMap/CARTO tiles via MapLibre, Photon geocoding, OSRM routing) as in the original archive; never add a Google Maps key requirement — the user wants no API key to supply.
+- Maps, address search and routing use keyless free services (OpenStreetMap standard tiles via MapLibre, Photon geocoding, OSRM routing) as in the original archive; never add a Google Maps key requirement — the user wants no API key to supply.
 
 - Any fare discount is a single rate constant in `src/lib/vtc-pricing.js` applied inside `calculateFare`; quotes and server-side booking charges share it, so setting it to 0 removes the discount everywhere.
+- Driver pay floors (per ride, per hour incl. approach, per km, net of commission) are constants in `src/lib/vtc-pricing.js`, applied in `calculateFare` after any discount and re-checked at completion by `settleDriverEarnings` using `rides.accepted_at`; the passenger price never changes after booking, the platform fee absorbs any top-up.
+- Legal pages (`/privacy`, `/terms`, `/mentions-legales`) must describe the app's real data flows and retention; company identifiers live in `src/lib/legal.js`, and retention is enforced by the nightly `purge_expired_personal_data` job, so change both together.
