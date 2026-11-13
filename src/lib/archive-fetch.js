@@ -1,3 +1,4 @@
+import {LEGAL_VERSION} from './legal';
 import {vtcRequest,contactRequest} from './vtc.functions';
 import {supabase} from '@/integrations/supabase/client';
 export async function apiFetch(path,options={}) {
@@ -6,7 +7,7 @@ export async function apiFetch(path,options={}) {
   let body=options.body?JSON.parse(options.body):{};
   let data;
   if(path==='/api/auth/signup'){
-   const {data:result,error}=await supabase.auth.signUp({email:body.email,password:body.password,options:{emailRedirectTo:window.location.origin+'/login',data:{name:body.name,username:body.username,role:body.role}}});if(error)throw error;data={ok:true,needsConfirmation:!result.session};
+   const {data:result,error}=await supabase.auth.signUp({email:body.email,password:body.password,options:{emailRedirectTo:window.location.origin+'/login',data:{name:body.name,username:body.username,role:body.role,consent:{termsVersion:LEGAL_VERSION,privacyVersion:LEGAL_VERSION,acceptedAt:new Date().toISOString()}}}});if(error)throw error;data={ok:true,needsConfirmation:!result.session};
   }else if(path==='/api/contact')data=await contactRequest({data:body});
   else data=await vtcRequest({data:{path,method:options.method||'GET',body}});
   return new Response(JSON.stringify(data),{status:200,headers:{'Content-Type':'application/json'}});
