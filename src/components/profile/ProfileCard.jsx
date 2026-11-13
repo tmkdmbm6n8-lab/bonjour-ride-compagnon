@@ -3,7 +3,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 
 import { useEffect, useRef, useState } from 'react';
 import { signOut, useSession } from '@/lib/archive-auth';
-import { LogOut, Pencil, Check, X, Camera } from 'lucide-react';
+import { LogOut, Pencil, Check, X, Camera, Download, Trash2 } from 'lucide-react';
 import { Avatar, Stars, Loading, money } from '@/components/ui/bits';
 import { useToast } from '@/components/ui/Toast';
 
@@ -171,7 +171,7 @@ export default function ProfileCard({ children }) {
           </FieldRow>
           <FieldRow label="Téléphone" editing={editing}>
             {editing ? (
-              <input className="input" value={form.phone} placeholder="+1 555 000 1234" onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+              <input className="input" value={form.phone} placeholder="+33 6 12 34 56 78" onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
             ) : (
               user.phone || <span className="muted">Non renseigné</span>
             )}
@@ -194,6 +194,8 @@ export default function ProfileCard({ children }) {
 
       {children}
 
+      <PersonalDataCard />
+
       <button
         className="btn btn-danger btn-full mt-4"
         onClick={() => signOut({ callbackUrl: '/' })}
@@ -210,6 +212,69 @@ function FieldRow({ label, children }) {
         {label}
       </span>
       <div className="small">{children}</div>
+    </div>
+  );
+}
+
+/** Droits RGPD : accès / portabilité (export) et effacement (demande traitée sous un mois). */
+function PersonalDataCard() {
+  const toast = useToast();
+  const [exporting, setExporting] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [requested, setRequested] = useState(false);
+
+  async function exportData() {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/users/me/export');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `strasdrive-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('Vos données ont été téléchargées', 'success');
+    } catch {
+      toast('Le téléchargement a échoué — réessayez', 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function requestDeletion() {
+    if (!window.confirm('Demander la suppression de votre compte et de vos données personnelles ? Les données de facturation sont conservées 10 ans, comme la loi l’exige.')) return;
+    setRequesting(true);
+    try {
+      const res = await fetch('/api/users/me/deletion-request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setRequested(true);
+      toast('Demande envoyée — réponse sous un mois maximum', 'success');
+    } catch {
+      toast('La demande n’a pas pu être envoyée', 'error');
+    } finally {
+      setRequesting(false);
+    }
+  }
+
+  return (
+    <div className="card card-pad mt-4">
+      <h3 className="small mb-1" style={{ fontWeight: 700 }}>Mes données personnelles</h3>
+      <p className="tiny muted mb-4" style={{ lineHeight: 1.6 }}>
+        Téléchargez une copie de vos données ou demandez la suppression de votre compte. Détails dans la{' '}
+        <a href="/privacy" style={{ fontWeight: 600, color: 'var(--text)', textDecoration: 'underline' }}>politique de confidentialité</a>.
+      </p>
+      <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+        <button className="btn btn-secondary btn-sm" onClick={exportData} disabled={exporting}>
+          {exporting ? <span className="spinner" /> : <><Download size={14} /> Télécharger mes données</>}
+        </button>
+        <button className="btn btn-ghost btn-sm" onClick={requestDeletion} disabled={requesting || requested}>
+          {requesting ? <span className="spinner" /> : <><Trash2 size={14} /> {requested ? 'Suppression demandée' : 'Supprimer mon compte'}</>}
+        </button>
+      </div>
     </div>
   );
 }
