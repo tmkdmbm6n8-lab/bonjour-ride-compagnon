@@ -1,0 +1,65 @@
+CREATE TABLE public.profiles (id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE, original_id text UNIQUE, name text NOT NULL DEFAULT '', username text NOT NULL DEFAULT '', phone text NOT NULL DEFAULT '', avatar text NOT NULL DEFAULT '', balance numeric(14,2) NOT NULL DEFAULT 0, rating jsonb NOT NULL DEFAULT '{"average":5,"count":0}', created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT, UPDATE ON public.profiles TO authenticated; GRANT ALL ON public.profiles TO service_role;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE TABLE public.user_roles (user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE, role text NOT NULL CHECK(role IN ('rider','driver','admin')), PRIMARY KEY(user_id,role));
+GRANT SELECT ON public.user_roles TO authenticated; GRANT ALL ON public.user_roles TO service_role;
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+CREATE FUNCTION public.has_role(_user_id uuid,_role text) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$ SELECT EXISTS(SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role=_role) $$;
+CREATE POLICY roles_own ON public.user_roles FOR SELECT TO authenticated USING(user_id=auth.uid());
+CREATE POLICY profiles_read ON public.profiles FOR SELECT TO authenticated USING(id=auth.uid() OR public.has_role(auth.uid(),'admin'));
+CREATE POLICY profiles_update ON public.profiles FOR UPDATE TO authenticated USING(id=auth.uid()) WITH CHECK(id=auth.uid());
+REVOKE UPDATE ON public.profiles FROM authenticated; GRANT UPDATE(name,username,phone,avatar) ON public.profiles TO authenticated;
+CREATE TABLE public.drivers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid UNIQUE NOT NULL REFERENCES public.profiles(id), is_approved boolean NOT NULL DEFAULT false, is_online boolean NOT NULL DEFAULT false, vehicle jsonb NOT NULL DEFAULT '{}', location jsonb, stats jsonb NOT NULL DEFAULT '{"totalTrips":0,"totalEarnings":0,"averageRating":5,"acceptanceRate":100}', payout jsonb NOT NULL DEFAULT '{}', updated_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT,UPDATE ON public.drivers TO authenticated; GRANT ALL ON public.drivers TO service_role;
+ALTER TABLE public.drivers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY drivers_read ON public.drivers FOR SELECT TO authenticated USING(user_id=auth.uid() OR public.has_role(auth.uid(),'admin'));
+CREATE POLICY drivers_update ON public.drivers FOR UPDATE TO authenticated USING(user_id=auth.uid() OR public.has_role(auth.uid(),'admin'));
+REVOKE UPDATE ON public.drivers FROM authenticated; GRANT UPDATE(vehicle,location,is_online,updated_at) ON public.drivers TO authenticated;
+CREATE TABLE public.rides (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), original_id text UNIQUE, rider_id uuid NOT NULL REFERENCES public.profiles(id), driver_id uuid REFERENCES public.profiles(id), status text NOT NULL DEFAULT 'searching' CHECK(status IN ('searching','accepted','arrived','in_progress','completed','cancelled','no_drivers')), vehicle_type text NOT NULL, pickup jsonb NOT NULL, dropoff jsonb NOT NULL, route jsonb NOT NULL, fare jsonb NOT NULL, pin text NOT NULL, payment jsonb NOT NULL DEFAULT '{"method":"wallet"}', rating jsonb NOT NULL DEFAULT '{}', messages jsonb NOT NULL DEFAULT '[]', offer_driver_id uuid, offer_expires_at timestamptz, declined uuid[] NOT NULL DEFAULT '{}', created_at timestamptz NOT NULL DEFAULT now(), arrived_at timestamptz, completed_at timestamptz);
+GRANT SELECT ON public.rides TO authenticated; GRANT ALL ON public.rides TO service_role;
+ALTER TABLE public.rides ENABLE ROW LEVEL SECURITY;
+CREATE POLICY rides_read ON public.rides FOR SELECT TO authenticated USING(rider_id=auth.uid() OR driver_id=auth.uid() OR public.has_role(auth.uid(),'admin'));
+CREATE TABLE public.wallet_transactions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES public.profiles(id), ride_id uuid REFERENCES public.rides(id), type text NOT NULL, amount numeric(14,2) NOT NULL, balance_after numeric(14,2) NOT NULL, note text NOT NULL DEFAULT '', provider_id text UNIQUE, created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT ON public.wallet_transactions TO authenticated; GRANT ALL ON public.wallet_transactions TO service_role;
+ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY transactions_read ON public.wallet_transactions FOR SELECT TO authenticated USING(user_id=auth.uid() OR public.has_role(auth.uid(),'admin'));
+CREATE TABLE public.pricing_rules (vehicle_type text PRIMARY KEY, city text NOT NULL DEFAULT 'default', rule jsonb NOT NULL, is_active boolean NOT NULL DEFAULT true);
+GRANT SELECT ON public.pricing_rules TO authenticated,anon; GRANT ALL ON public.pricing_rules TO service_role;
+ALTER TABLE public.pricing_rules ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pricing_read ON public.pricing_rules FOR SELECT TO anon,authenticated USING(is_active);
+CREATE TABLE public.contact_messages (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, email text NOT NULL, topic text NOT NULL, message text NOT NULL, status text NOT NULL DEFAULT 'open', created_at timestamptz NOT NULL DEFAULT now(), resolved_at timestamptz);
+GRANT SELECT ON public.contact_messages TO authenticated; GRANT ALL ON public.contact_messages TO service_role;
+ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY contacts_admin ON public.contact_messages FOR SELECT TO authenticated USING(public.has_role(auth.uid(),'admin'));
+CREATE TABLE public.imported_identities (original_id text PRIMARY KEY, email text NOT NULL UNIQUE, profile jsonb NOT NULL, mapped_user_id uuid UNIQUE REFERENCES public.profiles(id));
+GRANT ALL ON public.imported_identities TO service_role;
+ALTER TABLE public.imported_identities ENABLE ROW LEVEL SECURITY;
+CREATE FUNCTION public.create_vtc_profile() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE imported public.imported_identities; desired text;
+BEGIN
+SELECT * INTO imported FROM public.imported_identities WHERE lower(email)=lower(NEW.email) AND mapped_user_id IS NULL;
+INSERT INTO public.profiles(id,name,username) VALUES(NEW.id,coalesce(NEW.raw_user_meta_data->>'name',''),coalesce(NEW.raw_user_meta_data->>'username',''));
+-- Self-selection only grants an unapproved driver application, never administrator access.
+desired := CASE WHEN NEW.raw_user_meta_data->>'role'='driver' THEN 'driver' ELSE 'rider' END;
+INSERT INTO public.user_roles VALUES(NEW.id,desired);
+IF desired='driver' THEN INSERT INTO public.drivers(user_id) VALUES(NEW.id); END IF;
+RETURN NEW;
+END $$;
+CREATE TRIGGER vtc_signup AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.create_vtc_profile();
+CREATE FUNCTION public.wallet_entry(_user uuid,_amount numeric,_type text,_ride uuid DEFAULT NULL,_provider text DEFAULT NULL) RETURNS numeric LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ DECLARE b numeric; BEGIN
+IF _provider IS NOT NULL AND EXISTS(SELECT 1 FROM wallet_transactions WHERE provider_id=_provider) THEN SELECT balance INTO b FROM profiles WHERE id=_user; RETURN b; END IF;
+UPDATE profiles SET balance=balance+_amount WHERE id=_user RETURNING balance INTO b;
+IF b IS NULL THEN RAISE EXCEPTION 'Compte introuvable'; END IF;
+INSERT INTO wallet_transactions(user_id,amount,type,ride_id,provider_id,balance_after) VALUES(_user,_amount,_type,_ride,_provider,b); RETURN b; END $$;
+REVOKE ALL ON FUNCTION public.wallet_entry(uuid,numeric,text,uuid,text) FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION public.wallet_entry(uuid,numeric,text,uuid,text) TO service_role;
+CREATE FUNCTION public.settle_ride(_id uuid,_actor uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ DECLARE r public.rides; BEGIN
+SELECT * INTO r FROM rides WHERE id=_id FOR UPDATE;
+IF r.driver_id IS DISTINCT FROM _actor OR r.status<>'in_progress' THEN RAISE EXCEPTION 'Course non autorisée'; END IF;
+PERFORM wallet_entry(r.rider_id,-(r.fare->>'total')::numeric,'ride_payment',r.id);
+PERFORM wallet_entry(r.driver_id,(r.fare->>'driverEarnings')::numeric,'ride_earning',r.id);
+UPDATE rides SET status='completed',completed_at=now() WHERE id=r.id;
+UPDATE drivers SET stats=jsonb_set(jsonb_set(stats,'{totalTrips}',to_jsonb(coalesce((stats->>'totalTrips')::int,0)+1)),'{totalEarnings}',to_jsonb(coalesce((stats->>'totalEarnings')::numeric,0)+(r.fare->>'driverEarnings')::numeric)) WHERE user_id=r.driver_id;
+RETURN jsonb_build_object('ok',true); END $$;
+REVOKE ALL ON FUNCTION public.settle_ride(uuid,uuid) FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION public.settle_ride(uuid,uuid) TO service_role;
+CREATE UNIQUE INDEX one_active_rider ON public.rides(rider_id) WHERE status IN ('searching','accepted','arrived','in_progress');
+CREATE UNIQUE INDEX one_active_driver ON public.rides(driver_id) WHERE status IN ('accepted','arrived','in_progress');

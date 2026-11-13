@@ -1,0 +1,100 @@
+[
+  {
+    "capability": "code",
+    "source": "archive",
+    "outcome": "adapt",
+    "status": "implemented",
+    "next_action": "Original source retained; imported screens run with restored styles; complete production behavior remains pending"
+  },
+  {
+    "capability": "schema",
+    "source": "MongoDB models",
+    "outcome": "migrate",
+    "status": "implemented",
+    "next_action": "Cloud schema applied; model and access-policy verification pending"
+  },
+  {
+    "capability": "records",
+    "source": "not supplied",
+    "outcome": "migrate",
+    "status": "pending",
+    "next_action": "Request filtered CSV or JSON exports"
+  },
+  {
+    "capability": "auth identities",
+    "source": "NextAuth usernames",
+    "outcome": "migrate",
+    "status": "pending",
+    "next_action": "Request user emails and original IDs; verify email and set password"
+  },
+  {
+    "capability": "authorization",
+    "source": "rider driver admin",
+    "outcome": "adapt",
+    "status": "pending",
+    "next_action": "Verify role isolation with confirmed rider, driver and administrator accounts"
+  },
+  {
+    "capability": "uploaded file bytes",
+    "source": "S3 compatible",
+    "outcome": "preserve",
+    "status": "pending",
+    "next_action": "Existing storage credentials and files"
+  },
+  {
+    "capability": "external providers",
+    "source": "Stripe Photon OSRM S3",
+    "outcome": "preserve",
+    "status": "pending",
+    "next_action": "Stripe and storage preserved in original source; production port and credentials unverified"
+  },
+  {
+    "capability": "public endpoints",
+    "source": "Next API routes",
+    "outcome": "adapt",
+    "status": "pending",
+    "next_action": "Port handlers and preserve external paths"
+  },
+  {
+    "capability": "callbacks",
+    "source": "Stripe Connect",
+    "outcome": "preserve",
+    "status": "pending",
+    "next_action": "Update URLs at cutover"
+  },
+  {
+    "capability": "webhooks",
+    "source": "Stripe",
+    "outcome": "preserve",
+    "status": "pending",
+    "next_action": "Original webhook retained in source copy; active signed endpoint not yet ported"
+  },
+  {
+    "capability": "schedules",
+    "source": "Socket dispatch timers",
+    "outcome": "adapt",
+    "status": "pending",
+    "next_action": "Polling is a temporary adapter, not equivalent to original Socket.io dispatch"
+  },
+  {
+    "capability": "secrets",
+    "source": "Stripe S3",
+    "outcome": "preserve",
+    "status": "pending",
+    "next_action": "Secure secret form before live verification"
+  },
+  {
+    "capability": "cutover",
+    "source": "unpublished",
+    "outcome": "pending",
+    "status": "pending",
+    "next_action": "Publish and update provider URLs"
+  },
+  {
+    "capability": "verification",
+    "source": "all flows",
+    "outcome": "verify",
+    "status": "partial",
+    "next_action": "Public routes and desktop/mobile rendering verified without browser errors; 3 routing/currency tests pass. No confirmed auth user exists, so signed-in flows unverified"
+  }
+]
