@@ -5,7 +5,7 @@ export const DEFAULT_PRICING = {
   xl: {baseFare:4,perKmRate:1.8,perMinRate:.3,minimumFare:8,bookingFee:.75,platformCommission:8,surgeMultiplierCap:3},
 };
 // Taux de remise appliqué au tarif calculé (0.20 = 20 %). Mettre à 0 pour retirer la remise.
-export const DISCOUNT_RATE = 0.20;
+export const DISCOUNT_RATE = 0;
 const round2 = (n) => Math.round(n * 100) / 100;
 export function calculateFare(rule, meters, seconds, surge=1, discountRate=DISCOUNT_RATE) {
  const distanceFare=meters/1000*rule.perKmRate,timeFare=seconds/60*rule.perMinRate;
