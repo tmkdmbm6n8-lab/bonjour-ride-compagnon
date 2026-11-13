@@ -321,11 +321,23 @@ function RiderDashboard() {
                           </span>
                           <span className="tiny muted truncate" style={{ display: 'block' }}>{Meta.blurb}</span>
                         </span>
-                        <span className="small mono-nums" style={{ fontWeight: 700 }}>{money(fare.total)}</span>
+                        <span className="flex-col" style={{ alignItems: 'flex-end' }}>
+                          <span className="small mono-nums" style={{ fontWeight: 700 }}>{money(fare.total)}</span>
+                          {fare.discount > 0 && (
+                            <span className="tiny muted mono-nums" style={{ textDecoration: 'line-through' }}>{money(fare.originalTotal)}</span>
+                          )}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
+
+                {selectedFare?.discount > 0 && (
+                  <div className="flex items-center justify-between mt-4 tiny">
+                    <span style={{ fontWeight: 600 }}>Remise de {Math.round(selectedFare.discountRate * 100)} % appliquée</span>
+                    <span className="mono-nums">−{money(selectedFare.discount)}</span>
+                  </div>
+                )}
 
                 {/* Payment — wallet only */}
                 <div
@@ -590,6 +602,12 @@ function RiderDashboard() {
                 <span className="muted">Frais de réservation</span>
                 <span className="mono-nums">{money(completedRide.fare?.bookingFee)}</span>
               </div>
+              {completedRide.fare?.discount > 0 && (
+                <div className="flex items-center justify-between small mt-1">
+                  <span className="muted">Remise ({Math.round((completedRide.fare.discountRate || 0) * 100)} %)</span>
+                  <span className="mono-nums">−{money(completedRide.fare.discount)}</span>
+                </div>
+              )}
               <div
                 className="flex items-center justify-between mt-2"
                 style={{ borderTop: '1px solid var(--border)', paddingTop: 10, fontWeight: 700 }}
