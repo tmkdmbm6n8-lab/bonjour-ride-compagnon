@@ -14,13 +14,336 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contact_messages: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          resolved_at: string | null
+          status: string
+          topic: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          resolved_at?: string | null
+          status?: string
+          topic: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          resolved_at?: string | null
+          status?: string
+          topic?: string
+        }
+        Relationships: []
+      }
+      drivers: {
+        Row: {
+          id: string
+          is_approved: boolean
+          is_online: boolean
+          location: Json | null
+          payout: Json
+          stats: Json
+          updated_at: string
+          user_id: string
+          vehicle: Json
+        }
+        Insert: {
+          id?: string
+          is_approved?: boolean
+          is_online?: boolean
+          location?: Json | null
+          payout?: Json
+          stats?: Json
+          updated_at?: string
+          user_id: string
+          vehicle?: Json
+        }
+        Update: {
+          id?: string
+          is_approved?: boolean
+          is_online?: boolean
+          location?: Json | null
+          payout?: Json
+          stats?: Json
+          updated_at?: string
+          user_id?: string
+          vehicle?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drivers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      imported_identities: {
+        Row: {
+          email: string
+          mapped_user_id: string | null
+          original_id: string
+          profile: Json
+        }
+        Insert: {
+          email: string
+          mapped_user_id?: string | null
+          original_id: string
+          profile: Json
+        }
+        Update: {
+          email?: string
+          mapped_user_id?: string | null
+          original_id?: string
+          profile?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imported_identities_mapped_user_id_fkey"
+            columns: ["mapped_user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_rules: {
+        Row: {
+          city: string
+          is_active: boolean
+          rule: Json
+          vehicle_type: string
+        }
+        Insert: {
+          city?: string
+          is_active?: boolean
+          rule: Json
+          vehicle_type: string
+        }
+        Update: {
+          city?: string
+          is_active?: boolean
+          rule?: Json
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar: string
+          balance: number
+          created_at: string
+          id: string
+          name: string
+          original_id: string | null
+          phone: string
+          rating: Json
+          username: string
+        }
+        Insert: {
+          avatar?: string
+          balance?: number
+          created_at?: string
+          id: string
+          name?: string
+          original_id?: string | null
+          phone?: string
+          rating?: Json
+          username?: string
+        }
+        Update: {
+          avatar?: string
+          balance?: number
+          created_at?: string
+          id?: string
+          name?: string
+          original_id?: string | null
+          phone?: string
+          rating?: Json
+          username?: string
+        }
+        Relationships: []
+      }
+      rides: {
+        Row: {
+          arrived_at: string | null
+          completed_at: string | null
+          created_at: string
+          declined: string[]
+          driver_id: string | null
+          dropoff: Json
+          fare: Json
+          id: string
+          messages: Json
+          offer_driver_id: string | null
+          offer_expires_at: string | null
+          original_id: string | null
+          payment: Json
+          pickup: Json
+          pin: string
+          rating: Json
+          rider_id: string
+          route: Json
+          status: string
+          vehicle_type: string
+        }
+        Insert: {
+          arrived_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          declined?: string[]
+          driver_id?: string | null
+          dropoff: Json
+          fare: Json
+          id?: string
+          messages?: Json
+          offer_driver_id?: string | null
+          offer_expires_at?: string | null
+          original_id?: string | null
+          payment?: Json
+          pickup: Json
+          pin: string
+          rating?: Json
+          rider_id: string
+          route: Json
+          status?: string
+          vehicle_type: string
+        }
+        Update: {
+          arrived_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          declined?: string[]
+          driver_id?: string | null
+          dropoff?: Json
+          fare?: Json
+          id?: string
+          messages?: Json
+          offer_driver_id?: string | null
+          offer_expires_at?: string | null
+          original_id?: string | null
+          payment?: Json
+          pickup?: Json
+          pin?: string
+          rating?: Json
+          rider_id?: string
+          route?: Json
+          status?: string
+          vehicle_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rides_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rides_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          role: string
+          user_id: string
+        }
+        Insert: {
+          role: string
+          user_id: string
+        }
+        Update: {
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          id: string
+          note: string
+          provider_id: string | null
+          ride_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          id?: string
+          note?: string
+          provider_id?: string | null
+          ride_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          id?: string
+          note?: string
+          provider_id?: string | null
+          ride_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      settle_ride: { Args: { _actor: string; _id: string }; Returns: Json }
+      wallet_entry: {
+        Args: {
+          _amount: number
+          _provider?: string
+          _ride?: string
+          _type: string
+          _user: string
+        }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
