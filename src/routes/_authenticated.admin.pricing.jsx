@@ -90,6 +90,7 @@ function AdminPricingPage() {
     <div className="content-pad" style={{ maxWidth: 900 }}>
       <h1 className="page-title">Tarification</h1>
       <p className="page-sub mb-6"> Règles tarifaires par gamme de service. Les passagers voient toujours le prix final avant de réserver. </p>
+      <p className="small muted mb-6" style={{ marginTop: -12 }}> Rémunération minimale des chauffeurs (accord ARPE) appliquée automatiquement, commission incluse : 9 € nets par course, 30 € nets par heure d’activité (approche comprise) et 1 € net par kilomètre. Aucun tarif ne descend sous ce plancher. </p>
 
       <div className="grid-2">
         {Object.keys(DEFAULTS).map((type) => ( <div key={type} className="card card-pad">

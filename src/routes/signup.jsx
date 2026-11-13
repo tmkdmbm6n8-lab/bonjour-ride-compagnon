@@ -19,6 +19,7 @@ function SignupForm() {
     password: '',
     confirmPassword: '',
     role: searchParams.get('role') === 'driver' ? 'driver' : 'rider',
+    acceptTerms: false,
   });
   const [error, setError] = useState('');
   const [fieldError, setFieldError] = useState('');
@@ -35,6 +36,11 @@ function SignupForm() {
     if (form.password !== form.confirmPassword) {
       setError('Les mots de passe ne correspondent pas');
       setFieldError('confirmPassword');
+      return;
+    }
+    if (!form.acceptTerms) {
+      setError('Vous devez accepter les conditions d’utilisation pour créer un compte');
+      setFieldError('acceptTerms');
       return;
     }
     if (form.password.length < 8) {
@@ -197,11 +203,22 @@ function SignupForm() {
 
           {error && <p className="input-error-msg">{error}</p>}
 
-          <p className="tiny muted text-center" style={{ lineHeight: 1.6 }}>
-            En créant un compte, vous acceptez nos{' '}
-            <Link href="/terms" style={{ fontWeight: 600, color: 'var(--text)', textDecoration: 'underline' }}> Conditions d’utilisation </Link>{' '}
-            et{' '}
-            <Link href="/privacy" style={{ fontWeight: 600, color: 'var(--text)', textDecoration: 'underline' }}> Politique de confidentialité </Link> . </p>
+          <label htmlFor="acceptTerms" className="tiny muted flex gap-2" style={{ lineHeight: 1.6, alignItems: 'flex-start', cursor: 'pointer' }}>
+            <input
+              id="acceptTerms"
+              type="checkbox"
+              checked={form.acceptTerms}
+              onChange={(e) => setForm((f) => ({ ...f, acceptTerms: e.target.checked }))}
+              required
+              style={{ marginTop: 3, accentColor: 'var(--ink-950)', flexShrink: 0 }}
+            />
+            <span>
+              J’accepte les{' '}
+              <Link href="/terms" style={{ fontWeight: 600, color: 'var(--text)', textDecoration: 'underline' }}>Conditions d’utilisation</Link>{' '}
+              et j’ai lu la{' '}
+              <Link href="/privacy" style={{ fontWeight: 600, color: 'var(--text)', textDecoration: 'underline' }}>Politique de confidentialité</Link>, qui explique comment mes données sont utilisées.
+            </span>
+          </label>
 
           <button type="submit" className="btn btn-primary btn-lg btn-full" disabled={loading}>
             {loading ? <span className="spinner" /> : (

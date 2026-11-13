@@ -1,61 +1,90 @@
 import {createFileRoute} from '@tanstack/react-router';
 import PublicLayout from '@/components/PublicLayout';
+import {COMPANY, HOST, LEGAL_UPDATED_LABEL} from '@/lib/legal';
 
+const linkStyle = { fontWeight: 600, color: 'var(--text)' };
 
 function PrivacyPage() {
   return (
     <article className="prose-page">
       <h1>Politique de confidentialité</h1>
-      <p className="updated">Dernière mise à jour : 12 août 2026</p>
+      <p className="updated">Dernière mise à jour : {LEGAL_UPDATED_LABEL}</p>
 
-      <p> Cette politique explique quelles données StrasDrive collecte, pourquoi nous les collectons et les choix dont vous disposez. Nous collectons uniquement les données nécessaires au fonctionnement d’une plateforme de courses sûre et fiable — aucune donnée n’est vendue aux annonceurs. </p>
+      <p> Cette politique explique quelles données StrasDrive traite, pourquoi, combien de temps elles sont gardées et comment exercer vos droits, conformément au Règlement général sur la protection des données (RGPD) et à la loi Informatique et Libertés. Nous ne vendons pas vos données et ne les utilisons pas à des fins publicitaires. </p>
 
-      <h2>1. Les données que nous collectons</h2>
+      <h2>1. Responsable du traitement</h2>
+      <p> {COMPANY.legalName}, {COMPANY.address} (voir les{' '}
+        <a href="/mentions-legales" style={linkStyle}>mentions légales</a>). Contact données personnelles : {COMPANY.dpoEmail}, ou la{' '}
+        <a href="/contact" style={linkStyle}>page de contact</a> (sujet « Confidentialité / demande concernant les données »). </p>
+
+      <h2>2. Les données que nous traitons</h2>
       <ul>
-        <li><strong>Données de compte</strong> — nom, nom d’utilisateur et, de manière facultative, téléphone et e-mail.</li>
-        <li><strong>Données de localisation</strong> — lieu de prise en charge et destination de chaque course ; les chauffeurs ne partagent leur position GPS en direct que lorsqu’ils sont en ligne ou en course.</li>
-        <li><strong>Données de course</strong> — itinéraire, détail du tarif, horodatages, notes et messages échangés pendant la course.</li>
-        <li><strong>Données de paiement</strong> — solde du portefeuille et registre des transactions. Nous ne conservons jamais les numéros de carte bancaire.</li>
-        <li><strong>Données des chauffeurs</strong> — informations sur le véhicule et le permis nécessaires à l’approbation.</li>
+        <li><strong>Compte</strong> — nom, nom d’utilisateur, adresse e-mail, mot de passe (stocké sous forme chiffrée irréversible), rôle (passager ou chauffeur), et si vous les ajoutez : téléphone et photo de profil.</li>
+        <li><strong>Preuve d’acceptation</strong> — date et version des conditions d’utilisation et de la présente politique acceptées à l’inscription.</li>
+        <li><strong>Courses</strong> — adresses de départ et d’arrivée, itinéraire, distance et durée, prix et son détail, horaires (création, acceptation, arrivée, fin), gamme choisie, code PIN de départ, notes, commentaires et messages échangés pendant la course.</li>
+        <li><strong>Localisation</strong> — passagers : votre position actuelle, seulement si vous l’autorisez dans votre navigateur, pour proposer l’adresse de départ. Chauffeurs : votre position est transmise uniquement lorsque vous êtes en ligne ou en course ; seule la dernière position est gardée.</li>
+        <li><strong>Portefeuille</strong> — solde, recharges, paiements de courses, revenus et frais d’annulation. Les numéros de carte sont saisis chez Stripe et ne nous parviennent jamais.</li>
+        <li><strong>Chauffeurs</strong> — véhicule (marque, modèle, année, couleur, plaque, gamme), statut d’approbation, statistiques d’activité et compte de versement Stripe.</li>
+        <li><strong>Assistance</strong> — nom, e-mail, sujet et contenu des messages envoyés via le formulaire de contact.</li>
       </ul>
 
-      <h2>2. Comment nous les utilisons</h2>
+      <h2>3. Pourquoi et sur quelle base légale</h2>
       <ul>
-        <li>Mettre en relation les passagers avec les chauffeurs à proximité et guider les trajets.</li>
-        <li>Calculer les tarifs à l’avance, y compris la tarification liée à la demande locale.</li>
-        <li>Fonctionnalités de sécurité : vérification de la prise en charge par code PIN, historiques des courses et évaluations réciproques.</li>
-        <li>Assistance — résoudre les litiges et répondre à vos messages.</li>
+        <li><strong>Fournir le service</strong> (compte, devis, attribution au chauffeur disponible le plus proche, suivi, paiement, rémunération du chauffeur) — exécution du contrat (art. 6.1.b RGPD).</li>
+        <li><strong>Sécurité</strong> (code PIN, notes réciproques, prévention de la fraude) — intérêt légitime à protéger passagers et chauffeurs (art. 6.1.f).</li>
+        <li><strong>Comptabilité et obligations légales</strong> (conservation des opérations financières, réponses aux autorités) — obligation légale (art. 6.1.c).</li>
+        <li><strong>Assistance</strong> — exécution du contrat ou intérêt légitime à répondre à vos demandes.</li>
+        <li><strong>Mesure d’audience</strong> sans cookie (voir section 7) — intérêt légitime à améliorer le service.</li>
+        <li><strong>Position du passager</strong> — votre accord, donné et retirable à tout moment dans les réglages de votre navigateur.</li>
       </ul>
+      <p> L’attribution d’une course au chauffeur le plus proche et le calcul du prix sont automatisés ; ils ne produisent pas d’effet juridique vous concernant au sens de l’article 22 du RGPD. </p>
 
-      <h2>3. Ce que nous ne faisons pas</h2>
+      <h2>4. Qui reçoit vos données</h2>
       <ul>
-        <li>Nous ne vendons pas vos données personnelles.</li>
-        <li>Nous ne suivons pas votre position lorsque vous n’utilisez pas l’application.</li>
-        <li>Nous ne communiquons pas les numéros de téléphone des passagers aux chauffeurs — la discussion pendant la course préserve la confidentialité des coordonnées.</li>
+        <li><strong>L’autre participant à la course</strong> — le chauffeur voit votre nom, le lieu de départ et la destination ; le passager voit le nom, la photo, la note, le véhicule et la plaque du chauffeur. Les numéros de téléphone ne sont pas échangés : la discussion passe par l’application.</li>
+        <li><strong>{HOST.name}</strong> ({HOST.address}) — hébergement de l’application et de la base de données, envoi des e-mails de confirmation de compte, mesure d’audience.</li>
+        <li><strong>Stripe</strong> — paiement des recharges et versements aux chauffeurs.</li>
+        <li><strong>Services cartographiques gratuits</strong> — Photon (komoot, Allemagne) reçoit le texte des adresses recherchées et les coordonnées à convertir en adresse ; OSRM (FOSSGIS, Allemagne) reçoit les coordonnées de départ et d’arrivée pour calculer l’itinéraire ; ces deux demandes passent par nos serveurs, sans votre identité. Les fonds de carte sont chargés par votre navigateur depuis les serveurs d’OpenStreetMap, qui reçoivent donc votre adresse IP.</li>
+        <li><strong>Autorités</strong> — uniquement lorsque la loi l’exige.</li>
       </ul>
+      <p> Lorsque des données sont traitées hors de l’Union européenne, ces transferts sont encadrés par les garanties prévues par le RGPD (décision d’adéquation ou clauses contractuelles types de la Commission européenne). </p>
 
-      <h2>4. Partage des données</h2>
-      <p> Les participants à une course voient les informations dont ils ont besoin : votre chauffeur voit votre nom, le lieu de prise en charge et votre destination ; votre passager voit votre nom, votre photo, votre véhicule et sa plaque d’immatriculation. En dehors de cela, les données ne sont partagées qu’avec les prestataires qui hébergent notre infrastructure, ou lorsque la loi l’exige. </p>
-
-      <h2>5. Conservation</h2>
-      <p> Les données des courses sont conservées tant que votre compte est actif — elles permettent d’afficher votre historique de courses, vos reçus et votre registre de revenus. Vous pouvez demander à tout moment la suppression de votre compte et des données personnelles associées via la page de contact. </p>
-
-      <h2>6. Sécurité</h2>
-      <p> Les mots de passe sont stockés sous forme d’empreintes bcrypt avec sel. Les connexions en temps réel sont authentifiées par des jetons signés à courte durée de validité. L’accès aux données de production est restreint et fait l’objet d’audits. </p>
-
-      <h2>7. Vos choix</h2>
+      <h2>5. Combien de temps</h2>
       <ul>
-        <li>Modifiez à tout moment les informations de votre profil depuis l’application.</li>
-        <li>Les chauffeurs choisissent quand ils sont visibles en passant en ligne ou hors ligne.</li>
-        <li>Demandez une copie ou la suppression de vos données via la page de contact.</li>
+        <li><strong>Compte</strong> — tant que le compte est ouvert. Après une demande de suppression, il est supprimé ou anonymisé dans un délai d’un mois.</li>
+        <li><strong>Messages échangés pendant une course</strong> — effacés 1 an après la course.</li>
+        <li><strong>Adresses précises et tracé des courses</strong> — 3 ans, puis arrondis à environ 1 km.</li>
+        <li><strong>Montants des courses et opérations du portefeuille</strong> — 10 ans, durée imposée pour les pièces comptables (article L123-22 du Code de commerce), puis supprimés.</li>
+        <li><strong>Dernière position d’un chauffeur</strong> — effacée 24 heures après son passage hors ligne.</li>
+        <li><strong>Messages envoyés via le formulaire de contact</strong> — 3 ans après l’envoi.</li>
+        <li><strong>Preuve d’acceptation des conditions</strong> — tant que le compte est ouvert.</li>
       </ul>
+      <p> Ces suppressions sont faites automatiquement chaque nuit. </p>
 
-      <h2>8. Contact</h2>
-      <p>
-        Des questions sur la confidentialité ? Contactez-nous via la{' '}
-        <a href="/contact" style={{ fontWeight: 600, color: 'var(--text)' }}>page de contact</a>. </p>
+      <h2>6. Ce qui est enregistré sur votre appareil</h2>
+      <p> Lorsque vous êtes connecté, votre navigateur garde un jeton de session (dans son stockage local) pour que vous restiez connecté ; il est supprimé à la déconnexion. Il est indispensable au service et ne sert pas à vous suivre. Nous n’utilisons aucun cookie publicitaire ni de traceur de réseau social. La police d’écriture est servie par notre propre site. </p>
+
+      <h2>7. Mesure d’audience</h2>
+      <p> Pour savoir comment le site est utilisé, nous utilisons l’outil de mesure d’audience de Lovable. Il n’utilise aucun cookie, n’enregistre rien sur votre appareil, ne conserve pas votre adresse IP et ne permet pas de vous identifier. Lovable collecte ces données pour nous. <a href="https://lovable.dev/privacy" style={linkStyle} target="_blank" rel="noreferrer">La politique de confidentialité de Lovable</a> explique comment il les traite. </p>
+      <p> Il enregistre les pages visitées, le site d’où vous venez, votre pays, votre navigateur, votre système d’exploitation et votre type d’appareil, le temps passé, la vitesse de chargement des pages et les erreurs. Ces informations sont enregistrées pour chaque visiteur, sans cookie et sans identifier personne. Les données détaillées sont gardées 90 jours et les résumés quotidiens un an. </p>
+
+      <h2>8. Sécurité</h2>
+      <p> Les échanges sont chiffrés (HTTPS). Les mots de passe ne sont jamais stockés en clair. L’accès aux données est limité par des règles qui ne permettent à chaque utilisateur de voir que ses propres courses et opérations ; seuls les administrateurs habilités accèdent aux outils de gestion. </p>
+
+      <h2>9. Vos droits</h2>
+      <p> Vous disposez d’un droit d’accès, de rectification, d’effacement, de limitation, d’opposition et de portabilité de vos données, ainsi que du droit de retirer votre accord et de définir des directives sur le sort de vos données après votre décès. </p>
+      <ul>
+        <li><strong>Modifier</strong> votre nom et votre téléphone : depuis votre profil.</li>
+        <li><strong>Télécharger</strong> une copie de vos données : bouton « Télécharger mes données » dans votre profil.</li>
+        <li><strong>Supprimer</strong> votre compte : bouton « Supprimer mon compte » dans votre profil.</li>
+        <li><strong>Autres demandes</strong> : via la <a href="/contact" style={linkStyle}>page de contact</a> ou {COMPANY.dpoEmail}.</li>
+      </ul>
+      <p> Nous répondons dans un délai d’un mois. Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL (<a href="https://www.cnil.fr" style={linkStyle} target="_blank" rel="noreferrer">cnil.fr</a>). </p>
+
+      <h2>10. Modifications</h2>
+      <p> Nous vous informons dans l’application de toute modification importante de cette politique. </p>
     </article>
   );
 }
 
-export const Route=createFileRoute('/privacy')({head:()=>({meta:[{title:"Confidentialité · StrasDrive"},{name:'description',content:"StrasDrive — confidentialité, service de mise en relation VTC et tarifs en euros."},{property:'og:title',content:"Confidentialité · StrasDrive"},{property:'og:description',content:"StrasDrive — confidentialité, service de mise en relation VTC et tarifs en euros."},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:() => <PublicLayout><PrivacyPage/></PublicLayout>});
+export const Route=createFileRoute('/privacy')({head:()=>({meta:[{title:"Politique de confidentialité · StrasDrive"},{name:'description',content:"Données traitées par StrasDrive, finalités, destinataires, durées de conservation et droits RGPD des passagers et chauffeurs."},{property:'og:title',content:"Politique de confidentialité · StrasDrive"},{property:'og:description',content:"Comment StrasDrive traite vos données de compte et de course, combien de temps, et comment exercer vos droits RGPD."},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:() => <PublicLayout><PrivacyPage/></PublicLayout>});

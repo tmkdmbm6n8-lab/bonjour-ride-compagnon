@@ -22,6 +22,7 @@ const COLUMNS = [
     links: [
       { href: '/terms', label: 'Conditions d’utilisation' },
       { href: '/privacy', label: 'Politique de confidentialité' },
+      { href: '/mentions-legales', label: 'Mentions légales' },
     ],
   },
 ];
@@ -89,6 +90,7 @@ export default function SiteFooter() {
           <div className="flex gap-4 tiny muted">
             <Link href="/terms">Conditions</Link>
             <Link href="/privacy">Confidentialité</Link>
+            <Link href="/mentions-legales">Mentions légales</Link>
             <Link href="/contact">Contact</Link>
           </div>
         </div>

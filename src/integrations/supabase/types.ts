@@ -179,6 +179,7 @@ export type Database = {
       }
       rides: {
         Row: {
+          accepted_at: string | null
           arrived_at: string | null
           completed_at: string | null
           created_at: string
@@ -201,6 +202,7 @@ export type Database = {
           vehicle_type: string
         }
         Insert: {
+          accepted_at?: string | null
           arrived_at?: string | null
           completed_at?: string | null
           created_at?: string
@@ -223,6 +225,7 @@ export type Database = {
           vehicle_type: string
         }
         Update: {
+          accepted_at?: string | null
           arrived_at?: string | null
           completed_at?: string | null
           created_at?: string
@@ -333,6 +336,7 @@ export type Database = {
     }
     Functions: {
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      purge_expired_personal_data: { Args: never; Returns: undefined }
       settle_ride: { Args: { _actor: string; _id: string }; Returns: Json }
       wallet_entry: {
         Args: {

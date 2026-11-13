@@ -339,6 +339,13 @@ function RiderDashboard() {
                   </div>
                 )}
 
+                {selectedFare?.driverFloorSupplement > 0 && (
+                  <div className="flex items-center justify-between mt-4 tiny muted">
+                    <span>Inclut le complément de rémunération minimale du chauffeur</span>
+                    <span className="mono-nums">+{money(selectedFare.driverFloorSupplement)}</span>
+                  </div>
+                )}
+
                 {/* Payment — wallet only */}
                 <div
                   className="flex items-center justify-between mt-4"
@@ -602,6 +609,12 @@ function RiderDashboard() {
                 <span className="muted">Frais de réservation</span>
                 <span className="mono-nums">{money(completedRide.fare?.bookingFee)}</span>
               </div>
+              {completedRide.fare?.driverFloorSupplement > 0 && (
+                <div className="flex items-center justify-between small mt-1">
+                  <span className="muted">Complément rémunération minimale chauffeur</span>
+                  <span className="mono-nums">{money(completedRide.fare.driverFloorSupplement)}</span>
+                </div>
+              )}
               {completedRide.fare?.discount > 0 && (
                 <div className="flex items-center justify-between small mt-1">
                   <span className="muted">Remise ({Math.round((completedRide.fare.discountRate || 0) * 100)} %)</span>

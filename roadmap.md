@@ -7,3 +7,10 @@
 - [ ] Finaliser et vérifier les adaptations de courses, permissions, portefeuille et suivi en direct — migration fonctionnelle non terminée.
 - [ ] Importer les données et comptes existants — exports absents.
 - [ ] Vérifier Stripe et stockage existants — accès sécurisés nécessaires.
+
+# Conformité légale France
+- [x] Rémunération chauffeurs ARPE (9 € net/course, 30 € net/h approche comprise, 1 €/km) garantie par les prix passagers, vérifiée en fin de course.
+- [x] RGPD : case d'acceptation à l'inscription, export des données, demande de suppression, effacement automatique selon les durées annoncées.
+- [x] Mentions légales, CGU et politique de confidentialité alignées sur le fonctionnement réel.
+- [ ] Coordonnées réelles de la société (raison sociale, SIREN, TVA, adresse, directeur de publication, n° de centrale de réservation, médiateur) — en attente de l'utilisateur.
+- [ ] Indicateurs annuels d'activité et de revenus des chauffeurs à publier (art. L7342-9 Code du travail) — à confirmer avec l'utilisateur.

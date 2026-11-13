@@ -8,6 +8,13 @@
       "when": 1794609764892,
       "tag": "0000_import_vtc_core",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794613910439,
+      "tag": "0001_arpe_acceptance_time_and_data_retention",
+      "breakpoints": true
     }
   ]
 }
