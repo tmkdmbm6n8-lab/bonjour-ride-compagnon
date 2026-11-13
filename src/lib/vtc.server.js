@@ -1,4 +1,4 @@
-import {DEFAULT_PRICING,calculateFare} from './vtc-pricing';
+import {DEFAULT_PRICING,calculateFare,settleDriverEarnings} from './vtc-pricing';
 import {haversineDistance} from './utils/geo';
 const active=['searching','accepted','arrived','in_progress'];
 function required(result){if(result.error)throw new Error(result.error.message);return result.data;}
@@ -29,6 +29,18 @@ export async function handleVtc(input,context){
  // RLS has verified the role; privileged operations below use only the verified caller identity.
  const {supabaseAdmin:admin}=await import('@/integrations/supabase/client.server');
  const profile=required(await db.from('profiles').select('*').eq('id',uid).single());
+ if(p==='/api/users/me/export'){
+  // Droit d'accès et de portabilité (RGPD art. 15 et 20) : toutes les données liées au compte.
+  const driver=role==='driver'?required(await db.from('drivers').select('*').eq('user_id',uid).maybeSingle()):null;
+  const rides=required(await db.from('rides').select('*').or(`rider_id.eq.${uid},driver_id.eq.${uid}`).order('created_at',{ascending:false}).limit(5000)).map(({pin,offer_driver_id,offer_expires_at,declined,...rest})=>rest);
+  const transactions=required(await db.from('wallet_transactions').select('*').eq('user_id',uid).order('created_at',{ascending:false}).limit(10000));
+  return {exportedAt:new Date().toISOString(),account:{email:context.claims.email||'',role,consent:context.claims.user_metadata?.consent||null},profile,driver,rides,walletTransactions:transactions};
+ }
+ if(p==='/api/users/me/deletion-request'&&method==='POST'){
+  // Droit à l'effacement (RGPD art. 17) : demande enregistrée et traitée sous un mois.
+  required(await admin.from('contact_messages').insert({name:profile.name||profile.username||'Utilisateur',email:context.claims.email||'',topic:'rgpd-suppression',message:`Demande de suppression du compte ${uid} (${role}). ${String(body.reason||'').slice(0,1000)}`.trim()}));
+  return {ok:true};
+ }
  if(p==='/api/users/me'){
   if(method==='PATCH'){const payload={};for(const k of ['name','phone','username'])if(typeof body[k]==='string')payload[k]=body[k].slice(0,100);required(await db.from('profiles').update(payload).eq('id',uid));}
   const fresh=required(await db.from('profiles').select('*').eq('id',uid).single());return {user:{...profileShape(fresh,context.claims.email),role}};
@@ -105,7 +117,7 @@ export async function handleVtc(input,context){
   const [,id,action]=match;const r=required(await admin.from('rides').select('*').eq('id',id).single());const participant=r.rider_id===uid||r.driver_id===uid;
   if(action==='accept'){
    if(role!=='driver'||r.status!=='searching'||r.offer_driver_id!==uid||new Date(r.offer_expires_at)<new Date())throw new Error('Cette demande n’est plus disponible');
-   const claimed=required(await admin.from('rides').update({driver_id:uid,status:'accepted'}).eq('id',id).eq('status','searching').eq('offer_driver_id',uid).select('*'))[0];if(!claimed)throw new Error('Course déjà acceptée');return {ride:await serialize(admin,claimed,uid)};
+   const claimed=required(await admin.from('rides').update({driver_id:uid,status:'accepted',accepted_at:new Date().toISOString()}).eq('id',id).eq('status','searching').eq('offer_driver_id',uid).select('*'))[0];if(!claimed)throw new Error('Course déjà acceptée');return {ride:await serialize(admin,claimed,uid)};
   }
   if(action==='decline'){if(r.offer_driver_id!==uid||role!=='driver')throw new Error('Accès refusé');required(await admin.from('rides').update({declined:[...r.declined,uid],offer_driver_id:null,offer_expires_at:null}).eq('id',id).eq('offer_driver_id',uid));return {ok:true};}
   if(!participant&&role!=='admin')throw new Error('Course inaccessible');
@@ -113,7 +125,7 @@ export async function handleVtc(input,context){
   if(action==='arrive'||action==='start'||action==='complete'){
    const previous={arrive:'accepted',start:'arrived',complete:'in_progress'}[action];if(r.driver_id!==uid||r.status!==previous)throw new Error('Action non autorisée');
    if(action==='start'&&body.pin!==r.pin)throw new Error('Code PIN incorrect');
-   if(action==='complete')required(await admin.rpc('settle_ride',{_id:id,_actor:uid}));else required(await admin.from('rides').update({status:action==='arrive'?'arrived':'in_progress',...(action==='arrive'?{arrived_at:new Date().toISOString()}: {})}).eq('id',id).eq('status',previous));
+   if(action==='complete'){const since=new Date(r.accepted_at||r.arrived_at||r.created_at).getTime();const activitySeconds=Math.max(0,(Date.now()-since)/1000);const fare=settleDriverEarnings(r.fare,r.route.distanceMeters,activitySeconds);required(await admin.from('rides').update({fare}).eq('id',id).eq('status','in_progress'));required(await admin.rpc('settle_ride',{_id:id,_actor:uid}));}else required(await admin.from('rides').update({status:action==='arrive'?'arrived':'in_progress',...(action==='arrive'?{arrived_at:new Date().toISOString()}: {})}).eq('id',id).eq('status',previous));
   }else if(action==='cancel'){
    if(!participant||!['searching','accepted','arrived'].includes(r.status))throw new Error('Annulation impossible');
    if(r.driver_id===uid){required(await admin.from('rides').update({status:'searching',driver_id:null,offer_driver_id:null,declined:[...r.declined,uid]}).eq('id',id).eq('status',r.status));}
