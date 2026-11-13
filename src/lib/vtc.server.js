@@ -38,7 +38,7 @@ export async function handleVtc(input,context){
  }
  if(p==='/api/users/me/deletion-request'&&method==='POST'){
   // Droit à l'effacement (RGPD art. 17) : demande enregistrée et traitée sous un mois.
-  required(await admin.from('contact_messages').insert({name:profile.name||profile.username||'Utilisateur',email:context.claims.email||'',topic:'rgpd-suppression',message:`Demande de suppression du compte ${uid} (${role}). ${String(body.reason||'').slice(0,1000)}`.trim()}));
+  required(await admin.from('contact_messages').insert({name:profile.name||profile.username||'Utilisateur',email:context.claims.email||'',topic:'data_request',message:`Demande de suppression du compte ${uid} (${role}). ${String(body.reason||'').slice(0,1000)}`.trim()}));
   return {ok:true};
  }
  if(p==='/api/users/me'){
