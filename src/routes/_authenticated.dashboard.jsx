@@ -299,7 +299,7 @@ function RiderDashboard() {
                   </span>
                   {surge && (
                     <span className="badge badge-warning">
-                      <TrendingUp size={12} /> {selectedFare.surgeMultiplier}× demandee
+                      <TrendingUp size={12} /> {selectedFare.surgeMultiplier}× demande
                     </span>
                   )}
                 </div>

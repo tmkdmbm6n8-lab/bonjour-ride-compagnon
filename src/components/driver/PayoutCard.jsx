@@ -92,8 +92,8 @@ function PayoutCardInner() {
         <div className="flex-1">
           <div className="small" style={{ fontWeight: 700 }}>Stripe vérifie vos informations</div>
           <div className="tiny muted mt-1">
-            This usually takes a few minutes. You keep earning meanwhile — your
-            balance is {money(status.balance)}.
+            Cela prend généralement quelques minutes. Vous continuez à gagner entre-temps — votre
+            solde est de {money(status.balance)}.
           </div>
         </div>
         <button className="btn btn-secondary btn-sm" onClick={() => act('onboard')} disabled={busy}> Mettre à jour </button>

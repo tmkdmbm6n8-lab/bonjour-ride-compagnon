@@ -251,7 +251,7 @@ export default function WalletPanel() {
             {processing ? (
               <span className="spinner" />
             ) : stripeEnabled ? (
-              <><CreditCard size={17} /> Pay {money(parseFloat(amount) || 0)} par carte</>
+              <><CreditCard size={17} /> Payer {money(parseFloat(amount) || 0)} par carte</>
             ) : (
               `Ajouter ${money(parseFloat(amount) || 0)}`
             )}
