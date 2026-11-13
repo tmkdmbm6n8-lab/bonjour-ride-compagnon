@@ -34,9 +34,23 @@ export async function handleVtc(input,context){
   const fresh=required(await db.from('profiles').select('*').eq('id',uid).single());return {user:{...profileShape(fresh,context.claims.email),role}};
  }
  if(p==='/api/geo/search'){
-  const reverse=q.get('reverse')==='1',lat=q.get('lat'),lng=q.get('lng');
-  const endpoint=reverse?`https://photon.komoot.io/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&lang=fr`:`https://photon.komoot.io/api/?q=${encodeURIComponent(q.get('q')||'')}&limit=6&lang=fr${lat&&lng?`&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`:''}`;
-  const res=await fetch(endpoint,{signal:AbortSignal.timeout(10000)});if(!res.ok)throw new Error('Recherche d’adresse indisponible');const j=await res.json();return {results:(j.features||[]).map(f=>{const x=f.properties;return {name:x.name||x.street||x.city,address:[x.name,x.housenumber,x.street,x.postcode,x.city,x.country].filter(Boolean).join(', '),lng:f.geometry.coordinates[0],lat:f.geometry.coordinates[1]}})};
+  // Photon (OpenStreetMap) — service gratuit, sans clé, comme dans l'archive d'origine
+  const PHOTON_BASE='https://photon.komoot.io';
+  const reverse=q.get('reverse')==='1',lat=parseFloat(q.get('lat')),lng=parseFloat(q.get('lng')),text=(q.get('q')||'').trim();
+  let endpoint;
+  if(reverse){
+   if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error('Latitude et longitude requises');
+   endpoint=`${PHOTON_BASE}/reverse?lon=${lng}&lat=${lat}&limit=1&lang=fr`;
+  }else{
+   if(text.length<2)return {results:[]};
+   endpoint=`${PHOTON_BASE}/api/?q=${encodeURIComponent(text)}&limit=6&lang=fr`;
+   if(Number.isFinite(lat)&&Number.isFinite(lng))endpoint+=`&lat=${lat}&lon=${lng}&zoom=14&location_bias_scale=0.4`;
+  }
+  let res;
+  try{res=await fetch(endpoint,{signal:AbortSignal.timeout(5000),headers:{'User-Agent':'strasdrive/1.0'}});}catch{throw new Error('La recherche d’adresse est momentanément indisponible');}
+  if(!res.ok)throw new Error('La recherche d’adresse est momentanément indisponible');
+  const j=await res.json();
+  return {results:(j.features||[]).map(f=>{const x=f.properties||{};const parts=[x.name,x.street,x.housenumber,x.district,x.city,x.state,x.country].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);return {name:x.name||x.street||'Lieu inconnu',address:parts.join(', '),lat:f.geometry.coordinates[1],lng:f.geometry.coordinates[0],type:x.osm_value||x.type||''};})};
  }
  if(p==='/api/rides/estimate')return estimates(admin,body.pickup,body.dropoff);
  if(p==='/api/drivers/me'){
