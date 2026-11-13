@@ -21,17 +21,15 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 const MAP_STYLE = {
   version: 8,
   sources: {
-    carto: {
+    osm: {
       type: 'raster',
-      tiles: ['a', 'b', 'c', 'd'].map(
-        (s) => `https://${s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png`
-      ),
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
       attribution:
-        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
+        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     },
   },
-  layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
+  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
 };
 
 function el(className, html) {
