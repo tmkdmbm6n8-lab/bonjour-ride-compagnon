@@ -3,15 +3,15 @@
     "capability": "code",
     "source": "archive",
     "outcome": "adapt",
-    "status": "pending",
-    "next_action": "Import complete source and port screens"
+    "status": "implemented",
+    "next_action": "Original source retained; imported screens run with restored styles; complete production behavior remains pending"
   },
   {
     "capability": "schema",
     "source": "MongoDB models",
     "outcome": "migrate",
-    "status": "pending",
-    "next_action": "Create Cloud schema"
+    "status": "implemented",
+    "next_action": "Cloud schema applied; model and access-policy verification pending"
   },
   {
     "capability": "records",
@@ -32,7 +32,7 @@
     "source": "rider driver admin",
     "outcome": "adapt",
     "status": "pending",
-    "next_action": "Server-enforced roles"
+    "next_action": "Verify role isolation with confirmed rider, driver and administrator accounts"
   },
   {
     "capability": "uploaded file bytes",
@@ -46,7 +46,7 @@
     "source": "Stripe Photon OSRM S3",
     "outcome": "preserve",
     "status": "pending",
-    "next_action": "Adapt compatible calls"
+    "next_action": "Stripe and storage preserved in original source; production port and credentials unverified"
   },
   {
     "capability": "public endpoints",
@@ -67,14 +67,14 @@
     "source": "Stripe",
     "outcome": "preserve",
     "status": "pending",
-    "next_action": "Signature verification and idempotency"
+    "next_action": "Original webhook retained in source copy; active signed endpoint not yet ported"
   },
   {
     "capability": "schedules",
     "source": "Socket dispatch timers",
     "outcome": "adapt",
     "status": "pending",
-    "next_action": "Replace persistent server runtime"
+    "next_action": "Polling is a temporary adapter, not equivalent to original Socket.io dispatch"
   },
   {
     "capability": "secrets",
@@ -94,7 +94,7 @@
     "capability": "verification",
     "source": "all flows",
     "outcome": "verify",
-    "status": "pending",
-    "next_action": "Browser and permission checks"
+    "status": "partial",
+    "next_action": "Public routes and desktop/mobile rendering verified without browser errors; 3 routing/currency tests pass. No confirmed auth user exists, so signed-in flows unverified"
   }
 ]
