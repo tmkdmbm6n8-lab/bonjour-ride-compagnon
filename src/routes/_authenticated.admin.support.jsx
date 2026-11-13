@@ -122,7 +122,7 @@ function AdminSupportPage() {
             <div className="flex justify-between items-center mt-3" style={{ borderTop: '1px solid var(--ink-100)', paddingTop: 10 }}>
               <span className="tiny muted">
                 {m.status === 'resolved' && m.resolvedAt
-                  ? `Résolu €{formatRelativeTime(m.resolvedAt)}`
+                  ? `Résolu ${formatRelativeTime(m.resolvedAt)}`
                   : ''}
               </span>
               {m.status === 'open' ? (

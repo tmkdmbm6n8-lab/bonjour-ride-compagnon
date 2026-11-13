@@ -30,8 +30,8 @@ function PayoutCardInner() {
   useEffect(() => {
     const p = searchParams.get('payout');
     if (!p) return;
-    if (p === 'done') toast('Payout details submitted — Stripe is verifying', 'success', 6000);
-    if (p === 'refresh') toast('Onboarding was interrupted — you can resume any time', 'info', 5000);
+    if (p === 'done') toast('Informations de versement envoyées — vérification en cours par Stripe', 'success', 6000);
+    if (p === 'refresh') toast('La configuration a été interrompue — vous pouvez la reprendre à tout moment', 'info', 5000);
     router.replace('/driver/earnings');
     load();
   }, [searchParams, router, toast, load]);
@@ -47,16 +47,16 @@ function PayoutCardInner() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast(data.error || 'Something went wrong', 'error', 6000);
+        toast(data.error || 'Une erreur est survenue', 'error', 6000);
       } else if (action === 'onboard') {
         window.location.href = data.url; // hand off to Stripe
         return;
       } else {
-        toast(`${money(data.amount)} is on its way to your bank`, 'success', 6000);
+        toast(`${money(data.amount)} est en cours de transfert vers votre banque`, 'success', 6000);
         load();
       }
     } catch {
-      toast('Network error — please try again', 'error');
+      toast('Erreur réseau — veuillez réessayer', 'error');
     } finally {
       setBusy(false);
     }
@@ -112,15 +112,15 @@ function PayoutCardInner() {
           </div>
           <div className="tiny muted mt-1">
             {status.lastPayoutAt
-              ? `Last payout ${formatRelativeTime(status.lastPayoutAt)}`
-              : `Minimum payout ${money(status.minPayout)}`}
+              ? `Dernier versement ${formatRelativeTime(status.lastPayoutAt)}`
+              : `Versement minimum : ${money(status.minPayout)}`}
           </div>
         </div>
         <button
           className="btn btn-success"
           onClick={() => act('cashout')}
           disabled={busy || !status.canCashOut}
-          title={!status.canCashOut ? `Vous devez disposer d’au moins €{money(status.minPayout)}` : undefined}
+          title={!status.canCashOut ? `Vous devez disposer d’au moins ${money(status.minPayout)}` : undefined}
         >
           {busy ? <span className="spinner" /> : <><ArrowUpRight size={17} /> Retirer</>}
         </button>

@@ -50,7 +50,7 @@ export default function ContactForm() {
       <div className="empty" style={{ padding: 24 }}>
         <CheckCircle2 size={36} style={{ color: 'var(--success)' }} />
         <h3>Message envoyé</h3>
-        <p>Thanks for reaching out — we’ll get back to you at {form.email}.</p>
+        <p>Merci de nous avoir contactés — nous vous répondrons à {form.email}.</p>
       </div>
     );
   }

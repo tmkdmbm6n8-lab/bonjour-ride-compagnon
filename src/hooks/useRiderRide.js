@@ -143,7 +143,7 @@ export default function useRiderRide({ onEvent } = {}) {
       body: JSON.stringify({ pickup, dropoff, vehicleType }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to book ride');
+    if (!res.ok) throw new Error(data.error || 'Impossible de réserver la course');
     setOffersSent(0);
     setRide(data.ride);
     return data.ride;
@@ -158,7 +158,7 @@ export default function useRiderRide({ onEvent } = {}) {
       body: JSON.stringify({ reason }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to cancel');
+    if (!res.ok) throw new Error(data.error || 'Échec de l’annulation');
     setRide(null);
     setDriverPosition(null);
     return data.ride;
@@ -172,7 +172,7 @@ export default function useRiderRide({ onEvent } = {}) {
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Failed to submit rating');
+      throw new Error(data.error || 'Impossible d’envoyer la note');
     }
   }, []);
 

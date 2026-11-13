@@ -5,7 +5,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 
 import { useEffect, useRef, useState } from 'react';
 import Link from '@/lib/archive-navigation';
-import { Route, DollarSign, Car, Users, ArrowRight, Inbox } from 'lucide-react';
+import { Route as RouteIcon, DollarSign, Car, Users, ArrowRight, Inbox } from 'lucide-react';
 import MapView from '@/components/ArchiveMap';
 import { useSocket } from '@/context/SocketProvider';
 import { RideStatusBadge, Loading, money } from '@/components/ui/bits';
@@ -89,7 +89,7 @@ function AdminDashboard() {
   }
 
   const stats = [
-    { label: 'Courses aujourd’hui', value: data.ridesToday, icon: Route, tone: 'var(--info)' },
+    { label: 'Courses aujourd’hui', value: data.ridesToday, icon: RouteIcon, tone: 'var(--info)' },
     { label: 'En cours actuellement', value: data.activeRides, icon: Car, tone: 'var(--gold-600)' },
     { label: 'Montant brut des réservations aujourd’hui', value: money(data.revenueToday), icon: DollarSign, tone: 'var(--success)' },
     { label: 'Chauffeurs en ligne', value: data.onlineDrivers, icon: Users, tone: 'var(--ink-700)' },
@@ -105,13 +105,13 @@ function AdminDashboard() {
         <div className="flex gap-2 wrap">
           {data.pendingDrivers > 0 && (
             <Link href="/admin/drivers?pending=1" className="btn btn-gold btn-sm">
-              {data.pendingDrivers} driver{data.pendingDrivers > 1 ? 's' : ''} awaiting approval
+              {data.pendingDrivers} chauffeur{data.pendingDrivers > 1 ? 's' : ''} en attente d’approbation
               <ArrowRight size={15} />
             </Link>
           )}
           {data.openSupport > 0 && (
             <Link href="/admin/support" className="btn btn-secondary btn-sm">
-              <Inbox size={15} /> {data.openSupport} open support message{data.openSupport > 1 ? 's' : ''}
+              <Inbox size={15} /> {data.openSupport} message d’assistance ouvert{data.openSupport > 1 ? 's' : ''}
             </Link>
           )}
         </div>
@@ -137,7 +137,7 @@ function AdminDashboard() {
             className="badge badge-success badge-dot"
             style={{ position: 'absolute', top: 12, left: 12, zIndex: 5, background: '#fff', boxShadow: 'var(--shadow-sm)' }}
           >
-            {liveDrivers.length} live driver{liveDrivers.length === 1 ? '' : 's'}
+            {liveDrivers.length} chauffeur en direct{liveDrivers.length === 1 ? '' : 's'}
           </span>
         </div>
 
@@ -167,14 +167,14 @@ function AdminDashboard() {
         <div className="flex items-center justify-between mb-4 wrap gap-2">
           <h3 className="small" style={{ fontWeight: 700 }}>7 derniers jours</h3>
           <span className="tiny muted">
-            {money(week.driverEarnings)} to drivers · {money(week.platformFees)} platform fees ·{' '}
-            {week.trips} trips
+            {money(week.driverEarnings)} aux chauffeurs · {money(week.platformFees)} de frais de plateforme ·{' '}
+            {week.trips} courses
           </span>
         </div>
         <div className="flex gap-2" style={{ height: 110, alignItems: 'flex-end' }}>
           {weekBars.map((bar) => ( <div key={bar.key} className="flex-col items-center gap-2 flex-1">
               <div
-                title={`${bar.label} : €{money(bar.revenue)}`}
+                title={`${bar.label} : ${money(bar.revenue)}`}
                 style={{
                   width: '100%',
                   maxWidth: 56,
@@ -208,7 +208,7 @@ function AdminDashboard() {
           <span className="stat-label">Terminées cette semaine</span>
           <span className="stat-value">{data.statusBreakdown?.completed || 0}</span>
           <span className="tiny muted">
-            {data.statusBreakdown?.cancelled || 0} cancelled · {data.statusBreakdown?.no_drivers || 0} unfilled
+            {data.statusBreakdown?.cancelled || 0} annulées · {data.statusBreakdown?.no_drivers || 0} sans chauffeur
           </span>
         </div>
       </div>

@@ -153,19 +153,19 @@ export default function useDriverState({ onEvent } = {}) {
       if (typeof window !== 'undefined' && !window.isSecureContext) {
         return reject(
           new Error(
-            `Location is blocked on ${window.location.hostname} — open the app at http://localhost:${window.location.port || 3000} (or via https) to go online`
+            `La géolocalisation est bloquée sur ${window.location.hostname} — ouvrez l’application sur http://localhost:${window.location.port || 3000} (ou via https) pour passer en ligne`
           )
         );
       }
-      if (!navigator.geolocation) return reject(new Error('Geolocation not supported'));
+      if (!navigator.geolocation) return reject(new Error('Géolocalisation non prise en charge'));
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
         (err) =>
           reject(
             new Error(
               err.code === 1
-                ? 'Location permission denied — allow location for this site in your browser settings, then try again'
-                : 'Could not get your location — try again'
+                ? 'Autorisation de géolocalisation refusée — autorisez la localisation pour ce site dans les paramètres de votre navigateur, puis réessayez'
+                : 'Impossible d’obtenir votre position — réessayez'
             )
           ),
         { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
@@ -183,7 +183,7 @@ export default function useDriverState({ onEvent } = {}) {
       });
       const data = await res.json();
       if (!res.ok) {
-        const err = new Error(data.error || 'Failed to go online');
+        const err = new Error(data.error || 'Impossible de passer en ligne');
         err.code = data.code;
         throw err;
       }
@@ -205,7 +205,7 @@ export default function useDriverState({ onEvent } = {}) {
         body: JSON.stringify({ online: false }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to go offline');
+      if (!res.ok) throw new Error(data.error || 'Impossible de passer hors ligne');
       socketRef.current?.emit('driver:offline');
       setOnline(false);
     } finally {
@@ -220,7 +220,7 @@ export default function useDriverState({ onEvent } = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `Failed to ${action}`);
+    if (!res.ok) throw new Error(data.error || `Impossible de ${action}`);
     return data;
   }, []);
 

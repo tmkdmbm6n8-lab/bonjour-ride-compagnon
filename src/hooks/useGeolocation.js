@@ -62,7 +62,7 @@ export function useGeolocation({
     if (!navigator.geolocation) {
       // Defer so we don't set state synchronously inside the effect body
       const t = setTimeout(() => {
-        setError('Geolocation is not supported');
+        setError('La géolocalisation n’est pas prise en charge');
         setLoading(false);
       }, 0);
       return () => clearTimeout(t);

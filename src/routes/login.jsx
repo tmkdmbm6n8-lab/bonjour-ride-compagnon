@@ -121,7 +121,7 @@ function LoginForm() {
         </form>
 
         <p className="text-center small muted mt-6">
-          New to Kova?{' '}
+          Vous découvrez StrasDrive ?{' '}
           <Link href="/signup" style={{ fontWeight: 600, color: 'var(--text)' }}> Créer un compte </Link>
         </p>
 

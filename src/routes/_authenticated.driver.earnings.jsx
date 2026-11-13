@@ -69,7 +69,7 @@ function EarningsPage() {
         >
           <div>
             <div className="small" style={{ fontWeight: 700, color: 'var(--danger)' }}>
-              Outstanding balance: {money(Math.abs(data.wallet.balance))}
+              Solde débiteur : {money(Math.abs(data.wallet.balance))}
             </div>
             <div className="tiny muted mt-1"> Rechargez votre portefeuille pour le régler — la conduite est suspendue lorsque votre dette dépasse 25 €. </div>
           </div>
@@ -81,17 +81,17 @@ function EarningsPage() {
         <div className="card card-pad stat">
           <span className="stat-label">Aujourd’hui</span>
           <span className="stat-value">{money(data.today.earnings)}</span>
-          <span className="tiny muted">{data.today.trips} trip{data.today.trips === 1 ? '' : 's'}</span>
+          <span className="tiny muted">{data.today.trips} course{data.today.trips === 1 ? '' : 's'}</span>
         </div>
         <div className="card card-pad stat">
           <span className="stat-label">Cette semaine</span>
           <span className="stat-value">{money(data.week.total)}</span>
-          <span className="tiny muted">{data.week.trips} trip{data.week.trips === 1 ? '' : 's'}</span>
+          <span className="tiny muted">{data.week.trips} course{data.week.trips === 1 ? '' : 's'}</span>
         </div>
         <div className="card card-pad stat">
           <span className="stat-label">Depuis le début</span>
           <span className="stat-value">{money(data.stats.totalEarnings || 0)}</span>
-          <span className="tiny muted">{data.stats.totalTrips || 0} trips</span>
+          <span className="tiny muted">{data.stats.totalTrips || 0} courses</span>
         </div>
       </div>
 

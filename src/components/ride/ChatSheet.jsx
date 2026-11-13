@@ -34,12 +34,12 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast(data.error || 'Message failed to send', 'error');
+        toast(data.error || 'Échec de l’envoi du message', 'error');
       } else {
         setText('');
       }
     } catch {
-      toast('Message failed to send', 'error');
+      toast('Échec de l’envoi du message', 'error');
     } finally {
       setSending(false);
     }
@@ -63,7 +63,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
         overflow: 'hidden',
       }}
       role="dialog"
-      aria-label="Chat"
+      aria-label="Discussion"
     >
       <div
         className="flex items-center justify-between"
@@ -72,10 +72,10 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
         <div className="flex items-center gap-2">
           <MessageCircle size={17} style={{ color: 'var(--gold-600)' }} />
           <span className="small" style={{ fontWeight: 700 }}>
-            {counterpartName || 'Chat'}
+            {counterpartName || 'Discussion'}
           </span>
         </div>
-        <button className="btn btn-ghost btn-icon" style={{ minHeight: 32, width: 32 }} onClick={onClose} aria-label="Close chat">
+        <button className="btn btn-ghost btn-icon" style={{ minHeight: 32, width: 32 }} onClick={onClose} aria-label="Fermer la discussion">
           <X size={16} />
         </button>
       </div>

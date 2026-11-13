@@ -85,7 +85,7 @@ export default function SiteFooter() {
           className="flex items-center justify-between wrap gap-3"
           style={{ borderTop: '1px solid var(--border)', marginTop: 40, paddingTop: 20 }}
         >
-          <span className="tiny muted">© {new Date().getFullYear()} Kova. All rights reserved.</span>
+          <span className="tiny muted">© {new Date().getFullYear()} StrasDrive. Tous droits réservés.</span>
           <div className="flex gap-4 tiny muted">
             <Link href="/terms">Conditions</Link>
             <Link href="/privacy">Confidentialité</Link>

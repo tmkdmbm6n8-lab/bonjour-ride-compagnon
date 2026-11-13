@@ -75,7 +75,7 @@ function AdminPricingPage() {
         toast(data.error || 'Échec de l’enregistrement', 'error', 5000);
       } else {
         setRules((r) => ({ ...r, [type]: { ...r[type], ...data.rule, _unsaved: false } }));
-        toast(`Tarification €{VEHICLE_LABELS[type]} enregistrée`, 'success');
+        toast(`Tarification ${VEHICLE_LABELS[type]} enregistrée`, 'success');
       }
     } catch {
       toast('Échec de l’enregistrement', 'error');

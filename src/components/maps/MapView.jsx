@@ -288,7 +288,7 @@ export default function MapView({
       ref={containerRef}
       className={className}
       style={{ width: '100%', height: '100%', ...style }}
-      aria-label="Map"
+      aria-label="Carte"
     />
   );
 }

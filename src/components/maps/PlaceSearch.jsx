@@ -25,7 +25,7 @@ export default function PlaceSearch({
   onChangeText,
   onSelect,
   committedValue,
-  placeholder = 'Search a place…',
+  placeholder = 'Rechercher un lieu…',
   icon: Icon = MapPin,
   bias,
   autoFocus = false,

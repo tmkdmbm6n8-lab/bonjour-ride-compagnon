@@ -198,9 +198,9 @@ function SignupForm() {
           {error && <p className="input-error-msg">{error}</p>}
 
           <p className="tiny muted text-center" style={{ lineHeight: 1.6 }}>
-            By creating an account you agree to our{' '}
+            En créant un compte, vous acceptez nos{' '}
             <Link href="/terms" style={{ fontWeight: 600, color: 'var(--text)', textDecoration: 'underline' }}> Conditions d’utilisation </Link>{' '}
-            and{' '}
+            et{' '}
             <Link href="/privacy" style={{ fontWeight: 600, color: 'var(--text)', textDecoration: 'underline' }}> Politique de confidentialité </Link> . </p>
 
           <button type="submit" className="btn btn-primary btn-lg btn-full" disabled={loading}>
@@ -212,7 +212,7 @@ function SignupForm() {
         </form>
 
         <p className="text-center small muted mt-6">
-          Already have an account?{' '}
+          Vous avez déjà un compte ?{' '}
           <Link href="/login" style={{ fontWeight: 600, color: 'var(--text)' }}> Se connecter </Link>
         </p>
 

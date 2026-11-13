@@ -4,7 +4,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Route } from 'lucide-react';
+import { Route as RouteIcon } from 'lucide-react';
 import { RideStatusBadge, Loading, Empty, VEHICLE_LABELS, money } from '@/components/ui/bits';
 import { formatDate } from '@/lib/utils/geo';
 
@@ -53,7 +53,7 @@ function AdminRidesPage() {
       </div>
 
       {rides === null && <Loading label="Chargement des courses…" />}
-      {rides?.length === 0 && <Empty icon={Route} title="Aucune course trouvée" hint="Essayez un autre filtre." />}
+      {rides?.length === 0 && <Empty icon={RouteIcon} title="Aucune course trouvée" hint="Essayez un autre filtre." />}
 
       {rides?.length > 0 && (
         <div className="card table-wrap">

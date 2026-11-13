@@ -52,7 +52,7 @@ function PrivacyPage() {
 
       <h2>8. Contact</h2>
       <p>
-        Privacy questions? Reach us through the{' '}
+        Des questions sur la confidentialité ? Contactez-nous via la{' '}
         <a href="/contact" style={{ fontWeight: 600, color: 'var(--text)' }}>page de contact</a>. </p>
     </article>
   );

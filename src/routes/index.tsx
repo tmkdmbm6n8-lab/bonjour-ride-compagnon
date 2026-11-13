@@ -1,7 +1,7 @@
 import {createFileRoute} from '@tanstack/react-router';
 import Link from '@/lib/archive-navigation';
 import {
-  Zap, ShieldCheck, Wallet, Radio, Route, Car, Crown, Users,
+  Zap, ShieldCheck, Wallet, Radio, Route as RouteIcon, Car, Crown, Users,
   ArrowRight, Star, Clock, MessageCircle,
 } from 'lucide-react';
 import SiteHeader from '@/components/shell/SiteHeader';
@@ -26,7 +26,7 @@ const FEATURES = [
     text: 'Suivez l’approche de votre chauffeur en temps réel, de l’acceptation à l’arrivée, mètre par mètre.',
   },
   {
-    icon: Route,
+    icon: RouteIcon,
     title: 'Des tarifs qui restent bas',
     text: 'Un fonctionnement optimisé pour des courses moins chères que sur les grandes applications — prix annoncés à l’avance, sans mauvaises surprises.',
   },
@@ -98,7 +98,7 @@ function LandingPage() {
               <span className="flex items-center gap-2 small muted">
                 <Clock size={15} /> Trajet de 12 min </span>
               <span className="flex items-center gap-2 small muted">
-                <Route size={15} /> 4,8 km </span>
+                <RouteIcon size={15} /> 4,8 km </span>
               <span style={{ fontWeight: 800, fontSize: '1.2rem' }} className="mono-nums">11,20 €</span>
             </div>
           </div>

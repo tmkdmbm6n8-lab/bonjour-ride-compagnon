@@ -270,7 +270,7 @@ function RiderDashboard() {
                 onChangeText={(t) => { setPickupText(t); if (pickup) setPickup(null); }}
                 onSelect={(r) => { setPickup(r); setPickupText(r.address); }}
                 committedValue={pickup?.address}
-                placeholder="Pickup location"
+                placeholder="Lieu de prise en charge"
                 icon={Circle}
                 bias={geo || undefined}
               />
@@ -279,7 +279,7 @@ function RiderDashboard() {
                 onChangeText={(t) => { setDropoffText(t); if (dropoff) setDropoff(null); }}
                 onSelect={(r) => { setDropoff(r); setDropoffText(r.address); }}
                 committedValue={dropoff?.address}
-                placeholder="Where are you going?"
+                placeholder="Quelle est votre destination ?"
                 icon={MapPin}
                 bias={geo || undefined}
                 autoFocus={Boolean(pickup)}
@@ -299,7 +299,7 @@ function RiderDashboard() {
                   </span>
                   {surge && (
                     <span className="badge badge-warning">
-                      <TrendingUp size={12} /> {selectedFare.surgeMultiplier}× demand
+                      <TrendingUp size={12} /> {selectedFare.surgeMultiplier}× demandee
                     </span>
                   )}
                 </div>
@@ -341,9 +341,9 @@ function RiderDashboard() {
 
                 {insufficientWallet && (
                   <p className="tiny mt-2" style={{ color: 'var(--danger)' }}>
-                    Wallet balance too low —{' '}
+                    Solde du portefeuille insuffisant —{' '}
                     <Link href="/wallet" style={{ fontWeight: 700, textDecoration: 'underline' }}> ajoutez des fonds </Link>{' '}
-                    to book this ride.
+                    pour réserver cette course.
                   </p>
                 )}
 
@@ -353,7 +353,7 @@ function RiderDashboard() {
                   disabled={booking || insufficientWallet}
                 >
                   {booking ? <span className="spinner" /> : (
-                    <>Book {VEHICLE_LABELS[vehicleType]} · {money(selectedFare?.total || 0)}</>
+                    <>Réserver {VEHICLE_LABELS[vehicleType]} · {money(selectedFare?.total || 0)}</>
                   )}
                 </button>
               </>
@@ -370,8 +370,8 @@ function RiderDashboard() {
             <h3 style={{ fontSize: '1.15rem' }}>Recherche de votre chauffeur…</h3>
             <p className="small muted mt-1">
               {offersSent > 0
-                ? `Contacting nearby drivers (${offersSent} reached)`
-                : 'Reaching out to drivers near your pickup'}
+                ? `Nous contactons les chauffeurs à proximité (${offersSent} contactés)`
+                : 'Nous contactons les chauffeurs proches de votre point de prise en charge'}
             </p>
             <button
               className="btn btn-secondary btn-full mt-6"
@@ -387,17 +387,17 @@ function RiderDashboard() {
               <span className={`badge badge-dot ${ride.status === 'in_progress' ? 'badge-info' : 'badge-gold'}`}>
                 {ride.status === 'accepted' &&
                   (liveTrip
-                    ? `Driver ${liveTrip.minutes} min away`
+                    ? `Chauffeur à ${liveTrip.minutes} min`
                     : etaMinutes
-                      ? `Driver arriving in ~${etaMinutes} min`
-                      : 'Driver on the way')}
-                {ride.status === 'arrived' && 'Your driver is here'}
+                      ? `Arrivée du chauffeur dans ~${etaMinutes} min`
+                      : 'Chauffeur en route')}
+                {ride.status === 'arrived' && 'Votre chauffeur est là'}
                 {ride.status === 'in_progress' &&
-                  (liveTrip ? `${liveTrip.minutes} min to destination` : 'Heading to destination')}
+                  (liveTrip ? `${liveTrip.minutes} min jusqu’à destination` : 'En route vers la destination')}
               </span>
               {liveTrip && (
                 <span className="tiny muted mono-nums">
-                  {formatDistance(liveTrip.meters)} {liveTrip.toDestination ? 'remaining' : 'away'}
+                  {formatDistance(liveTrip.meters)} {liveTrip.toDestination ? 'restants' : 'de distance'}
                 </span>
               )}
             </div>
@@ -441,7 +441,7 @@ function RiderDashboard() {
                   <div style={{ fontWeight: 700 }} className="truncate">{ride.driver.name}</div>
                   <div className="flex items-center gap-2">
                     <Stars value={ride.driver.rating} />
-                    <span className="tiny muted">{ride.driver.totalTrips} trips</span>
+                    <span className="tiny muted">{ride.driver.totalTrips} courses</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -466,8 +466,8 @@ function RiderDashboard() {
                 </div>
                 <button
                   className="flex items-center gap-2"
-                  onClick={() => { navigator.clipboard?.writeText(ride.pin); toast('PIN copied', 'info', 1500); }}
-                  aria-label="Copy PIN"
+                  onClick={() => { navigator.clipboard?.writeText(ride.pin); toast('Code PIN copié', 'info', 1500); }}
+                  aria-label="Copier le code PIN"
                   style={{ fontWeight: 800, fontSize: '1.3rem', letterSpacing: '0.25em', color: 'var(--gold-700)' }}
                 >
                   {ride.pin} <Copy size={14} />
@@ -503,7 +503,7 @@ function RiderDashboard() {
                 onClick={() => { setChatOpen(true); setUnread(0); }}
                 style={{ position: 'relative' }}
               >
-                <MessageCircle size={17} /> Chat
+                <MessageCircle size={17} /> Discussion
                 {unread > 0 && (
                   <span
                     className="badge badge-danger"
@@ -547,7 +547,7 @@ function RiderDashboard() {
       )}
 
       {/* Cancel confirm */}
-      <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Cancel this ride?">
+      <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Annuler cette course ?">
         <div className="flex-col gap-2">
           {CANCEL_REASONS.map((r) => ( <button
               key={r}
@@ -559,7 +559,7 @@ function RiderDashboard() {
             </button>
           ))}
           <button className="btn btn-danger btn-full mt-2" onClick={() => handleCancel('')} disabled={cancelling}>
-            {cancelling ? <span className="spinner" /> : 'Cancel without a reason'}
+            {cancelling ? <span className="spinner" /> : 'Annuler sans motif'}
           </button>
           <button className="btn btn-ghost btn-full" onClick={() => setCancelOpen(false)}> Conserver ma course </button>
         </div>
@@ -569,7 +569,7 @@ function RiderDashboard() {
       <Modal
         open={Boolean(completedRide)}
         onClose={() => { clearCompleted(); refreshWallet(); }}
-        title="Trip complete"
+        title="Course terminée"
       >
         {completedRide && (
           <div className="flex-col gap-4">
@@ -582,7 +582,7 @@ function RiderDashboard() {
               </div>
               {completedRide.fare?.surgeFare > 0 && (
                 <div className="flex items-center justify-between small mt-1">
-                  <span className="muted">Surge ({completedRide.fare.surgeMultiplier}×)</span>
+                  <span className="muted">Majoration ({completedRide.fare.surgeMultiplier}×)</span>
                   <span className="mono-nums">{money(completedRide.fare.surgeFare)}</span>
                 </div>
               )}
@@ -604,12 +604,12 @@ function RiderDashboard() {
             )}
 
             <div className="text-center">
-              <p className="small muted mb-2">How was your trip{completedRide.driver ? ` with ${completedRide.driver.name}` : ''}?</p>
+              <p className="small muted mb-2">Comment s’est passée votre course{completedRide.driver ? ` with ${completedRide.driver.name}` : ''}?</p>
               <StarPicker value={rating} onChange={setRating} />
               {rating > 0 && (
                 <textarea
                   className="input mt-3"
-                  placeholder="Leave a comment (optional)"
+                  placeholder="Laisser un commentaire (facultatif)"
                   value={ratingComment}
                   onChange={(e) => setRatingComment(e.target.value)}
                   maxLength={500}
@@ -623,7 +623,7 @@ function RiderDashboard() {
               onClick={rating > 0 ? handleRate : () => { clearCompleted(); refreshWallet(); }}
               disabled={submittingRating}
             >
-              {submittingRating ? <span className="spinner" /> : rating > 0 ? 'Submit rating' : 'Done'}
+              {submittingRating ? <span className="spinner" /> : rating > 0 ? 'Envoyer la note' : 'Terminé'}
             </button>
           </div>
         )}

@@ -167,7 +167,7 @@ export default function WalletPanel() {
 
         {owes && (
           <p className="small mt-3" style={{ color: '#fca5a5' }}>
-            You owe {money(Math.abs(wallet.balance))} — top up to book rides again.
+            Vous devez {money(Math.abs(wallet.balance))} — rechargez votre portefeuille pour réserver à nouveau.
           </p>
         )}
         <button className="btn btn-gold mt-4" onClick={() => setTopupOpen(true)}>
@@ -251,9 +251,9 @@ export default function WalletPanel() {
             {processing ? (
               <span className="spinner" />
             ) : stripeEnabled ? (
-              <><CreditCard size={17} /> Pay {money(parseFloat(amount) || 0)} by card</>
+              <><CreditCard size={17} /> Pay {money(parseFloat(amount) || 0)} par carte</>
             ) : (
-              `Ajouter €{money(parseFloat(amount) || 0)}`
+              `Ajouter ${money(parseFloat(amount) || 0)}`
             )}
           </button>
         </div>

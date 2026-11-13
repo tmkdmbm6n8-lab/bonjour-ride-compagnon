@@ -33,7 +33,7 @@ function DriverDashboard() {
     if (type === 'rider-cancelled') {
       toast(
         data?.compensation
-          ? `Le passager a annulé — une indemnité de €{money(data.compensation)} a été ajoutée`
+          ? `Le passager a annulé — une indemnité de ${money(data.compensation)} a été ajoutée`
           : 'Le passager a annulé la course',
         'info',
         5000
@@ -284,7 +284,7 @@ function DriverDashboard() {
 
             <div className="flex gap-2 mt-3">
               <button className="btn btn-secondary flex-1" onClick={() => { setChatOpen(true); setUnread(0); }} style={{ position: 'relative' }}>
-                <MessageCircle size={16} /> Chat
+                <MessageCircle size={16} /> Discussion
                 {unread > 0 && (
                   <span className="badge badge-danger" style={{ position: 'absolute', top: -6, right: -4, minWidth: 20, justifyContent: 'center', padding: '1px 6px' }}>
                     {unread}
@@ -318,7 +318,7 @@ function DriverDashboard() {
             </div>
             <h3 style={{ fontSize: '1.2rem' }}>Nouvelle demande de course</h3>
             <p className="small muted mt-1 mb-4">
-              {offer.rider?.name || 'Un passager'} · {formatDistance(offer.distanceToPickupMeters)} away · ~{offer.etaMinutes} min to pickup
+              {offer.rider?.name || 'Un passager'} · {formatDistance(offer.distanceToPickupMeters)} de distance · ~{offer.etaMinutes} min jusqu’à la prise en charge
             </p>
 
             <div className="card card-pad text-left mb-4" style={{ background: 'var(--ink-50)', border: 'none' }}>

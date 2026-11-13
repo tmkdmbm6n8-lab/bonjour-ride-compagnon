@@ -61,7 +61,7 @@ function TermsPage() {
 
       <h2>10. Contact</h2>
       <p>
-        Questions about these Terms? Reach us through the{' '}
+        Des questions sur ces Conditions ? Contactez-nous via la{' '}
         <a href="/contact" style={{ fontWeight: 600, color: 'var(--text)' }}>page de contact</a>. </p>
     </article>
   );
