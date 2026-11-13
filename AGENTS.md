@@ -31,3 +31,5 @@ use the editor.
 
 - Preserve imported UI modules and their CSS while adapting framework boundaries to TanStack file routes; this avoids replacing the source experience.
 - Keep a non-executed source archive under `original-source/` for capabilities requiring incompatible runtimes; track every remaining port in the migration ledger.
+
+- Maps, address search and routing use keyless free services (OpenStreetMap/CARTO tiles via MapLibre, Photon geocoding, OSRM routing) as in the original archive; never add a Google Maps key requirement — the user wants no API key to supply.
