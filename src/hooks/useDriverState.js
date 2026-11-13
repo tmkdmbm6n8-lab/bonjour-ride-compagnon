@@ -220,7 +220,14 @@ export default function useDriverState({ onEvent } = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `Impossible de ${action}`);
+    if (!res.ok) throw new Error(data.error || ({
+      accept: 'Impossible d’accepter la course',
+      decline: 'Impossible de refuser la demande',
+      arrive: 'Impossible de signaler votre arrivée',
+      start: 'Impossible de démarrer la course',
+      complete: 'Impossible de terminer la course',
+      cancel: 'Impossible d’annuler la course',
+    }[action] || 'Impossible d’effectuer cette action'));
     return data;
   }, []);
 
