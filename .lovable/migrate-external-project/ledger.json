@@ -1,0 +1,100 @@
+[
+  {
+    "capability": "code",
+    "source": "archive",
+    "outcome": "adapt",
+    "status": "pending",
+    "next_action": "Import complete source and port screens"
+  },
+  {
+    "capability": "schema",
+    "source": "MongoDB models",
+    "outcome": "migrate",
+    "status": "pending",
+    "next_action": "Create Cloud schema"
+  },
+  {
+    "capability": "records",
+    "source": "not supplied",
+    "outcome": "migrate",
+    "status": "pending",
+    "next_action": "Request filtered CSV or JSON exports"
+  },
+  {
+    "capability": "auth identities",
+    "source": "NextAuth usernames",
+    "outcome": "migrate",
+    "status": "pending",
+    "next_action": "Request user emails and original IDs; verify email and set password"
+  },
+  {
+    "capability": "authorization",
+    "source": "rider driver admin",
+    "outcome": "adapt",
+    "status": "pending",
+    "next_action": "Server-enforced roles"
+  },
+  {
+    "capability": "uploaded file bytes",
+    "source": "S3 compatible",
+    "outcome": "preserve",
+    "status": "pending",
+    "next_action": "Existing storage credentials and files"
+  },
+  {
+    "capability": "external providers",
+    "source": "Stripe Photon OSRM S3",
+    "outcome": "preserve",
+    "status": "pending",
+    "next_action": "Adapt compatible calls"
+  },
+  {
+    "capability": "public endpoints",
+    "source": "Next API routes",
+    "outcome": "adapt",
+    "status": "pending",
+    "next_action": "Port handlers and preserve external paths"
+  },
+  {
+    "capability": "callbacks",
+    "source": "Stripe Connect",
+    "outcome": "preserve",
+    "status": "pending",
+    "next_action": "Update URLs at cutover"
+  },
+  {
+    "capability": "webhooks",
+    "source": "Stripe",
+    "outcome": "preserve",
+    "status": "pending",
+    "next_action": "Signature verification and idempotency"
+  },
+  {
+    "capability": "schedules",
+    "source": "Socket dispatch timers",
+    "outcome": "adapt",
+    "status": "pending",
+    "next_action": "Replace persistent server runtime"
+  },
+  {
+    "capability": "secrets",
+    "source": "Stripe S3",
+    "outcome": "preserve",
+    "status": "pending",
+    "next_action": "Secure secret form before live verification"
+  },
+  {
+    "capability": "cutover",
+    "source": "unpublished",
+    "outcome": "pending",
+    "status": "pending",
+    "next_action": "Publish and update provider URLs"
+  },
+  {
+    "capability": "verification",
+    "source": "all flows",
+    "outcome": "verify",
+    "status": "pending",
+    "next_action": "Browser and permission checks"
+  }
+]
