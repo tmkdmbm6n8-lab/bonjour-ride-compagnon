@@ -5,7 +5,7 @@ import { Map as MLMap, Marker, LngLatBounds, NavigationControl } from 'maplibre-
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 /**
- * MapLibre GL map with premium light CARTO tiles (no API key).
+ * MapLibre GL map with standard OpenStreetMap tiles (no API key).
  *
  * Props:
  *  - center {lat,lng}, zoom
