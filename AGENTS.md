@@ -33,3 +33,5 @@ use the editor.
 - Keep a non-executed source archive under `original-source/` for capabilities requiring incompatible runtimes; track every remaining port in the migration ledger.
 
 - Maps, address search and routing use keyless free services (OpenStreetMap/CARTO tiles via MapLibre, Photon geocoding, OSRM routing) as in the original archive; never add a Google Maps key requirement — the user wants no API key to supply.
+
+- Any fare discount is a single rate constant in `src/lib/vtc-pricing.js` applied inside `calculateFare`; quotes and server-side booking charges share it, so setting it to 0 removes the discount everywhere.
