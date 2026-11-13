@@ -11,6 +11,7 @@ export default function LegalFooter({ className = '' }) {
     >
       <Link href="/terms" style={{ textDecoration: 'underline' }}> Conditions </Link>
       <Link href="/privacy" style={{ textDecoration: 'underline' }}> Confidentialité </Link>
+      <Link href="/mentions-legales" style={{ textDecoration: 'underline' }}> Mentions légales </Link>
       <Link href="/contact" style={{ textDecoration: 'underline' }}> Contact </Link>
       <span>© {new Date().getFullYear()} StrasDrive</span>
     </div>
