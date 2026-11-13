@@ -50,7 +50,7 @@ function Accueil() {
   const [etape, setEtape] = useState<"recherche" | "devis" | "confirmee">("recherche");
   const [gammeChoisie, setGammeChoisie] = useState<string>("berline");
 
-  const gamme = GAMMES.find((g) => g.id === gammeChoisie) ?? GAMMES[0];
+  const gamme = GAMMES.find((g) => g.id === gammeChoisie) ?? GAMMES[0]!;
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-background">
