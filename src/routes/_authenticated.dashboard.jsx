@@ -9,7 +9,7 @@ import {
   MapPin,
   Circle,
   Car,
-  Crown,
+  PawPrint,
   Users,
   Zap,
   Wallet,
@@ -43,14 +43,12 @@ import {
   haversineDistance,
   etaMinutes as etaFor,
 } from "@/lib/utils/geo";
-
 const VEHICLE_META = {
   economy: { icon: Car, blurb: "Des courses au quotidien à prix avantageux" },
   comfort: { icon: Car, blurb: "Voitures récentes, plus d’espace pour les jambes" },
-  premium: { icon: Crown, blurb: "Chauffeurs les mieux notés, voitures de luxe" },
+  pet: { icon: PawPrint, blurb: "Voyagez sereinement avec votre animal de compagnie" },
   xl: { icon: Users, blurb: "Jusqu’à 6 places" },
 };
-
 const CANCEL_REASONS = [
   "Le chauffeur met trop de temps",
   "Réservation faite par erreur",
