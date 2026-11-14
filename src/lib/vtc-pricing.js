@@ -1,16 +1,48 @@
 export const DEFAULT_PRICING = {
-  economy: {baseFare:2,perKmRate:1,perMinRate:.15,minimumFare:4,bookingFee:.5,platformCommission:5,surgeMultiplierCap:3},
-  comfort: {baseFare:3,perKmRate:1.5,perMinRate:.25,minimumFare:6.5,bookingFee:.75,platformCommission:5,surgeMultiplierCap:3},
-  premium: {baseFare:5,perKmRate:2.5,perMinRate:.4,minimumFare:12,bookingFee:1,platformCommission:10,surgeMultiplierCap:3},
-  xl: {baseFare:4,perKmRate:1.8,perMinRate:.3,minimumFare:8,bookingFee:.75,platformCommission:5,surgeMultiplierCap:3},
+  economy: {
+    baseFare: 2,
+    perKmRate: 1,
+    perMinRate: 0.15,
+    minimumFare: 4,
+    bookingFee: 0.5,
+    platformCommission: 5,
+    surgeMultiplierCap: 3,
+  },
+  comfort: {
+    baseFare: 3,
+    perKmRate: 1.5,
+    perMinRate: 0.25,
+    minimumFare: 6.5,
+    bookingFee: 0.75,
+    platformCommission: 5,
+    surgeMultiplierCap: 3,
+  },
+  pet: {
+    baseFare: 3.5,
+    perKmRate: 1.35,
+    perMinRate: 0.2,
+    minimumFare: 7,
+    bookingFee: 0.75,
+    platformCommission: 5,
+    surgeMultiplierCap: 3,
+  },
+  xl: {
+    baseFare: 4,
+    perKmRate: 1.8,
+    perMinRate: 0.3,
+    minimumFare: 8,
+    bookingFee: 0.75,
+    platformCommission: 5,
+    surgeMultiplierCap: 3,
+  },
 };
 // Taux de remise appliqué au tarif calculé (0.20 = 20 %). Mettre à 0 pour retirer la remise.
 export const DISCOUNT_RATE = 0;
 
 // Rémunération minimale des chauffeurs (accord ARPE VTC), montants nets de commission.
-export const DRIVER_MIN_NET_PER_RIDE = 9;   // € nets par course, quelle que soit la distance ou la durée
-export const DRIVER_MIN_NET_PER_HOUR = 30;  // € nets par heure d'activité, temps d'approche compris
-export const DRIVER_MIN_NET_PER_KM = 1;     // € nets par kilomètre parcouru
+export const DRIVER_MIN_NET_PER_RIDE = 9; // € nets par course, quelle que soit la distance ou la durée
+export const DRIVER_MIN_NET_PER_HOUR = 30; // € nets par heure d'activité, temps d'approche compris
+export const DRIVER_MIN_NET_PER_KM = 1; // € nets par kilomètre parcouru
 // Temps d'approche estimé, inclus dans le devis passager. Le temps réel est vérifié à la fin de la course.
 export const ESTIMATED_APPROACH_SECONDS = 300;
 
@@ -33,21 +65,48 @@ export function minimumPassengerTotal(net, commission) {
   return total;
 }
 
-export function calculateFare(rule, meters, seconds, surge=1, discountRate=DISCOUNT_RATE, approachSeconds=ESTIMATED_APPROACH_SECONDS) {
- const distanceFare=meters/1000*rule.perKmRate,timeFare=seconds/60*rule.perMinRate;
- const subtotal=rule.baseFare+distanceFare+timeFare;
- const multiplier=Math.min(rule.surgeMultiplierCap,Math.max(1,surge));
- const originalTotal=round2(Math.max(subtotal*multiplier,rule.minimumFare)+rule.bookingFee);
- const rate=Math.min(1,Math.max(0,Number(discountRate)||0));
- const discounted=round2(originalTotal-round2(originalTotal*rate));
- // Plancher de rémunération chauffeur : aucun tarif (ni remise) ne descend en dessous.
- const minimumNet=driverMinimumNet(meters,seconds+Math.max(0,Number(approachSeconds)||0));
- const floorTotal=minimumPassengerTotal(minimumNet,rule.platformCommission);
- const total=Math.max(discounted,floorTotal);
- const discount=round2(Math.max(0,originalTotal-total));
- const driverFloorSupplement=round2(Math.max(0,total-originalTotal));
- const platformFee=feeFor(total,rule.platformCommission);
- return {baseFare:rule.baseFare,distanceFare,timeFare,surgeFare:subtotal*(multiplier-1),surgeMultiplier:multiplier,bookingFee:rule.bookingFee,originalTotal,discountRate:discount>0?rate:0,discount,driverFloorSupplement,driverMinimumNet:minimumNet,approachSeconds:Math.max(0,Number(approachSeconds)||0),total,estimatedTotal:total,platformCommission:rule.platformCommission,platformFee,driverEarnings:round2(total-platformFee),currency:'EUR'};
+export function calculateFare(
+  rule,
+  meters,
+  seconds,
+  surge = 1,
+  discountRate = DISCOUNT_RATE,
+  approachSeconds = ESTIMATED_APPROACH_SECONDS,
+) {
+  const distanceFare = (meters / 1000) * rule.perKmRate,
+    timeFare = (seconds / 60) * rule.perMinRate;
+  const subtotal = rule.baseFare + distanceFare + timeFare;
+  const multiplier = Math.min(rule.surgeMultiplierCap, Math.max(1, surge));
+  const originalTotal = round2(Math.max(subtotal * multiplier, rule.minimumFare) + rule.bookingFee);
+  const rate = Math.min(1, Math.max(0, Number(discountRate) || 0));
+  const discounted = round2(originalTotal - round2(originalTotal * rate));
+  // Plancher de rémunération chauffeur : aucun tarif (ni remise) ne descend en dessous.
+  const minimumNet = driverMinimumNet(meters, seconds + Math.max(0, Number(approachSeconds) || 0));
+  const floorTotal = minimumPassengerTotal(minimumNet, rule.platformCommission);
+  const total = Math.max(discounted, floorTotal);
+  const discount = round2(Math.max(0, originalTotal - total));
+  const driverFloorSupplement = round2(Math.max(0, total - originalTotal));
+  const platformFee = feeFor(total, rule.platformCommission);
+  return {
+    baseFare: rule.baseFare,
+    distanceFare,
+    timeFare,
+    surgeFare: subtotal * (multiplier - 1),
+    surgeMultiplier: multiplier,
+    bookingFee: rule.bookingFee,
+    originalTotal,
+    discountRate: discount > 0 ? rate : 0,
+    discount,
+    driverFloorSupplement,
+    driverMinimumNet: minimumNet,
+    approachSeconds: Math.max(0, Number(approachSeconds) || 0),
+    total,
+    estimatedTotal: total,
+    platformCommission: rule.platformCommission,
+    platformFee,
+    driverEarnings: round2(total - platformFee),
+    currency: "EUR",
+  };
 }
 
 /**
@@ -56,19 +115,29 @@ export function calculateFare(rule, meters, seconds, surge=1, discountRate=DISCO
  * dure plus longtemps que prévu (bouchons).
  */
 export function settleDriverEarnings(fare, meters, activitySeconds) {
-  return {...fare,activitySeconds:Math.round(Math.max(0,Number(activitySeconds)||0))};
+  return { ...fare, activitySeconds: Math.round(Math.max(0, Number(activitySeconds) || 0)) };
 }
 
-export function formatEuro(value=0) { return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(value); }
+export function formatEuro(value = 0) {
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(value);
+}
 
 // Modes de paiement passager : portefeuille (débité en fin de course) ou espèces (remises au chauffeur).
-export const PAYMENT_METHODS = { wallet: 'Portefeuille', cash: 'Espèces' };
-export function paymentMethodOf(value) { return value === 'cash' ? 'cash' : 'wallet'; }
-export function paymentMethodLabel(value) { return PAYMENT_METHODS[paymentMethodOf(value)]; }
+export const PAYMENT_METHODS = { wallet: "Portefeuille", cash: "Espèces" };
+export function paymentMethodOf(value) {
+  return value === "cash" ? "cash" : "wallet";
+}
+export function paymentMethodLabel(value) {
+  return PAYMENT_METHODS[paymentMethodOf(value)];
+}
 /** Raison du refus de réservation, ou null. Seul le portefeuille exige un solde suffisant. */
 export function bookingPaymentProblem(method, balance, total) {
-  if (paymentMethodOf(method) === 'cash') return null;
-  return Number(balance) < Number(total) ? 'Solde insuffisant : rechargez votre portefeuille ou payez en espèces' : null;
+  if (paymentMethodOf(method) === "cash") return null;
+  return Number(balance) < Number(total)
+    ? "Solde insuffisant : rechargez votre portefeuille ou payez en espèces"
+    : null;
 }
 /** Écriture sur le portefeuille du chauffeur pour une course en espèces : il garde le prix encaissé, la part plateforme est déduite. */
-export function cashDriverWalletEntry(fare) { return round2((Number(fare.driverEarnings) || 0) - (Number(fare.total) || 0)); }
+export function cashDriverWalletEntry(fare) {
+  return round2((Number(fare.driverEarnings) || 0) - (Number(fare.total) || 0));
+}
