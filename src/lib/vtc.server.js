@@ -186,57 +186,121 @@ async function liveRoute(admin, r) {
   return value;
 }
 async function geoSearch(q) {
-    // Photon (OpenStreetMap) — service gratuit, sans clé, comme dans l'archive d'origine
-    const PHOTON_BASE = "https://photon.komoot.io";
-    const reverse = q.get("reverse") === "1",
-      lat = parseFloat(q.get("lat")),
-      lng = parseFloat(q.get("lng")),
-      text = (q.get("q") || "").trim();
-    let endpoint;
-    if (reverse) {
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Latitude et longitude requises");
-      endpoint = `${PHOTON_BASE}/reverse?lon=${lng}&lat=${lat}&limit=1&lang=fr`;
-    } else {
-      if (text.length < 2) return { results: [] };
-      endpoint = `${PHOTON_BASE}/api/?q=${encodeURIComponent(text)}&limit=6&lang=fr`;
-      if (Number.isFinite(lat) && Number.isFinite(lng))
-        endpoint += `&lat=${lat}&lon=${lng}&zoom=14&location_bias_scale=0.4`;
-    }
-    let res;
-    try {
-      res = await fetch(endpoint, { signal: AbortSignal.timeout(5000), headers: { "User-Agent": "strasdrive/1.0" } });
-    } catch {
-      throw new Error("La recherche d’adresse est momentanément indisponible");
-    }
-    if (!res.ok) throw new Error("La recherche d’adresse est momentanément indisponible");
-    const j = await res.json();
-    return {
-      results: (j.features || []).map((f) => {
-        const x = f.properties || {};
-        const parts = [x.name, x.street, x.housenumber, x.district, x.city, x.state, x.country]
-          .filter(Boolean)
-          .filter((v, i, a) => a.indexOf(v) === i);
-        return {
-          name: x.name || x.street || "Lieu inconnu",
-          address: parts.join(", "),
-          lat: f.geometry.coordinates[1],
-          lng: f.geometry.coordinates[0],
-          type: x.osm_value || x.type || "",
-        };
-      }),
-    };
+  // Photon (OpenStreetMap) — service gratuit, sans clé, comme dans l'archive d'origine
+  const PHOTON_BASE = "https://photon.komoot.io";
+  const reverse = q.get("reverse") === "1",
+    lat = parseFloat(q.get("lat")),
+    lng = parseFloat(q.get("lng")),
+    text = (q.get("q") || "").trim();
+  let endpoint;
+  if (reverse) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Latitude et longitude requises");
+    endpoint = `${PHOTON_BASE}/reverse?lon=${lng}&lat=${lat}&limit=1&lang=fr`;
+  } else {
+    if (text.length < 2) return { results: [] };
+    endpoint = `${PHOTON_BASE}/api/?q=${encodeURIComponent(text)}&limit=6&lang=fr`;
+    if (Number.isFinite(lat) && Number.isFinite(lng))
+      endpoint += `&lat=${lat}&lon=${lng}&zoom=14&location_bias_scale=0.4`;
   }
+  let res;
+  try {
+    res = await fetch(endpoint, { signal: AbortSignal.timeout(5000), headers: { "User-Agent": "strasdrive/1.0" } });
+  } catch {
+    throw new Error("La recherche d’adresse est momentanément indisponible");
+  }
+  if (!res.ok) throw new Error("La recherche d’adresse est momentanément indisponible");
+  const j = await res.json();
+  return {
+    results: (j.features || []).map((f) => {
+      const x = f.properties || {};
+      const parts = [x.name, x.street, x.housenumber, x.district, x.city, x.state, x.country]
+        .filter(Boolean)
+        .filter((v, i, a) => a.indexOf(v) === i);
+      return {
+        name: x.name || x.street || "Lieu inconnu",
+        address: parts.join(", "),
+        lat: f.geometry.coordinates[1],
+        lng: f.geometry.coordinates[0],
+        type: x.osm_value || x.type || "",
+      };
+    }),
+  };
+}
+// === src/lib/vtc.server.js (autour de la ligne 229) ===
+
 async function estimates(db, a, b) {
   const route = await routeBetween(a, b);
   const rows = required(await db.from("pricing_rules").select("*"));
   const rules = { ...DEFAULT_PRICING };
   for (const row of rows) rules[row.vehicle_type] = row.rule;
-  return {
-    route,
-    estimates: Object.fromEntries(
-      Object.entries(rules).map(([k, v]) => [k, calculateFare(v, route.distanceMeters, route.durationSeconds)]),
-    ),
+
+  // 1. Tarifs de base StrasDrive (toujours calculés en repli)
+  const baseEstimates = Object.fromEntries(
+    Object.entries(rules).map(([k, v]) => [k, calculateFare(v, route.distanceMeters, route.durationSeconds)]),
+  );
+
+  // 2. Tentative de récupération des tarifs Uber en direct
+  let uberList = null;
+  try {
+    const { uberProducts } = await import("./vtc-uber.server");
+    uberList = await uberProducts(a, b);
+  } catch {
+    uberList = null;
+  }
+
+  // Si Uber ne répond pas (cookie expiré, réseau, etc.), on conserve les prix actuels
+  if (!uberList || !Array.isArray(uberList) || !uberList.length) {
+    return { route, estimates: baseEstimates, source: "strasdrive" };
+  }
+
+  // 3. Correspondance des produits Uber avec les 4 gammes StrasDrive
+  const findProduct = (keywords) => {
+    for (const kw of keywords) {
+      const match = uberList.find((p) => p.name?.toLowerCase().includes(kw.toLowerCase()));
+      if (match) return match;
+    }
+    return null;
   };
+
+  const uberX = findProduct(["uberx", "electric", "wait & save"]);
+  const uberComfort = findProduct(["comfort"]);
+  const uberBlack = findProduct(["berline", "black", "premier", "lux"]);
+  const uberXL = findProduct(["uberxl", "xl"]);
+
+  const finalEstimates = { ...baseEstimates };
+
+  const applyUberPrice = (type, product) => {
+    const base = baseEstimates[type];
+    if (!base) return;
+
+    let price = product?.price;
+    // Si la ville n'a pas de Berline/Black, on cale Lux sur Comfort + 35 %
+    if (!price && type === "premium" && uberComfort?.price) {
+      price = Math.round(uberComfort.price * 1.35 * 100) / 100;
+    }
+
+    if (price && Number.isFinite(price) && price > 0) {
+      const commRate = rules[type]?.platformCommission || 5;
+      const platformFee = Math.round(price * commRate) / 100;
+      finalEstimates[type] = {
+        ...base,
+        total: price,
+        estimatedTotal: price,
+        originalTotal: price,
+        platformFee,
+        driverEarnings: Math.round((price - platformFee) * 100) / 100,
+        uberProduct: product ? product.name : type === "premium" ? "Uber Berline" : null,
+        isUberPrice: true,
+      };
+    }
+  };
+
+  applyUberPrice("economy", uberX);
+  applyUberPrice("comfort", uberComfort);
+  applyUberPrice("premium", uberBlack);
+  applyUberPrice("xl", uberXL);
+
+  return { route, estimates: finalEstimates, source: "uber" };
 }
 export async function handleVtc(input, context) {
   const { path, method = "GET", body = {} } = input;
@@ -293,15 +357,13 @@ export async function handleVtc(input, context) {
   if (p === "/api/users/me/deletion-request" && method === "POST") {
     // Droit à l'effacement (RGPD art. 17) : demande enregistrée et traitée sous un mois.
     required(
-      await admin
-        .from("contact_messages")
-        .insert({
-          name: profile.name || profile.username || "Utilisateur",
-          email: context.claims.email || "",
-          topic: "data_request",
-          message:
-            `Demande de suppression du compte ${uid} (${role}). ${String(body.reason || "").slice(0, 1000)}`.trim(),
-        }),
+      await admin.from("contact_messages").insert({
+        name: profile.name || profile.username || "Utilisateur",
+        email: context.claims.email || "",
+        topic: "data_request",
+        message:
+          `Demande de suppression du compte ${uid} (${role}). ${String(body.reason || "").slice(0, 1000)}`.trim(),
+      }),
     );
     return { ok: true };
   }
@@ -360,22 +422,20 @@ export async function handleVtc(input, context) {
           .maybeSingle(),
       );
       required(
-        await admin
-          .from("driver_documents")
-          .upsert(
-            {
-              user_id: uid,
-              doc_type: spec.type,
-              file_path: path,
-              file_name: String(body.fileName || "").slice(0, 150),
-              ...fields,
-              status: "pending",
-              rejection_reason: "",
-              uploaded_at: new Date().toISOString(),
-              reviewed_at: null,
-            },
-            { onConflict: "user_id,doc_type" },
-          ),
+        await admin.from("driver_documents").upsert(
+          {
+            user_id: uid,
+            doc_type: spec.type,
+            file_path: path,
+            file_name: String(body.fileName || "").slice(0, 150),
+            ...fields,
+            status: "pending",
+            rejection_reason: "",
+            uploaded_at: new Date().toISOString(),
+            reviewed_at: null,
+          },
+          { onConflict: "user_id,doc_type" },
+        ),
       );
       // Le document remplacé est supprimé immédiatement (minimisation RGPD).
       if (previous && previous.file_path !== path)
