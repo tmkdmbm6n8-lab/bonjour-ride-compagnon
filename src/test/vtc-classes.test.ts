@@ -14,22 +14,25 @@ describe('gammes de véhicules', () => {
     expect(canServe(d('a', 'comfort', ['economy']), 'economy')).toBe(true);
     expect(canServe(d('a', 'comfort'), 'economy')).toBe(false);
   });
-  it('un Lux peut cocher Comfort et/ou Go, mais pas le XL', () => {
-    expect(servedClasses(d('a', 'premium', ['economy']))).toEqual(['premium', 'economy']);
-    expect(servedClasses(d('a', 'premium', ['comfort', 'economy', 'xl']))).toEqual(['premium', 'comfort', 'economy']);
+  it('la gamme Lux n\'existe plus : un chauffeur « premium » est traité comme Go', () => {
+    expect(servedClasses(d('a', 'premium', ['economy']))).toEqual(['economy']);
   });
-  it('un XL peut accepter uniquement Go et Comfort, pas le Lux', () => {
+  it('un chauffeur Pet peut cocher le Go, mais pas le Comfort ni le XL', () => {
+    expect(servedClasses(d('a', 'pet', ['economy', 'comfort', 'xl']))).toEqual(['pet', 'economy']);
+  });
+  it('un XL peut accepter Go, Comfort et Pet, jamais une gamme inconnue', () => {
     expect(sanitizeAcceptedClasses('xl', ['economy', 'comfort', 'premium'])).toEqual(['economy', 'comfort']);
     expect(canServe(d('a', 'xl', ['premium']), 'premium')).toBe(false);
   });
-  it('un Lux ne reçoit pas de course XL', () => {
-    expect(canServe(d('a', 'premium', ['comfort', 'economy']), 'xl')).toBe(false);
+  it('un Pet ne reçoit pas de course XL', () => {
+    expect(canServe(d('a', 'pet', ['economy', 'xl']), 'xl')).toBe(false);
   });
   it('côté client : un Go + un Comfort qui accepte le Go = 2 chauffeurs disponibles en Go', () => {
     const a: any = availabilityByClass([d('go', 'economy', [], 2), d('cf', 'comfort', ['economy'], 1)], pickup);
     expect(a.economy.count).toBe(2);
     expect(a.comfort.count).toBe(1);
-    expect(a.premium.count).toBe(0);
+    expect(a.pet.count).toBe(0);
+    expect(a.premium).toBeUndefined();
   });
   it('un Comfort qui accepte le Go reçoit la course Go (au tarif Go, celui de la course)', () => {
     const cf = d('cf', 'comfort', ['economy']);
