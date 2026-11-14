@@ -23,8 +23,10 @@ export function setNavAuto(on) { try { localStorage.setItem(AUTO_KEY, on ? '1' :
 export function openNavigation(app, dest) {
   const url = navigationUrl(app, dest);
   if (!url) return false;
-  const w = window.open(url, '_blank', 'noopener');
-  return Boolean(w) || w === null ? Boolean(w) : true;
+  const w = window.open(url, '_blank');
+  if (!w) return false;
+  try { w.opener = null; } catch { /* cross-origin */ }
+  return true;
 }
 
 /** Driving leg from → to via the public OSRM server (no key). Returns [[lng,lat],…] or null. */
