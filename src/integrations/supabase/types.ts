@@ -255,6 +255,7 @@ export type Database = {
           fare: Json
           id: string
           is_test: boolean
+          live_route: Json | null
           messages: Json
           offer_driver_id: string | null
           offer_expires_at: string | null
@@ -280,6 +281,7 @@ export type Database = {
           fare: Json
           id?: string
           is_test?: boolean
+          live_route?: Json | null
           messages?: Json
           offer_driver_id?: string | null
           offer_expires_at?: string | null
@@ -305,6 +307,7 @@ export type Database = {
           fare?: Json
           id?: string
           is_test?: boolean
+          live_route?: Json | null
           messages?: Json
           offer_driver_id?: string | null
           offer_expires_at?: string | null

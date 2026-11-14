@@ -1,0 +1,2 @@
+ALTER TABLE public.rides ADD COLUMN IF NOT EXISTS live_route jsonb;
+COMMENT ON COLUMN public.rides.live_route IS 'Last traffic-aware route from the driver position to the current target (pickup or destination), shared by rider and driver to bound routing calls.';
