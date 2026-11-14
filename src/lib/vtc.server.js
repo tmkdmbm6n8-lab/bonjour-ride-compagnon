@@ -1,8 +1,9 @@
 import {DEFAULT_PRICING,calculateFare,settleDriverEarnings} from './vtc-pricing';
 import {haversineDistance} from './utils/geo';
+import {planDispatch,canSeeOffer,distanceToPickupKm} from './vtc-dispatch';
 const active=['searching','accepted','arrived','in_progress'];
 function required(result){if(result.error)throw new Error(result.error.message);return result.data;}
-function driverShape(d){return d?{...d,_id:d.id,isOnline:d.is_online,isApproved:d.is_approved,userId:d.user_id}:null;}
+function driverShape(d){return d?{...d,_id:d.id,isOnline:d.is_online,isApproved:d.is_approved,isPriority:Boolean(d.is_priority),userId:d.user_id}:null;}
 function profileShape(p,email){return {...p,_id:p.id,createdAt:p.created_at,email:email||'',wallet:{balance:Number(p.balance),currency:'EUR'}};}
 async function serialize(db,r,actor,raw=false){
  if(!r)return null;
@@ -102,12 +103,14 @@ export async function handleVtc(input,context){
   const r=required(await admin.from('rides').insert({rider_id:uid,vehicle_type:body.vehicleType,pickup:body.pickup,dropoff:body.dropoff,route:quote.route,fare,pin}).select('*').single());await assignOffer(admin,r);return {ride:await serialize(admin,r,uid)};
  }
  if(p==='/api/rides/active'){
-  const list=required(await db.from('rides').select('*').eq(role==='driver'?'driver_id':'rider_id',uid).in('status',active).limit(1));const r=list[0];if(r?.status==='searching'){await assignOffer(admin,r);const fresh=required(await db.from('rides').select('*').eq('id',r.id).single());return {ride:fresh.status==='no_drivers'?null:await serialize(admin,fresh,uid)};}return {ride:await serialize(admin,r,uid)};
+  const list=required(await db.from('rides').select('*').eq(role==='driver'?'driver_id':'rider_id',uid).in('status',active).limit(1));const r=list[0];if(r?.status==='searching'){const fresh=await assignOffer(admin,r);return {ride:fresh.status==='no_drivers'?null:await serialize(admin,fresh,uid)};}return {ride:await serialize(admin,r,uid)};
  }
  if(p==='/api/drivers/offers'){
-  if(role!=='driver')throw new Error('Accès refusé');const rs=required(await admin.from('rides').select('*').eq('status','searching').limit(100));for(const r of rs)await assignOffer(admin,r);
-  const r=required(await admin.from('rides').select('*').eq('status','searching').eq('offer_driver_id',uid).limit(1))[0];if(!r)return {offer:null};
-  const rider=required(await admin.from('profiles').select('name').eq('id',r.rider_id).single());return {offer:{rideId:r.id,pickup:r.pickup,dropoff:r.dropoff,rider,earnings:r.fare.driverEarnings,distanceMeters:r.route.distanceMeters,durationSeconds:r.route.durationSeconds,surgeMultiplier:r.fare.surgeMultiplier,expiresInSeconds:Math.max(0,Math.ceil((new Date(r.offer_expires_at)-Date.now())/1000)),distanceToPickupMeters:0,etaMinutes:1}};
+  if(role!=='driver')throw new Error('Accès refusé');const pool=await dispatchPool(admin);const me=pool.find(d=>d.user_id===uid);
+  const rs=required(await admin.from('rides').select('*').eq('status','searching').limit(100));const fresh=[];for(const r of rs)fresh.push(await assignOffer(admin,r,pool));
+  const r=fresh.filter(x=>canSeeOffer(x,me)).sort((a,b)=>distanceToPickupKm(a,me)-distanceToPickupKm(b,me))[0];if(!r)return {offer:null};
+  const approachKm=distanceToPickupKm(r,me),approachMeters=Number.isFinite(approachKm)?Math.round(approachKm*1350):null;
+  const rider=required(await admin.from('profiles').select('name').eq('id',r.rider_id).single());return {offer:{rideId:r.id,pickup:r.pickup,dropoff:r.dropoff,rider,earnings:r.fare.driverEarnings,distanceMeters:r.route.distanceMeters,durationSeconds:r.route.durationSeconds,surgeMultiplier:r.fare.surgeMultiplier,expiresInSeconds:Math.max(0,Math.ceil((new Date(r.offer_expires_at)-Date.now())/1000)),phase:r.dispatch_phase,isPriority:Boolean(me.is_priority),distanceToPickupMeters:approachMeters??0,etaMinutes:approachMeters==null?1:Math.max(1,Math.round(approachMeters/1000/25*60))}};
  }
  if(p==='/api/rides'||p==='/api/admin/rides'){
   const page=Math.max(1,Number(q.get('page'))||1),limit=Math.min(100,Math.max(1,Number(q.get('limit'))||15));let query=(role==='admin'?admin:db).from('rides').select('*',{count:'exact'}).order('created_at',{ascending:false});if(role!=='admin')query=query.eq(role==='driver'?'driver_id':'rider_id',uid);if(q.get('status'))query=query.eq('status',q.get('status'));const res=await query.range((page-1)*limit,page*limit-1);const rows=required(res);return {rides:await Promise.all(rows.map(r=>serialize(admin,r,uid,true))),pagination:{page,pages:Math.ceil(res.count/limit),total:res.count}};
@@ -116,10 +119,12 @@ export async function handleVtc(input,context){
  if(match){
   const [,id,action]=match;const r=required(await admin.from('rides').select('*').eq('id',id).single());const participant=r.rider_id===uid||r.driver_id===uid;
   if(action==='accept'){
-   if(role!=='driver'||r.status!=='searching'||r.offer_driver_id!==uid||new Date(r.offer_expires_at)<new Date())throw new Error('Cette demande n’est plus disponible');
-   const claimed=required(await admin.from('rides').update({driver_id:uid,status:'accepted',accepted_at:new Date().toISOString()}).eq('id',id).eq('status','searching').eq('offer_driver_id',uid).select('*'))[0];if(!claimed)throw new Error('Course déjà acceptée');return {ride:await serialize(admin,claimed,uid)};
+   const me=role==='driver'?(await dispatchPool(admin)).find(d=>d.user_id===uid):null;
+   if(!canSeeOffer(r,me))throw new Error('Cette demande n’est plus disponible');
+   let claim=admin.from('rides').update({driver_id:uid,status:'accepted',accepted_at:new Date().toISOString(),offer_driver_id:null,offer_expires_at:null}).eq('id',id).eq('status','searching').eq('dispatch_phase',r.dispatch_phase);if(r.dispatch_phase==='nearest')claim=claim.eq('offer_driver_id',uid);
+   const claimed=required(await claim.select('*'))[0];if(!claimed)throw new Error('Course déjà acceptée');return {ride:await serialize(admin,claimed,uid)};
   }
-  if(action==='decline'){if(r.offer_driver_id!==uid||role!=='driver')throw new Error('Accès refusé');required(await admin.from('rides').update({declined:[...r.declined,uid],offer_driver_id:null,offer_expires_at:null}).eq('id',id).eq('offer_driver_id',uid));return {ok:true};}
+  if(action==='decline'){if(role!=='driver')throw new Error('Accès refusé');required(await admin.rpc('decline_ride_offer',{_ride:id,_driver:uid}));return {ok:true};}
   if(!participant&&role!=='admin')throw new Error('Course inaccessible');
   if(!action)return {ride:await serialize(admin,r,uid)};
   if(action==='arrive'||action==='start'||action==='complete'){
@@ -128,7 +133,7 @@ export async function handleVtc(input,context){
    if(action==='complete'){const since=new Date(r.accepted_at||r.arrived_at||r.created_at).getTime();const activitySeconds=Math.max(0,(Date.now()-since)/1000);const fare=settleDriverEarnings(r.fare,r.route.distanceMeters,activitySeconds);required(await admin.from('rides').update({fare}).eq('id',id).eq('status','in_progress'));required(await admin.rpc('settle_ride',{_id:id,_actor:uid}));}else required(await admin.from('rides').update({status:action==='arrive'?'arrived':'in_progress',...(action==='arrive'?{arrived_at:new Date().toISOString()}: {})}).eq('id',id).eq('status',previous));
   }else if(action==='cancel'){
    if(!participant||!['searching','accepted','arrived'].includes(r.status))throw new Error('Annulation impossible');
-   if(r.driver_id===uid){required(await admin.from('rides').update({status:'searching',driver_id:null,offer_driver_id:null,declined:[...r.declined,uid]}).eq('id',id).eq('status',r.status));}
+   if(r.driver_id===uid){required(await admin.from('rides').update({status:'searching',driver_id:null,offer_driver_id:null,offer_expires_at:null,dispatch_phase:null,accepted_at:null,declined:[...r.declined,uid]}).eq('id',id).eq('status',r.status));}
    else{const patch={status:'cancelled',offer_driver_id:null};if(r.status==='arrived'){required(await admin.rpc('wallet_entry',{_user:uid,_amount:-3,_type:'cancellation_fee',_ride:id}));if(r.driver_id)required(await admin.rpc('wallet_entry',{_user:r.driver_id,_amount:2.76,_type:'ride_earning',_ride:id}));patch.fare={...r.fare,cancellationFee:3};}required(await admin.from('rides').update(patch).eq('id',id).eq('status',r.status));}
   }else if(action==='messages'){
    if(!participant)throw new Error('Accès refusé');if(method==='GET')return {messages:r.messages};if(!['accepted','arrived','in_progress'].includes(r.status)||typeof body.text!=='string'||!body.text.trim()||body.text.length>500)throw new Error('Message invalide');required(await admin.from('rides').update({messages:[...r.messages,{from:r.rider_id===uid?'rider':'driver',text:body.text.trim(),at:new Date().toISOString()}]}).eq('id',id));
@@ -138,7 +143,7 @@ export async function handleVtc(input,context){
   return {ride:await serialize(admin,required(await admin.from('rides').select('*').eq('id',id).single()),uid)};
  }
  if(p==='/api/admin/pricing'){if(method==='PUT'){if(!DEFAULT_PRICING[body.vehicleType]||Object.values(DEFAULT_PRICING[body.vehicleType]).some((_,i)=>!Number.isFinite(body[Object.keys(DEFAULT_PRICING[body.vehicleType])[i]])))throw new Error('Tarif invalide');required(await admin.from('pricing_rules').upsert({vehicle_type:body.vehicleType,rule:body}));return {rule:body};}return {rules:required(await admin.from('pricing_rules').select('*')).map(r=>({...r.rule,vehicleType:r.vehicle_type,city:r.city}))};}
- if(p==='/api/admin/drivers'){if(method==='PATCH'){required(await admin.from('drivers').update({is_approved:Boolean(body.isApproved),...(body.isApproved?{}:{is_online:false})}).eq('id',body.driverId));return {ok:true};}let query=admin.from('drivers').select('*');if(q.get('pending'))query=query.eq('is_approved',false);const ds=required(await query);return {drivers:await Promise.all(ds.map(async d=>({...driverShape(d),userId:required(await admin.from('profiles').select('name,username,avatar').eq('id',d.user_id).single())})))};}
+ if(p==='/api/admin/drivers'){if(method==='PATCH'){const patch='isPriority' in body?{is_priority:Boolean(body.isPriority)}:{is_approved:Boolean(body.isApproved),...(body.isApproved?{}:{is_online:false})};required(await admin.from('drivers').update(patch).eq('id',body.driverId));return {ok:true};}let query=admin.from('drivers').select('*');if(q.get('pending'))query=query.eq('is_approved',false);const ds=required(await query);return {drivers:await Promise.all(ds.map(async d=>({...driverShape(d),userId:required(await admin.from('profiles').select('name,username,avatar').eq('id',d.user_id).single())})))};}
  if(p==='/api/admin/users'){const ps=required(await admin.from('profiles').select('*').limit(100));const rs=required(await admin.from('user_roles').select('*'));return {users:ps.map(p=>({...profileShape(p),role:rs.find(r=>r.user_id===p.id)?.role||'rider'})).filter(p=>(!q.get('role')||p.role===q.get('role'))&&(!q.get('q')||(p.name+' '+p.username).toLowerCase().includes(q.get('q').toLowerCase())))};}
  if(p==='/api/admin/support'){if(method==='PATCH'){if(!['open','resolved'].includes(body.status))throw new Error('Statut invalide');required(await admin.from('contact_messages').update({status:body.status,resolved_at:body.status==='resolved'?new Date().toISOString():null}).eq('id',body.id));return {ok:true};}return {messages:required(await admin.from('contact_messages').select('*').eq('status',q.get('status')||'open')).map(m=>({...m,_id:m.id,createdAt:m.created_at,resolvedAt:m.resolved_at}))};}
  if(p==='/api/drivers/me/earnings'||p==='/api/admin/overview'){
@@ -148,10 +153,14 @@ export async function handleVtc(input,context){
  }
  throw new Error('Ce service n’est pas encore disponible');
 }
-async function assignOffer(db,r){
- if(r.status!=='searching')return;if(r.offer_driver_id&&new Date(r.offer_expires_at)>new Date())return;
- const declined=[...r.declined,...(r.offer_driver_id?[r.offer_driver_id]:[])];
- const ds=required(await db.from('drivers').select('*').eq('is_online',true).eq('is_approved',true));const busy=required(await db.from('rides').select('driver_id').in('status',['accepted','arrived','in_progress']));
- const d=ds.filter(d=>d.location&&d.vehicle.type===r.vehicle_type&&!declined.includes(d.user_id)&&!busy.some(b=>b.driver_id===d.user_id)).sort((a,b)=>haversineDistance(a.location.lat,a.location.lng,r.pickup.lat,r.pickup.lng)-haversineDistance(b.location.lat,b.location.lng,r.pickup.lat,r.pickup.lng))[0];
- required(await db.from('rides').update(d&&declined.length<8?{offer_driver_id:d.user_id,offer_expires_at:new Date(Date.now()+16000).toISOString(),declined}:{status:'no_drivers',offer_driver_id:null,declined}).eq('id',r.id).eq('status','searching'));
+async function dispatchPool(db){
+ const ds=required(await db.from('drivers').select('*').eq('is_online',true).eq('is_approved',true));
+ const busy=new Set(required(await db.from('rides').select('driver_id').in('status',['accepted','arrived','in_progress'])).map(b=>b.driver_id));
+ return ds.filter(d=>!busy.has(d.user_id));
+}
+async function assignOffer(db,r,pool){
+ if(r.status!=='searching')return r;
+ const patch=planDispatch(r,pool||await dispatchPool(db));if(!patch)return r;
+ let q=db.from('rides').update(patch).eq('id',r.id).eq('status','searching');q=r.dispatch_phase?q.eq('dispatch_phase',r.dispatch_phase):q.is('dispatch_phase',null);
+ return required(await q.select('*'))[0]||required(await db.from('rides').select('*').eq('id',r.id).single());
 }
