@@ -103,6 +103,7 @@ export type Database = {
       drivers: {
         Row: {
           accepts_classes: string[]
+          documents_override: boolean
           id: string
           is_approved: boolean
           is_online: boolean
@@ -117,6 +118,7 @@ export type Database = {
         }
         Insert: {
           accepts_classes?: string[]
+          documents_override?: boolean
           id?: string
           is_approved?: boolean
           is_online?: boolean
@@ -131,6 +133,7 @@ export type Database = {
         }
         Update: {
           accepts_classes?: string[]
+          documents_override?: boolean
           id?: string
           is_approved?: boolean
           is_online?: boolean

@@ -1,0 +1,2 @@
+ALTER TABLE public.drivers ADD COLUMN IF NOT EXISTS documents_override boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.drivers.documents_override IS 'Set by an admin "approve anyway": the driver may go online without a complete document file. Admin-only (no authenticated UPDATE grant).';

@@ -50,6 +50,13 @@
       "when": 1794620658013,
       "tag": "0006_admin_delete_account",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794621923131,
+      "tag": "0007_driver_documents_override",
+      "breakpoints": true
     }
   ]
 }
