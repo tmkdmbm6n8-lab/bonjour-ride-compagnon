@@ -12,6 +12,7 @@ import MapView from '@/components/ArchiveMap';
 import ChatSheet from '@/components/ride/ChatSheet';
 import MessageAlert from '@/components/ride/MessageAlert';
 import DispatchWheel from '@/components/ride/DispatchWheel';
+import { pickupZoneProblem } from '@/lib/vtc-dispatch';
 import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { money, VEHICLE_LABELS } from '@/components/ui/bits';
@@ -202,6 +203,11 @@ function DriverDashboard() {
     return { meters, minutes: etaFor(meters), seconds: etaFor(meters) * 60, label, quality: 'Calcul de l’itinéraire…', approximate: true };
   }, [ride, position, liveRoute]);
 
+  // Pickup zone: "arrived" and "start" stay disabled until the driver is close to the pickup point.
+  const zoneProblem = ride && !ride.isTest && ['accepted', 'arrived'].includes(ride.status)
+    ? pickupZoneProblem(position, ride.pickup)
+    : null;
+
   // In-app navigation leg: driver → pickup, then driver → destination
   const legTarget = ride
     ? ride.status === 'in_progress'
@@ -386,13 +392,16 @@ function DriverDashboard() {
               </div>
             </div>
 
+            {zoneProblem && (
+              <p className="small text-center mb-2" style={{ color: 'var(--warning)', fontWeight: 600 }}>{zoneProblem}</p>
+            )}
             {ride.status === 'accepted' && (
-              <button className="btn btn-primary btn-lg btn-full" onClick={() => run(arrive, 'Le passager a été informé de votre arrivée')} disabled={actionBusy}>
+              <button className="btn btn-primary btn-lg btn-full" onClick={() => run(arrive, 'Le passager a été informé de votre arrivée')} disabled={actionBusy || Boolean(zoneProblem)}>
                 {actionBusy ? <span className="spinner" /> : <><Flag size={18} /> Je suis arrivé</>}
               </button>
             )}
             {ride.status === 'arrived' && (
-              <button className="btn btn-primary btn-lg btn-full" onClick={() => setPinOpen(true)} disabled={actionBusy}>
+              <button className="btn btn-primary btn-lg btn-full" onClick={() => setPinOpen(true)} disabled={actionBusy || Boolean(zoneProblem)}>
                 <KeyRound size={18} /> Saisir le code PIN pour démarrer </button>
             )}
             {ride.status === 'in_progress' && (
