@@ -45,3 +45,4 @@ use the editor.
 - Test-offer expiry shares the broadcast countdown in `vtc-dispatch.js`; this keeps real and fictitious one-minute replacement timers aligned.
 - Sign-out uses local scope and a request without a session sends the user to `/login?expired=1` (in `archive-fetch.js`); a global sign-out on one device silently broke the driver's phone.
 - Admin account deletion goes through the service-role-only `admin_delete_account` SQL function (atomic) plus storage and auth cleanup in `vtc.server.js`; other users keep their payment lines, unlinked from the deleted rides.
+- Ride payment method lives in `rides.payment.method` (`wallet`|`cash`), sanitized by `paymentMethodOf` in `src/lib/vtc-pricing.js`; `settle_ride` debits only the driver's platform share for cash rides, so the rider wallet is never touched and the driver's negative-balance limit still applies.
