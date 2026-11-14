@@ -9,6 +9,6 @@ describe('Lancement du GPS chauffeur',()=>{
 describe('Sons de notification',()=>{
  it('the ride request sound differs from every rider and message sound',()=>{
   const offer=JSON.stringify(MELODIES.offer);
-  for(const k of ['driver-found','arrived','started','message','cancelled','completed'])expect(JSON.stringify(MELODIES[k])).not.toBe(offer);
+  for(const k of ['driver-found','arrived','started','message','cancelled','completed'] as const)expect(JSON.stringify(MELODIES[k])).not.toBe(offer);
  });
 });

@@ -1,8 +1,13 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Map as MLMap, Marker, LngLatBounds, NavigationControl } from 'maplibre-gl';
+import { Map as MLMap, Marker, LngLatBounds, NavigationControl, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+// Bundlers don't emit MapLibre's worker next to the pre-bundled library, so point to it explicitly
+// (without it the route line and other vector work never draw).
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+
+setWorkerUrl(maplibreWorkerUrl);
 
 /**
  * MapLibre GL map with standard OpenStreetMap tiles (no API key).
@@ -290,7 +295,7 @@ export default function MapView({
       (b, p) => b.extend(p),
       new LngLatBounds(points[0], points[0])
     );
-    map.fitBounds(bounds, { padding: { top: 80, bottom: 80, left: 60, right: 60 }, duration: 700, maxZoom: 16 });
+    map.fitBounds(bounds, { padding: fitPadding(map), duration: 700, maxZoom: 16 });
     // driverPosition is intentionally not a dep — refitting on every GPS
     // ping would make the camera jitter. It's included in bounds whenever
     // a route/endpoint change triggers a refit.
@@ -301,7 +306,7 @@ export default function MapView({
     const map = mapRef.current;
     if (!map || !followPosition) return;
     if (Date.now() - lastUserMoveRef.current < 8000) return;
-    map.easeTo({ center: [followPosition.lng, followPosition.lat], zoom: Math.max(map.getZoom(), 15.5), duration: 800 });
+    map.easeTo({ center: [followPosition.lng, followPosition.lat], zoom: Math.max(map.getZoom(), 15.5), padding: fitPadding(map), duration: 800 });
   }, [followPosition?.lat, followPosition?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Recenter when no fit target ──
@@ -319,6 +324,20 @@ export default function MapView({
       aria-label="Carte"
     />
   );
+}
+
+/**
+ * Keep framed points clear of the floating ride panel: on phones it covers the
+ * bottom of the map, on desktop the left side.
+ */
+function fitPadding(map) {
+  const box = map.getContainer().getBoundingClientRect();
+  const panel = document.querySelector('.ride-panel')?.getBoundingClientRect();
+  const pad = { top: 60, bottom: 60, left: 50, right: 50 };
+  if (!panel || panel.height === 0) return pad;
+  if (box.width <= 900) pad.bottom = Math.min(box.height - 140, Math.max(60, box.bottom - panel.top + 24));
+  else pad.left = Math.min(box.width - 200, Math.max(50, panel.right - box.left + 30));
+  return pad;
 }
 
 /**
