@@ -270,7 +270,7 @@ function RiderDashboard() {
     }
     // Once an address is set, frame the nearby available drivers around it
     const close = pickup
-      ? nearby.filter((d) => d.location && haversineDistance(pickup, d.location) <= 15000).map((d) => d.location)
+      ? nearby.filter((d) => d.location && haversineDistance(pickup.lat, pickup.lng, d.location.lat, d.location.lng) <= 15).map((d) => d.location)
       : [];
     return {
       pickup: pickup ? { lat: pickup.lat, lng: pickup.lng } : undefined,
