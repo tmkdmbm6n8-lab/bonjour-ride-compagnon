@@ -236,6 +236,7 @@ function DriverDashboard() {
                 {ride.status === 'arrived' && 'En attente du passager'}
                 {ride.status === 'in_progress' && 'Course en cours'}
               </span>
+              {ride.isTest && <span className="badge badge-warning">Test · PIN {ride.pin}</span>}
               <span className="small mono-nums" style={{ fontWeight: 700 }}>
                 {money(ride.fare?.driverEarnings)}
               </span>
@@ -323,6 +324,11 @@ function DriverDashboard() {
               {countdown}
             </div>
             <h3 style={{ fontSize: '1.2rem' }}>Nouvelle demande de course</h3>
+            {offer.isTest && (
+              <div className="mt-2">
+                <span className="badge badge-warning">Demande test · aucun paiement · code PIN {offer.testPin}</span>
+              </div>
+            )}
             {offer.rideClass && (
               <div className="mt-2">
                 <span className={`badge ${offer.lowerClass ? 'badge-warning' : 'badge-neutral'}`}>

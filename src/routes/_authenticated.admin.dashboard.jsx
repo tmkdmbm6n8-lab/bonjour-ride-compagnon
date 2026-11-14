@@ -10,6 +10,7 @@ import MapView from '@/components/ArchiveMap';
 import { useSocket } from '@/context/SocketProvider';
 import { RideStatusBadge, Loading, money } from '@/components/ui/bits';
 import { formatRelativeTime } from '@/lib/utils/geo';
+import TestRideButton from '@/components/admin/TestRideButton';
 
 function AdminDashboard() {
   const { socket } = useSocket();
@@ -103,6 +104,7 @@ function AdminDashboard() {
           <p className="page-sub">État de la plateforme en temps réel</p>
         </div>
         <div className="flex gap-2 wrap">
+          <TestRideButton />
           {data.pendingDrivers > 0 && (
             <Link href="/admin/drivers?pending=1" className="btn btn-gold btn-sm">
               {data.pendingDrivers} chauffeur{data.pendingDrivers > 1 ? 's' : ''} en attente d’approbation
