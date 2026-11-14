@@ -93,3 +93,26 @@ describe('rentabilité affichée au chauffeur prioritaire (gain net par heure, a
     expect(Math.round(approachSecondsFor(5000))).toBe(720);
   });
 });
+
+import { availableFor, isThrottled } from '@/lib/vtc-dispatch';
+describe('fair share (+30 %)', () => {
+  const ride = { status: 'searching', vehicle_type: 'economy', declined: [] } as any;
+  const drv = (id: string, earned: number, prio = false) => ({ user_id: id, vehicle_class: 'economy', accepts_classes: [], is_priority: prio, earned_today: earned });
+  it('throttles a driver earning more than 30 % above the others', () => {
+    const pool = [drv('rich', 100), drv('a', 40), drv('b', 50)];
+    expect(isThrottled(pool[0], pool)).toBe(true);
+    expect(availableFor(ride, pool).map((d) => d.user_id)).toEqual(['a', 'b']);
+  });
+  it('does not throttle at exactly 30 % above', () => {
+    const pool = [drv('x', 65), drv('a', 50)];
+    expect(isThrottled(pool[0], pool)).toBe(false);
+  });
+  it('never throttles priority drivers', () => {
+    const pool = [drv('p', 300, true), drv('a', 0)];
+    expect(isThrottled(pool[0], pool)).toBe(false);
+  });
+  it('still offers the ride when the throttled driver is the only one', () => {
+    const pool = [drv('rich', 100)];
+    expect(availableFor(ride, pool).map((d) => d.user_id)).toEqual(['rich']);
+  });
+});

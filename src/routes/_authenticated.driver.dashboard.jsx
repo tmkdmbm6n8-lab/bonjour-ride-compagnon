@@ -11,6 +11,7 @@ import {
 import MapView from '@/components/ArchiveMap';
 import ChatSheet from '@/components/ride/ChatSheet';
 import MessageAlert from '@/components/ride/MessageAlert';
+import DispatchWheel from '@/components/ride/DispatchWheel';
 import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { money, VEHICLE_LABELS } from '@/components/ui/bits';
@@ -39,6 +40,7 @@ function DriverDashboard() {
   const [countdown, setCountdown] = useState(0);
   const [unread, setUnread] = useState(0);
   const [lastMsg, setLastMsg] = useState(null);
+  const [award, setAward] = useState(null); // null | 'spinning' | 'won' | 'lost'
   const chatOpenRef = useRef(false);
   useEffect(() => { chatOpenRef.current = chatOpen; }, [chatOpen]);
 
@@ -118,14 +120,19 @@ function DriverDashboard() {
     if (actionBusy) return;
     setActionBusy(true);
     const pickupPoint = offer?.pickup ? { lat: offer.pickup.lat, lng: offer.pickup.lng } : null;
+    setAward('spinning');
+    const spin = new Promise((r) => setTimeout(r, 1500));
     try {
-      await accept();
+      await Promise.all([accept(), spin]);
       setUnread(0);
       setLastMsg(null);
-      toast('Course acceptée — rendez-vous au point de prise en charge', 'success');
+      setAward('won');
+      playSound('driver-found');
       if (pickupPoint) launchGps(pickupPoint, true);
     } catch (err) {
-      toast(err.message, 'error', 4000);
+      await spin;
+      if (/déjà acceptée|plus disponible/i.test(err.message || '')) { setAward('lost'); playSound('cancelled'); }
+      else { setAward(null); toast(err.message, 'error', 4000); }
     } finally {
       setActionBusy(false);
     }
@@ -407,6 +414,8 @@ function DriverDashboard() {
           </div>
         )}
       </div>
+
+      {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
 
       {/* ── Incoming offer ── */}
       <Modal open={Boolean(offer)} onClose={() => {}} closable={false} title="">
