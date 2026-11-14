@@ -1,6 +1,12 @@
 /**
- * StrasDrive — brand mark (S as a road with a small gold car driving on it)
+ * StrasDrive — brand mark: a centred S drawn as a road, with a gold
+ * navigation arrow (Google Maps style) that has just set off from the
+ * bottom end and follows the dashed centre line.
+ * The S is two equal arcs, point-symmetric around the centre (24,24).
+ * public/favicon.svg is a copy of this mark and must change with it.
  */
+
+const ROAD = 'M29.2 15A6 6 0 1 0 24 24A6 6 0 1 1 18.8 33';
 
 export function KovaIcon({ size = 32, className = '' }) {
   return (
@@ -11,33 +17,23 @@ export function KovaIcon({ size = 32, className = '' }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      shapeRendering="geometricPrecision"
       aria-hidden="true"
     >
       <rect width="48" height="48" rx="14" fill="#0C0A09" />
-      {/* The S is the road: a wide rounded stroke with a dashed center line */}
+      {/* The S is the road */}
+      <path d={ROAD} stroke="#FAFAF9" strokeWidth="8" strokeLinecap="round" />
+      {/* Dashed centre line */}
+      <path d={ROAD} stroke="#0C0A09" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2.2 2.4" />
+      {/* Navigation arrow, a little way along the road from the bottom end */}
       <path
-        d="M16 37C27 37 36 32 34.5 25.5C33 19 15 20 13.5 13.5C12 7 21 5.5 32 6.5"
-        stroke="#FAFAF9"
-        strokeWidth="9"
-        strokeLinecap="round"
+        d="M0 -4.6L3.7 4L0 2.1L-3.7 4Z"
+        transform="translate(26.54 35.44) rotate(65)"
+        fill="#CA8A04"
+        stroke="#0C0A09"
+        strokeWidth="0.9"
         strokeLinejoin="round"
       />
-      <path
-        d="M16 37C27 37 36 32 34.5 25.5C33 19 15 20 13.5 13.5C12 7 21 5.5 32 6.5"
-        stroke="#0C0A09"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeDasharray="3.2 3.2"
-      />
-      {/* Small gold car driving on the road, at the middle straight */}
-      <g>
-        <path
-          d="M18.5 24.2C18.5 23.3 19.2 22.7 20.1 22.6L21.6 20.9C21.9 20.5 22.4 20.3 22.9 20.3H26.1C26.6 20.3 27.1 20.5 27.4 20.9L28.9 22.6C29.8 22.7 30.5 23.3 30.5 24.2V26H18.5V24.2Z"
-          fill="#CA8A04"
-        />
-        <circle cx="21.4" cy="26.4" r="1.5" fill="#0C0A09" />
-        <circle cx="27.6" cy="26.4" r="1.5" fill="#0C0A09" />
-      </g>
     </svg>
   );
 }
