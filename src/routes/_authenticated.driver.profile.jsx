@@ -4,13 +4,75 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Car, Check } from 'lucide-react';
+import { Car, Check, Layers } from 'lucide-react';
 import ProfileCard from '@/components/profile/ProfileCard';
 import DocumentsCard from '@/components/driver/DocumentsCard';
 import { useToast } from '@/components/ui/Toast';
 import { VEHICLE_LABELS } from '@/components/ui/bits';
 
 const EMPTY_VEHICLE = { make: '', model: '', year: '', color: '', plate: '', type: 'economy' };
+
+function LowerClassesCard({ driver, onSaved }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(null);
+  if (!driver) return null;
+  const own = driver.vehicleClass || 'economy';
+  const options = driver.lowerClasses || [];
+  const accepted = driver.acceptsClasses || [];
+
+  async function toggle(cls) {
+    const next = accepted.includes(cls) ? accepted.filter((c) => c !== cls) : [...accepted, cls];
+    setBusy(cls);
+    try {
+      const res = await fetch('/api/drivers/me/classes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acceptsClasses: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) toast(data.error || 'Impossible d’enregistrer', 'error');
+      else {
+        onSaved(data.driver);
+        toast(next.includes(cls) ? `Vous recevrez aussi les courses ${VEHICLE_LABELS[cls]}, au tarif ${VEHICLE_LABELS[cls]}` : `Vous ne recevrez plus les courses ${VEHICLE_LABELS[cls]}`, 'success');
+      }
+    } catch {
+      toast('Impossible d’enregistrer', 'error');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="card card-pad mt-4">
+      <h3 className="flex items-center gap-2 mb-2" style={{ fontSize: '1.05rem' }}>
+        <Layers size={19} /> Courses de gamme inférieure
+      </h3>
+      {options.length === 0 ? (
+        <p className="tiny muted">Votre gamme ({VEHICLE_LABELS[own]}) reçoit uniquement ses propres courses.</p>
+      ) : (
+        <>
+          <p className="tiny muted mb-3">
+            Votre gamme : {VEHICLE_LABELS[own]}. Cochez les gammes inférieures que vous acceptez aussi. Une course d’une gamme inférieure est payée au tarif de cette gamme.
+          </p>
+          <div className="flex-col gap-2">
+            {options.map((cls) => (
+              <label key={cls} className="flex items-center gap-3 small" style={{ cursor: 'pointer', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={accepted.includes(cls)}
+                  disabled={busy !== null}
+                  onChange={() => toggle(cls)}
+                />
+                Accepter les courses {VEHICLE_LABELS[cls]} (tarif {VEHICLE_LABELS[cls]})
+                {busy === cls && <span className="spinner" />}
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function DriverProfilePage() {
   const toast = useToast();
@@ -109,10 +171,8 @@ function DriverProfilePage() {
               </div>
               <div className="field">
                 <label htmlFor="v-type">Gamme de service</label>
-                <select id="v-type" className="input" value={vehicle.type} onChange={set('type')}>
-                  {Object.entries(VEHICLE_LABELS).map(([value, label]) => ( <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
+                <input id="v-type" className="input" value={VEHICLE_LABELS[driver?.vehicleClass || 'economy']} readOnly disabled />
+                <span className="tiny muted">Attribuée par StrasDrive</span>
               </div>
             </div>
             <button type="submit" className="btn btn-primary" disabled={saving}>
@@ -120,6 +180,7 @@ function DriverProfilePage() {
             </button>
           </form>
         </div>
+        <LowerClassesCard driver={driver} onSaved={setDriver} />
         <DocumentsCard />
       </ProfileCard>
     </div>
