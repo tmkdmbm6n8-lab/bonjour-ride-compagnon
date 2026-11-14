@@ -1,4 +1,4 @@
-// Driver turn-by-turn: external GPS apps (Google Maps / Waze) and keyless OSRM legs for the in-app map.
+// Driver turn-by-turn: external GPS apps (Google Maps / Waze). In-app legs come from the server (see vtc-routing.js).
 
 export const NAV_APPS = { google: 'Google Maps', waze: 'Waze' };
 const APP_KEY = 'strasdrive.navApp';
@@ -27,20 +27,4 @@ export function openNavigation(app, dest) {
   if (!w) return false;
   try { w.opener = null; } catch { /* cross-origin */ }
   return true;
-}
-
-/** Driving leg from → to via the public OSRM server (no key). Returns [[lng,lat],…] or null. */
-export async function fetchLegGeometry(from, to, signal) {
-  if (!from || !to) return null;
-  try {
-    const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`,
-      { signal }
-    );
-    if (!res.ok) return null;
-    const j = await res.json();
-    return j.routes?.[0]?.geometry?.coordinates || null;
-  } catch {
-    return null;
-  }
 }
