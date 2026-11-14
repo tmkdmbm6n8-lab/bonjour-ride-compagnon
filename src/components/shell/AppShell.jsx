@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import Link from '@/lib/archive-navigation';
-import { usePathname } from '@/lib/archive-navigation';
-import { useSession, signOut } from '@/lib/archive-auth';
-import { LogOut } from 'lucide-react';
-import { KovaLogo } from '@/components/brand/KovaLogo';
-import { Avatar } from '@/components/ui/bits';
+import Link from "@/lib/archive-navigation";
+import { usePathname } from "@/lib/archive-navigation";
+import { useSession, signOut } from "@/lib/archive-auth";
+import { LogOut } from "lucide-react";
+import { KovaLogo } from "@/components/brand/KovaLogo";
+import { Avatar } from "@/components/ui/bits";
 
 /**
  * Authenticated app shell: sidebar on desktop, bottom tab bar on mobile.
@@ -15,21 +15,22 @@ export default function AppShell({ nav, children }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user;
+  const homeHref =
+    user?.role === "driver" ? "/driver/dashboard" : user?.role === "admin" ? "/admin/dashboard" : "/dashboard";
 
   return (
     <div className="shell">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <Link href="/" aria-label="Accueil StrasDrive">
+          <Link href={homeHref} aria-label="Accueil StrasDrive">
             <KovaLogo size={30} />
           </Link>
         </div>
-
         <nav className="sidebar-nav" aria-label="Navigation principale">
           {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
-              <Link key={href} href={href} className={`nav-item ${active ? 'active' : ''}`}>
+              <Link key={href} href={href} className={`nav-item ${active ? "active" : ""}`}>
                 <Icon size={19} strokeWidth={2} />
                 <span>{label}</span>
               </Link>
@@ -39,17 +40,17 @@ export default function AppShell({ nav, children }) {
 
         <div className="sidebar-footer">
           <div className="sidebar-user">
-            <Avatar name={user?.name || ''} src={user?.avatar || ''} size="sm" />
+            <Avatar name={user?.name || ""} src={user?.avatar || ""} size="sm" />
             <div className="flex-1 truncate">
               <div className="small truncate" style={{ fontWeight: 600 }}>
-                {user?.name || '—'}
+                {user?.name || "—"}
               </div>
-              <div className="tiny muted truncate">@{user?.username || ''}</div>
+              <div className="tiny muted truncate">@{user?.username || ""}</div>
             </div>
             <button
               className="btn btn-ghost btn-icon"
               style={{ minHeight: 36, width: 36 }}
-              onClick={() => signOut({ callbackUrl: '/' })}
+              onClick={() => signOut({ callbackUrl: "/" })}
               aria-label="Se déconnecter"
               title="Se déconnecter"
             >
