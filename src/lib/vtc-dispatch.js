@@ -1,5 +1,5 @@
-import {haversineDistance} from './utils/geo';
-import {canServe} from './vtc-classes';
+import { haversineDistance } from "./utils/geo";
+import { canServe } from "./vtc-classes";
 
 // Ride dispatch, in three steps:
 // 1. "priority": every available priority driver sees the ride at once, whatever the distance; first to accept wins.
@@ -25,40 +25,54 @@ export function availableFor(ride, drivers) {
 
 /** Returns the update to apply to a searching ride, or null when its current step is still running. */
 export function planDispatch(ride, drivers, now = Date.now()) {
-  if (ride.status !== 'searching') return null;
+  if (ride.status !== "searching") return null;
   const pool = availableFor(ride, drivers);
   const until = ride.offer_expires_at ? new Date(ride.offer_expires_at).getTime() : 0;
   const running = now < until;
   const phase = ride.dispatch_phase || null;
 
-  if (phase === 'priority' && running && pool.some((d) => d.is_priority)) return null;
-  if (phase === 'nearest' && running && pool.some((d) => d.user_id === ride.offer_driver_id)) return null;
-  if (phase === 'broadcast') {
-    return running ? null : { status: 'no_drivers', dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
+  if (phase === "priority" && running && pool.some((d) => d.is_priority)) return null;
+  if (phase === "nearest" && running && pool.some((d) => d.user_id === ride.offer_driver_id)) return null;
+  if (phase === "broadcast") {
+    return running
+      ? null
+      : { status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
   }
 
   if (!phase && pool.some((d) => d.is_priority)) {
-    return { dispatch_phase: 'priority', offer_driver_id: null, offer_expires_at: iso(now + PRIORITY_WINDOW_SECONDS * 1000) };
+    return {
+      dispatch_phase: "priority",
+      offer_driver_id: null,
+      offer_expires_at: iso(now + PRIORITY_WINDOW_SECONDS * 1000),
+    };
   }
-  if (phase !== 'nearest') {
+  if (phase !== "nearest") {
     const nearest = pool
       .filter((d) => !d.is_priority && d.location)
       .sort((a, b) => distanceToPickupKm(ride, a) - distanceToPickupKm(ride, b))[0];
     if (nearest) {
-      return { dispatch_phase: 'nearest', offer_driver_id: nearest.user_id, offer_expires_at: iso(now + NEAREST_WINDOW_SECONDS * 1000) };
+      return {
+        dispatch_phase: "nearest",
+        offer_driver_id: nearest.user_id,
+        offer_expires_at: iso(now + NEAREST_WINDOW_SECONDS * 1000),
+      };
     }
   }
-  return { dispatch_phase: 'broadcast', offer_driver_id: null, offer_expires_at: iso(now + BROADCAST_WINDOW_SECONDS * 1000) };
+  return {
+    dispatch_phase: "broadcast",
+    offer_driver_id: null,
+    offer_expires_at: iso(now + BROADCAST_WINDOW_SECONDS * 1000),
+  };
 }
 
 /** Whether this driver (online, approved, free) may see and accept the ride right now. */
 export function canSeeOffer(ride, driver, now = Date.now()) {
-  if (!driver || ride.status !== 'searching' || !ride.dispatch_phase) return false;
+  if (!driver || ride.status !== "searching" || !ride.dispatch_phase) return false;
   if (!ride.offer_expires_at || new Date(ride.offer_expires_at).getTime() <= now) return false;
   if (availableFor(ride, [driver]).length === 0) return false;
-  if (ride.dispatch_phase === 'priority') return Boolean(driver.is_priority);
-  if (ride.dispatch_phase === 'nearest') return ride.offer_driver_id === driver.user_id;
-  return ride.dispatch_phase === 'broadcast';
+  if (ride.dispatch_phase === "priority") return Boolean(driver.is_priority);
+  if (ride.dispatch_phase === "nearest") return ride.offer_driver_id === driver.user_id;
+  return ride.dispatch_phase === "broadcast";
 }
 
 // Profitability shown to priority drivers: expected net gain per hour, counting the drive to the passenger.
@@ -67,37 +81,17 @@ export const PROFITABLE_PER_HOUR = 30;
 export const APPROACH_SPEED_KMH = 25;
 
 export function approachSecondsFor(meters) {
-  return Math.max(60, (Number(meters) || 0) / 1000 / APPROACH_SPEED_KMH * 3600);
+  return Math.max(60, ((Number(meters) || 0) / 1000 / APPROACH_SPEED_KMH) * 3600);
 }
 
 export function profitability(netEarnings, approachSeconds, tripSeconds) {
   const hours = Math.max(1, (Number(approachSeconds) || 0) + (Number(tripSeconds) || 0)) / 3600;
-  const perHour = Math.round((Number(netEarnings) || 0) / hours * 100) / 100;
-  const level = perHour >= VERY_PROFITABLE_PER_HOUR ? 'very_profitable' : perHour >= PROFITABLE_PER_HOUR ? 'profitable' : 'not_profitable';
+  const perHour = Math.round(((Number(netEarnings) || 0) / hours) * 100) / 100;
+  const level =
+    perHour >= VERY_PROFITABLE_PER_HOUR
+      ? "very_profitable"
+      : perHour >= PROFITABLE_PER_HOUR
+        ? "profitable"
+        : "not_profitable";
   return { perHour, level };
 }
-export const FAIR_EARNINGS_THRESHOLD_RATIO = 1.3; // +30 %
-
-export function filterFairDispatchPool(pool, dailyEarningsByDriver = {}) {
-  // Les prioritaires ne sont jamais bridés
-  const priorities = pool.filter((d) => d.is_priority);
-  const standards = pool.filter((d) => !d.is_priority);
-
-  if (standards.length <= 1) return pool;
-
-  // Calcul du gain moyen des chauffeurs standards disponibles
-  const earnings = standards.map((d) => Number(dailyEarningsByDriver[d.user_id] || 0));
-  const avgEarnings = earnings.reduce((sum, val) => sum + val, 0) / earnings.length;
-
-  // Plafond à +30 % au-dessus de la moyenne
-  const maxAllowed = Math.max(20, avgEarnings * FAIR_EARNINGS_THRESHOLD_RATIO);
-
-  // Chauffeurs éligibles n'ayant pas encore dépassé le seuil
-  const eligibleStandards = standards.filter(
-    (d) => Number(dailyEarningsByDriver[d.user_id] || 0) <= maxAllowed
-  );
-
-  // Si tout le monde a dépassé ou qu'aucun n'est disponible, on garde tout le monde
-  const finalStandards = eligibleStandards.length > 0 ? eligibleStandards : standards;
-
-  return [...priorities, ...finalStandards];
