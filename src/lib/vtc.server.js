@@ -13,7 +13,7 @@ async function serialize(db,r,actor,raw=false){
  if(!r)return null;
  let driver;
  if(r.driver_id){const p=required(await db.from('profiles').select('*').eq('id',r.driver_id).single());const d=required(await db.from('drivers').select('*').eq('user_id',r.driver_id).single());driver={id:p.id,name:p.name,avatar:p.avatar,rating:p.rating.average,totalTrips:d.stats.totalTrips,vehicle:{...d.vehicle,type:driverClass(d)},location:d.location};}
- const out={...r,id:r.id,_id:r.id,createdAt:r.created_at,completedAt:r.completed_at,vehicleType:r.vehicle_type,driver,pin:r.rider_id===actor||r.is_test?r.pin:undefined,isTest:Boolean(r.is_test)};
+ const out={...r,id:r.id,_id:r.id,createdAt:r.created_at,completedAt:r.completed_at,vehicleType:r.vehicle_type,driver,pin:r.rider_id===actor||r.is_test?r.pin:undefined,isTest:Boolean(r.is_test),live_route:undefined};
  if(raw){const p=required(await db.from('profiles').select('id,name,username').eq('id',r.rider_id).single());out.riderId=p;out.driverId=driver;}
  return out;
 }
