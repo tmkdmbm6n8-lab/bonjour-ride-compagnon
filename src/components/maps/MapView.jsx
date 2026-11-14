@@ -306,7 +306,7 @@ export default function MapView({
     const map = mapRef.current;
     if (!map || !followPosition) return;
     if (Date.now() - lastUserMoveRef.current < 8000) return;
-    map.easeTo({ center: [followPosition.lng, followPosition.lat], zoom: Math.max(map.getZoom(), 15.5), duration: 800 });
+    map.easeTo({ center: [followPosition.lng, followPosition.lat], zoom: Math.max(map.getZoom(), 15.5), padding: fitPadding(map), duration: 800 });
   }, [followPosition?.lat, followPosition?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Recenter when no fit target ──

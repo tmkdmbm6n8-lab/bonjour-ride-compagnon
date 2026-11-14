@@ -321,8 +321,9 @@ function DriverDashboard() {
                 <button className="btn btn-secondary btn-full" onClick={() => launchGps(legTarget)}>
                   <Navigation size={17} /> Lancer le GPS · {NAV_APPS[navApp]}
                 </button>
-                <div className="flex items-center justify-between mt-2 tiny">
-                  <span className="flex gap-1" role="radiogroup" aria-label="Application GPS">
+                <div className="flex items-center justify-between mt-2 tiny" style={{ gap: 8 }}>
+                  <span className="flex items-center gap-1" role="radiogroup" aria-label="Application GPS">
+                    <span className="muted">GPS :</span>
                     {Object.entries(NAV_APPS).map(([id, label]) => (
                       <button
                         key={id}
@@ -330,15 +331,19 @@ function DriverDashboard() {
                         role="radio"
                         aria-checked={navApp === id}
                         onClick={() => chooseNavApp(id)}
-                        className={`badge ${navApp === id ? 'badge-gold' : ''}`}
-                        style={{ cursor: 'pointer', border: navApp === id ? '1px solid var(--gold-600)' : '1px solid var(--border)' }}
+                        style={{
+                          cursor: 'pointer', whiteSpace: 'nowrap', padding: '3px 9px', borderRadius: 999, fontWeight: 600,
+                          background: navApp === id ? 'var(--gold-50)' : 'transparent',
+                          color: navApp === id ? 'var(--gold-700)' : 'var(--text-2)',
+                          border: `1px solid ${navApp === id ? 'var(--gold-600)' : 'var(--border)'}`,
+                        }}
                       >
                         {label}
                       </button>
                     ))}
                   </span>
-                  <label className="flex items-center gap-1 muted" style={{ cursor: 'pointer' }}>
-                    <input type="checkbox" checked={navAuto} onChange={toggleNavAuto} /> Ouvrir automatiquement
+                  <label className="flex items-center gap-1 muted" style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <input type="checkbox" checked={navAuto} onChange={toggleNavAuto} /> Auto
                   </label>
                 </div>
               </div>
