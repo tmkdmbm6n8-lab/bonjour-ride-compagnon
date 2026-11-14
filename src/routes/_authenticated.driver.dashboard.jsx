@@ -1,39 +1,48 @@
-import {createFileRoute} from '@tanstack/react-router';
-import DriverLayout from '@/components/DriverLayout';
-'use client';
+import { createFileRoute } from "@tanstack/react-router";
+import DriverLayout from "@/components/DriverLayout";
+("use client");
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from '@/lib/archive-navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "@/lib/archive-navigation";
 import {
-  Power, Navigation, MapPin, Circle, MessageCircle, X, Car,
-  TrendingUp, CheckCircle2, KeyRound, Flag,
-} from 'lucide-react';
-import MapView from '@/components/ArchiveMap';
-import ChatSheet from '@/components/ride/ChatSheet';
-import MessageAlert from '@/components/ride/MessageAlert';
-import DispatchWheel from '@/components/ride/DispatchWheel';
-import { pickupZoneProblem } from '@/lib/vtc-dispatch';
-import Modal from '@/components/ui/Modal';
-import { useToast } from '@/components/ui/Toast';
-import { money, VEHICLE_LABELS } from '@/components/ui/bits';
-import useDriverState from '@/hooks/useDriverState';
-import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from '@/lib/utils/geo';
-import { playSound, startRinging } from '@/lib/sounds';
-import { NAV_APPS, getNavApp, setNavApp, getNavAuto, setNavAuto, openNavigation } from '@/lib/navigation';
-import { useLiveRoute } from '@/hooks/useLiveRoute';
-import { routeQualityLabel } from '@/lib/vtc-routing';
-import { drawableRoute, arrivalClock } from '@/lib/utils/route-display';
+  Power,
+  Navigation,
+  MapPin,
+  Circle,
+  MessageCircle,
+  X,
+  Car,
+  TrendingUp,
+  CheckCircle2,
+  KeyRound,
+  Flag,
+} from "lucide-react";
+import MapView from "@/components/ArchiveMap";
+import ChatSheet from "@/components/ride/ChatSheet";
+import MessageAlert from "@/components/ride/MessageAlert";
+import DispatchWheel from "@/components/ride/DispatchWheel";
+import { pickupZoneProblem } from "@/lib/vtc-dispatch";
+import Modal from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
+import { money, VEHICLE_LABELS } from "@/components/ui/bits";
+import useDriverState from "@/hooks/useDriverState";
+import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from "@/lib/utils/geo";
+import { playSound, startRinging } from "@/lib/sounds";
+import { NAV_APPS, getNavApp, setNavApp, getNavAuto, setNavAuto, openNavigation } from "@/lib/navigation";
+import { useLiveRoute } from "@/hooks/useLiveRoute";
+import { routeQualityLabel } from "@/lib/vtc-routing";
+import { drawableRoute, arrivalClock } from "@/lib/utils/route-display";
 
 const PROFIT_BADGES = {
-  very_profitable: { label: 'Très rentable', className: 'badge-success' },
-  profitable: { label: 'Rentable', className: 'badge-info' },
-  not_profitable: { label: 'Non rentable', className: 'badge-danger' },
+  very_profitable: { label: "Très rentable", className: "badge-success" },
+  profitable: { label: "Rentable", className: "badge-info" },
+  not_profitable: { label: "Non rentable", className: "badge-danger" },
 };
 
 function DriverDashboard() {
   const toast = useToast();
   const [chatOpen, setChatOpen] = useState(false);
-  const [pinValue, setPinValue] = useState('');
+  const [pinValue, setPinValue] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [receipt, setReceipt] = useState(null);
@@ -43,57 +52,88 @@ function DriverDashboard() {
   const [lastMsg, setLastMsg] = useState(null);
   const [award, setAward] = useState(null); // null | 'spinning' | 'won' | 'lost'
   const chatOpenRef = useRef(false);
-  useEffect(() => { chatOpenRef.current = chatOpen; }, [chatOpen]);
+  useEffect(() => {
+    chatOpenRef.current = chatOpen;
+  }, [chatOpen]);
 
-  const onEvent = useCallback((type, data) => {
-    if (type === 'offer-expired') toast('Demande expirée', 'info', 2500);
-    if (type === 'offer-withdrawn') toast('La demande a été annulée', 'info', 2500);
-    if (type === 'rider-cancelled') {
-      toast(
-        data?.compensation
-          ? `Le passager a annulé — une indemnité de ${money(data.compensation)} a été ajoutée`
-          : 'Le passager a annulé la course',
-        'info',
-        5000
-      );
-    }
-    if (type === 'message' && data?.from === 'rider') {
-      playSound('message');
-      if (!chatOpenRef.current) {
-        setUnread((u) => u + 1);
-        setLastMsg(data);
-        if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+  const onEvent = useCallback(
+    (type, data) => {
+      if (type === "offer-expired") toast("Demande expirée", "info", 2500);
+      if (type === "offer-withdrawn") toast("La demande a été annulée", "info", 2500);
+      if (type === "rider-cancelled") {
+        toast(
+          data?.compensation
+            ? `Le passager a annulé — une indemnité de ${money(data.compensation)} a été ajoutée`
+            : "Le passager a annulé la course",
+          "info",
+          5000,
+        );
       }
-    }
-    if (type === 'rider-cancelled' || type === 'offer-withdrawn') playSound('cancelled');
-  }, [toast]);
+      if (type === "message" && data?.from === "rider") {
+        playSound("message");
+        if (!chatOpenRef.current) {
+          setUnread((u) => u + 1);
+          setLastMsg(data);
+          if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+        }
+      }
+      if (type === "rider-cancelled" || type === "offer-withdrawn") playSound("cancelled");
+    },
+    [toast],
+  );
 
   const {
-    loading, profile, online, position, offer, ride, busy, isConnected,
-    goOnline, goOffline, accept, decline, arrive, start, complete, cancelTrip,
+    loading,
+    profile,
+    online,
+    position,
+    offer,
+    ride,
+    busy,
+    isConnected,
+    goOnline,
+    goOffline,
+    accept,
+    decline,
+    arrive,
+    start,
+    complete,
+    cancelTrip,
   } = useDriverState({ onEvent });
 
   // Ring (Uber-style, repeated) while a ride request is on screen
   useEffect(() => {
     if (!offer?.rideId) return undefined;
-    return startRinging('offer');
+    return startRinging("offer");
   }, [offer?.rideId]);
 
   // GPS app preference (Google Maps / Waze) and auto-launch
-  const [navApp, setNavAppState] = useState('google');
+  const [navApp, setNavAppState] = useState("google");
   const [navAuto, setNavAutoState] = useState(true);
-  useEffect(() => { setNavAppState(getNavApp()); setNavAutoState(getNavAuto()); }, []);
-  const chooseNavApp = (app) => { setNavApp(app); setNavAppState(app); };
-  const toggleNavAuto = () => { setNavAuto(!navAuto); setNavAutoState(!navAuto); };
+  useEffect(() => {
+    setNavAppState(getNavApp());
+    setNavAutoState(getNavAuto());
+  }, []);
+  const chooseNavApp = (app) => {
+    setNavApp(app);
+    setNavAppState(app);
+  };
+  const toggleNavAuto = () => {
+    setNavAuto(!navAuto);
+    setNavAutoState(!navAuto);
+  };
   function launchGps(dest, auto = false) {
     if (auto && !navAuto) return;
     const opened = openNavigation(navApp, dest);
-    if (!opened && auto) toast('Touchez « Lancer le GPS » pour ouvrir la navigation', 'info', 5000);
+    if (!opened && auto) toast("Touchez « Lancer le GPS » pour ouvrir la navigation", "info", 5000);
   }
 
   // Offer countdown
   useEffect(() => {
-    if (!offer) { setCountdown(0); return undefined; }
+    if (!offer) {
+      setCountdown(0);
+      return undefined;
+    }
     const expires = offer.receivedAt + (offer.expiresInSeconds || 15) * 1000;
     const tick = () => setCountdown(Math.max(0, Math.ceil((expires - Date.now()) / 1000)));
     tick();
@@ -106,13 +146,13 @@ function DriverDashboard() {
       if (online) await goOffline();
       else {
         await goOnline();
-        toast('Vous êtes en ligne — vous recevrez des demandes', 'success');
+        toast("Vous êtes en ligne — vous recevrez des demandes", "success");
       }
     } catch (err) {
-      if (err.code === 'NO_VEHICLE') {
-        toast('Ajoutez d’abord les informations de votre véhicule', 'error', 5000);
+      if (err.code === "NO_VEHICLE") {
+        toast("Ajoutez d’abord les informations de votre véhicule", "error", 5000);
       } else {
-        toast(err.message, 'error', 5000);
+        toast(err.message, "error", 5000);
       }
     }
   }
@@ -121,19 +161,24 @@ function DriverDashboard() {
     if (actionBusy) return;
     setActionBusy(true);
     const pickupPoint = offer?.pickup ? { lat: offer.pickup.lat, lng: offer.pickup.lng } : null;
-    setAward('spinning');
+    setAward("spinning");
     const spin = new Promise((r) => setTimeout(r, 1500));
     try {
       await Promise.all([accept(), spin]);
       setUnread(0);
       setLastMsg(null);
-      setAward('won');
-      playSound('driver-found');
+      setAward("won");
+      playSound("driver-found");
       if (pickupPoint) launchGps(pickupPoint, true);
     } catch (err) {
       await spin;
-      if (/déjà acceptée|plus disponible/i.test(err.message || '')) { setAward('lost'); playSound('cancelled'); }
-      else { setAward(null); toast(err.message, 'error', 4000); }
+      if (/déjà acceptée|plus disponible/i.test(err.message || "")) {
+        setAward("lost");
+        playSound("cancelled");
+      } else {
+        setAward(null);
+        toast(err.message, "error", 4000);
+      }
     } finally {
       setActionBusy(false);
     }
@@ -144,9 +189,9 @@ function DriverDashboard() {
     setActionBusy(true);
     try {
       await fn();
-      if (success) toast(success, 'success');
+      if (success) toast(success, "success");
     } catch (err) {
-      toast(err.message, 'error', 4000);
+      toast(err.message, "error", 4000);
     } finally {
       setActionBusy(false);
     }
@@ -158,11 +203,11 @@ function DriverDashboard() {
     try {
       await start(pinValue);
       setPinOpen(false);
-      setPinValue('');
-      toast('Course démarrée', 'success');
+      setPinValue("");
+      toast("Course démarrée", "success");
       if (ride?.dropoff) launchGps({ lat: ride.dropoff.lat, lng: ride.dropoff.lng }, true);
     } catch (err) {
-      toast(err.message, 'error', 4000);
+      toast(err.message, "error", 4000);
     } finally {
       setActionBusy(false);
     }
@@ -175,7 +220,7 @@ function DriverDashboard() {
       const finished = await complete();
       setReceipt(finished);
     } catch (err) {
-      toast(err.message, 'error', 4000);
+      toast(err.message, "error", 4000);
     } finally {
       setActionBusy(false);
     }
@@ -185,8 +230,8 @@ function DriverDashboard() {
   // with a rough on-device estimate until the first answer arrives.
   const liveRoute = useLiveRoute(ride?.id, ride?.status);
   const liveLeg = useMemo(() => {
-    if (!ride || (ride.status !== 'accepted' && ride.status !== 'in_progress')) return null;
-    const label = ride.status === 'in_progress' ? 'jusqu’à destination' : 'jusqu’au point de prise en charge';
+    if (!ride || (ride.status !== "accepted" && ride.status !== "in_progress")) return null;
+    const label = ride.status === "in_progress" ? "jusqu’à destination" : "jusqu’au point de prise en charge";
     if (liveRoute) {
       return {
         meters: liveRoute.distanceMeters,
@@ -198,27 +243,66 @@ function DriverDashboard() {
       };
     }
     if (!position) return null;
-    const target = ride.status === 'in_progress' ? ride.dropoff : ride.pickup;
+    const target = ride.status === "in_progress" ? ride.dropoff : ride.pickup;
     const meters = roadDistanceMeters(position, { lat: target.lat, lng: target.lng });
-    return { meters, minutes: etaFor(meters), seconds: etaFor(meters) * 60, label, quality: 'Calcul de l’itinéraire…', approximate: true };
+    return {
+      meters,
+      minutes: etaFor(meters),
+      seconds: etaFor(meters) * 60,
+      label,
+      quality: "Calcul de l’itinéraire…",
+      approximate: true,
+    };
   }, [ride, position, liveRoute]);
 
   // Pickup zone: "arrived" and "start" stay disabled until the driver is close to the pickup point.
-  const zoneProblem = ride && !ride.isTest && ['accepted', 'arrived'].includes(ride.status)
-    ? pickupZoneProblem(position, ride.pickup)
-    : null;
+  const zoneProblem =
+    ride && !ride.isTest && ["accepted", "arrived"].includes(ride.status)
+      ? pickupZoneProblem(position, ride.pickup)
+      : null;
 
   // In-app navigation leg: driver → pickup, then driver → destination
   const legTarget = ride
-    ? ride.status === 'in_progress'
+    ? ride.status === "in_progress"
       ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng }
-      : ride.status === 'accepted'
+      : ride.status === "accepted"
         ? { lat: ride.pickup.lat, lng: ride.pickup.lng }
         : null
     : null;
   const navigating = Boolean(legTarget);
   const needsVehicle = profile && !profile.vehicle?.plate;
   const center = position || { lat: 40.7128, lng: -74.006 };
+
+  const [togglingPet, setTogglingPet] = useState(false);
+  const acceptsPet = (profile?.acceptsClasses || []).includes("pet");
+
+  async function handleTogglePet() {
+    setTogglingPet(true);
+    const current = profile?.acceptsClasses || [];
+    const next = acceptsPet ? current.filter((c) => c !== "pet") : [...current, "pet"];
+    try {
+      const res = await fetch("/api/drivers/me/classes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acceptsClasses: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) toast(data.error || "Erreur de mise à jour", "error");
+      else {
+        toast(
+          next.includes("pet")
+            ? "StrasDrive Pet activé : vous recevrez les courses avec animaux"
+            : "StrasDrive Pet désactivé",
+          "success",
+        );
+        window.location.reload();
+      }
+    } catch {
+      toast("Erreur de connexion", "error");
+    } finally {
+      setTogglingPet(false);
+    }
+  }
 
   return (
     <div className="ride-page">
@@ -228,8 +312,11 @@ function DriverDashboard() {
           zoom={14}
           userPosition={position || undefined}
           pickup={ride ? { lat: ride.pickup.lat, lng: ride.pickup.lng } : undefined}
-          dropoff={ride && ride.status === 'in_progress' ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng } : undefined}
-          routeGeometry={drawableRoute(liveRoute?.geometry) || (ride?.status === 'in_progress' ? drawableRoute(ride.route?.geometry) : undefined)}
+          dropoff={ride && ride.status === "in_progress" ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng } : undefined}
+          routeGeometry={
+            drawableRoute(liveRoute?.geometry) ||
+            (ride?.status === "in_progress" ? drawableRoute(ride.route?.geometry) : undefined)
+          }
           fit={Boolean(ride)}
           followPosition={navigating && position ? position : undefined}
         />
@@ -243,44 +330,46 @@ function DriverDashboard() {
               <div className="skeleton" style={{ height: 52 }} />
             ) : needsVehicle ? (
               <>
-                <h3 style={{ fontSize: '1.1rem' }}>Vous y êtes presque</h3>
-                <p className="small muted mt-1 mb-4"> Ajoutez les informations de votre véhicule pour commencer à accepter des courses. </p>
+                <h3 style={{ fontSize: "1.1rem" }}>Vous y êtes presque</h3>
+                <p className="small muted mt-1 mb-4">
+                  {" "}
+                  Ajoutez les informations de votre véhicule pour commencer à accepter des courses.{" "}
+                </p>
                 <Link href="/driver/profile" className="btn btn-primary btn-full">
-                  <Car size={17} /> Ajouter mon véhicule </Link>
+                  <Car size={17} /> Ajouter mon véhicule{" "}
+                </Link>
               </>
             ) : (
               <>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 style={{ fontSize: '1.1rem' }}>
-                      {online ? 'Vous êtes en ligne' : 'Vous êtes hors ligne'}
-                    </h3>
+                    <h3 style={{ fontSize: "1.1rem" }}>{online ? "Vous êtes en ligne" : "Vous êtes hors ligne"}</h3>
                     <p className="tiny muted mt-1">
                       {online
                         ? isConnected
-                          ? 'En attente de demandes de course…'
-                          : 'Reconnexion…'
-                        : 'Passez en ligne pour recevoir des demandes'}
+                          ? "En attente de demandes de course…"
+                          : "Reconnexion…"
+                        : "Passez en ligne pour recevoir des demandes"}
                     </p>
                   </div>
                   <button
                     onClick={handleToggle}
                     disabled={busy}
                     aria-pressed={online}
-                    aria-label={online ? 'Passer hors ligne' : 'Passer en ligne'}
+                    aria-label={online ? "Passer hors ligne" : "Passer en ligne"}
                     className="btn-icon"
                     style={{
                       width: 60,
                       height: 60,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: online ? 'var(--success)' : 'var(--ink-100)',
-                      color: online ? '#fff' : 'var(--ink-500)',
-                      boxShadow: online ? '0 4px 16px rgba(5,150,105,.35)' : 'none',
-                      transition: 'background 250ms, box-shadow 250ms',
-                      cursor: 'pointer',
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: online ? "var(--success)" : "var(--ink-100)",
+                      color: online ? "#fff" : "var(--ink-500)",
+                      boxShadow: online ? "0 4px 16px rgba(5,150,105,.35)" : "none",
+                      transition: "background 250ms, box-shadow 250ms",
+                      cursor: "pointer",
                     }}
                   >
                     {busy ? <span className="spinner" /> : <Power size={24} />}
@@ -288,7 +377,9 @@ function DriverDashboard() {
                 </div>
                 {online && (
                   <div className="flex items-center gap-2 mt-4 tiny muted">
-                    <span className="badge badge-success badge-dot">En direct</span> Votre position se met à jour automatiquement lorsque vous êtes en ligne </div>
+                    <span className="badge badge-success badge-dot">En direct</span> Votre position se met à jour
+                    automatiquement lorsque vous êtes en ligne{" "}
+                  </div>
                 )}
               </>
             )}
@@ -299,20 +390,20 @@ function DriverDashboard() {
         {ride && (
           <div className="card card-pad animate-in">
             <div className="flex items-center justify-between mb-3">
-              <span className={`badge badge-dot ${ride.status === 'in_progress' ? 'badge-info' : 'badge-gold'}`}>
-                {ride.status === 'accepted' && 'Rejoignez le point de prise en charge'}
-                {ride.status === 'arrived' && 'En attente du passager'}
-                {ride.status === 'in_progress' && 'Course en cours'}
+              <span className={`badge badge-dot ${ride.status === "in_progress" ? "badge-info" : "badge-gold"}`}>
+                {ride.status === "accepted" && "Rejoignez le point de prise en charge"}
+                {ride.status === "arrived" && "En attente du passager"}
+                {ride.status === "in_progress" && "Course en cours"}
               </span>
               {ride.isTest && <span className="badge badge-warning">Test · PIN {ride.pin}</span>}
               <span className="small mono-nums" style={{ fontWeight: 700 }}>
                 {money(ride.fare?.driverEarnings)}
               </span>
             </div>
-            {ride.payment?.method === 'cash' && (
+            {ride.payment?.method === "cash" && (
               <div
                 className="flex items-center justify-between mb-3 small"
-                style={{ background: 'var(--ink-50)', borderRadius: 12, padding: '10px 14px', fontWeight: 700 }}
+                style={{ background: "var(--ink-50)", borderRadius: 12, padding: "10px 14px", fontWeight: 700 }}
               >
                 <span>Paiement en espèces</span>
                 <span className="mono-nums">À encaisser : {money(ride.fare?.total)}</span>
@@ -322,21 +413,27 @@ function DriverDashboard() {
             {liveLeg && (
               <div
                 className="flex items-center justify-between mb-3"
-                style={{ background: 'var(--ink-50)', borderRadius: 12, padding: '10px 14px' }}
+                style={{ background: "var(--ink-50)", borderRadius: 12, padding: "10px 14px" }}
               >
                 <span style={{ minWidth: 0 }}>
-                  <span className="small" style={{ fontWeight: 700, display: 'block' }}>
+                  <span className="small" style={{ fontWeight: 700, display: "block" }}>
                     {formatDistance(liveLeg.meters)} {liveLeg.label}
                   </span>
-                  <span className="tiny" style={{ display: 'block', color: liveLeg.approximate ? 'var(--warning)' : 'var(--text-2)' }}>
+                  <span
+                    className="tiny"
+                    style={{ display: "block", color: liveLeg.approximate ? "var(--warning)" : "var(--text-2)" }}
+                  >
                     {liveLeg.quality}
                   </span>
                 </span>
-                <span className="mono-nums" style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <span className="small" style={{ fontWeight: 700, color: 'var(--gold-700)', display: 'block' }}>
-                    {liveLeg.approximate ? '~' : ''}{liveLeg.minutes} min
+                <span className="mono-nums" style={{ textAlign: "right", flexShrink: 0 }}>
+                  <span className="small" style={{ fontWeight: 700, color: "var(--gold-700)", display: "block" }}>
+                    {liveLeg.approximate ? "~" : ""}
+                    {liveLeg.minutes} min
                   </span>
-                  <span className="tiny muted" style={{ display: 'block' }}>Arrivée {arrivalClock(liveLeg.seconds)}</span>
+                  <span className="tiny muted" style={{ display: "block" }}>
+                    Arrivée {arrivalClock(liveLeg.seconds)}
+                  </span>
                 </span>
               </div>
             )}
@@ -357,17 +454,21 @@ function DriverDashboard() {
                         aria-checked={navApp === id}
                         onClick={() => chooseNavApp(id)}
                         style={{
-                          cursor: 'pointer', whiteSpace: 'nowrap', padding: '3px 9px', borderRadius: 999, fontWeight: 600,
-                          background: navApp === id ? 'var(--gold-50)' : 'transparent',
-                          color: navApp === id ? 'var(--gold-700)' : 'var(--text-2)',
-                          border: `1px solid ${navApp === id ? 'var(--gold-600)' : 'var(--border)'}`,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          padding: "3px 9px",
+                          borderRadius: 999,
+                          fontWeight: 600,
+                          background: navApp === id ? "var(--gold-50)" : "transparent",
+                          color: navApp === id ? "var(--gold-700)" : "var(--text-2)",
+                          border: `1px solid ${navApp === id ? "var(--gold-600)" : "var(--border)"}`,
                         }}
                       >
                         {label}
                       </button>
                     ))}
                   </span>
-                  <label className="flex items-center gap-1 muted" style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <label className="flex items-center gap-1 muted" style={{ cursor: "pointer", whiteSpace: "nowrap" }}>
                     <input type="checkbox" checked={navAuto} onChange={toggleNavAuto} /> Auto
                   </label>
                 </div>
@@ -376,48 +477,81 @@ function DriverDashboard() {
 
             <div className="flex-col gap-2 small mb-4">
               <div className="flex gap-2">
-                <Circle size={14} style={{ marginTop: 4, color: 'var(--ink-950)', flexShrink: 0 }} />
+                <Circle size={14} style={{ marginTop: 4, color: "var(--ink-950)", flexShrink: 0 }} />
                 <span className="muted">{ride.pickup.address}</span>
               </div>
               <div className="flex gap-2">
-                <MapPin size={14} style={{ marginTop: 4, color: 'var(--gold-600)', flexShrink: 0 }} />
+                <MapPin size={14} style={{ marginTop: 4, color: "var(--gold-600)", flexShrink: 0 }} />
                 <span className="muted">{ride.dropoff.address}</span>
               </div>
               <div className="flex items-center justify-between mt-1">
                 <span className="muted">Course</span>
                 <span className="mono-nums">
-                  {formatDistance(ride.route?.distanceMeters || 0)} · {ride.route?.approximate ? '~' : ''}
+                  {formatDistance(ride.route?.distanceMeters || 0)} · {ride.route?.approximate ? "~" : ""}
                   {formatDuration(ride.route?.durationSeconds || 0)} de trajet
                 </span>
               </div>
             </div>
 
             {zoneProblem && (
-              <p className="small text-center mb-2" style={{ color: 'var(--warning)', fontWeight: 600 }}>{zoneProblem}</p>
+              <p className="small text-center mb-2" style={{ color: "var(--warning)", fontWeight: 600 }}>
+                {zoneProblem}
+              </p>
             )}
-            {ride.status === 'accepted' && (
-              <button className="btn btn-primary btn-lg btn-full" onClick={() => run(arrive, 'Le passager a été informé de votre arrivée')} disabled={actionBusy || Boolean(zoneProblem)}>
-                {actionBusy ? <span className="spinner" /> : <><Flag size={18} /> Je suis arrivé</>}
+            {ride.status === "accepted" && (
+              <button
+                className="btn btn-primary btn-lg btn-full"
+                onClick={() => run(arrive, "Le passager a été informé de votre arrivée")}
+                disabled={actionBusy || Boolean(zoneProblem)}
+              >
+                {actionBusy ? (
+                  <span className="spinner" />
+                ) : (
+                  <>
+                    <Flag size={18} /> Je suis arrivé
+                  </>
+                )}
               </button>
             )}
-            {ride.status === 'arrived' && (
-              <button className="btn btn-primary btn-lg btn-full" onClick={() => setPinOpen(true)} disabled={actionBusy || Boolean(zoneProblem)}>
-                <KeyRound size={18} /> Saisir le code PIN pour démarrer </button>
+            {ride.status === "arrived" && (
+              <button
+                className="btn btn-primary btn-lg btn-full"
+                onClick={() => setPinOpen(true)}
+                disabled={actionBusy || Boolean(zoneProblem)}
+              >
+                <KeyRound size={18} /> Saisir le code PIN pour démarrer{" "}
+              </button>
             )}
-            {ride.status === 'in_progress' && (
+            {ride.status === "in_progress" && (
               <button className="btn btn-success btn-lg btn-full" onClick={handleComplete} disabled={actionBusy}>
-                {actionBusy ? <span className="spinner" /> : <><CheckCircle2 size={18} /> Terminer la course</>}
+                {actionBusy ? (
+                  <span className="spinner" />
+                ) : (
+                  <>
+                    <CheckCircle2 size={18} /> Terminer la course
+                  </>
+                )}
               </button>
             )}
 
             <div className="flex gap-2 mt-3">
-              <button className={`btn flex-1 ${unread > 0 ? 'chat-btn-unread' : 'btn-secondary'}`} onClick={() => { setChatOpen(true); setUnread(0); setLastMsg(null); }} style={{ position: 'relative' }}>
-                <MessageCircle size={16} /> {unread > 0 ? (unread > 1 ? `${unread} nouveaux messages` : 'Nouveau message') : 'Discussion'}
+              <button
+                className={`btn flex-1 ${unread > 0 ? "chat-btn-unread" : "btn-secondary"}`}
+                onClick={() => {
+                  setChatOpen(true);
+                  setUnread(0);
+                  setLastMsg(null);
+                }}
+                style={{ position: "relative" }}
+              >
+                <MessageCircle size={16} />{" "}
+                {unread > 0 ? (unread > 1 ? `${unread} nouveaux messages` : "Nouveau message") : "Discussion"}
                 {unread > 0 && <span className="chat-unread-badge mono-nums">{unread}</span>}
               </button>
-              {ride.status !== 'in_progress' && (
+              {ride.status !== "in_progress" && (
                 <button className="btn btn-danger flex-1" onClick={() => setCancelOpen(true)}>
-                  <X size={16} /> Annuler </button>
+                  <X size={16} /> Annuler{" "}
+                </button>
               )}
             </div>
           </div>
@@ -433,16 +567,23 @@ function DriverDashboard() {
             <div
               className="mono-nums"
               style={{
-                width: 64, height: 64, margin: '0 auto 12px', borderRadius: '50%',
-                border: '3px solid var(--gold-600)', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800,
-                color: countdown <= 5 ? 'var(--danger)' : 'var(--text)',
+                width: 64,
+                height: 64,
+                margin: "0 auto 12px",
+                borderRadius: "50%",
+                border: "3px solid var(--gold-600)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.5rem",
+                fontWeight: 800,
+                color: countdown <= 5 ? "var(--danger)" : "var(--text)",
               }}
               aria-live="polite"
             >
               {countdown}
             </div>
-            <h3 style={{ fontSize: '1.2rem' }}>Nouvelle demande de course</h3>
+            <h3 style={{ fontSize: "1.2rem" }}>Nouvelle demande de course</h3>
             {offer.isTest && (
               <div className="mt-2">
                 <span className="badge badge-warning">Demande test · aucun paiement · code PIN {offer.testPin}</span>
@@ -450,11 +591,15 @@ function DriverDashboard() {
             )}
             {offer.rideClass && (
               <div className="mt-2">
-                <span className={`badge ${offer.lowerClass ? 'badge-warning' : 'badge-neutral'}`}>
-                  Course {VEHICLE_LABELS[offer.rideClass]}{offer.lowerClass ? ` · tarif ${VEHICLE_LABELS[offer.rideClass]}` : ''}
+                <span className={`badge ${offer.lowerClass ? "badge-warning" : "badge-neutral"}`}>
+                  Course {VEHICLE_LABELS[offer.rideClass]}
+                  {offer.lowerClass ? ` · tarif ${VEHICLE_LABELS[offer.rideClass]}` : ""}
                 </span>
                 {offer.lowerClass && (
-                  <p className="tiny muted mt-1">Gamme inférieure à la vôtre : si vous acceptez, vous êtes payé au tarif {VEHICLE_LABELS[offer.rideClass]}.</p>
+                  <p className="tiny muted mt-1">
+                    Gamme inférieure à la vôtre : si vous acceptez, vous êtes payé au tarif{" "}
+                    {VEHICLE_LABELS[offer.rideClass]}.
+                  </p>
                 )}
               </div>
             )}
@@ -466,32 +611,37 @@ function DriverDashboard() {
               </div>
             )}
             <p className="small muted mt-1 mb-4">
-              {offer.rider?.name || 'Un passager'} · {formatDistance(offer.distanceToPickupMeters)} de distance · ~{offer.etaMinutes} min jusqu’à la prise en charge
+              {offer.rider?.name || "Un passager"} · {formatDistance(offer.distanceToPickupMeters)} de distance · ~
+              {offer.etaMinutes} min jusqu’à la prise en charge
             </p>
 
-            <div className="card card-pad text-left mb-4" style={{ background: 'var(--ink-50)', border: 'none' }}>
+            <div className="card card-pad text-left mb-4" style={{ background: "var(--ink-50)", border: "none" }}>
               <div className="flex gap-2 small mb-2">
                 <Circle size={13} style={{ marginTop: 4, flexShrink: 0 }} />
                 <span className="truncate">{offer.pickup.address}</span>
               </div>
               <div className="flex gap-2 small">
-                <MapPin size={13} style={{ marginTop: 4, color: 'var(--gold-600)', flexShrink: 0 }} />
+                <MapPin size={13} style={{ marginTop: 4, color: "var(--gold-600)", flexShrink: 0 }} />
                 <span className="truncate">{offer.dropoff.address}</span>
               </div>
-              <div className="flex items-center justify-between mt-3" style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+              <div
+                className="flex items-center justify-between mt-3"
+                style={{ borderTop: "1px solid var(--border)", paddingTop: 10 }}
+              >
                 <span className="tiny muted">
-                  {formatDistance(offer.distanceMeters)} · {formatDuration(offer.durationSeconds)} de trajet{offer.routeQuality ? ` · ${offer.routeQuality}` : ''}
+                  {formatDistance(offer.distanceMeters)} · {formatDuration(offer.durationSeconds)} de trajet
+                  {offer.routeQuality ? ` · ${offer.routeQuality}` : ""}
                   {offer.surgeMultiplier > 1 && (
                     <span className="badge badge-warning" style={{ marginLeft: 8 }}>
                       <TrendingUp size={11} /> {offer.surgeMultiplier}×
                     </span>
                   )}
                 </span>
-                <span style={{ fontWeight: 800, fontSize: '1.15rem' }} className="mono-nums">
+                <span style={{ fontWeight: 800, fontSize: "1.15rem" }} className="mono-nums">
                   {money(offer.profitability?.expectedEarnings ?? offer.earnings)}
                 </span>
               </div>
-              {offer.paymentMethod === 'cash' && (
+              {offer.paymentMethod === "cash" && (
                 <div className="flex items-center justify-between mt-2 tiny" style={{ fontWeight: 700 }}>
                   <span className="badge badge-warning">Paiement en espèces</span>
                   <span className="mono-nums">À encaisser : {money(offer.total)}</span>
@@ -500,9 +650,16 @@ function DriverDashboard() {
             </div>
 
             <div className="flex gap-3">
-              <button className="btn btn-secondary flex-1" onClick={decline} disabled={actionBusy}> Refuser </button>
-              <button className="btn btn-success btn-lg flex-1" onClick={handleAccept} disabled={actionBusy || countdown === 0}>
-                {actionBusy ? <span className="spinner" /> : 'Accepter'}
+              <button className="btn btn-secondary flex-1" onClick={decline} disabled={actionBusy}>
+                {" "}
+                Refuser{" "}
+              </button>
+              <button
+                className="btn btn-success btn-lg flex-1"
+                onClick={handleAccept}
+                disabled={actionBusy || countdown === 0}
+              >
+                {actionBusy ? <span className="spinner" /> : "Accepter"}
               </button>
             </div>
           </div>
@@ -514,9 +671,9 @@ function DriverDashboard() {
         <p className="small muted mb-4">Demandez au passager son code PIN à 4 chiffres pour démarrer la course.</p>
         <input
           className="input text-center mono-nums"
-          style={{ fontSize: '2.2rem', letterSpacing: '0.5em', fontWeight: 800, minHeight: 64, color: 'var(--text)' }}
+          style={{ fontSize: "2.2rem", letterSpacing: "0.5em", fontWeight: 800, minHeight: 64, color: "var(--text)" }}
           value={pinValue}
-          onChange={(e) => setPinValue(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          onChange={(e) => setPinValue(e.target.value.replace(/\D/g, "").slice(0, 4))}
           inputMode="numeric"
           maxLength={4}
           placeholder="0000"
@@ -528,18 +685,40 @@ function DriverDashboard() {
           onClick={handleStart}
           disabled={pinValue.length !== 4 || actionBusy}
         >
-          {actionBusy ? <span className="spinner" /> : <><Navigation size={17} /> Démarrer la course</>}
+          {actionBusy ? (
+            <span className="spinner" />
+          ) : (
+            <>
+              <Navigation size={17} /> Démarrer la course
+            </>
+          )}
         </button>
       </Modal>
 
       {/* ── Cancel trip ── */}
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Annuler cette course ?">
-        <p className="small muted mb-4"> Un autre chauffeur sera attribué au passager. Des annulations fréquentes réduisent votre priorité d’attribution. </p>
+        <p className="small muted mb-4">
+          {" "}
+          Un autre chauffeur sera attribué au passager. Des annulations fréquentes réduisent votre priorité
+          d’attribution.{" "}
+        </p>
         <div className="flex-col gap-2">
-          <button className="btn btn-danger btn-full" disabled={actionBusy} onClick={() => run(async () => { await cancelTrip('Le chauffeur a annulé'); setCancelOpen(false); }, 'Course annulée')}>
-            {actionBusy ? <span className="spinner" /> : 'Oui, annuler la course'}
+          <button
+            className="btn btn-danger btn-full"
+            disabled={actionBusy}
+            onClick={() =>
+              run(async () => {
+                await cancelTrip("Le chauffeur a annulé");
+                setCancelOpen(false);
+              }, "Course annulée")
+            }
+          >
+            {actionBusy ? <span className="spinner" /> : "Oui, annuler la course"}
           </button>
-          <button className="btn btn-ghost btn-full" onClick={() => setCancelOpen(false)}> Conserver la course </button>
+          <button className="btn btn-ghost btn-full" onClick={() => setCancelOpen(false)}>
+            {" "}
+            Conserver la course{" "}
+          </button>
         </div>
       </Modal>
 
@@ -547,11 +726,20 @@ function DriverDashboard() {
       <Modal open={Boolean(receipt)} onClose={() => setReceipt(null)} title="Course terminée 🎉">
         {receipt && (
           <div className="text-center">
-            <div style={{ fontSize: '2.4rem', fontWeight: 800 }} className="mono-nums">
+            <div style={{ fontSize: "2.4rem", fontWeight: 800 }} className="mono-nums">
               {money(receipt.fare?.driverEarnings)}
             </div>
-            <p className="small muted mt-1 mb-4">{receipt.isTest ? 'Course test : rien n’a été versé sur votre portefeuille' : receipt.payment?.method === 'cash' ? `gagnés sur cette course · encaissez ${money(receipt.fare?.total)} en espèces, la commission est déduite de votre portefeuille` : 'gagnés sur cette course · versés sur votre portefeuille'}</p>
-            <button className="btn btn-primary btn-full" onClick={() => setReceipt(null)}> Reprendre la conduite </button>
+            <p className="small muted mt-1 mb-4">
+              {receipt.isTest
+                ? "Course test : rien n’a été versé sur votre portefeuille"
+                : receipt.payment?.method === "cash"
+                  ? `gagnés sur cette course · encaissez ${money(receipt.fare?.total)} en espèces, la commission est déduite de votre portefeuille`
+                  : "gagnés sur cette course · versés sur votre portefeuille"}
+            </p>
+            <button className="btn btn-primary btn-full" onClick={() => setReceipt(null)}>
+              {" "}
+              Reprendre la conduite{" "}
+            </button>
           </div>
         )}
       </Modal>
@@ -561,7 +749,11 @@ function DriverDashboard() {
           message={lastMsg}
           count={unread}
           fromLabel="Passager"
-          onOpen={() => { setChatOpen(true); setUnread(0); setLastMsg(null); }}
+          onOpen={() => {
+            setChatOpen(true);
+            setUnread(0);
+            setLastMsg(null);
+          }}
           onDismiss={() => setLastMsg(null)}
         />
       )}
@@ -581,4 +773,23 @@ function DriverDashboard() {
   );
 }
 
-export const Route=createFileRoute('/_authenticated/driver/dashboard')({head:()=>({meta:[{title:"Conduire · StrasDrive"},{name:'description',content:"StrasDrive — conduire, service de mise en relation VTC et tarifs en euros."},{property:'og:title',content:"Conduire · StrasDrive"},{property:'og:description',content:"StrasDrive — conduire, service de mise en relation VTC et tarifs en euros."},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:() => <DriverLayout><DriverDashboard/></DriverLayout>});
+export const Route = createFileRoute("/_authenticated/driver/dashboard")({
+  head: () => ({
+    meta: [
+      { title: "Conduire · StrasDrive" },
+      { name: "description", content: "StrasDrive — conduire, service de mise en relation VTC et tarifs en euros." },
+      { property: "og:title", content: "Conduire · StrasDrive" },
+      {
+        property: "og:description",
+        content: "StrasDrive — conduire, service de mise en relation VTC et tarifs en euros.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: () => (
+    <DriverLayout>
+      <DriverDashboard />
+    </DriverLayout>
+  ),
+});
