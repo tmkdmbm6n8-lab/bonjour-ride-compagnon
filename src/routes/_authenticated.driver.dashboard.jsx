@@ -16,6 +16,12 @@ import { money } from '@/components/ui/bits';
 import useDriverState from '@/hooks/useDriverState';
 import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from '@/lib/utils/geo';
 
+const PROFIT_BADGES = {
+  very_profitable: { label: 'Très rentable', className: 'badge-success' },
+  profitable: { label: 'Rentable', className: 'badge-info' },
+  not_profitable: { label: 'Non rentable', className: 'badge-danger' },
+};
+
 function DriverDashboard() {
   const toast = useToast();
   const [chatOpen, setChatOpen] = useState(false);
