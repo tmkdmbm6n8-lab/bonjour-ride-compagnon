@@ -303,7 +303,7 @@ function DriverDashboard() {
                   <span className="small" style={{ fontWeight: 700, display: 'block' }}>
                     {formatDistance(liveLeg.meters)} {liveLeg.label}
                   </span>
-                  <span className="tiny" style={{ display: 'block', color: liveLeg.approximate ? 'var(--warning, var(--gold-700))' : 'var(--text-2)' }}>
+                  <span className="tiny" style={{ display: 'block', color: liveLeg.approximate ? 'var(--warning)' : 'var(--text-2)' }}>
                     {liveLeg.quality}
                   </span>
                 </span>
