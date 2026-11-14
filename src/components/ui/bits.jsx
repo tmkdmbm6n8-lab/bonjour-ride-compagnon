@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Star } from 'lucide-react';
+import { useState } from "react";
+import { Star } from "lucide-react";
 
 /** Initials avatar with optional image. */
-export function Avatar({ name = '', src = '', size = 'md' }) {
-  const cls = size === 'lg' ? 'avatar avatar-lg' : size === 'sm' ? 'avatar avatar-sm' : 'avatar';
+export function Avatar({ name = "", src = "", size = "md" }) {
+  const cls = size === "lg" ? "avatar avatar-lg" : size === "sm" ? "avatar avatar-sm" : "avatar";
   const initials = name
-    .split(' ')
+    .split(" ")
     .map((w) => w[0])
     .filter(Boolean)
     .slice(0, 2)
-    .join('')
+    .join("")
     .toUpperCase();
 
   return (
     <span className={cls} aria-hidden="true">
-      {src ? <img src={src} alt="" /> : initials || '•'}
+      {src ? <img src={src} alt="" /> : initials || "•"}
     </span>
   );
 }
@@ -24,9 +24,9 @@ export function Avatar({ name = '', src = '', size = 'md' }) {
 /** Read-only star display, e.g. ratings on cards. */
 export function Stars({ value = 5, size = 14 }) {
   return (
-    <span className="flex items-center gap-1" style={{ color: 'var(--gold-600)' }}>
+    <span className="flex items-center gap-1" style={{ color: "var(--gold-600)" }}>
       <Star size={size} fill="currentColor" strokeWidth={0} />
-      <span className="small mono-nums" style={{ color: 'var(--text)', fontWeight: 600 }}>
+      <span className="small mono-nums" style={{ color: "var(--text)", fontWeight: 600 }}>
         {Number(value).toFixed(1)}
       </span>
     </span>
@@ -46,18 +46,18 @@ export function StarPicker({ value, onChange, size = 32 }) {
             type="button"
             role="radio"
             aria-checked={value === n}
-            aria-label={`${n} étoile${n > 1 ? 's' : ''}`}
+            aria-label={`${n} étoile${n > 1 ? "s" : ""}`}
             onMouseEnter={() => setHover(n)}
             onMouseLeave={() => setHover(0)}
             onClick={() => onChange(n)}
             style={{
-              color: active ? 'var(--gold-500)' : 'var(--ink-300)',
-              transition: 'color 120ms, transform 120ms',
-              transform: hover === n ? 'scale(1.15)' : 'scale(1)',
+              color: active ? "var(--gold-500)" : "var(--ink-300)",
+              transition: "color 120ms, transform 120ms",
+              transform: hover === n ? "scale(1.15)" : "scale(1)",
               padding: 2,
             }}
           >
-            <Star size={size} fill={active ? 'currentColor' : 'none'} />
+            <Star size={size} fill={active ? "currentColor" : "none"} />
           </button>
         );
       })}
@@ -66,10 +66,10 @@ export function StarPicker({ value, onChange, size = 32 }) {
 }
 
 /** Centered loading block. */
-export function Loading({ label = 'Chargement…' }) {
+export function Loading({ label = "Chargement…" }) {
   return (
     <div className="empty" style={{ padding: 32 }}>
-      <span className="spinner" style={{ color: 'var(--ink-500)' }} />
+      <span className="spinner" style={{ color: "var(--ink-500)" }} />
       <p className="small">{label}</p>
     </div>
   );
@@ -88,28 +88,26 @@ export function Empty({ icon: Icon, title, hint, action }) {
 }
 
 const STATUS_BADGE = {
-  searching: ['badge-info', 'Recherche d’un chauffeur'],
-  accepted: ['badge-gold', 'Chauffeur en route'],
-  arrived: ['badge-gold', 'Chauffeur arrivé'],
-  in_progress: ['badge-info', 'En cours'],
-  completed: ['badge-success', 'Terminée'],
-  cancelled: ['badge-danger', 'Annulée'],
-  no_drivers: ['badge-warning', 'Aucun chauffeur'],
+  searching: ["badge-info", "Recherche d’un chauffeur"],
+  accepted: ["badge-gold", "Chauffeur en route"],
+  arrived: ["badge-gold", "Chauffeur arrivé"],
+  in_progress: ["badge-info", "En cours"],
+  completed: ["badge-success", "Terminée"],
+  cancelled: ["badge-danger", "Annulée"],
+  no_drivers: ["badge-warning", "Aucun chauffeur"],
 };
 
 /** Consistent ride status chip. */
 export function RideStatusBadge({ status }) {
-  const [cls, label] = STATUS_BADGE[status] || ['badge-neutral', status];
+  const [cls, label] = STATUS_BADGE[status] || ["badge-neutral", status];
   return <span className={`badge badge-dot ${cls}`}>{label}</span>;
 }
-
 export const VEHICLE_LABELS = {
-  economy: 'StrasDrive Go',
-  comfort: 'StrasDrive Comfort',
-  premium: 'StrasDrive Lux',
-  xl: 'StrasDrive XL',
+  economy: "StrasDrive Go",
+  comfort: "StrasDrive Comfort",
+  pet: "StrasDrive Pet",
+  xl: "StrasDrive XL",
 };
-
-export function money(n, currency = 'EUR') {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(n ?? 0);
+export function money(n, currency = "EUR") {
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(n ?? 0);
 }
