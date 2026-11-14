@@ -36,6 +36,13 @@
       "when": 1794618822599,
       "tag": "0004_driver_vehicle_classes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794619780308,
+      "tag": "0005_admin_test_ride",
+      "breakpoints": true
     }
   ]
 }

@@ -251,6 +251,7 @@ export type Database = {
           dropoff: Json
           fare: Json
           id: string
+          is_test: boolean
           messages: Json
           offer_driver_id: string | null
           offer_expires_at: string | null
@@ -275,6 +276,7 @@ export type Database = {
           dropoff: Json
           fare: Json
           id?: string
+          is_test?: boolean
           messages?: Json
           offer_driver_id?: string | null
           offer_expires_at?: string | null
@@ -299,6 +301,7 @@ export type Database = {
           dropoff?: Json
           fare?: Json
           id?: string
+          is_test?: boolean
           messages?: Json
           offer_driver_id?: string | null
           offer_expires_at?: string | null
