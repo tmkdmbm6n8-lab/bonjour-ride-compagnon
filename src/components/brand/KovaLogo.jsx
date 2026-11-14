@@ -1,5 +1,5 @@
 /**
- * StrasDrive — brand mark (SD monogram with gold route dot)
+ * StrasDrive — brand mark (S as a road with a small gold car driving on it)
  */
 
 export function KovaIcon({ size = 32, className = '' }) {
@@ -14,22 +14,30 @@ export function KovaIcon({ size = 32, className = '' }) {
       aria-hidden="true"
     >
       <rect width="48" height="48" rx="14" fill="#0C0A09" />
-      {/* S + D — same rounded ink strokes, with the gold route dot */}
+      {/* The S is the road: a wide rounded stroke with a dashed center line */}
       <path
-        d="M20.5 17.2C19.4 15.7 17.7 15 15.6 15C12.6 15 10.6 16.7 10.6 19.3C10.6 21.9 12.8 23 15.6 23.9C18.6 24.9 21 26.1 21 29C21 31.8 18.8 33.6 15.6 33.6C13.2 33.6 11.2 32.7 10 31"
+        d="M16 37C27 37 36 32 34.5 25.5C33 19 15 20 13.5 13.5C12 7 21 5.5 32 6.5"
         stroke="#FAFAF9"
-        strokeWidth="4"
+        strokeWidth="9"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M26 15V33.6H29.2C33.9 33.6 37 29.9 37 24.3C37 18.7 33.9 15 29.2 15H26Z"
-        stroke="#FAFAF9"
-        strokeWidth="4"
+        d="M16 37C27 37 36 32 34.5 25.5C33 19 15 20 13.5 13.5C12 7 21 5.5 32 6.5"
+        stroke="#0C0A09"
+        strokeWidth="1.6"
         strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeDasharray="3.2 3.2"
       />
-      <circle cx="38.5" cy="11.5" r="4" fill="#CA8A04" />
+      {/* Small gold car driving on the road, at the middle straight */}
+      <g>
+        <path
+          d="M18.5 24.2C18.5 23.3 19.2 22.7 20.1 22.6L21.6 20.9C21.9 20.5 22.4 20.3 22.9 20.3H26.1C26.6 20.3 27.1 20.5 27.4 20.9L28.9 22.6C29.8 22.7 30.5 23.3 30.5 24.2V26H18.5V24.2Z"
+          fill="#CA8A04"
+        />
+        <circle cx="21.4" cy="26.4" r="1.5" fill="#0C0A09" />
+        <circle cx="27.6" cy="26.4" r="1.5" fill="#0C0A09" />
+      </g>
     </svg>
   );
 }
