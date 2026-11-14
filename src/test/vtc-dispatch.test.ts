@@ -101,7 +101,7 @@ describe('fair share (+30 %)', () => {
   it('throttles a driver earning more than 30 % above the others', () => {
     const pool = [drv('rich', 100), drv('a', 40), drv('b', 50)];
     expect(isThrottled(pool[0], pool)).toBe(true);
-    expect(availableFor(ride, pool).map((d) => d.user_id)).toEqual(['a', 'b']);
+    expect(availableFor(ride, pool).map((d: any) => d.user_id)).toEqual(['a', 'b']);
   });
   it('does not throttle at exactly 30 % above', () => {
     const pool = [drv('x', 65), drv('a', 50)];
@@ -113,6 +113,6 @@ describe('fair share (+30 %)', () => {
   });
   it('still offers the ride when the throttled driver is the only one', () => {
     const pool = [drv('rich', 100)];
-    expect(availableFor(ride, pool).map((d) => d.user_id)).toEqual(['rich']);
+    expect(availableFor(ride, pool).map((d: any) => d.user_id)).toEqual(['rich']);
   });
 });
