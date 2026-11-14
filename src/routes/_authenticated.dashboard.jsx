@@ -20,6 +20,9 @@ import { bookingPaymentProblem, paymentMethodLabel } from '@/lib/vtc-pricing';
 import { playSound } from '@/lib/sounds';
 import useVisualViewport from '@/hooks/useVisualViewport';
 import useGeolocation from '@/hooks/useGeolocation';
+import { useLiveRoute } from '@/hooks/useLiveRoute';
+import { routeQualityLabel } from '@/lib/vtc-routing';
+import { drawableRoute, arrivalClock } from '@/lib/utils/route-display';
 import { formatDistance, formatDuration, roadDistanceMeters, haversineDistance, etaMinutes as etaFor } from '@/lib/utils/geo';
 
 const VEHICLE_META = {
@@ -229,21 +232,27 @@ function RiderDashboard() {
     }
   }
 
-  // Live distance + ETA, recomputed from the driver's streamed GPS position.
-  // Before pickup it tracks driver→pickup; during the trip, driver→dropoff.
+  // Live distance + ETA: traffic-aware route from the server (Google Routes, shared with the driver),
+  // with a rough estimate from the driver's GPS until the first answer arrives.
+  const liveRoute = useLiveRoute(phase === 'active' ? ride?.id : null, ride?.status);
   const liveTrip = useMemo(() => {
-    if (phase !== 'active' || !ride || !driverPosition) return null;
-    const target =
-      ride.status === 'in_progress'
-        ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng }
-        : { lat: ride.pickup.lat, lng: ride.pickup.lng };
-    const meters = roadDistanceMeters(driverPosition, target);
-    return {
-      meters,
-      minutes: etaFor(meters),
-      toDestination: ride.status === 'in_progress',
-    };
-  }, [phase, ride, driverPosition]);
+    if (phase !== 'active' || !ride || (ride.status !== 'accepted' && ride.status !== 'in_progress')) return null;
+    const toDestination = ride.status === 'in_progress';
+    if (liveRoute) {
+      return {
+        meters: liveRoute.distanceMeters,
+        minutes: Math.max(1, Math.round(liveRoute.durationSeconds / 60)),
+        seconds: liveRoute.durationSeconds,
+        toDestination,
+        quality: routeQualityLabel(liveRoute),
+        approximate: liveRoute.approximate,
+      };
+    }
+    if (!driverPosition) return null;
+    const target = toDestination ? ride.dropoff : ride.pickup;
+    const meters = roadDistanceMeters(driverPosition, { lat: target.lat, lng: target.lng });
+    return { meters, minutes: etaFor(meters), seconds: etaFor(meters) * 60, toDestination, quality: 'Calcul de l’itinéraire…', approximate: true };
+  }, [phase, ride, driverPosition, liveRoute]);
 
   const selectedFare = estimate?.estimates?.[vehicleType];
   const surge = selectedFare?.surgeMultiplier > 1;
@@ -259,7 +268,7 @@ function RiderDashboard() {
       return {
         pickup: p,
         dropoff: { lat: ride.dropoff.lat, lng: ride.dropoff.lng },
-        routeGeometry: ride.status === 'in_progress' ? ride.route?.geometry : undefined,
+        routeGeometry: drawableRoute(liveRoute?.geometry) || (ride.status === 'in_progress' ? drawableRoute(ride.route?.geometry) : undefined),
         driverPosition,
         fit: true,
         // Before pickup, zoom on the driver coming to the rider
@@ -274,14 +283,14 @@ function RiderDashboard() {
     return {
       pickup: pickup ? { lat: pickup.lat, lng: pickup.lng } : undefined,
       dropoff: dropoff ? { lat: dropoff.lat, lng: dropoff.lng } : undefined,
-      routeGeometry: estimate?.route?.geometry,
+      routeGeometry: drawableRoute(estimate?.route?.geometry),
       drivers: nearby,
       userPosition: geo || undefined,
       fit: Boolean(pickup),
-      fitTo: pickup ? [pickup, dropoff, ...close, ...(dropoff && estimate?.route?.geometry ? estimate.route.geometry.map(([lng, lat]) => ({ lat, lng })) : [])].filter(Boolean) : undefined,
+      fitTo: pickup ? [pickup, dropoff, ...close, ...(dropoff && drawableRoute(estimate?.route?.geometry) ? estimate.route.geometry.map(([lng, lat]) => ({ lat, lng })) : [])].filter(Boolean) : undefined,
       fitKey: `${pickup?.lat},${pickup?.lng}|${dropoff?.lat},${dropoff?.lng}|${estimate ? 'r' : '-'}|${nearby.map((d) => d.id).sort().join(',')}`,
     };
-  }, [phase, ride, driverPosition, pickup, dropoff, estimate, nearby, geo]);
+  }, [phase, ride, driverPosition, pickup, dropoff, estimate, nearby, geo, liveRoute]);
 
   const center = geo || { lat: 40.7128, lng: -74.006 };
 
@@ -336,8 +345,14 @@ function RiderDashboard() {
             {estimate && !estimating && (
               <>
                 <div className="flex items-center justify-between mt-4 mb-2">
-                  <span className="tiny muted">
-                    {formatDistance(estimate.route.distanceMeters)} · {formatDuration(estimate.route.durationSeconds)}
+                  <span className="tiny" style={{ minWidth: 0 }}>
+                    <span className="muted" style={{ display: 'block' }}>
+                      {formatDistance(estimate.route.distanceMeters)} · {estimate.route.approximate ? '~' : ''}
+                      {formatDuration(estimate.route.durationSeconds)} de trajet · arrivée vers {arrivalClock(estimate.route.durationSeconds)}
+                    </span>
+                    <span style={{ display: 'block', color: estimate.route.approximate ? 'var(--warning)' : 'var(--text-2)' }}>
+                      {routeQualityLabel(estimate.route)}
+                    </span>
                   </span>
                   {surge && (
                     <span className="badge badge-warning">
@@ -477,13 +492,13 @@ function RiderDashboard() {
               <span className={`badge badge-dot ${ride.status === 'in_progress' ? 'badge-info' : 'badge-gold'}`}>
                 {ride.status === 'accepted' &&
                   (liveTrip
-                    ? `Chauffeur à ${liveTrip.minutes} min`
+                    ? `Chauffeur à ${liveTrip.approximate ? '~' : ''}${liveTrip.minutes} min`
                     : etaMinutes
                       ? `Arrivée du chauffeur dans ~${etaMinutes} min`
                       : 'Chauffeur en route')}
                 {ride.status === 'arrived' && 'Votre chauffeur est là'}
                 {ride.status === 'in_progress' &&
-                  (liveTrip ? `${liveTrip.minutes} min jusqu’à destination` : 'En route vers la destination')}
+                  (liveTrip ? `${liveTrip.approximate ? '~' : ''}${liveTrip.minutes} min jusqu’à destination` : 'En route vers la destination')}
               </span>
               {liveTrip && (
                 <span className="tiny muted mono-nums">
@@ -491,6 +506,14 @@ function RiderDashboard() {
                 </span>
               )}
             </div>
+            {liveTrip && (
+              <div className="flex items-center justify-between mb-2 tiny" style={{ gap: 8 }}>
+                <span style={{ color: liveTrip.approximate ? 'var(--warning)' : 'var(--text-2)' }}>{liveTrip.quality}</span>
+                <span className="mono-nums" style={{ fontWeight: 700 }}>
+                  {liveTrip.toDestination ? 'Arrivée à destination' : 'Chauffeur là'} vers {arrivalClock(liveTrip.seconds)}
+                </span>
+              </div>
+            )}
 
             {/* Live trip progress */}
             {liveTrip && (
@@ -577,8 +600,8 @@ function RiderDashboard() {
               <div className="flex items-center justify-between mt-2">
                 <span className="muted">Course</span>
                 <span className="mono-nums">
-                  {formatDistance(ride.route?.distanceMeters || 0)} ·{' '}
-                  {formatDuration(ride.route?.durationSeconds || 0)}
+                  {formatDistance(ride.route?.distanceMeters || 0)} · {ride.route?.approximate ? '~' : ''}
+                  {formatDuration(ride.route?.durationSeconds || 0)} de trajet
                 </span>
               </div>
               <div className="flex items-center justify-between">
