@@ -2,6 +2,7 @@ import {DEFAULT_PRICING,calculateFare,settleDriverEarnings,paymentMethodOf,booki
 import {haversineDistance} from './utils/geo';
 import {planDispatch,canSeeOffer,distanceToPickupKm,approachSecondsFor,profitability,TEST_OFFER_SECONDS} from './vtc-dispatch';
 import {LOWER_CLASSES,isVehicleClass,driverClass,sanitizeAcceptedClasses,isLowerClassRide,availabilityByClass} from './vtc-classes';
+import {approximateRoute,routeFromGoogle,routeFromOsrm,googleRouteRequest,GOOGLE_ROUTE_FIELDS,liveTarget,liveRouteFresh} from './vtc-routing';
 import {DOCUMENTS_BUCKET,documentSpec,validateDocumentInput,driverCompliance,complianceProblem} from './vtc-documents';
 const active=['searching','accepted','arrived','in_progress'];
 function required(result){if(result.error)throw new Error(result.error.message);return result.data;}
@@ -16,11 +17,35 @@ async function serialize(db,r,actor,raw=false){
  if(raw){const p=required(await db.from('profiles').select('id,name,username').eq('id',r.rider_id).single());out.riderId=p;out.driverId=driver;}
  return out;
 }
+const MAPS_GATEWAY='https://connector-gateway.lovable.dev/google_maps';
+async function googleRoute(a,b){
+ const lovable=process.env.LOVABLE_API_KEY,maps=process.env.GOOGLE_MAPS_API_KEY;
+ if(!lovable||!maps){console.error('Google Routes: connector credentials missing');return null;}
+ try{
+  const res=await fetch(`${MAPS_GATEWAY}/routes/directions/v2:computeRoutes`,{method:'POST',headers:{Authorization:`Bearer ${lovable}`,'X-Connection-Api-Key':maps,'Content-Type':'application/json','X-Goog-FieldMask':GOOGLE_ROUTE_FIELDS},body:JSON.stringify(googleRouteRequest(a,b)),signal:AbortSignal.timeout(8000)});
+  if(!res.ok){console.error(`Google Routes failed [${res.status}]: ${(await res.text()).slice(0,500)}`);return null;}
+  return routeFromGoogle(await res.json());
+ }catch(e){console.error('Google Routes error',e?.message);return null;}
+}
+async function osrmRoute(a,b){
+ try{const res=await fetch(`https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`,{signal:AbortSignal.timeout(8000)});if(!res.ok)return null;return routeFromOsrm(await res.json());}catch{return null;}
+}
+function validPoint(p){return p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)&&Math.abs(p.lat)<=90&&Math.abs(p.lng)<=180;}
 async function routeBetween(a,b){
- if(!a||!b||![a.lat,a.lng,b.lat,b.lng].every(Number.isFinite)||Math.abs(a.lat)>90||Math.abs(b.lat)>90||Math.abs(a.lng)>180||Math.abs(b.lng)>180)throw new Error('Adresses invalides');
- try{const res=await fetch(`https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`,{signal:AbortSignal.timeout(8000)});const j=await res.json();if(j.routes?.[0])return {distanceMeters:j.routes[0].distance,durationSeconds:j.routes[0].duration,geometry:j.routes[0].geometry.coordinates};}catch{}
- const distanceMeters=Math.round(haversineDistance(a.lat,a.lng,b.lat,b.lng)*1350);
- return {distanceMeters,durationSeconds:distanceMeters/25000*3600,geometry:[[a.lng,a.lat],[b.lng,b.lat]]};
+ if(!validPoint(a)||!validPoint(b))throw new Error('Adresses invalides');
+ // Google (trafic en temps réel) → OSRM (sans trafic) → estimation signalée, jamais de ligne droite.
+ return (await googleRoute(a,b))||(await osrmRoute(a,b))||approximateRoute(haversineDistance(a.lat,a.lng,b.lat,b.lng));
+}
+/** Live leg driver → pickup/destination, shared by rider and driver through rides.live_route. */
+async function liveRoute(admin,r){
+ const target=liveTarget(r);if(!target||!r.driver_id)return null;
+ if(liveRouteFresh(r.live_route,r.status))return r.live_route;
+ const d=required(await admin.from('drivers').select('location').eq('user_id',r.driver_id).single());
+ if(!validPoint(d.location)||!validPoint(target))return null;
+ const route=await routeBetween(d.location,target);
+ const value={...route,status:r.status,target:target.kind,at:new Date().toISOString()};
+ required(await admin.from('rides').update({live_route:value}).eq('id',r.id).eq('status',r.status));
+ return value;
 }
 async function estimates(db,a,b){const route=await routeBetween(a,b);const rows=required(await db.from('pricing_rules').select('*'));const rules={...DEFAULT_PRICING};for(const row of rows)rules[row.vehicle_type]=row.rule;return {route,estimates:Object.fromEntries(Object.entries(rules).map(([k,v])=>[k,calculateFare(v,route.distanceMeters,route.durationSeconds)]))};}
 export async function handleVtc(input,context){
@@ -157,6 +182,7 @@ export async function handleVtc(input,context){
   if(action==='decline'){if(role!=='driver')throw new Error('Accès refusé');required(await admin.rpc('decline_ride_offer',{_ride:id,_driver:uid}));return {ok:true};}
   if(!participant&&role!=='admin')throw new Error('Course inaccessible');
   if(!action)return {ride:await serialize(admin,r,uid)};
+  if(action==='route'){if(!participant)throw new Error('Accès refusé');return {route:await liveRoute(admin,r)};}
   if(action==='arrive'||action==='start'||action==='complete'){
    const previous={arrive:'accepted',start:'arrived',complete:'in_progress'}[action];if(r.driver_id!==uid||r.status!==previous)throw new Error('Action non autorisée');
    if(action==='start'&&body.pin!==r.pin)throw new Error('Code PIN incorrect');
