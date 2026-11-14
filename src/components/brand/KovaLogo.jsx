@@ -1,5 +1,5 @@
 /**
- * Kova — brand mark (ink monogram with gold route dot)
+ * StrasDrive — brand mark (SD monogram with gold route dot)
  */
 
 export function KovaIcon({ size = 32, className = '' }) {
@@ -14,26 +14,22 @@ export function KovaIcon({ size = 32, className = '' }) {
       aria-hidden="true"
     >
       <rect width="48" height="48" rx="14" fill="#0C0A09" />
-      {/* K — upright stem with the outbound stroke ending in a route pin */}
+      {/* S + D — same rounded ink strokes, with the gold route dot */}
       <path
-        d="M15 13V35"
+        d="M20.5 17.2C19.4 15.7 17.7 15 15.6 15C12.6 15 10.6 16.7 10.6 19.3C10.6 21.9 12.8 23 15.6 23.9C18.6 24.9 21 26.1 21 29C21 31.8 18.8 33.6 15.6 33.6C13.2 33.6 11.2 32.7 10 31"
         stroke="#FAFAF9"
-        strokeWidth="4.5"
+        strokeWidth="4"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
-        d="M15 25L31 13"
+        d="M26 15V33.6H29.2C33.9 33.6 37 29.9 37 24.3C37 18.7 33.9 15 29.2 15H26Z"
         stroke="#FAFAF9"
-        strokeWidth="4.5"
+        strokeWidth="4"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <path
-        d="M15 25L31 35"
-        stroke="#FAFAF9"
-        strokeWidth="4.5"
-        strokeLinecap="round"
-      />
-      <circle cx="33" cy="13" r="4.5" fill="#CA8A04" />
+      <circle cx="38.5" cy="11.5" r="4" fill="#CA8A04" />
     </svg>
   );
 }
