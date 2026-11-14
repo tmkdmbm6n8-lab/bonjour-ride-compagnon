@@ -15,6 +15,13 @@
       "when": 1794613910439,
       "tag": "0001_arpe_acceptance_time_and_data_retention",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794614626572,
+      "tag": "0002_driver_priority_dispatch",
+      "breakpoints": true
     }
   ]
 }

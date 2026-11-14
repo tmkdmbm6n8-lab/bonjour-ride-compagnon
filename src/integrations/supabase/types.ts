@@ -52,6 +52,7 @@ export type Database = {
           id: string
           is_approved: boolean
           is_online: boolean
+          is_priority: boolean
           location: Json | null
           payout: Json
           stats: Json
@@ -63,6 +64,7 @@ export type Database = {
           id?: string
           is_approved?: boolean
           is_online?: boolean
+          is_priority?: boolean
           location?: Json | null
           payout?: Json
           stats?: Json
@@ -74,6 +76,7 @@ export type Database = {
           id?: string
           is_approved?: boolean
           is_online?: boolean
+          is_priority?: boolean
           location?: Json | null
           payout?: Json
           stats?: Json
@@ -184,6 +187,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           declined: string[]
+          dispatch_phase: string | null
           driver_id: string | null
           dropoff: Json
           fare: Json
@@ -207,6 +211,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           declined?: string[]
+          dispatch_phase?: string | null
           driver_id?: string | null
           dropoff: Json
           fare: Json
@@ -230,6 +235,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           declined?: string[]
+          dispatch_phase?: string | null
           driver_id?: string | null
           dropoff?: Json
           fare?: Json
@@ -335,6 +341,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      decline_ride_offer: {
+        Args: { _driver: string; _ride: string }
+        Returns: undefined
+      }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       purge_expired_personal_data: { Args: never; Returns: undefined }
       settle_ride: { Args: { _actor: string; _id: string }; Returns: Json }

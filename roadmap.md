@@ -14,3 +14,8 @@
 - [x] Mentions légales, CGU et politique de confidentialité alignées sur le fonctionnement réel.
 - [ ] Coordonnées réelles de la société (raison sociale, SIREN, TVA, adresse, directeur de publication, n° de centrale de réservation, médiateur) — en attente de l'utilisateur.
 - [ ] Indicateurs annuels d'activité et de revenus des chauffeurs à publier (art. L7342-9 Code du travail) — à confirmer avec l'utilisateur.
+
+# Attribution des courses
+- [ ] Niveau prioritaire par chauffeur, choisi par l'admin.
+- [ ] Envoi : prioritaires tous ensemble → le plus proche seul quelques secondes → tous ensemble, le premier qui accepte.
+- [ ] Notification du chauffeur prioritaire : distance jusqu'au client et mention « très rentable / rentable / non rentable », il choisit d'y aller ou non.
