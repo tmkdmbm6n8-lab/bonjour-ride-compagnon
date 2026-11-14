@@ -38,7 +38,7 @@
 - [x] Plus de ligne droite muette : « durée estimée » affichée, aucun tracé
 
 ## Alerte de message bien visible
-- [ ] Grande alerte « Nouveau message » en haut de l'écran + bouton Discussion mis en évidence (passager et chauffeur)
+- [x] Grande alerte « Nouveau message » en haut de l'écran + bouton Discussion mis en évidence (passager et chauffeur)
 
 ## Virements chauffeurs hebdomadaires
 - [ ] Gains chauffeurs conservés sur la plateforme, virement automatique chaque semaine dimanche→lundi minuit (heure de Paris)
