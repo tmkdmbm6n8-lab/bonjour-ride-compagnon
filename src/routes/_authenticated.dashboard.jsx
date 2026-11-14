@@ -19,9 +19,8 @@ import useRiderRide from '@/hooks/useRiderRide';
 import { bookingPaymentProblem, paymentMethodLabel } from '@/lib/vtc-pricing';
 import { playSound } from '@/lib/sounds';
 import useVisualViewport from '@/hooks/useVisualViewport';
-import { haversineDistance } from '@/lib/utils/geo';
 import useGeolocation from '@/hooks/useGeolocation';
-import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from '@/lib/utils/geo';
+import { formatDistance, formatDuration, roadDistanceMeters, haversineDistance, etaMinutes as etaFor } from '@/lib/utils/geo';
 
 const VEHICLE_META = {
   economy: { icon: Car, blurb: 'Des courses au quotidien à prix avantageux' },
