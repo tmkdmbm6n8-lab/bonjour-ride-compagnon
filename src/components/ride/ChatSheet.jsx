@@ -4,6 +4,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 import { useEffect, useRef, useState } from 'react';
 import { Send, X, MessageCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import useVisualViewport from '@/hooks/useVisualViewport';
 
 /**
  * In-ride chat panel. Messages arrive via the socket (parent owns the
@@ -14,6 +15,9 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
   const [sending, setSending] = useState(false);
   const listRef = useRef(null);
   const toast = useToast();
+  const [isPhone, setIsPhone] = useState(false);
+  useEffect(() => { setIsPhone(window.matchMedia('(max-width: 640px)').matches); }, []);
+  const vv = useVisualViewport(open && isPhone);
 
   useEffect(() => {
     if (open && listRef.current) {
@@ -51,15 +55,14 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
     <div
       className="card animate-in"
       style={{
-        position: 'absolute',
-        bottom: 16,
-        right: 16,
-        width: 'min(360px, calc(100% - 32px))',
-        height: 420,
+        position: vv ? 'fixed' : 'absolute',
+        ...(vv
+          ? { top: vv.top + 8, left: 8, right: 8, height: Math.min(520, vv.height - 16), zIndex: 'var(--z-sheet)' }
+          : { bottom: 16, right: 16, width: 'min(380px, calc(100% - 32px))', height: 460 }),
         display: 'flex',
         flexDirection: 'column',
         boxShadow: 'var(--shadow-lg)',
-        zIndex: 25,
+        ...(vv ? null : { zIndex: 25 }),
         overflow: 'hidden',
       }}
       role="dialog"
@@ -92,17 +95,26 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
                 key={i}
                 style={{
                   alignSelf: mine ? 'flex-end' : 'flex-start',
-                  maxWidth: '80%',
-                  padding: '8px 13px',
-                  borderRadius: 16,
-                  borderBottomRightRadius: mine ? 4 : 16,
-                  borderBottomLeftRadius: mine ? 16 : 4,
-                  background: mine ? 'var(--ink-950)' : 'var(--ink-100)',
-                  color: mine ? 'var(--text-invert)' : 'var(--text)',
-                  fontSize: '0.88rem',
+                  maxWidth: '82%',
+                  padding: '10px 14px',
+                  borderRadius: 18,
+                  borderBottomRightRadius: mine ? 4 : 18,
+                  borderBottomLeftRadius: mine ? 18 : 4,
+                  background: mine ? 'var(--gold-500)' : 'var(--ink-950)',
+                  color: mine ? 'var(--ink-950)' : 'var(--text-invert)',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  lineHeight: 1.35,
+                  boxShadow: 'var(--shadow-sm)',
+                  wordBreak: 'break-word',
                 }}
               >
                 {m.text}
+                {m.at && (
+                  <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 500, opacity: 0.7, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
+                    {mine ? 'Vous · ' : ''}{new Date(m.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
               </div>
             );
           })}
@@ -116,7 +128,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
       >
         <input
           className="input flex-1"
-          style={{ minHeight: 42 }}
+          style={{ minHeight: 46, fontSize: '1rem' }}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Saisissez un message…"

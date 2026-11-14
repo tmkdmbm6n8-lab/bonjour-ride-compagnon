@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import useVisualViewport from '@/hooks/useVisualViewport';
 
 export default function Modal({
   open,
@@ -11,7 +12,9 @@ export default function Modal({
   sheetOnMobile = true,
   closable = true,
   maxWidth = 440,
+  keyboardSafe = false, // keep the dialog inside the area above the phone keyboard
 }) {
+  const vv = useVisualViewport(open && keyboardSafe);
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => {
@@ -29,7 +32,8 @@ export default function Modal({
 
   return (
     <div
-      className={`overlay ${sheetOnMobile ? 'sheet-on-mobile' : ''}`}
+      className={`overlay ${sheetOnMobile && !keyboardSafe ? 'sheet-on-mobile' : ''}`}
+      style={vv ? { top: vv.top, height: vv.height, bottom: 'auto', alignItems: 'flex-start', paddingTop: 16 } : undefined}
       onClick={closable ? onClose : undefined}
       role="dialog"
       aria-modal="true"
@@ -37,7 +41,7 @@ export default function Modal({
     >
       <div
         className="modal modal-pad"
-        style={{ maxWidth }}
+        style={{ maxWidth, ...(vv ? { maxHeight: vv.height - 32 } : null) }}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || closable) && (
