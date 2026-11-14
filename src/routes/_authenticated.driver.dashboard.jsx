@@ -386,6 +386,44 @@ function DriverDashboard() {
           </div>
         )}
 
+        {!ride && !needsVehicle && (
+          <div
+            className="card card-pad mt-3 flex items-center justify-between"
+            style={{ background: acceptsPet ? "var(--gold-50, #fcf9f2)" : "var(--ink-50)" }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  background: acceptsPet ? "var(--gold-500)" : "var(--ink-200)",
+                  color: acceptsPet ? "#fff" : "var(--ink-600)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <PawPrint size={22} />
+              </div>
+              <div>
+                <div className="small" style={{ fontWeight: 700 }}>
+                  StrasDrive Pet
+                </div>
+                <div className="tiny muted">Accepter les passagers avec animal de compagnie</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              className={`btn btn-sm ${acceptsPet ? "btn-primary" : "btn-secondary"}`}
+              onClick={handleTogglePet}
+              disabled={togglingPet}
+            >
+              {togglingPet ? <span className="spinner" /> : acceptsPet ? "Activé" : "Désactivé"}
+            </button>
+          </div>
+        )}
+
         {/* ── Active trip card ── */}
         {ride && (
           <div className="card card-pad animate-in">
