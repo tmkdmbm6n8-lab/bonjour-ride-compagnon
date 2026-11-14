@@ -1,4 +1,5 @@
 import {createFileRoute} from '@tanstack/react-router';
+import { drawableRoute } from '@/lib/utils/route-display';
 import RiderLayout from '@/components/RiderLayout';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
@@ -62,7 +63,7 @@ function RideDetailPage() {
           center={{ lat: ride.pickup.lat, lng: ride.pickup.lng }}
           pickup={{ lat: ride.pickup.lat, lng: ride.pickup.lng }}
           dropoff={{ lat: ride.dropoff.lat, lng: ride.dropoff.lng }}
-          routeGeometry={ride.route?.geometry}
+          routeGeometry={drawableRoute(ride.route?.geometry)}
           fit
         />
       </div>
