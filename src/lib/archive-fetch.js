@@ -1,5 +1,5 @@
 import {LEGAL_VERSION} from './legal';
-import {vtcRequest,contactRequest} from './vtc.functions';
+import {vtcRequest,contactRequest,publicVtcRequest} from './vtc.functions';
 import {supabase} from '@/integrations/supabase/client';
 const PUBLIC_PAGES=['/','/login','/signup','/contact','/privacy','/terms','/mentions-legales'];
 let redirecting=false;
@@ -15,6 +15,7 @@ export async function apiFetch(path,options={}) {
   if(path==='/api/auth/signup'){
    const {data:result,error}=await supabase.auth.signUp({email:body.email,password:body.password,options:{emailRedirectTo:window.location.origin+'/login',data:{name:body.name,username:body.username,role:body.role,consent:{termsVersion:LEGAL_VERSION,privacyVersion:LEGAL_VERSION,acceptedAt:new Date().toISOString()}}}});if(error)throw error;data={ok:true,needsConfirmation:!result.session};
   }else if(path==='/api/contact')data=await contactRequest({data:body});
+  else if(String(path).startsWith('/api/geo/search')&&!(await supabase.auth.getSession()).data.session)data=await publicVtcRequest({data:{path,body}});
   else{
    // Without a session the request would be refused: send the user back to sign in with a clear message.
    const {data:{session}}=await supabase.auth.getSession();if(!session)throw sessionExpired();
