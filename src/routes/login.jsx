@@ -57,6 +57,11 @@ function LoginForm() {
 
         <h1 className="text-center" style={{ fontSize: '1.5rem' }}> Heureux de vous revoir </h1>
         <p className="text-center muted small mt-1 mb-6"> Connectez-vous pour poursuivre votre voyage </p>
+        {searchParams.get('expired') && (
+          <p className="small text-center mb-4" role="status" style={{ color: 'var(--gold-700)', fontWeight: 600 }}>
+            Votre session a expiré (déconnexion sur un autre appareil ou connexion trop ancienne). Reconnectez-vous pour continuer.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="flex-col gap-4">
           <div className="field">
