@@ -19,3 +19,6 @@
 - [ ] Niveau prioritaire par chauffeur, choisi par l'admin.
 - [ ] Envoi : prioritaires tous ensemble → le plus proche seul quelques secondes → tous ensemble, le premier qui accepte.
 - [ ] Notification du chauffeur prioritaire : distance jusqu'au client et mention « très rentable / rentable / non rentable », il choisit d'y aller ou non.
+
+# Logo
+- [ ] Remplacer le logo « K » par un logo « SD » dans le même style (carré noir arrondi, point doré).
