@@ -1,16 +1,17 @@
 import {DEFAULT_PRICING,calculateFare,settleDriverEarnings} from './vtc-pricing';
 import {haversineDistance} from './utils/geo';
 import {planDispatch,canSeeOffer,distanceToPickupKm,approachSecondsFor,profitability} from './vtc-dispatch';
+import {LOWER_CLASSES,isVehicleClass,driverClass,sanitizeAcceptedClasses,isLowerClassRide,availabilityByClass} from './vtc-classes';
 import {DOCUMENTS_BUCKET,documentSpec,validateDocumentInput,driverCompliance,complianceProblem} from './vtc-documents';
 const active=['searching','accepted','arrived','in_progress'];
 function required(result){if(result.error)throw new Error(result.error.message);return result.data;}
-function driverShape(d){return d?{...d,_id:d.id,isOnline:d.is_online,isApproved:d.is_approved,isPriority:Boolean(d.is_priority),userId:d.user_id}:null;}
+function driverShape(d){if(!d)return null;const vc=driverClass(d);return {...d,vehicle:{...(d.vehicle||{}),type:vc},_id:d.id,isOnline:d.is_online,isApproved:d.is_approved,isPriority:Boolean(d.is_priority),userId:d.user_id,vehicleClass:vc,acceptsClasses:sanitizeAcceptedClasses(vc,d.accepts_classes),lowerClasses:LOWER_CLASSES[vc]};}
 function docShape(d){return {id:d.id,type:d.doc_type,fileName:d.file_name,number:d.document_number,referenceDate:d.reference_date,validUntil:d.valid_until,status:d.status,rejectionReason:d.rejection_reason,uploadedAt:d.uploaded_at,reviewedAt:d.reviewed_at};}
 function profileShape(p,email){return {...p,_id:p.id,createdAt:p.created_at,email:email||'',wallet:{balance:Number(p.balance),currency:'EUR'}};}
 async function serialize(db,r,actor,raw=false){
  if(!r)return null;
  let driver;
- if(r.driver_id){const p=required(await db.from('profiles').select('*').eq('id',r.driver_id).single());const d=required(await db.from('drivers').select('*').eq('user_id',r.driver_id).single());driver={id:p.id,name:p.name,avatar:p.avatar,rating:p.rating.average,totalTrips:d.stats.totalTrips,vehicle:d.vehicle,location:d.location};}
+ if(r.driver_id){const p=required(await db.from('profiles').select('*').eq('id',r.driver_id).single());const d=required(await db.from('drivers').select('*').eq('user_id',r.driver_id).single());driver={id:p.id,name:p.name,avatar:p.avatar,rating:p.rating.average,totalTrips:d.stats.totalTrips,vehicle:{...d.vehicle,type:driverClass(d)},location:d.location};}
  const out={...r,id:r.id,_id:r.id,createdAt:r.created_at,completedAt:r.completed_at,vehicleType:r.vehicle_type,driver,pin:r.rider_id===actor?r.pin:undefined};
  if(raw){const p=required(await db.from('profiles').select('id,name,username').eq('id',r.rider_id).single());out.riderId=p;out.driverId=driver;}
  return out;
@@ -71,9 +72,18 @@ export async function handleVtc(input,context){
  if(p==='/api/rides/estimate')return estimates(admin,body.pickup,body.dropoff);
  if(p==='/api/drivers/me'){
   if(method==='PATCH'){
-   const v=body.vehicle;if(!v||!v.make||!v.model||!v.plate||!DEFAULT_PRICING[v.type]||!Number.isInteger(v.year)||v.year<1990||v.year>2030)throw new Error('Vérifiez les informations du véhicule');
+   const cur=required(await db.from('drivers').select('vehicle_class').eq('user_id',uid).single());
+   // La gamme est attribuée par StrasDrive : le chauffeur ne peut pas la changer lui-même.
+   const v={...(body.vehicle||{}),type:driverClass(cur)};if(!v.make||!v.model||!v.plate||!Number.isInteger(v.year)||v.year<1990||v.year>2030)throw new Error('Vérifiez les informations du véhicule');
    required(await db.from('drivers').update({vehicle:v}).eq('user_id',uid));
   }
+  return {driver:driverShape(required(await db.from('drivers').select('*').eq('user_id',uid).single()))};
+ }
+ if(p==='/api/drivers/me/classes'&&method==='PATCH'){
+  const cur=required(await db.from('drivers').select('vehicle_class').eq('user_id',uid).single());const own=driverClass(cur);
+  const wanted=Array.isArray(body.acceptsClasses)?body.acceptsClasses:[];
+  if(wanted.some(c=>!(LOWER_CLASSES[own]||[]).includes(c)))throw new Error('Vous ne pouvez accepter que des courses de gamme inférieure autorisée pour votre véhicule');
+  required(await admin.from('drivers').update({accepts_classes:sanitizeAcceptedClasses(own,wanted)}).eq('user_id',uid));
   return {driver:driverShape(required(await db.from('drivers').select('*').eq('user_id',uid).single()))};
  }
  if(p==='/api/drivers/me/documents'){
@@ -102,7 +112,8 @@ export async function handleVtc(input,context){
   required(await db.from('drivers').update({location:{lat:body.lat,lng:body.lng,heading:body.heading},updated_at:new Date().toISOString()}).eq('user_id',uid));return {ok:true};
  }
  if(p==='/api/drivers/nearby'){
-  const ds=required(await admin.from('drivers').select('id,location,vehicle').eq('is_online',true).eq('is_approved',true));return {drivers:ds.filter(d=>d.location).map(d=>({id:d.id,location:d.location}))};
+  const ds=await dispatchPool(admin);const lat=parseFloat(q.get('lat')),lng=parseFloat(q.get('lng'));const at=Number.isFinite(lat)&&Number.isFinite(lng)?{lat,lng}:null;
+  return {drivers:ds.filter(d=>d.location).map(d=>({id:d.id,location:d.location})),availability:availabilityByClass(ds,at)};
  }
  if(p==='/api/wallet'){
   if(method==='POST')throw new Error('Les recharges nécessitent un paiement Stripe vérifié.');
@@ -128,7 +139,7 @@ export async function handleVtc(input,context){
   const r=fresh.filter(x=>canSeeOffer(x,me)).sort((a,b)=>distanceToPickupKm(a,me)-distanceToPickupKm(b,me))[0];if(!r)return {offer:null};
   const approachKm=distanceToPickupKm(r,me),approachMeters=Number.isFinite(approachKm)?Math.round(approachKm*1350):null;
   let profit=null;if(me.is_priority&&approachMeters!=null){const approachSeconds=approachSecondsFor(approachMeters),tripSeconds=r.route.durationSeconds||0;const expected=settleDriverEarnings(r.fare,r.route.distanceMeters,approachSeconds+tripSeconds).driverEarnings;profit={...profitability(expected,approachSeconds,tripSeconds),expectedEarnings:expected,approachSeconds:Math.round(approachSeconds)};}
-  const rider=required(await admin.from('profiles').select('name').eq('id',r.rider_id).single());return {offer:{rideId:r.id,pickup:r.pickup,dropoff:r.dropoff,rider,earnings:r.fare.driverEarnings,distanceMeters:r.route.distanceMeters,durationSeconds:r.route.durationSeconds,surgeMultiplier:r.fare.surgeMultiplier,expiresInSeconds:Math.max(0,Math.ceil((new Date(r.offer_expires_at)-Date.now())/1000)),phase:r.dispatch_phase,isPriority:Boolean(me.is_priority),distanceToPickupMeters:approachMeters??0,etaMinutes:approachMeters==null?1:Math.max(1,Math.round(approachSecondsFor(approachMeters)/60)),profitability:profit}};
+  const rider=required(await admin.from('profiles').select('name').eq('id',r.rider_id).single());return {offer:{rideId:r.id,pickup:r.pickup,dropoff:r.dropoff,rider,earnings:r.fare.driverEarnings,distanceMeters:r.route.distanceMeters,durationSeconds:r.route.durationSeconds,surgeMultiplier:r.fare.surgeMultiplier,expiresInSeconds:Math.max(0,Math.ceil((new Date(r.offer_expires_at)-Date.now())/1000)),phase:r.dispatch_phase,isPriority:Boolean(me.is_priority),rideClass:r.vehicle_type,ownClass:driverClass(me),lowerClass:isLowerClassRide(me,r.vehicle_type),distanceToPickupMeters:approachMeters??0,etaMinutes:approachMeters==null?1:Math.max(1,Math.round(approachSecondsFor(approachMeters)/60)),profitability:profit}};
  }
  if(p==='/api/rides'||p==='/api/admin/rides'){
   const page=Math.max(1,Number(q.get('page'))||1),limit=Math.min(100,Math.max(1,Number(q.get('limit'))||15));let query=(role==='admin'?admin:db).from('rides').select('*',{count:'exact'}).order('created_at',{ascending:false});if(role!=='admin')query=query.eq(role==='driver'?'driver_id':'rider_id',uid);if(q.get('status'))query=query.eq('status',q.get('status'));const res=await query.range((page-1)*limit,page*limit-1);const rows=required(res);return {rides:await Promise.all(rows.map(r=>serialize(admin,r,uid,true))),pagination:{page,pages:Math.ceil(res.count/limit),total:res.count}};
@@ -174,7 +185,7 @@ export async function handleVtc(input,context){
   const c=driverCompliance(docs);
   return {documents:await Promise.all(docs.map(async x=>({...docShape(x),url:(await admin.storage.from(DOCUMENTS_BUCKET).createSignedUrl(x.file_path,600)).data?.signedUrl||null}))),compliance:{...c,problem:complianceProblem(c)}};
  }
- if(p==='/api/admin/drivers'){if(method==='PATCH'){if(body.isApproved===true){const t=required(await admin.from('drivers').select('user_id').eq('id',body.driverId).single());const c=driverCompliance(required(await admin.from('driver_documents').select('doc_type,status,valid_until').eq('user_id',t.user_id)));if(!c.canBeApproved)throw new Error(`Validation impossible. ${complianceProblem(c)}`);}const patch='isPriority' in body?{is_priority:Boolean(body.isPriority)}:{is_approved:Boolean(body.isApproved),...(body.isApproved?{}:{is_online:false})};required(await admin.from('drivers').update(patch).eq('id',body.driverId));return {ok:true};}let query=admin.from('drivers').select('*');if(q.get('pending'))query=query.eq('is_approved',false);const ds=required(await query);const allDocs=required(await admin.from('driver_documents').select('user_id,doc_type,status,valid_until'));return {drivers:await Promise.all(ds.map(async d=>({...driverShape(d),documents:(c=>({approved:c.approved,required:c.required,canBeApproved:c.canBeApproved,problem:complianceProblem(c)}))(driverCompliance(allDocs.filter(x=>x.user_id===d.user_id))),userId:required(await admin.from('profiles').select('name,username,avatar').eq('id',d.user_id).single())})))};}
+ if(p==='/api/admin/drivers'){if(method==='PATCH'){if(body.isApproved===true){const t=required(await admin.from('drivers').select('user_id').eq('id',body.driverId).single());const c=driverCompliance(required(await admin.from('driver_documents').select('doc_type,status,valid_until').eq('user_id',t.user_id)));if(!c.canBeApproved)throw new Error(`Validation impossible. ${complianceProblem(c)}`);}let patch;if('vehicleClass' in body){if(!isVehicleClass(body.vehicleClass))throw new Error('Gamme invalide');const t=required(await admin.from('drivers').select('accepts_classes,vehicle').eq('id',body.driverId).single());patch={vehicle_class:body.vehicleClass,accepts_classes:sanitizeAcceptedClasses(body.vehicleClass,t.accepts_classes),vehicle:{...(t.vehicle||{}),type:body.vehicleClass}};}else patch='isPriority' in body?{is_priority:Boolean(body.isPriority)}:{is_approved:Boolean(body.isApproved),...(body.isApproved?{}:{is_online:false})};required(await admin.from('drivers').update(patch).eq('id',body.driverId));return {ok:true};}let query=admin.from('drivers').select('*');if(q.get('pending'))query=query.eq('is_approved',false);const ds=required(await query);const allDocs=required(await admin.from('driver_documents').select('user_id,doc_type,status,valid_until'));return {drivers:await Promise.all(ds.map(async d=>({...driverShape(d),documents:(c=>({approved:c.approved,required:c.required,canBeApproved:c.canBeApproved,problem:complianceProblem(c)}))(driverCompliance(allDocs.filter(x=>x.user_id===d.user_id))),userId:required(await admin.from('profiles').select('name,username,avatar').eq('id',d.user_id).single())})))};}
  if(p==='/api/admin/users'){const ps=required(await admin.from('profiles').select('*').limit(100));const rs=required(await admin.from('user_roles').select('*'));return {users:ps.map(p=>({...profileShape(p),role:rs.find(r=>r.user_id===p.id)?.role||'rider'})).filter(p=>(!q.get('role')||p.role===q.get('role'))&&(!q.get('q')||(p.name+' '+p.username).toLowerCase().includes(q.get('q').toLowerCase())))};}
  if(p==='/api/admin/support'){if(method==='PATCH'){if(!['open','resolved'].includes(body.status))throw new Error('Statut invalide');required(await admin.from('contact_messages').update({status:body.status,resolved_at:body.status==='resolved'?new Date().toISOString():null}).eq('id',body.id));return {ok:true};}return {messages:required(await admin.from('contact_messages').select('*').eq('status',q.get('status')||'open')).map(m=>({...m,_id:m.id,createdAt:m.created_at,resolvedAt:m.resolved_at}))};}
  if(p==='/api/drivers/me/earnings'||p==='/api/admin/overview'){
