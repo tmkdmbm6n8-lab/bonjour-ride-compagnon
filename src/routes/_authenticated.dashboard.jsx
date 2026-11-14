@@ -12,6 +12,7 @@ import Link from '@/lib/archive-navigation';
 import MapView from '@/components/ArchiveMap';
 import PlaceSearch from '@/components/maps/PlaceSearch';
 import ChatSheet from '@/components/ride/ChatSheet';
+import MessageAlert from '@/components/ride/MessageAlert';
 import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { Avatar, Stars, StarPicker, VEHICLE_LABELS, money } from '@/components/ui/bits';
@@ -63,6 +64,7 @@ function RiderDashboard() {
   const [ratingComment, setRatingComment] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [lastMsg, setLastMsg] = useState(null);
   const [searchFocused, setSearchFocused] = useState(false);
   const blurTimerRef = useRef(null);
   const onSearchFocus = useCallback((focused) => {
@@ -98,6 +100,8 @@ function RiderDashboard() {
     }
     if (type === 'message' && data?.from === 'driver' && !chatOpenRef.current) {
       setUnread((u) => u + 1);
+      setLastMsg(data);
+      if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
     }
   }, [toast]);
 
@@ -195,6 +199,7 @@ function RiderDashboard() {
     try {
       await book({ pickup, dropoff, vehicleType, paymentMethod });
       setUnread(0);
+      setLastMsg(null);
     } catch (err) {
       toast(err.message, 'error', 5000);
     } finally {
@@ -612,19 +617,12 @@ function RiderDashboard() {
 
             <div className="flex gap-2 mt-4">
               <button
-                className="btn btn-secondary flex-1"
-                onClick={() => { setChatOpen(true); setUnread(0); }}
+                className={`btn flex-1 ${unread > 0 ? 'chat-btn-unread' : 'btn-secondary'}`}
+                onClick={() => { setChatOpen(true); setUnread(0); setLastMsg(null); }}
                 style={{ position: 'relative' }}
               >
-                <MessageCircle size={17} /> Discussion
-                {unread > 0 && (
-                  <span
-                    className="badge badge-danger"
-                    style={{ position: 'absolute', top: -6, right: -4, minWidth: 20, justifyContent: 'center', padding: '1px 6px' }}
-                  >
-                    {unread}
-                  </span>
-                )}
+                <MessageCircle size={17} /> {unread > 0 ? (unread > 1 ? `${unread} nouveaux messages` : 'Nouveau message') : 'Discussion'}
+                {unread > 0 && <span className="chat-unread-badge mono-nums">{unread}</span>}
               </button>
               {ride.status !== 'in_progress' && (
                 <button className="btn btn-danger flex-1" onClick={() => setCancelOpen(true)}>
@@ -646,6 +644,16 @@ function RiderDashboard() {
           </div>
         )}
       </div>
+
+      {phase === 'active' && ride && !chatOpen && (
+        <MessageAlert
+          message={lastMsg}
+          count={unread}
+          fromLabel={ride.driver?.name || 'Votre chauffeur'}
+          onOpen={() => { setChatOpen(true); setUnread(0); setLastMsg(null); }}
+          onDismiss={() => setLastMsg(null)}
+        />
+      )}
 
       {/* Chat */}
       {phase === 'active' && ride && (
