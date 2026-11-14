@@ -9,6 +9,7 @@ import { signIn } from '@/lib/archive-auth';
 import { User, AtSign, Lock, ArrowRight, Car, Navigation } from 'lucide-react';
 import { KovaLogo } from '@/components/brand/KovaLogo';
 import LegalFooter from '@/components/shell/LegalFooter';
+import { REQUIRED_DOCUMENTS } from '@/lib/vtc-documents';
 
 function SignupForm() {
   const searchParams = useSearchParams();
@@ -124,6 +125,16 @@ function SignupForm() {
             {roleCard('rider', Navigation, 'Voyager', 'Réservez des courses en ville')}
             {roleCard('driver', Car, 'Conduire', 'Gagnez de l’argent à votre rythme')}
           </div>
+
+          {form.role === 'driver' && (
+            <div className="card card-pad tiny" style={{ background: 'var(--gold-50)', borderColor: 'var(--gold-200, var(--border))' }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Documents à fournir après l’inscription (obligatoires en France)</div>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {REQUIRED_DOCUMENTS.map((d) => <li key={d.type}>{d.label}</li>)}
+              </ul>
+              <div className="muted mt-1">Votre compte chauffeur est activé une fois ces documents vérifiés par StrasDrive.</div>
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="name">Nom complet</label>
