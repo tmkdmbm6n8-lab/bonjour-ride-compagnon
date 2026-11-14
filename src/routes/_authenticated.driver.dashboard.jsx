@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   KeyRound,
   Flag,
+  PawPrint,
 } from "lucide-react";
 import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
