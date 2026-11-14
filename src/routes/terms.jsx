@@ -59,7 +59,7 @@ function TermsPage() {
         <li>{formatEuro(DRIVER_MIN_NET_PER_HOUR)} nets par heure d’activité, temps d’approche compris ;</li>
         <li>{formatEuro(DRIVER_MIN_NET_PER_KM)} net par kilomètre parcouru.</li>
       </ul>
-      <p> Le prix passager est calculé pour couvrir ce minimum, avec un temps d’approche estimé. À la fin de la course, la rémunération est recalculée avec le temps d’activité réel (de l’acceptation à l’arrivée) : si le minimum n’est pas atteint, StrasDrive complète la différence sur sa commission, sans rien facturer de plus au passager. La rémunération est créditée sur le portefeuille du chauffeur dès la fin de la course. </p>
+      <p> Le prix passager est calculé pour couvrir ce minimum, avec un temps d’approche estimé. Le prix annoncé ne change pas pendant la course : si elle dure plus longtemps que prévu (embouteillages), ni le passager ni StrasDrive ne paient de supplément, et la commission de la plateforme reste inchangée. La rémunération est créditée sur le portefeuille du chauffeur dès la fin de la course. </p>
 
       <h2>7. Comportement</h2>
       <ul>

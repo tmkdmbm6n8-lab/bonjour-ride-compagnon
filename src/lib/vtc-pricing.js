@@ -51,16 +51,12 @@ export function calculateFare(rule, meters, seconds, surge=1, discountRate=DISCO
 }
 
 /**
- * À la fin de la course, vérifie la rémunération avec le temps d'activité réel
- * (de l'acceptation à l'arrivée, approche comprise). Le passager paie le prix annoncé ;
- * si le chauffeur passerait sous le plancher, la plateforme complète sur sa commission.
+ * À la fin de la course, enregistre le temps d'activité réel. Le passager paie le prix annoncé
+ * et la plateforme garde toujours sa commission : aucun complément n'est versé si la course
+ * dure plus longtemps que prévu (bouchons).
  */
 export function settleDriverEarnings(fare, meters, activitySeconds) {
-  const due=driverMinimumNet(meters,activitySeconds);
-  const earned=Number(fare.driverEarnings)||0;
-  if(earned>=due)return {...fare,activitySeconds:Math.round(activitySeconds)};
-  const topUp=round2(due-earned);
-  return {...fare,activitySeconds:Math.round(activitySeconds),driverEarnings:due,platformFee:round2((Number(fare.total)||0)-due),platformTopUp:topUp};
+  return {...fare,activitySeconds:Math.round(Math.max(0,Number(activitySeconds)||0))};
 }
 
 export function formatEuro(value=0) { return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(value); }
