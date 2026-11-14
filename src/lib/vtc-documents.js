@@ -94,7 +94,8 @@ export function documentState(doc, today = todayIso()) {
 
 export function driverCompliance(docs = [], today = todayIso()) {
   const byType = Object.fromEntries(docs.map((d) => [d.doc_type, d]));
-  const res = { required: REQUIRED_DOCUMENTS.length, approved: 0, missing: [], pending: [], rejected: [], expired: [], expiring: [] };
+  /** @type {{required:number,approved:number,missing:string[],pending:string[],rejected:string[],expired:string[],expiring:string[],canBeApproved:boolean,canDrive:boolean}} */
+  const res = { canBeApproved: false, canDrive: false, required: REQUIRED_DOCUMENTS.length, approved: 0, missing: [], pending: [], rejected: [], expired: [], expiring: [] };
   for (const spec of DRIVER_DOCUMENTS) {
     const doc = byType[spec.type];
     const state = documentState(doc, today);

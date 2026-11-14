@@ -29,17 +29,17 @@ describe('documents obligatoires VTC', () => {
 
   it('un chauffeur ne peut être validé que si tous les documents obligatoires sont vérifiés', () => {
     expect(driverCompliance(approvedAll(), TODAY).canBeApproved).toBe(true);
-    const docs = approvedAll(); docs[0].status = 'pending';
+    const docs = approvedAll(); docs[0]!.status = 'pending';
     expect(driverCompliance(docs, TODAY).canBeApproved).toBe(false);
     expect(driverCompliance(approvedAll().slice(1), TODAY).canBeApproved).toBe(false);
   });
 
   it('un document renouvelé en vérification ne bloque pas la conduite, un document expiré ou refusé oui', () => {
-    const pending = approvedAll(); pending[6].status = 'pending';
+    const pending = approvedAll(); pending[6]!.status = 'pending';
     expect(driverCompliance(pending, TODAY).canDrive).toBe(true);
-    const expired = approvedAll(); expired[6].valid_until = '2026-11-13';
+    const expired = approvedAll(); expired[6]!.valid_until = '2026-11-13';
     expect(driverCompliance(expired, TODAY).canDrive).toBe(false);
-    const rejected = approvedAll(); rejected[2].status = 'rejected';
+    const rejected = approvedAll(); rejected[2]!.status = 'rejected';
     expect(driverCompliance(rejected, TODAY).canDrive).toBe(false);
   });
 
