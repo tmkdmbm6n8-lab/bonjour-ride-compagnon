@@ -76,3 +76,28 @@ export function profitability(netEarnings, approachSeconds, tripSeconds) {
   const level = perHour >= VERY_PROFITABLE_PER_HOUR ? 'very_profitable' : perHour >= PROFITABLE_PER_HOUR ? 'profitable' : 'not_profitable';
   return { perHour, level };
 }
+export const FAIR_EARNINGS_THRESHOLD_RATIO = 1.3; // +30 %
+
+export function filterFairDispatchPool(pool, dailyEarningsByDriver = {}) {
+  // Les prioritaires ne sont jamais bridés
+  const priorities = pool.filter((d) => d.is_priority);
+  const standards = pool.filter((d) => !d.is_priority);
+
+  if (standards.length <= 1) return pool;
+
+  // Calcul du gain moyen des chauffeurs standards disponibles
+  const earnings = standards.map((d) => Number(dailyEarningsByDriver[d.user_id] || 0));
+  const avgEarnings = earnings.reduce((sum, val) => sum + val, 0) / earnings.length;
+
+  // Plafond à +30 % au-dessus de la moyenne
+  const maxAllowed = Math.max(20, avgEarnings * FAIR_EARNINGS_THRESHOLD_RATIO);
+
+  // Chauffeurs éligibles n'ayant pas encore dépassé le seuil
+  const eligibleStandards = standards.filter(
+    (d) => Number(dailyEarningsByDriver[d.user_id] || 0) <= maxAllowed
+  );
+
+  // Si tout le monde a dépassé ou qu'aucun n'est disponible, on garde tout le monde
+  const finalStandards = eligibleStandards.length > 0 ? eligibleStandards : standards;
+
+  return [...priorities, ...finalStandards];
