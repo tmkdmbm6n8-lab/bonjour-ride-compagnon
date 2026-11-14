@@ -7,14 +7,6 @@ import {
 } from "./vtc-pricing";
 import { haversineDistance } from "./utils/geo";
 import {
-  planDispatch,
-  canSeeOffer,
-  distanceToPickupKm,
-  approachSecondsFor,
-  profitability,
-  TEST_OFFER_SECONDS,
-} from "./vtc-dispatch";
-import {
   LOWER_CLASSES,
   isVehicleClass,
   driverClass,
