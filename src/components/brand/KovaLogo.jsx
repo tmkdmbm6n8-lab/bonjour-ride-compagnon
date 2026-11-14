@@ -27,11 +27,11 @@ export function KovaIcon({ size = 32, className = '' }) {
       <path d={ROAD} stroke="#0C0A09" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2.2 2.4" />
       {/* Navigation arrow, a little way along the road from the bottom end */}
       <path
-        d="M0 -4.6L3.7 4L0 2.1L-3.7 4Z"
-        transform="translate(26.54 35.44) rotate(65)"
+        d="M0 -3.5L2.9 3L0 1.5L-2.9 3Z"
+        transform="translate(22.96 35.91) rotate(100)"
         fill="#CA8A04"
         stroke="#0C0A09"
-        strokeWidth="0.9"
+        strokeWidth="0.7"
         strokeLinejoin="round"
       />
     </svg>

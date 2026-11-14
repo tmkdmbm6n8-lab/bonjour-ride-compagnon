@@ -2,5 +2,5 @@
   <rect width="48" height="48" rx="14" fill="#0C0A09"/>
   <path d="M29.2 15A6 6 0 1 0 24 24A6 6 0 1 1 18.8 33" stroke="#FAFAF9" stroke-width="8" stroke-linecap="round"/>
   <path d="M29.2 15A6 6 0 1 0 24 24A6 6 0 1 1 18.8 33" stroke="#0C0A09" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="2.2 2.4"/>
-  <path d="M0 -4.6L3.7 4L0 2.1L-3.7 4Z" transform="translate(26.54 35.44) rotate(65)" fill="#CA8A04" stroke="#0C0A09" stroke-width="0.9" stroke-linejoin="round"/>
+  <path d="M0 -3.5L2.9 3L0 1.5L-2.9 3Z" transform="translate(22.96 35.91) rotate(100)" fill="#CA8A04" stroke="#0C0A09" stroke-width="0.7" stroke-linejoin="round"/>
 </svg>
