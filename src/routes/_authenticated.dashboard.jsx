@@ -48,6 +48,7 @@ function RiderDashboard() {
   const [walletBalance, setWalletBalance] = useState(null);
   const [booking, setBooking] = useState(false);
   const [nearby, setNearby] = useState([]);
+  const [availability, setAvailability] = useState(null); // {economy:{count,etaMinutes},…}
   const [chatOpen, setChatOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -118,7 +119,7 @@ function RiderDashboard() {
 
   // ── Nearby drivers (idle only, 10s poll) ──
   useEffect(() => {
-    if (phase !== 'idle' || !pickup) { setNearby([]); return undefined; }
+    if (phase !== 'idle' || !pickup) { setNearby([]); setAvailability(null); return undefined; }
     let timer;
     let stopped = false;
     async function load() {
@@ -126,7 +127,7 @@ function RiderDashboard() {
         const res = await fetch(`/api/drivers/nearby?lat=${pickup.lat}&lng=${pickup.lng}`);
         if (res.ok) {
           const data = await res.json();
-          if (!stopped) setNearby(data.drivers || []);
+          if (!stopped) { setNearby(data.drivers || []); setAvailability(data.availability || null); }
         }
       } catch { /* ignore */ }
       timer = setTimeout(load, 10000);
@@ -223,6 +224,8 @@ function RiderDashboard() {
 
   const selectedFare = estimate?.estimates?.[vehicleType];
   const surge = selectedFare?.surgeMultiplier > 1;
+  const selectedAvailability = availability?.[vehicleType];
+  const noDriverForSelected = selectedAvailability != null && selectedAvailability.count === 0;
   const insufficientWallet =
     walletBalance != null && selectedFare && walletBalance < selectedFare.total;
 
@@ -307,6 +310,7 @@ function RiderDashboard() {
                 <div className="flex-col gap-2">
                   {Object.entries(estimate.estimates).map(([type, fare]) => {
                     const Meta = VEHICLE_META[type];
+                    const avail = availability?.[type];
                     return (
                       <button
                         key={type}
@@ -320,6 +324,13 @@ function RiderDashboard() {
                             {VEHICLE_LABELS[type]}
                           </span>
                           <span className="tiny muted truncate" style={{ display: 'block' }}>{Meta.blurb}</span>
+                          {avail && (
+                            <span className="tiny truncate" style={{ display: 'block', fontWeight: 600, color: avail.count ? 'var(--success)' : 'var(--danger)' }}>
+                              {avail.count
+                                ? `${avail.count} chauffeur${avail.count > 1 ? 's' : ''} disponible${avail.count > 1 ? 's' : ''}${avail.etaMinutes ? ` · ${avail.etaMinutes} min` : ''}`
+                                : 'Aucun chauffeur disponible'}
+                            </span>
+                          )}
                         </span>
                         <span className="flex-col" style={{ alignItems: 'flex-end' }}>
                           <span className="small mono-nums" style={{ fontWeight: 700 }}>{money(fare.total)}</span>
@@ -369,9 +380,11 @@ function RiderDashboard() {
                 <button
                   className="btn btn-primary btn-lg btn-full mt-4"
                   onClick={handleBook}
-                  disabled={booking || insufficientWallet}
+                  disabled={booking || insufficientWallet || noDriverForSelected}
                 >
-                  {booking ? <span className="spinner" /> : (
+                  {booking ? <span className="spinner" /> : noDriverForSelected ? (
+                    <>Aucun chauffeur {VEHICLE_LABELS[vehicleType]} disponible</>
+                  ) : (
                     <>Réserver {VEHICLE_LABELS[vehicleType]} · {money(selectedFare?.total || 0)}</>
                   )}
                 </button>
