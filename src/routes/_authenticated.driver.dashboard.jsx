@@ -425,7 +425,7 @@ function DriverDashboard() {
             <div style={{ fontSize: '2.4rem', fontWeight: 800 }} className="mono-nums">
               {money(receipt.fare?.driverEarnings)}
             </div>
-            <p className="small muted mt-1 mb-4"> gagnés sur cette course · versés sur votre portefeuille </p>
+            <p className="small muted mt-1 mb-4">{receipt.isTest ? 'Course test : rien n’a été versé sur votre portefeuille' : 'gagnés sur cette course · versés sur votre portefeuille'}</p>
             <button className="btn btn-primary btn-full" onClick={() => setReceipt(null)}> Reprendre la conduite </button>
           </div>
         )}
