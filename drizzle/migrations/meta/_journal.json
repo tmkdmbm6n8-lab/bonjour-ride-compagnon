@@ -57,6 +57,13 @@
       "when": 1794621923131,
       "tag": "0007_driver_documents_override",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794646287942,
+      "tag": "0008_cash_payment_settlement",
+      "breakpoints": true
     }
   ]
 }
