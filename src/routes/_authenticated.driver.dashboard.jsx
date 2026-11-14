@@ -2,7 +2,7 @@ import {createFileRoute} from '@tanstack/react-router';
 import DriverLayout from '@/components/DriverLayout';
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from '@/lib/archive-navigation';
 import {
   Power, Navigation, MapPin, Circle, MessageCircle, X, Car,
@@ -15,6 +15,8 @@ import { useToast } from '@/components/ui/Toast';
 import { money, VEHICLE_LABELS } from '@/components/ui/bits';
 import useDriverState from '@/hooks/useDriverState';
 import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from '@/lib/utils/geo';
+import { playSound, startRinging } from '@/lib/sounds';
+import { NAV_APPS, getNavApp, setNavApp, getNavAuto, setNavAuto, openNavigation, fetchLegGeometry } from '@/lib/navigation';
 
 const PROFIT_BADGES = {
   very_profitable: { label: 'Très rentable', className: 'badge-success' },
@@ -45,13 +47,32 @@ function DriverDashboard() {
         5000
       );
     }
-    if (type === 'message' && data?.from === 'rider') setUnread((u) => u + 1);
+    if (type === 'message' && data?.from === 'rider') { setUnread((u) => u + 1); playSound('message'); }
+    if (type === 'rider-cancelled' || type === 'offer-withdrawn') playSound('cancelled');
   }, [toast]);
 
   const {
     loading, profile, online, position, offer, ride, busy, isConnected,
     goOnline, goOffline, accept, decline, arrive, start, complete, cancelTrip,
   } = useDriverState({ onEvent });
+
+  // Ring (Uber-style, repeated) while a ride request is on screen
+  useEffect(() => {
+    if (!offer?.rideId) return undefined;
+    return startRinging('offer');
+  }, [offer?.rideId]);
+
+  // GPS app preference (Google Maps / Waze) and auto-launch
+  const [navApp, setNavAppState] = useState('google');
+  const [navAuto, setNavAutoState] = useState(true);
+  useEffect(() => { setNavAppState(getNavApp()); setNavAutoState(getNavAuto()); }, []);
+  const chooseNavApp = (app) => { setNavApp(app); setNavAppState(app); };
+  const toggleNavAuto = () => { setNavAuto(!navAuto); setNavAutoState(!navAuto); };
+  function launchGps(dest, auto = false) {
+    if (auto && !navAuto) return;
+    const opened = openNavigation(navApp, dest);
+    if (!opened && auto) toast('Touchez « Lancer le GPS » pour ouvrir la navigation', 'info', 5000);
+  }
 
   // Offer countdown
   useEffect(() => {
@@ -82,10 +103,12 @@ function DriverDashboard() {
   async function handleAccept() {
     if (actionBusy) return;
     setActionBusy(true);
+    const pickupPoint = offer?.pickup ? { lat: offer.pickup.lat, lng: offer.pickup.lng } : null;
     try {
       await accept();
       setUnread(0);
       toast('Course acceptée — rendez-vous au point de prise en charge', 'success');
+      if (pickupPoint) launchGps(pickupPoint, true);
     } catch (err) {
       toast(err.message, 'error', 4000);
     } finally {
@@ -114,6 +137,7 @@ function DriverDashboard() {
       setPinOpen(false);
       setPinValue('');
       toast('Course démarrée', 'success');
+      if (ride?.dropoff) launchGps({ lat: ride.dropoff.lat, lng: ride.dropoff.lng }, true);
     } catch (err) {
       toast(err.message, 'error', 4000);
     } finally {
@@ -150,6 +174,32 @@ function DriverDashboard() {
     };
   }, [ride, position]);
 
+  // In-app navigation leg: driver → pickup, then driver → destination
+  const legTarget = ride
+    ? ride.status === 'in_progress'
+      ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng }
+      : ride.status === 'accepted'
+        ? { lat: ride.pickup.lat, lng: ride.pickup.lng }
+        : null
+    : null;
+  const navigating = Boolean(legTarget);
+  const [legGeometry, setLegGeometry] = useState(null);
+  const positionRef = useRef(position);
+  useEffect(() => { positionRef.current = position; }, [position]);
+  const hasPosition = Boolean(position);
+  useEffect(() => {
+    setLegGeometry(null);
+    if (!legTarget || !hasPosition) return undefined;
+    const ctrl = new AbortController();
+    const load = async () => {
+      const geom = await fetchLegGeometry(positionRef.current, legTarget, ctrl.signal);
+      if (!ctrl.signal.aborted && geom) setLegGeometry(geom);
+    };
+    load();
+    const timer = setInterval(load, 45000);
+    return () => { ctrl.abort(); clearInterval(timer); };
+  }, [ride?.id, ride?.status, hasPosition]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const needsVehicle = profile && !profile.vehicle?.plate;
   const center = position || { lat: 40.7128, lng: -74.006 };
 
@@ -162,8 +212,9 @@ function DriverDashboard() {
           userPosition={position || undefined}
           pickup={ride ? { lat: ride.pickup.lat, lng: ride.pickup.lng } : undefined}
           dropoff={ride && ride.status === 'in_progress' ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng } : undefined}
-          routeGeometry={ride?.status === 'in_progress' ? ride.route?.geometry : undefined}
+          routeGeometry={legGeometry || (ride?.status === 'in_progress' ? ride.route?.geometry : undefined)}
           fit={Boolean(ride)}
+          followPosition={navigating && position ? position : undefined}
         />
       </div>
 
@@ -262,6 +313,34 @@ function DriverDashboard() {
                 <span className="small mono-nums" style={{ fontWeight: 700, color: 'var(--gold-700)' }}>
                   ~{liveLeg.minutes} min
                 </span>
+              </div>
+            )}
+
+            {legTarget && (
+              <div className="mb-3">
+                <button className="btn btn-secondary btn-full" onClick={() => launchGps(legTarget)}>
+                  <Navigation size={17} /> Lancer le GPS · {NAV_APPS[navApp]}
+                </button>
+                <div className="flex items-center justify-between mt-2 tiny">
+                  <span className="flex gap-1" role="radiogroup" aria-label="Application GPS">
+                    {Object.entries(NAV_APPS).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        role="radio"
+                        aria-checked={navApp === id}
+                        onClick={() => chooseNavApp(id)}
+                        className={`badge ${navApp === id ? 'badge-gold' : ''}`}
+                        style={{ cursor: 'pointer', border: navApp === id ? '1px solid var(--gold-600)' : '1px solid var(--border)' }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </span>
+                  <label className="flex items-center gap-1 muted" style={{ cursor: 'pointer' }}>
+                    <input type="checkbox" checked={navAuto} onChange={toggleNavAuto} /> Ouvrir automatiquement
+                  </label>
+                </div>
               </div>
             )}
 
@@ -400,11 +479,11 @@ function DriverDashboard() {
       </Modal>
 
       {/* ── PIN entry ── */}
-      <Modal open={pinOpen} onClose={() => setPinOpen(false)} title="Code PIN du passager">
+      <Modal open={pinOpen} onClose={() => setPinOpen(false)} title="Code PIN du passager" keyboardSafe>
         <p className="small muted mb-4">Demandez au passager son code PIN à 4 chiffres pour démarrer la course.</p>
         <input
           className="input text-center mono-nums"
-          style={{ fontSize: '1.6rem', letterSpacing: '0.4em', fontWeight: 700 }}
+          style={{ fontSize: '2.2rem', letterSpacing: '0.5em', fontWeight: 800, minHeight: 64, color: 'var(--text)' }}
           value={pinValue}
           onChange={(e) => setPinValue(e.target.value.replace(/\D/g, '').slice(0, 4))}
           inputMode="numeric"
