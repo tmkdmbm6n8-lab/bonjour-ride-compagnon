@@ -26,7 +26,7 @@ describe('gammes de véhicules', () => {
     expect(canServe(d('a', 'premium', ['comfort', 'economy']), 'xl')).toBe(false);
   });
   it('côté client : un Go + un Comfort qui accepte le Go = 2 chauffeurs disponibles en Go', () => {
-    const a = availabilityByClass([d('go', 'economy', [], 2), d('cf', 'comfort', ['economy'], 1)], pickup);
+    const a: any = availabilityByClass([d('go', 'economy', [], 2), d('cf', 'comfort', ['economy'], 1)], pickup);
     expect(a.economy.count).toBe(2);
     expect(a.comfort.count).toBe(1);
     expect(a.premium.count).toBe(0);
