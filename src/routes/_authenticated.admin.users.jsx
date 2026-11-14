@@ -4,13 +4,65 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, Search } from 'lucide-react';
+import { Users, Search, Trash2 } from 'lucide-react';
+import Modal from '@/components/ui/Modal';
+import { useToast } from '@/components/ui/Toast';
+import { useSession } from '@/lib/archive-auth';
 import { Avatar, Loading, Empty, money } from '@/components/ui/bits';
 import { formatRelativeTime } from '@/lib/utils/geo';
 
 const ROLE_BADGE = { rider: 'badge-info', driver: 'badge-gold', admin: 'badge-danger' };
 
+function DeleteAccountModal({ user, onClose, onDeleted }) {
+  const toast = useToast();
+  const [typed, setTyped] = useState('');
+  const [busy, setBusy] = useState(false);
+  const confirmWord = 'SUPPRIMER';
+
+  async function remove() {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/users', { method: 'DELETE', body: JSON.stringify({ userId: user._id }) });
+      const j = await res.json();
+      if (!res.ok || j.error) throw new Error(j.error || 'Suppression impossible');
+      toast(`Compte de ${user.name || '@' + user.username} supprimé définitivement`, 'success', 5000);
+      onDeleted(user._id);
+    } catch (e) {
+      toast(e.message || 'Suppression impossible', 'error', 6000);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={busy ? () => {} : onClose} title="Supprimer ce compte ?">
+      <p className="small mb-3">
+        <strong>{user.name || 'Utilisateur'}</strong> (@{user.username}) sera effacé <strong>définitivement</strong> :
+      </p>
+      <ul className="small muted mb-3" style={{ paddingLeft: 18, listStyle: 'disc' }}>
+        <li>le compte et la connexion</li>
+        <li>les documents chauffeur et leurs fichiers</li>
+        <li>toutes ses courses (côté passager et côté chauffeur)</li>
+        <li>le portefeuille, les factures et l’historique des paiements</li>
+        <li>ses messages à l’assistance</li>
+      </ul>
+      <p className="small mb-3" style={{ color: 'var(--danger)', fontWeight: 600 }}>Cette action est irréversible.</p>
+      <label className="small" style={{ fontWeight: 600, display: 'block', marginBottom: 6 }} htmlFor="confirm-delete">
+        Tapez {confirmWord} pour confirmer
+      </label>
+      <input id="confirm-delete" className="input mb-4" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
+      <div className="flex gap-2">
+        <button type="button" className="btn btn-secondary flex-1" onClick={onClose} disabled={busy}>Annuler</button>
+        <button type="button" className="btn btn-danger flex-1" disabled={typed.trim().toUpperCase() !== confirmWord || busy} onClick={remove}>
+          {busy ? <span className="spinner" /> : <><Trash2 size={16} /> Supprimer définitivement</>}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 function AdminUsersPage() {
+  const { data: session } = useSession();
+  const [toDelete, setToDelete] = useState(null);
   const [users, setUsers] = useState(null);
   const [q, setQ] = useState('');
   const [role, setRole] = useState('');
@@ -64,6 +116,7 @@ function AdminUsersPage() {
                 <th>Portefeuille</th>
                 <th>Inscription</th>
                 <th>Dernière activité</th>
+                <th aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
@@ -82,11 +135,25 @@ function AdminUsersPage() {
                   <td className="small mono-nums">{money(u.wallet?.balance || 0)}</td>
                   <td className="tiny muted">{new Date(u.createdAt).toLocaleDateString()}</td>
                   <td className="tiny muted">{u.lastLoginAt ? formatRelativeTime(u.lastLoginAt) : '—'}</td>
+                  <td>
+                    {u._id !== session?.user?.id && (
+                      <button type="button" className="btn btn-danger btn-sm" onClick={() => setToDelete(u)} aria-label={`Supprimer le compte de ${u.name || u.username}`}>
+                        <Trash2 size={14} /> Supprimer
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+      {toDelete && (
+        <DeleteAccountModal
+          user={toDelete}
+          onClose={() => setToDelete(null)}
+          onDeleted={(id) => { setToDelete(null); setUsers((list) => (list || []).filter((x) => x._id !== id)); }}
+        />
       )}
     </div>
   );

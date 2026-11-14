@@ -403,6 +403,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_account: { Args: { _user: string }; Returns: Json }
       decline_ride_offer: {
         Args: { _driver: string; _ride: string }
         Returns: undefined
