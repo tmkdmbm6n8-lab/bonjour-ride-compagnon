@@ -41,6 +41,7 @@
 - [x] Grande alerte « Nouveau message » en haut de l'écran + bouton Discussion mis en évidence (passager et chauffeur)
 
 ## Virements chauffeurs hebdomadaires
-- [ ] Gains chauffeurs conservés sur la plateforme, virement automatique chaque semaine dimanche→lundi minuit (heure de Paris)
-- [ ] Retrait anticipé avant la date : 0,50 € de frais
-- [ ] Course en espèces : la commission (5 %) que le chauffeur doit est récupérée automatiquement sur sa prochaine course payée par carte/portefeuille
+- [x] Gains chauffeurs conservés sur la plateforme, virement automatique chaque semaine dimanche→lundi minuit (heure de Paris)
+- [x] Retrait anticipé avant la date : 0,50 € de frais
+- [x] Course en espèces : la commission (5 %) que le chauffeur doit est récupérée automatiquement sur sa prochaine course payée par carte/portefeuille
+- [ ] Virement réel vers la banque des chauffeurs — en attente de la connexion d'un compte Stripe (clé secrète)

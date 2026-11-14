@@ -128,7 +128,7 @@ function PayoutCardInner() {
       {/* Bank details */}
       {!status.configured && (
         <p className="tiny muted mt-3 flex gap-2 items-center">
-          <Banknote size={15} /> Le virement vers votre banque sera activé prochainement — vos gains restent en sécurité sur votre solde d’ici là.
+          <Banknote size={15} style={{ flexShrink: 0 }} /> Le virement vers votre banque sera activé prochainement — vos gains restent en sécurité sur votre solde d’ici là.
         </p>
       )}
       {status.configured && (!status.connected || !status.detailsSubmitted) && (
