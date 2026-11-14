@@ -311,7 +311,7 @@ function DriversAdmin() {
           </p>
           {forceFor.documents?.problem && <p className="tiny muted mb-2">{forceFor.documents.problem}.</p>}
           <p className="tiny muted mb-4">
-            Vous pouvez l’approuver malgré tout. Il ne pourra passer en ligne qu’une fois ses documents validés.
+            Vous pouvez l’approuver malgré tout : il pourra passer en ligne et recevoir des courses sans attendre ses documents. Si vous le suspendez puis le réapprouvez normalement, le contrôle des documents s’appliquera de nouveau.
           </p>
           <div className="flex gap-2" style={{ justifyContent: 'flex-end' }}>
             <button className="btn btn-ghost btn-sm" onClick={() => setForceFor(null)}>Annuler</button>
