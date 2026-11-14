@@ -33,6 +33,7 @@ import { Route as AuthenticatedDriverProfileRouteImport } from './routes/_authen
 import { Route as AuthenticatedDriverTripsRouteImport } from './routes/_authenticated.driver.trips'
 import { Route as AuthenticatedDriverWalletRouteImport } from './routes/_authenticated.driver.wallet'
 import { Route as AuthenticatedRidesIdRouteImport } from './routes/_authenticated.rides.$id'
+import { Route as ApiPublicJobsWeeklyPayoutsRouteImport } from './routes/api/public/jobs/weekly-payouts'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -162,6 +163,12 @@ const AuthenticatedRidesIdRoute = AuthenticatedRidesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedRidesRoute,
 } as any)
+const ApiPublicJobsWeeklyPayoutsRoute =
+  ApiPublicJobsWeeklyPayoutsRouteImport.update({
+    id: '/api/public/jobs/weekly-payouts',
+    path: '/api/public/jobs/weekly-payouts',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
+  '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -212,6 +220,7 @@ export interface FileRoutesByTo {
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
+  '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -239,6 +248,7 @@ export interface FileRoutesById {
   '/_authenticated/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/_authenticated/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/_authenticated/rides/$id': typeof AuthenticatedRidesIdRoute
+  '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/driver/trips'
     | '/driver/wallet'
     | '/rides/$id'
+    | '/api/public/jobs/weekly-payouts'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/driver/trips'
     | '/driver/wallet'
     | '/rides/$id'
+    | '/api/public/jobs/weekly-payouts'
   id:
     | '__root__'
     | '/'
@@ -317,6 +329,7 @@ export interface FileRouteTypes {
     | '/_authenticated/driver/trips'
     | '/_authenticated/driver/wallet'
     | '/_authenticated/rides/$id'
+    | '/api/public/jobs/weekly-payouts'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -328,6 +341,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  ApiPublicJobsWeeklyPayoutsRoute: typeof ApiPublicJobsWeeklyPayoutsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -500,6 +514,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRidesIdRouteImport
       parentRoute: typeof AuthenticatedRidesRoute
     }
+    '/api/public/jobs/weekly-payouts': {
+      id: '/api/public/jobs/weekly-payouts'
+      path: '/api/public/jobs/weekly-payouts'
+      fullPath: '/api/public/jobs/weekly-payouts'
+      preLoaderRoute: typeof ApiPublicJobsWeeklyPayoutsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -562,6 +583,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  ApiPublicJobsWeeklyPayoutsRoute: ApiPublicJobsWeeklyPayoutsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
