@@ -6,6 +6,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 import { useEffect, useState } from 'react';
 import { Car, Check } from 'lucide-react';
 import ProfileCard from '@/components/profile/ProfileCard';
+import DocumentsCard from '@/components/driver/DocumentsCard';
 import { useToast } from '@/components/ui/Toast';
 import { VEHICLE_LABELS } from '@/components/ui/bits';
 
@@ -66,7 +67,7 @@ function DriverProfilePage() {
   return (
     <div className="content-pad" style={{ maxWidth: 640 }}>
       <h1 className="page-title">Profil</h1>
-      <p className="page-sub mb-6">Votre compte et votre véhicule</p>
+      <p className="page-sub mb-6">Votre compte, votre véhicule et vos documents</p>
 
       <ProfileCard>
         <div className="card card-pad mt-4">
@@ -119,6 +120,7 @@ function DriverProfilePage() {
             </button>
           </form>
         </div>
+        <DocumentsCard />
       </ProfileCard>
     </div>
   );
