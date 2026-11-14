@@ -162,7 +162,7 @@ export async function handleVtc(input,context){
   if(role!=='driver')throw new Error('Accès refusé');const pool=await dispatchPool(admin);let me=pool.find(d=>d.user_id===uid);
   const test=await pendingTestOffer(admin,uid);
   const rs=required(await admin.from('rides').select('*').eq('status','searching').eq('is_test',false).limit(100));const fresh=[];for(const r of rs)fresh.push(await assignOffer(admin,r,pool));
-  let r=fresh.filter(x=>canSeeOffer(x,me)).sort((a,b)=>distanceToPickupKm(a,me)-distanceToPickupKm(b,me))[0];if(test){r=test.ride;me=me||test.driver;}if(!r)return {offer:null};
+  let r=fresh.filter(x=>canSeeOffer(x,me,Date.now(),pool)).sort((a,b)=>distanceToPickupKm(a,me)-distanceToPickupKm(b,me))[0];if(test){r=test.ride;me=me||test.driver;}if(!r)return {offer:null};
   const approachKm=distanceToPickupKm(r,me),approachMeters=Number.isFinite(approachKm)?Math.round(approachKm*1350):null;
   let profit=null;if(me.is_priority&&approachMeters!=null){const approachSeconds=approachSecondsFor(approachMeters),tripSeconds=r.route.durationSeconds||0;const expected=settleDriverEarnings(r.fare,r.route.distanceMeters,approachSeconds+tripSeconds).driverEarnings;profit={...profitability(expected,approachSeconds,tripSeconds),expectedEarnings:expected,approachSeconds:Math.round(approachSeconds)};}
   const rider=required(await admin.from('profiles').select('name').eq('id',r.rider_id).single());return {offer:{rideId:r.id,pickup:r.pickup,dropoff:r.dropoff,rider,earnings:r.fare.driverEarnings,distanceMeters:r.route.distanceMeters,durationSeconds:r.route.durationSeconds,routeQuality:routeQualityLabel(r.route),surgeMultiplier:r.fare.surgeMultiplier,expiresInSeconds:Math.max(0,Math.ceil((new Date(r.offer_expires_at)-Date.now())/1000)),phase:r.dispatch_phase,isPriority:Boolean(me.is_priority),rideClass:r.vehicle_type,ownClass:driverClass(me),lowerClass:isLowerClassRide(me,r.vehicle_type),distanceToPickupMeters:approachMeters??0,etaMinutes:approachMeters==null?1:Math.max(1,Math.round(approachSecondsFor(approachMeters)/60)),profitability:profit,isTest:Boolean(r.is_test),testPin:r.is_test?r.pin:undefined,paymentMethod:paymentMethodOf(r.payment?.method),total:r.fare.total}};
@@ -175,7 +175,7 @@ export async function handleVtc(input,context){
   const [,id,action]=match;const r=required(await admin.from('rides').select('*').eq('id',id).single());const participant=r.rider_id===uid||r.driver_id===uid;
   if(action==='accept'){
    if(r.is_test){if(role!=='driver'||r.status!=='searching'||r.offer_driver_id!==uid||!r.offer_expires_at||new Date(r.offer_expires_at).getTime()<=Date.now())throw new Error('Cette demande n’est plus disponible');}
-   else{const me=role==='driver'?(await dispatchPool(admin)).find(d=>d.user_id===uid):null;if(!canSeeOffer(r,me))throw new Error('Cette demande n’est plus disponible');}
+   else{const pool=role==='driver'?await dispatchPool(admin):[];const me=pool.find(d=>d.user_id===uid)||null;if(!canSeeOffer(r,me,Date.now(),pool))throw new Error('Cette demande n’est plus disponible');}
    let claim=admin.from('rides').update({driver_id:uid,status:'accepted',accepted_at:new Date().toISOString(),offer_driver_id:null,offer_expires_at:null}).eq('id',id).eq('status','searching').eq('dispatch_phase',r.dispatch_phase);if(r.dispatch_phase==='nearest')claim=claim.eq('offer_driver_id',uid);
    const claimed=required(await claim.select('*'))[0];if(!claimed)throw new Error('Course déjà acceptée');return {ride:await serialize(admin,claimed,uid)};
   }
@@ -257,7 +257,12 @@ async function pendingTestOffer(db,uid){
 async function dispatchPool(db){
  const ds=required(await db.from('drivers').select('*').eq('is_online',true).eq('is_approved',true));
  const busy=new Set(required(await db.from('rides').select('driver_id').in('status',['accepted','arrived','in_progress'])).map(b=>b.driver_id));
- return ds.filter(d=>!busy.has(d.user_id));
+ const free=ds.filter(d=>!busy.has(d.user_id));if(!free.length)return free;
+ // Today's net earnings (Paris day) for the fair-share rule.
+ const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date());const since=new Date(Date.parse(`${day}T00:00:00Z`)-2*3600e3).toISOString();
+ const done=required(await db.from('rides').select('driver_id,fare,completed_at').eq('status','completed').eq('is_test',false).in('driver_id',free.map(d=>d.user_id)).gte('completed_at',since));
+ const earned={};for(const x of done){if(new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date(x.completed_at))!==day)continue;earned[x.driver_id]=(earned[x.driver_id]||0)+(Number(x.fare?.driverEarnings)||0);}
+ return free.map(d=>({...d,earned_today:Math.round((earned[d.user_id]||0)*100)/100}));
 }
 async function assignOffer(db,r,pool){
  if(r.status!=='searching')return r;

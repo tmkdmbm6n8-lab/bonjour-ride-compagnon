@@ -17,10 +17,28 @@ export function distanceToPickupKm(ride, driver) {
   return haversineDistance(driver.location.lat, driver.location.lng, ride.pickup.lat, ride.pickup.lng);
 }
 
-/** Drivers (already online, approved and free) who can still receive this ride: its class, or a higher class that opted into it. */
+// Fair share: a non-priority driver who already earned more than 30 % above the average of the
+// other available non-priority drivers today stops receiving rides while others can take them.
+// Small amounts are never throttled. Priority drivers are never throttled.
+export const FAIR_SHARE_RATIO = 1.3;
+export const FAIR_SHARE_MIN_EUR = 20;
+
+export function isThrottled(driver, pool) {
+  if (!driver || driver.is_priority) return false;
+  const mine = Number(driver.earned_today) || 0;
+  if (mine < FAIR_SHARE_MIN_EUR) return false;
+  const others = pool.filter((d) => !d.is_priority && d.user_id !== driver.user_id);
+  if (!others.length) return false;
+  const avg = others.reduce((s, d) => s + (Number(d.earned_today) || 0), 0) / others.length;
+  return mine > avg * FAIR_SHARE_RATIO;
+}
+
+/** Drivers (already online, approved and free) who can still receive this ride: its class, or a higher class that opted into it, minus fair-share throttled drivers when someone else can take it. */
 export function availableFor(ride, drivers) {
   const declined = ride.declined || [];
-  return drivers.filter((d) => canServe(d, ride.vehicle_type) && !declined.includes(d.user_id));
+  const pool = drivers.filter((d) => canServe(d, ride.vehicle_type) && !declined.includes(d.user_id));
+  const fair = pool.filter((d) => !isThrottled(d, pool));
+  return fair.length ? fair : pool;
 }
 
 /** Returns the update to apply to a searching ride, or null when its current step is still running. */
@@ -66,10 +84,11 @@ export function planDispatch(ride, drivers, now = Date.now()) {
 }
 
 /** Whether this driver (online, approved, free) may see and accept the ride right now. */
-export function canSeeOffer(ride, driver, now = Date.now()) {
+export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
   if (!driver || ride.status !== "searching" || !ride.dispatch_phase) return false;
   if (!ride.offer_expires_at || new Date(ride.offer_expires_at).getTime() <= now) return false;
-  if (availableFor(ride, [driver]).length === 0) return false;
+  const all = pool && pool.some((d) => d.user_id === driver.user_id) ? pool : [driver];
+  if (!availableFor(ride, all).some((d) => d.user_id === driver.user_id)) return false;
   if (ride.dispatch_phase === "priority") return Boolean(driver.is_priority);
   if (ride.dispatch_phase === "nearest") return ride.offer_driver_id === driver.user_id;
   return ride.dispatch_phase === "broadcast";
