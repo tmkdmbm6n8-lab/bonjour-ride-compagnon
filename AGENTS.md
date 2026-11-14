@@ -32,7 +32,8 @@ use the editor.
 - Preserve imported UI modules and their CSS while adapting framework boundaries to TanStack file routes; this avoids replacing the source experience.
 - Keep a non-executed source archive under `original-source/` for capabilities requiring incompatible runtimes; track every remaining port in the migration ledger.
 
-- Maps, address search and routing use keyless free services (OpenStreetMap standard tiles via MapLibre, Photon geocoding, OSRM routing) as in the original archive; never add a Google Maps key requirement — the user wants no API key to supply.
+- Map tiles (OpenStreetMap via MapLibre) and address search (Photon) stay keyless; routing and trip times use Google Routes (traffic-aware) through the managed Google Maps connector on the server, OSRM only as fallback, then an approximate estimate with no drawn line — all in `src/lib/vtc-routing.js`; the user never supplies a key.
+- The live leg (driver → pickup/destination) is computed server-side from `drivers.location` and cached in `rides.live_route` for 45 s, shared by rider and driver; keeps billed routing calls to about one per minute per active ride.
 
 - Any fare discount is a single rate constant in `src/lib/vtc-pricing.js` applied inside `calculateFare`; quotes and server-side booking charges share it, so setting it to 0 removes the discount everywhere.
 - Driver pay floors (per ride, per hour incl. approach, per km, net of commission) are constants in `src/lib/vtc-pricing.js`, applied in `calculateFare` after any discount and re-checked at completion by `settleDriverEarnings` using `rides.accepted_at`; the passenger price never changes after booking, the platform fee absorbs any top-up.
@@ -47,5 +48,5 @@ use the editor.
 - Admin account deletion goes through the service-role-only `admin_delete_account` SQL function (atomic) plus storage and auth cleanup in `vtc.server.js`; other users keep their payment lines, unlinked from the deleted rides.
 - Ride payment method lives in `rides.payment.method` (`wallet`|`cash`), sanitized by `paymentMethodOf` in `src/lib/vtc-pricing.js`; `settle_ride` debits only the driver's platform share for cash rides, so the rider wallet is never touched and the driver's negative-balance limit still applies.
 - `MapView.jsx` sets MapLibre's worker URL explicitly (Vite `?url` import); without it the bundled worker 404s and GeoJSON layers such as the route line never draw.
-- Driver navigation (Google Maps/Waze deep links, keyless OSRM legs) lives in `src/lib/navigation.js`; notification melodies are synthesized in `src/lib/sounds.js` (no audio files), one distinct melody per event.
+- Driver navigation (Google Maps/Waze deep links) lives in `src/lib/navigation.js`; notification melodies are synthesized in `src/lib/sounds.js` (no audio files), one distinct melody per event.
 - Inputs that open the phone keyboard (address search, PIN, chat) position themselves with `useVisualViewport`; fixed/portal positioning alone drifts when iOS scrolls the page.
