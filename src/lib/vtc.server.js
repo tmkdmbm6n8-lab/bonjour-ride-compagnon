@@ -1,9 +1,11 @@
 import {DEFAULT_PRICING,calculateFare,settleDriverEarnings} from './vtc-pricing';
 import {haversineDistance} from './utils/geo';
 import {planDispatch,canSeeOffer,distanceToPickupKm,approachSecondsFor,profitability} from './vtc-dispatch';
+import {DOCUMENTS_BUCKET,documentSpec,validateDocumentInput,driverCompliance,complianceProblem} from './vtc-documents';
 const active=['searching','accepted','arrived','in_progress'];
 function required(result){if(result.error)throw new Error(result.error.message);return result.data;}
 function driverShape(d){return d?{...d,_id:d.id,isOnline:d.is_online,isApproved:d.is_approved,isPriority:Boolean(d.is_priority),userId:d.user_id}:null;}
+function docShape(d){return {id:d.id,type:d.doc_type,fileName:d.file_name,number:d.document_number,referenceDate:d.reference_date,validUntil:d.valid_until,status:d.status,rejectionReason:d.rejection_reason,uploadedAt:d.uploaded_at,reviewedAt:d.reviewed_at};}
 function profileShape(p,email){return {...p,_id:p.id,createdAt:p.created_at,email:email||'',wallet:{balance:Number(p.balance),currency:'EUR'}};}
 async function serialize(db,r,actor,raw=false){
  if(!r)return null;
@@ -35,7 +37,8 @@ export async function handleVtc(input,context){
   const driver=role==='driver'?required(await db.from('drivers').select('*').eq('user_id',uid).maybeSingle()):null;
   const rides=required(await db.from('rides').select('*').or(`rider_id.eq.${uid},driver_id.eq.${uid}`).order('created_at',{ascending:false}).limit(5000)).map(({pin,offer_driver_id,offer_expires_at,declined,...rest})=>rest);
   const transactions=required(await db.from('wallet_transactions').select('*').eq('user_id',uid).order('created_at',{ascending:false}).limit(10000));
-  return {exportedAt:new Date().toISOString(),account:{email:context.claims.email||'',role,consent:context.claims.user_metadata?.consent||null},profile,driver,rides,walletTransactions:transactions};
+  const documents=role==='driver'?required(await db.from('driver_documents').select('*').eq('user_id',uid)).map(docShape):undefined;
+  return {exportedAt:new Date().toISOString(),account:{email:context.claims.email||'',role,consent:context.claims.user_metadata?.consent||null},profile,driver,documents,rides,walletTransactions:transactions};
  }
  if(p==='/api/users/me/deletion-request'&&method==='POST'){
   // Droit à l'effacement (RGPD art. 17) : demande enregistrée et traitée sous un mois.
@@ -73,11 +76,25 @@ export async function handleVtc(input,context){
   }
   return {driver:driverShape(required(await db.from('drivers').select('*').eq('user_id',uid).single()))};
  }
+ if(p==='/api/drivers/me/documents'){
+  if(method==='POST'){
+   const spec=documentSpec(body.type);if(!spec)throw new Error('Type de document inconnu');
+   const fields=validateDocumentInput(body.type,body);
+   const path=String(body.path||'');if(!path.startsWith(`${uid}/`)||path.includes('..')||path.length>200)throw new Error('Fichier invalide');
+   const check=await admin.storage.from(DOCUMENTS_BUCKET).createSignedUrl(path,10);if(check.error)throw new Error('Fichier introuvable, renvoyez-le');
+   const previous=required(await admin.from('driver_documents').select('file_path').eq('user_id',uid).eq('doc_type',spec.type).maybeSingle());
+   required(await admin.from('driver_documents').upsert({user_id:uid,doc_type:spec.type,file_path:path,file_name:String(body.fileName||'').slice(0,150),...fields,status:'pending',rejection_reason:'',uploaded_at:new Date().toISOString(),reviewed_at:null},{onConflict:'user_id,doc_type'}));
+   // Le document remplacé est supprimé immédiatement (minimisation RGPD).
+   if(previous&&previous.file_path!==path)await admin.storage.from(DOCUMENTS_BUCKET).remove([previous.file_path]);
+  }
+  const docs=required(await db.from('driver_documents').select('*').eq('user_id',uid));
+  const c=driverCompliance(docs);return {documents:docs.map(docShape),compliance:{...c,problem:complianceProblem(c)}};
+ }
  if(p==='/api/drivers/me/status'){
   const d=required(await db.from('drivers').select('*').eq('user_id',uid).single());
   const current=required(await db.from('rides').select('id').eq('driver_id',uid).in('status',active));
   if(!body.online&&current.length)throw new Error('Terminez votre course avant de passer hors ligne');
-  if(body.online){if(!d.is_approved)throw new Error('Votre inscription doit être approuvée');if(!d.vehicle.plate)throw new Error('Ajoutez votre véhicule');if(Number(profile.balance)<-25)throw new Error('Régularisez votre solde avant de passer en ligne');if(!body.location||![body.location.lat,body.location.lng].every(Number.isFinite))throw new Error('Position invalide');}
+  if(body.online){if(!d.is_approved)throw new Error('Votre inscription doit être approuvée');if(!d.vehicle.plate)throw new Error('Ajoutez votre véhicule');const dc=driverCompliance(required(await db.from('driver_documents').select('doc_type,status,valid_until').eq('user_id',uid)));if(!dc.canDrive)throw new Error(`${complianceProblem(dc)} — mettez à jour vos documents dans votre profil`);if(Number(profile.balance)<-25)throw new Error('Régularisez votre solde avant de passer en ligne');if(!body.location||![body.location.lat,body.location.lng].every(Number.isFinite))throw new Error('Position invalide');}
   required(await db.from('drivers').update({is_online:Boolean(body.online),location:body.location||d.location,updated_at:new Date().toISOString()}).eq('user_id',uid));return {ok:true};
  }
  if(p==='/api/drivers/location'){
@@ -144,7 +161,20 @@ export async function handleVtc(input,context){
   return {ride:await serialize(admin,required(await admin.from('rides').select('*').eq('id',id).single()),uid)};
  }
  if(p==='/api/admin/pricing'){if(method==='PUT'){if(!DEFAULT_PRICING[body.vehicleType]||Object.values(DEFAULT_PRICING[body.vehicleType]).some((_,i)=>!Number.isFinite(body[Object.keys(DEFAULT_PRICING[body.vehicleType])[i]])))throw new Error('Tarif invalide');required(await admin.from('pricing_rules').upsert({vehicle_type:body.vehicleType,rule:body}));return {rule:body};}return {rules:required(await admin.from('pricing_rules').select('*')).map(r=>({...r.rule,vehicleType:r.vehicle_type,city:r.city}))};}
- if(p==='/api/admin/drivers'){if(method==='PATCH'){const patch='isPriority' in body?{is_priority:Boolean(body.isPriority)}:{is_approved:Boolean(body.isApproved),...(body.isApproved?{}:{is_online:false})};required(await admin.from('drivers').update(patch).eq('id',body.driverId));return {ok:true};}let query=admin.from('drivers').select('*');if(q.get('pending'))query=query.eq('is_approved',false);const ds=required(await query);return {drivers:await Promise.all(ds.map(async d=>({...driverShape(d),userId:required(await admin.from('profiles').select('name,username,avatar').eq('id',d.user_id).single())})))};}
+ if(p==='/api/admin/drivers/documents'){
+  if(method==='PATCH'){
+   if(!['approved','rejected'].includes(body.status))throw new Error('Statut invalide');const reason=String(body.reason||'').trim().slice(0,300);if(body.status==='rejected'&&reason.length<3)throw new Error('Indiquez le motif du refus');
+   const doc=required(await admin.from('driver_documents').update({status:body.status,rejection_reason:body.status==='rejected'?reason:'',reviewed_at:new Date().toISOString()}).eq('id',body.documentId).select('user_id').single());
+   const c=driverCompliance(required(await admin.from('driver_documents').select('doc_type,status,valid_until').eq('user_id',doc.user_id)));
+   if(!c.canDrive)required(await admin.from('drivers').update({is_online:false}).eq('user_id',doc.user_id));
+   return {ok:true};
+  }
+  const d=required(await admin.from('drivers').select('user_id').eq('id',q.get('driverId')).single());
+  const docs=required(await admin.from('driver_documents').select('*').eq('user_id',d.user_id));
+  const c=driverCompliance(docs);
+  return {documents:await Promise.all(docs.map(async x=>({...docShape(x),url:(await admin.storage.from(DOCUMENTS_BUCKET).createSignedUrl(x.file_path,600)).data?.signedUrl||null}))),compliance:{...c,problem:complianceProblem(c)}};
+ }
+ if(p==='/api/admin/drivers'){if(method==='PATCH'){if(body.isApproved===true){const t=required(await admin.from('drivers').select('user_id').eq('id',body.driverId).single());const c=driverCompliance(required(await admin.from('driver_documents').select('doc_type,status,valid_until').eq('user_id',t.user_id)));if(!c.canBeApproved)throw new Error(`Validation impossible. ${complianceProblem(c)}`);}const patch='isPriority' in body?{is_priority:Boolean(body.isPriority)}:{is_approved:Boolean(body.isApproved),...(body.isApproved?{}:{is_online:false})};required(await admin.from('drivers').update(patch).eq('id',body.driverId));return {ok:true};}let query=admin.from('drivers').select('*');if(q.get('pending'))query=query.eq('is_approved',false);const ds=required(await query);const allDocs=required(await admin.from('driver_documents').select('user_id,doc_type,status,valid_until'));return {drivers:await Promise.all(ds.map(async d=>({...driverShape(d),documents:(c=>({approved:c.approved,required:c.required,canBeApproved:c.canBeApproved,problem:complianceProblem(c)}))(driverCompliance(allDocs.filter(x=>x.user_id===d.user_id))),userId:required(await admin.from('profiles').select('name,username,avatar').eq('id',d.user_id).single())})))};}
  if(p==='/api/admin/users'){const ps=required(await admin.from('profiles').select('*').limit(100));const rs=required(await admin.from('user_roles').select('*'));return {users:ps.map(p=>({...profileShape(p),role:rs.find(r=>r.user_id===p.id)?.role||'rider'})).filter(p=>(!q.get('role')||p.role===q.get('role'))&&(!q.get('q')||(p.name+' '+p.username).toLowerCase().includes(q.get('q').toLowerCase())))};}
  if(p==='/api/admin/support'){if(method==='PATCH'){if(!['open','resolved'].includes(body.status))throw new Error('Statut invalide');required(await admin.from('contact_messages').update({status:body.status,resolved_at:body.status==='resolved'?new Date().toISOString():null}).eq('id',body.id));return {ok:true};}return {messages:required(await admin.from('contact_messages').select('*').eq('status',q.get('status')||'open')).map(m=>({...m,_id:m.id,createdAt:m.created_at,resolvedAt:m.resolved_at}))};}
  if(p==='/api/drivers/me/earnings'||p==='/api/admin/overview'){
