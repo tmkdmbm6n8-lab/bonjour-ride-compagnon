@@ -22,3 +22,12 @@
 
 # Logo
 - [x] Remplacer le logo « K » par un logo « SD » dans le même style (carré noir arrondi, point doré).
+
+# Confort mobile (demande du 14/11)
+- [ ] Messages du chat plus visibles
+- [ ] Saisie du code PIN visible au-dessus du clavier
+- [ ] GPS lancé automatiquement à l'acceptation et à la prise en charge
+- [ ] Carte : déplacement/zoom uniquement à deux doigts (Voyager et Conduire)
+- [ ] Client : voir les chauffeurs proches et zoom automatique dessus après l'adresse
+- [ ] Suggestions d'adresse en temps réel sous le champ
+- [ ] Son de notification (style Uber, distinct par type)
