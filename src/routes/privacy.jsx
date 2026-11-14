@@ -25,6 +25,7 @@ function PrivacyPage() {
         <li><strong>Localisation</strong> — passagers : votre position actuelle, seulement si vous l’autorisez dans votre navigateur, pour proposer l’adresse de départ. Chauffeurs : votre position est transmise uniquement lorsque vous êtes en ligne ou en course ; seule la dernière position est gardée.</li>
         <li><strong>Portefeuille</strong> — solde, recharges, paiements de courses, revenus et frais d’annulation. Les numéros de carte sont saisis chez Stripe et ne nous parviennent jamais.</li>
         <li><strong>Chauffeurs</strong> — véhicule (marque, modèle, année, couleur, plaque, gamme), statut d’approbation, statistiques d’activité et compte de versement Stripe.</li>
+        <li><strong>Documents professionnels des chauffeurs</strong> — copies de la pièce d’identité, du permis de conduire, de la carte professionnelle VTC, de l’immatriculation de l’entreprise (SIRET), de l’inscription au registre VTC, de la carte grise, des attestations d’assurance, de la signalétique VTC, de l’attestation de vigilance URSSAF et, le cas échéant, du contrôle technique ; avec leur numéro, leur date de validité et le résultat de la vérification. Ils sont stockés dans un espace privé, visibles uniquement par le chauffeur et l’équipe StrasDrive.</li>
         <li><strong>Assistance</strong> — nom, e-mail, sujet et contenu des messages envoyés via le formulaire de contact.</li>
       </ul>
 
@@ -32,6 +33,7 @@ function PrivacyPage() {
       <ul>
         <li><strong>Fournir le service</strong> (compte, devis, attribution de la course aux chauffeurs disponibles selon leur niveau de priorité et leur distance, suivi, paiement, rémunération du chauffeur) — exécution du contrat (art. 6.1.b RGPD).</li>
         <li><strong>Sécurité</strong> (code PIN, notes réciproques, prévention de la fraude) — intérêt légitime à protéger passagers et chauffeurs (art. 6.1.f).</li>
+        <li><strong>Vérification des documents des chauffeurs</strong> (carte VTC, registre VTC, assurances, attestation de vigilance URSSAF) — obligation légale de la centrale de réservation (Code des transports, article L8222-1 du Code du travail).</li>
         <li><strong>Comptabilité et obligations légales</strong> (conservation des opérations financières, réponses aux autorités) — obligation légale (art. 6.1.c).</li>
         <li><strong>Assistance</strong> — exécution du contrat ou intérêt légitime à répondre à vos demandes.</li>
         <li><strong>Mesure d’audience</strong> sans cookie (voir section 7) — intérêt légitime à améliorer le service.</li>
@@ -58,6 +60,7 @@ function PrivacyPage() {
         <li><strong>Dernière position d’un chauffeur</strong> — effacée 24 heures après son passage hors ligne.</li>
         <li><strong>Messages envoyés via le formulaire de contact</strong> — 3 ans après l’envoi.</li>
         <li><strong>Preuve d’acceptation des conditions</strong> — tant que le compte est ouvert.</li>
+        <li><strong>Documents des chauffeurs</strong> — tant que le compte chauffeur est ouvert, puis supprimés avec le compte. Un document remplacé par une version plus récente est supprimé immédiatement.</li>
       </ul>
       <p> Ces suppressions sont faites automatiquement chaque nuit. </p>
 

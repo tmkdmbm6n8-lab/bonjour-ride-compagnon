@@ -47,6 +47,59 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_documents: {
+        Row: {
+          doc_type: string
+          document_number: string
+          file_name: string
+          file_path: string
+          id: string
+          reference_date: string | null
+          rejection_reason: string
+          reviewed_at: string | null
+          status: string
+          uploaded_at: string
+          user_id: string
+          valid_until: string | null
+        }
+        Insert: {
+          doc_type: string
+          document_number?: string
+          file_name?: string
+          file_path: string
+          id?: string
+          reference_date?: string | null
+          rejection_reason?: string
+          reviewed_at?: string | null
+          status?: string
+          uploaded_at?: string
+          user_id: string
+          valid_until?: string | null
+        }
+        Update: {
+          doc_type?: string
+          document_number?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          reference_date?: string | null
+          rejection_reason?: string
+          reviewed_at?: string | null
+          status?: string
+          uploaded_at?: string
+          user_id?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_documents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drivers: {
         Row: {
           id: string
