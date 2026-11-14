@@ -317,6 +317,13 @@ function DriverDashboard() {
               {countdown}
             </div>
             <h3 style={{ fontSize: '1.2rem' }}>Nouvelle demande de course</h3>
+            {offer.profitability && (
+              <div className="mt-2">
+                <span className={`badge ${PROFIT_BADGES[offer.profitability.level].className}`}>
+                  {PROFIT_BADGES[offer.profitability.level].label} · {money(offer.profitability.perHour)}/h
+                </span>
+              </div>
+            )}
             <p className="small muted mt-1 mb-4">
               {offer.rider?.name || 'Un passager'} · {formatDistance(offer.distanceToPickupMeters)} de distance · ~{offer.etaMinutes} min jusqu’à la prise en charge
             </p>
@@ -340,7 +347,7 @@ function DriverDashboard() {
                   )}
                 </span>
                 <span style={{ fontWeight: 800, fontSize: '1.15rem' }} className="mono-nums">
-                  {money(offer.earnings)}
+                  {money(offer.profitability?.expectedEarnings ?? offer.earnings)}
                 </span>
               </div>
             </div>

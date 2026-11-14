@@ -58,3 +58,19 @@ export function canSeeOffer(ride, driver, now = Date.now()) {
   if (ride.dispatch_phase === 'nearest') return ride.offer_driver_id === driver.user_id;
   return ride.dispatch_phase === 'broadcast';
 }
+
+// Profitability shown to priority drivers: expected net gain per hour, counting the drive to the passenger.
+export const VERY_PROFITABLE_PER_HOUR = 45;
+export const PROFITABLE_PER_HOUR = 30;
+export const APPROACH_SPEED_KMH = 25;
+
+export function approachSecondsFor(meters) {
+  return Math.max(60, (Number(meters) || 0) / 1000 / APPROACH_SPEED_KMH * 3600);
+}
+
+export function profitability(netEarnings, approachSeconds, tripSeconds) {
+  const hours = Math.max(1, (Number(approachSeconds) || 0) + (Number(tripSeconds) || 0)) / 3600;
+  const perHour = Math.round((Number(netEarnings) || 0) / hours * 100) / 100;
+  const level = perHour >= VERY_PROFITABLE_PER_HOUR ? 'very_profitable' : perHour >= PROFITABLE_PER_HOUR ? 'profitable' : 'not_profitable';
+  return { perHour, level };
+}

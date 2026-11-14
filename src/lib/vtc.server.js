@@ -1,6 +1,6 @@
 import {DEFAULT_PRICING,calculateFare,settleDriverEarnings} from './vtc-pricing';
 import {haversineDistance} from './utils/geo';
-import {planDispatch,canSeeOffer,distanceToPickupKm} from './vtc-dispatch';
+import {planDispatch,canSeeOffer,distanceToPickupKm,approachSecondsFor,profitability} from './vtc-dispatch';
 const active=['searching','accepted','arrived','in_progress'];
 function required(result){if(result.error)throw new Error(result.error.message);return result.data;}
 function driverShape(d){return d?{...d,_id:d.id,isOnline:d.is_online,isApproved:d.is_approved,isPriority:Boolean(d.is_priority),userId:d.user_id}:null;}
@@ -110,7 +110,8 @@ export async function handleVtc(input,context){
   const rs=required(await admin.from('rides').select('*').eq('status','searching').limit(100));const fresh=[];for(const r of rs)fresh.push(await assignOffer(admin,r,pool));
   const r=fresh.filter(x=>canSeeOffer(x,me)).sort((a,b)=>distanceToPickupKm(a,me)-distanceToPickupKm(b,me))[0];if(!r)return {offer:null};
   const approachKm=distanceToPickupKm(r,me),approachMeters=Number.isFinite(approachKm)?Math.round(approachKm*1350):null;
-  const rider=required(await admin.from('profiles').select('name').eq('id',r.rider_id).single());return {offer:{rideId:r.id,pickup:r.pickup,dropoff:r.dropoff,rider,earnings:r.fare.driverEarnings,distanceMeters:r.route.distanceMeters,durationSeconds:r.route.durationSeconds,surgeMultiplier:r.fare.surgeMultiplier,expiresInSeconds:Math.max(0,Math.ceil((new Date(r.offer_expires_at)-Date.now())/1000)),phase:r.dispatch_phase,isPriority:Boolean(me.is_priority),distanceToPickupMeters:approachMeters??0,etaMinutes:approachMeters==null?1:Math.max(1,Math.round(approachMeters/1000/25*60))}};
+  let profit=null;if(me.is_priority&&approachMeters!=null){const approachSeconds=approachSecondsFor(approachMeters),tripSeconds=r.route.durationSeconds||0;const expected=settleDriverEarnings(r.fare,r.route.distanceMeters,approachSeconds+tripSeconds).driverEarnings;profit={...profitability(expected,approachSeconds,tripSeconds),expectedEarnings:expected,approachSeconds:Math.round(approachSeconds)};}
+  const rider=required(await admin.from('profiles').select('name').eq('id',r.rider_id).single());return {offer:{rideId:r.id,pickup:r.pickup,dropoff:r.dropoff,rider,earnings:r.fare.driverEarnings,distanceMeters:r.route.distanceMeters,durationSeconds:r.route.durationSeconds,surgeMultiplier:r.fare.surgeMultiplier,expiresInSeconds:Math.max(0,Math.ceil((new Date(r.offer_expires_at)-Date.now())/1000)),phase:r.dispatch_phase,isPriority:Boolean(me.is_priority),distanceToPickupMeters:approachMeters??0,etaMinutes:approachMeters==null?1:Math.max(1,Math.round(approachSecondsFor(approachMeters)/60)),profitability:profit}};
  }
  if(p==='/api/rides'||p==='/api/admin/rides'){
   const page=Math.max(1,Number(q.get('page'))||1),limit=Math.min(100,Math.max(1,Number(q.get('limit'))||15));let query=(role==='admin'?admin:db).from('rides').select('*',{count:'exact'}).order('created_at',{ascending:false});if(role!=='admin')query=query.eq(role==='driver'?'driver_id':'rider_id',uid);if(q.get('status'))query=query.eq('status',q.get('status'));const res=await query.range((page-1)*limit,page*limit-1);const rows=required(res);return {rides:await Promise.all(rows.map(r=>serialize(admin,r,uid,true))),pagination:{page,pages:Math.ceil(res.count/limit),total:res.count}};
