@@ -114,3 +114,17 @@ export function profitability(netEarnings, approachSeconds, tripSeconds) {
         : "not_profitable";
   return { perHour, level };
 }
+// Zone de prise en charge : le chauffeur doit être à moins de PICKUP_ZONE_METERS
+// du point de prise en charge pour signaler son arrivée et démarrer la course.
+export const PICKUP_ZONE_METERS = 150;
+
+/** Renvoie null si le chauffeur est dans la zone, sinon le message à afficher. */
+export function pickupZoneProblem(driverLocation, pickup, radius = PICKUP_ZONE_METERS) {
+  if (!driverLocation || !Number.isFinite(driverLocation.lat) || !Number.isFinite(driverLocation.lng)) {
+    return "Position GPS introuvable — activez la localisation";
+  }
+  if (!pickup) return null;
+  const meters = Math.round(haversineDistance(driverLocation.lat, driverLocation.lng, pickup.lat, pickup.lng) * 1000);
+  if (meters <= radius) return null;
+  return `Rapprochez-vous du point de prise en charge (encore ${meters - radius} m)`;
+}
