@@ -31,3 +31,8 @@
 - [x] Client : voir les chauffeurs proches et zoom automatique dessus après l'adresse
 - [x] Suggestions d'adresse en temps réel sous le champ
 - [x] Son de notification (style Uber, distinct par type)
+
+# Itinéraire en temps réel (demande du 14/11)
+- [x] Itinéraire calculé par Google Routes avec trafic en temps réel (OSRM en secours)
+- [x] Temps de trajet et heure d’arrivée affichés sur la course (client, chauffeur, offre)
+- [x] Plus de ligne droite muette : « durée estimée » affichée, aucun tracé
