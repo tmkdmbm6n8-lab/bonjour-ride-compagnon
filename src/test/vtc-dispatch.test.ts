@@ -116,3 +116,17 @@ describe('fair share (+30 %)', () => {
     expect(availableFor(ride, pool).map((d: any) => d.user_id)).toEqual(['rich']);
   });
 });
+
+import { pickupZoneProblem } from '@/lib/vtc-dispatch';
+describe('pickup zone (150 m)', () => {
+  const pickup = { lat: 48.5833, lng: 7.7458 };
+  it('allows a driver about 100 m away', () => {
+    expect(pickupZoneProblem({ lat: 48.5842, lng: 7.7458 }, pickup)).toBeNull();
+  });
+  it('blocks a driver about 300 m away', () => {
+    expect(pickupZoneProblem({ lat: 48.5860, lng: 7.7458 }, pickup)).toMatch(/Rapprochez-vous/);
+  });
+  it('blocks when there is no GPS position', () => {
+    expect(pickupZoneProblem(null, pickup)).toMatch(/GPS/);
+  });
+});
