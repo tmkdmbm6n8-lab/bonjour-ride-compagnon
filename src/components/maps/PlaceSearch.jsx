@@ -1,16 +1,15 @@
 import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useId, useRef, useState } from 'react';
 import { MapPin, Loader2, SearchX, WifiOff } from 'lucide-react';
 
 /**
  * Debounced place autocomplete backed by /api/geo/search (Photon/OSM).
  *
- * The dropdown renders in a body portal so it can never be clipped by
- * scrollable/overflow containers (panels, modals, sheets). Empty results
- * and network errors render explanatory rows — no silent failures.
+ * Suggestions render in the page flow, right under the input (like Google),
+ * so they never float away when the phone keyboard moves the page. Empty
+ * results and network errors render explanatory rows — no silent failures.
  *
  * Props:
  *  - value: current text
@@ -29,6 +28,7 @@ export default function PlaceSearch({
   icon: Icon = MapPin,
   bias,
   autoFocus = false,
+  onFocusChange,
 }) {
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
@@ -36,40 +36,22 @@ export default function PlaceSearch({
   // 'idle' | 'ok' | 'empty' | 'error' — what the last completed search found
   const [outcome, setOutcome] = useState('idle');
   const [highlight, setHighlight] = useState(-1);
-  const [anchor, setAnchor] = useState(null); // {top,left,width} viewport coords
   const wrapRef = useRef(null);
-  const listRef = useRef(null);
+  const inputRef = useRef(null);
   const timerRef = useRef(null);
   const selectedRef = useRef(false);
+  const listId = useId();
 
   // Close on click outside both the input and the portaled list
   useEffect(() => {
     const onDocClick = (e) => {
-      if (!wrapRef.current?.contains(e.target) && !listRef.current?.contains(e.target)) {
+      if (!wrapRef.current?.contains(e.target)) {
         setOpen(false);
       }
     };
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
-
-  // Keep the portaled dropdown glued to the input
-  useLayoutEffect(() => {
-    if (!open) return undefined;
-
-    const update = () => {
-      const rect = wrapRef.current?.getBoundingClientRect();
-      if (rect) setAnchor({ top: rect.bottom + 6, left: rect.left, width: rect.width });
-    };
-    update();
-
-    window.addEventListener('resize', update);
-    window.addEventListener('scroll', update, true); // capture: any scroll container
-    return () => {
-      window.removeEventListener('resize', update);
-      window.removeEventListener('scroll', update, true);
-    };
-  }, [open]);
 
   useEffect(() => {
     if (selectedRef.current) {
@@ -112,7 +94,7 @@ export default function PlaceSearch({
       } finally {
         setLoading(false);
       }
-    }, 320);
+    }, 180);
 
     return () => clearTimeout(timerRef.current);
   }, [value, bias?.lat, bias?.lng, committedValue]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -123,6 +105,7 @@ export default function PlaceSearch({
     setOpen(false);
     setResults([]);
     setOutcome('idle');
+    inputRef.current?.blur(); // closes the phone keyboard once a place is chosen
   }
 
   function onKeyDown(e) {
@@ -142,23 +125,18 @@ export default function PlaceSearch({
   }
 
   const showDropdown =
-    open && anchor && (results.length > 0 || outcome === 'empty' || outcome === 'error');
+    open && (results.length > 0 || outcome === 'empty' || outcome === 'error');
 
   const dropdown = showDropdown ? (
     <div
-      ref={listRef}
       role="listbox"
-      id="place-search-listbox"
+      id={listId}
       className="card"
       style={{
-        position: 'fixed',
-        top: anchor.top,
-        left: anchor.left,
-        width: anchor.width,
-        zIndex: 70, // above panels, modals and toasts — never clipped
-        boxShadow: 'var(--shadow-lg)',
+        marginTop: 6,
+        boxShadow: 'var(--shadow-md)',
         overflow: 'hidden',
-        maxHeight: Math.min(280, window.innerHeight - anchor.top - 16),
+        maxHeight: 300,
         overflowY: 'auto',
       }}
     >
@@ -166,6 +144,8 @@ export default function PlaceSearch({
           key={`${r.lat}-${r.lng}-${i}`}
           role="option"
           aria-selected={i === highlight}
+          onPointerDown={(e) => e.preventDefault()} // keep focus so the tap lands
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => choose(r)}
           onMouseEnter={() => setHighlight(i)}
           className="w-full"
@@ -217,22 +197,24 @@ export default function PlaceSearch({
           <Icon size={17} />
         )}
         <input
+          ref={inputRef}
           className="input"
           value={value}
           onChange={(e) => onChangeText(e.target.value)}
-          onFocus={() => (results.length > 0 || outcome !== 'idle') && setOpen(true)}
+          onFocus={() => { onFocusChange?.(true); if (results.length > 0 || outcome !== 'idle') setOpen(true); }}
+          onBlur={() => onFocusChange?.(false)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
           autoFocus={autoFocus}
           autoComplete="off"
           role="combobox"
           aria-expanded={Boolean(showDropdown)}
-          aria-controls="place-search-listbox"
+          aria-controls={listId}
           aria-autocomplete="list"
         />
       </div>
 
-      {dropdown && createPortal(dropdown, document.body)}
+      {dropdown}
     </div>
   );
 }
