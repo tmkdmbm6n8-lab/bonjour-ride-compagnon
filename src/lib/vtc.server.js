@@ -227,19 +227,13 @@ async function geoSearch(q) {
   };
 }
 // === src/lib/vtc.server.js (autour de la ligne 229) ===
-
 async function estimates(db, a, b) {
   const route = await routeBetween(a, b);
   const rows = required(await db.from("pricing_rules").select("*"));
   const rules = { ...DEFAULT_PRICING };
   for (const row of rows) rules[row.vehicle_type] = row.rule;
 
-  // 1. Tarifs de base StrasDrive (toujours calculés en repli)
-  const baseEstimates = Object.fromEntries(
-    Object.entries(rules).map(([k, v]) => [k, calculateFare(v, route.distanceMeters, route.durationSeconds)]),
-  );
-
-  // 2. Tentative de récupération des tarifs Uber en direct
+  // 1. Appel en direct de l'API Uber
   let uberList = null;
   try {
     const { uberProducts } = await import("./vtc-uber.server");
@@ -248,12 +242,12 @@ async function estimates(db, a, b) {
     uberList = null;
   }
 
-  // Si Uber ne répond pas (cookie expiré, réseau, etc.), on conserve les prix actuels
+  // 2. Si Uber ne répond pas ou renvoie une erreur : on stoppe et on affiche l'erreur
   if (!uberList || !Array.isArray(uberList) || !uberList.length) {
-    return { route, estimates: baseEstimates, source: "strasdrive" };
+    throw new Error("Tarifs en direct momentanément indisponibles. Veuillez réessayer dans quelques instants.");
   }
 
-  // 3. Correspondance des produits Uber avec les 4 gammes StrasDrive
+  // 3. Correspondance avec les gammes StrasDrive (Go, Comfort, Pet, XL)
   const findProduct = (keywords) => {
     for (const kw of keywords) {
       const match = uberList.find((p) => p.name?.toLowerCase().includes(kw.toLowerCase()));
@@ -264,32 +258,29 @@ async function estimates(db, a, b) {
 
   const uberX = findProduct(["uberx", "electric", "wait & save"]);
   const uberComfort = findProduct(["comfort"]);
-  const uberBlack = findProduct(["berline", "black", "premier", "lux"]);
+  const uberPet = findProduct(["pet", "uber pet", "animal"]);
   const uberXL = findProduct(["uberxl", "xl"]);
 
-  const finalEstimates = { ...baseEstimates };
+  const finalEstimates = {};
 
   const applyUberPrice = (type, product) => {
-    const base = baseEstimates[type];
-    if (!base) return;
-
     let price = product?.price;
-    // Si la ville n'a pas de Berline/Black, on cale Lux sur Comfort + 35 %
-    if (!price && type === "premium" && uberComfort?.price) {
-      price = Math.round(uberComfort.price * 1.35 * 100) / 100;
+
+    // Si Uber Pet n'est pas actif dans la ville, barème officiel Uber : UberX + 4,00 €
+    if (!price && type === "pet" && uberX?.price) {
+      price = Math.round((uberX.price + 4.0) * 100) / 100;
     }
 
     if (price && Number.isFinite(price) && price > 0) {
       const commRate = rules[type]?.platformCommission || 5;
       const platformFee = Math.round(price * commRate) / 100;
       finalEstimates[type] = {
-        ...base,
         total: price,
         estimatedTotal: price,
         originalTotal: price,
         platformFee,
         driverEarnings: Math.round((price - platformFee) * 100) / 100,
-        uberProduct: product ? product.name : type === "premium" ? "Uber Berline" : null,
+        uberProduct: product ? product.name : type === "pet" ? "Uber Pet" : null,
         isUberPrice: true,
       };
     }
@@ -297,11 +288,17 @@ async function estimates(db, a, b) {
 
   applyUberPrice("economy", uberX);
   applyUberPrice("comfort", uberComfort);
-  applyUberPrice("premium", uberBlack);
+  applyUberPrice("pet", uberPet);
   applyUberPrice("xl", uberXL);
+
+  // Vérifier qu'au moins la gamme économique a pu être tarifée
+  if (!finalEstimates.economy) {
+    throw new Error("Impossible de récupérer les tarifs Uber pour cet itinéraire.");
+  }
 
   return { route, estimates: finalEstimates, source: "uber" };
 }
+
 export async function handleVtc(input, context) {
   const { path, method = "GET", body = {} } = input;
   const url = new URL(path, "http://app");
