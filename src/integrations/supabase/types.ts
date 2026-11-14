@@ -185,6 +185,56 @@ export type Database = {
           },
         ]
       }
+      payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          driver_id: string
+          failure: string | null
+          fee: number
+          id: string
+          kind: string
+          paid_at: string | null
+          provider_id: string | null
+          status: string
+          week_of: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          driver_id: string
+          failure?: string | null
+          fee?: number
+          id?: string
+          kind: string
+          paid_at?: string | null
+          provider_id?: string | null
+          status?: string
+          week_of?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          driver_id?: string
+          failure?: string | null
+          fee?: number
+          id?: string
+          kind?: string
+          paid_at?: string | null
+          provider_id?: string | null
+          status?: string
+          week_of?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pricing_rules: {
         Row: {
           city: string
@@ -410,8 +460,27 @@ export type Database = {
     }
     Functions: {
       admin_delete_account: { Args: { _user: string }; Returns: Json }
+      create_payout: {
+        Args: {
+          _amount: number
+          _driver: string
+          _fee: number
+          _kind: string
+          _week?: string
+        }
+        Returns: string
+      }
       decline_ride_offer: {
         Args: { _driver: string; _ride: string }
+        Returns: undefined
+      }
+      finish_payout: {
+        Args: {
+          _failure?: string
+          _id: string
+          _ok: boolean
+          _provider?: string
+        }
         Returns: undefined
       }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
