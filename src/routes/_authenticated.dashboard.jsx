@@ -495,51 +495,37 @@ function RiderDashboard() {
                         />
                         {/* Remplacer l'intérieur du bouton vehicle-row, vers la ligne 381 */}
                         <span className="flex-1" style={{ minWidth: 0 }}>
-                          <span className="small flex items-center gap-2" style={{ fontWeight: 700 }}>
-                            {VEHICLE_LABELS[type]}
-                            {fare.uberProduct && (
+                            <span className="small" style={{ display: 'block', fontWeight: 700 }}>
+                              {VEHICLE_LABELS[type]}
+                            </span>
+                            <span className="tiny muted truncate" style={{ display: 'block' }}>
+                              {Meta.blurb}
+                            </span>
+                            {avail && (
                               <span
-                                className="badge badge-neutral tiny"
-                                style={{ fontSize: "0.68rem", fontWeight: 500, padding: "2px 6px" }}
+                                className="tiny truncate"
+                                style={{
+                                  display: 'block',
+                                  fontWeight: 600,
+                                  color: avail.count ? 'var(--success)' : 'var(--danger)',
+                                }}
                               >
-                                {fare.uberProduct}
+                                {avail.count
+                                  ? `${avail.count} chauffeur${avail.count > 1 ? 's' : ''} disponible${avail.count > 1 ? 's' : ''}${avail.etaMinutes ? ` · ${avail.etaMinutes} min` : ''}`
+                                  : 'Aucun chauffeur disponible'}
                               </span>
                             )}
                           </span>
-                          <span className="tiny muted truncate" style={{ display: "block" }}>
-                            {Meta.blurb}
+                          <span className="flex-col" style={{ alignItems: 'flex-end' }}>
+                            <span className="small mono-nums" style={{ fontWeight: 700 }}>
+                              {money(fare.total)}
+                            </span>
+                            {fare.discount > 0 && (
+                              <span className="tiny muted mono-nums" style={{ textDecoration: 'line-through' }}>
+                                {money(fare.originalTotal)}
+                              </span>
+                            )}
                           </span>
-                          {avail && (
-                            <span
-                              className="tiny truncate"
-                              style={{
-                                display: "block",
-                                fontWeight: 600,
-                                color: avail.count ? "var(--success)" : "var(--danger)",
-                              }}
-                            >
-                              {avail.count
-                                ? `${avail.count} chauffeur${avail.count > 1 ? "s" : ""} disponible${avail.count > 1 ? "s" : ""}${avail.etaMinutes ? ` · ${avail.etaMinutes} min` : ""}`
-                                : "Aucun chauffeur disponible"}
-                            </span>
-                          )}
-                        </span>
-                        <span className="flex-col" style={{ alignItems: "flex-end" }}>
-                          <span className="small mono-nums" style={{ fontWeight: 700 }}>
-                            {money(fare.total)}
-                          </span>
-                          {fare.isUberPrice && (
-                            <span
-                              className="tiny"
-                              style={{ fontSize: "0.68rem", color: "var(--gold-600)", fontWeight: 600 }}
-                            >
-                              Tarif Uber
-                            </span>
-                          )}
-                          {fare.discount > 0 && (
-                            <span className="tiny muted mono-nums" style={{ textDecoration: "line-through" }}>
-                              {money(fare.originalTotal)}
-                            </span>
                           )}
                         </span>
                       </button>
