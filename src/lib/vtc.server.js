@@ -234,12 +234,12 @@ async function estimates(db, a, b) {
   const rules = { ...DEFAULT_PRICING };
   for (const row of rows) rules[row.vehicle_type] = row.rule;
 
-  // 1. Tarifs de base StrasDrive (toujours calculés en repli)
+  // 1. Tarifs de base StrasDrive
   const baseEstimates = Object.fromEntries(
     Object.entries(rules).map(([k, v]) => [k, calculateFare(v, route.distanceMeters, route.durationSeconds)]),
   );
 
-  // 2. Tentative de récupération des tarifs Uber en direct
+  // 2. Tarifs Uber en direct
   let uberList = null;
   try {
     const { uberProducts } = await import("./vtc-uber.server");
@@ -248,12 +248,11 @@ async function estimates(db, a, b) {
     uberList = null;
   }
 
-  // Si Uber ne répond pas (cookie expiré, réseau, etc.), on conserve les prix actuels
   if (!uberList || !Array.isArray(uberList) || !uberList.length) {
     return { route, estimates: baseEstimates, source: "strasdrive" };
   }
 
-  // 3. Correspondance des produits Uber avec les 4 gammes StrasDrive
+  // 3. Correspondance sans aucune mention d'Uber
   const findProduct = (keywords) => {
     for (const kw of keywords) {
       const match = uberList.find((p) => p.name?.toLowerCase().includes(kw.toLowerCase()));
@@ -264,7 +263,7 @@ async function estimates(db, a, b) {
 
   const uberX = findProduct(["uberx", "electric", "wait & save"]);
   const uberComfort = findProduct(["comfort"]);
-  const uberBlack = findProduct(["berline", "black", "premier", "lux"]);
+  const uberPet = findProduct(["uber pet", "pet"]);
   const uberXL = findProduct(["uberxl", "xl"]);
 
   const finalEstimates = { ...baseEstimates };
@@ -274,9 +273,9 @@ async function estimates(db, a, b) {
     if (!base) return;
 
     let price = product?.price;
-    // Si la ville n'a pas de Berline/Black, on cale Lux sur Comfort + 35 %
-    if (!price && type === "premium" && uberComfort?.price) {
-      price = Math.round(uberComfort.price * 1.35 * 100) / 100;
+    // Repli pour Pet si Uber Pet n'est pas dispo dans la ville : Go + 4 €
+    if (!price && type === "pet" && uberX?.price) {
+      price = Math.round((uberX.price + 4) * 100) / 100;
     }
 
     if (price && Number.isFinite(price) && price > 0) {
@@ -289,19 +288,18 @@ async function estimates(db, a, b) {
         originalTotal: price,
         platformFee,
         driverEarnings: Math.round((price - platformFee) * 100) / 100,
-        uberProduct: product ? product.name : type === "premium" ? "Uber Berline" : null,
-        isUberPrice: true,
       };
     }
   };
 
   applyUberPrice("economy", uberX);
   applyUberPrice("comfort", uberComfort);
-  applyUberPrice("premium", uberBlack);
+  applyUberPrice("pet", uberPet);
   applyUberPrice("xl", uberXL);
 
-  return { route, estimates: finalEstimates, source: "uber" };
+  return { route, estimates: finalEstimates, source: "strasdrive" };
 }
+
 export async function handleVtc(input, context) {
   const { path, method = "GET", body = {} } = input;
   const url = new URL(path, "http://app");
