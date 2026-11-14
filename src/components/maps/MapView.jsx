@@ -163,7 +163,7 @@ export default function MapView({
     syncMarker('user', userPosition, () => {
       const dot = el('');
       dot.style.cssText =
-        'width:16px;height:16px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.3)';
+        'width:16px;height:16px;border-radius:50%;background:#eab308;border:3px solid #0c0a09;box-shadow:0 1px 6px rgba(0,0,0,.45)';
       return dot;
     });
   }, [userPosition?.lat, userPosition?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -332,7 +332,7 @@ function drawRoute(map, geometry) {
         id: 'route-casing',
         type: 'line',
         source: 'route',
-        paint: { 'line-color': '#ffffff', 'line-width': 7, 'line-opacity': 0.9 },
+        paint: { 'line-color': '#0c0a09', 'line-width': 7, 'line-opacity': 0.9 },
         layout: { 'line-cap': 'round', 'line-join': 'round' },
       });
     }
@@ -341,7 +341,7 @@ function drawRoute(map, geometry) {
         id: 'route-line',
         type: 'line',
         source: 'route',
-        paint: { 'line-color': '#1c1917', 'line-width': 4 },
+        paint: { 'line-color': '#eab308', 'line-width': 4 },
         layout: { 'line-cap': 'round', 'line-join': 'round' },
       });
     }
