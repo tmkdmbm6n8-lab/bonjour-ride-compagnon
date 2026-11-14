@@ -10,10 +10,10 @@ import { useToast } from '@/components/ui/Toast';
 
 // Driver-first defaults: single-digit commission, low rider rates
 const DEFAULTS = {
-  economy: { baseFare: 2.0, perKmRate: 1.0, perMinRate: 0.15, minimumFare: 4, bookingFee: 0.5, platformCommission: 8, surgeMultiplierCap: 3 },
-  comfort: { baseFare: 3.0, perKmRate: 1.5, perMinRate: 0.25, minimumFare: 6.5, bookingFee: 0.75, platformCommission: 8, surgeMultiplierCap: 3 },
+  economy: { baseFare: 2.0, perKmRate: 1.0, perMinRate: 0.15, minimumFare: 4, bookingFee: 0.5, platformCommission: 5, surgeMultiplierCap: 3 },
+  comfort: { baseFare: 3.0, perKmRate: 1.5, perMinRate: 0.25, minimumFare: 6.5, bookingFee: 0.75, platformCommission: 5, surgeMultiplierCap: 3 },
   premium: { baseFare: 5.0, perKmRate: 2.5, perMinRate: 0.4, minimumFare: 12, bookingFee: 1.0, platformCommission: 10, surgeMultiplierCap: 3 },
-  xl: { baseFare: 4.0, perKmRate: 1.8, perMinRate: 0.3, minimumFare: 8, bookingFee: 0.75, platformCommission: 8, surgeMultiplierCap: 3 },
+  xl: { baseFare: 4.0, perKmRate: 1.8, perMinRate: 0.3, minimumFare: 8, bookingFee: 0.75, platformCommission: 5, surgeMultiplierCap: 3 },
 };
 
 const FIELDS = [
