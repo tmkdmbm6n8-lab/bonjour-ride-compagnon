@@ -363,7 +363,7 @@ function RiderDashboard() {
                 <div className="flex gap-2 mt-4" role="radiogroup" aria-label="Mode de paiement">
                   {[
                     { id: 'wallet', icon: Wallet, label: 'Portefeuille', detail: walletBalance != null ? money(walletBalance) : '—' },
-                    { id: 'cash', icon: Banknote, label: 'Espèces', detail: 'au chauffeur' },
+                    { id: 'cash', icon: Banknote, label: 'Espèces', detail: '' },
                   ].map(({ id, icon: Icon, label, detail }) => (
                     <button
                       key={id}
