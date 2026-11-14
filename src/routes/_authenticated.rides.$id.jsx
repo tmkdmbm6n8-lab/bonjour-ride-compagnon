@@ -111,7 +111,7 @@ function RideDetailPage() {
                 {ride.fare.driverFloorSupplement > 0 && <Row label="Complément rémunération minimale chauffeur" value={money(ride.fare.driverFloorSupplement)} />}
                 {ride.fare.discount > 0 && <Row label="Remise" value={`−${money(ride.fare.discount)}`} />}
                 <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8 }}>
-                  <Row label={<b>Total ({ride.payment?.method})</b>} value={<b>{money(ride.fare.total)}</b>} />
+                  <Row label={<b>Total ({paymentMethodLabel(ride.payment?.method)})</b>} value={<b>{money(ride.fare.total)}</b>} />
                 </div>
               </>
             ) : (

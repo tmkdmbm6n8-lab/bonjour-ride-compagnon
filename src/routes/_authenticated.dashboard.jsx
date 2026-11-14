@@ -5,7 +5,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Navigation, MapPin, Circle, Car, Crown, Users, Zap, Wallet,
+  Navigation, MapPin, Circle, Car, Crown, Users, Zap, Wallet, Banknote,
   MessageCircle, X, ShieldCheck, Copy, TrendingUp,
 } from 'lucide-react';
 import Link from '@/lib/archive-navigation';
@@ -16,6 +16,7 @@ import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { Avatar, Stars, StarPicker, VEHICLE_LABELS, money } from '@/components/ui/bits';
 import useRiderRide from '@/hooks/useRiderRide';
+import { bookingPaymentProblem, paymentMethodLabel } from '@/lib/vtc-pricing';
 import useGeolocation from '@/hooks/useGeolocation';
 import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from '@/lib/utils/geo';
 
@@ -40,6 +41,7 @@ function RiderDashboard() {
   // Booking form state
   const [pickup, setPickup] = useState(null); // {address, lat, lng}
   const [dropoff, setDropoff] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('wallet'); // 'wallet' | 'cash'
   const [pickupText, setPickupText] = useState('');
   const [dropoffText, setDropoffText] = useState('');
   const [estimate, setEstimate] = useState(null); // {route, estimates}
@@ -167,7 +169,7 @@ function RiderDashboard() {
     if (!pickup || !dropoff || booking) return;
     setBooking(true);
     try {
-      await book({ pickup, dropoff, vehicleType });
+      await book({ pickup, dropoff, vehicleType, paymentMethod });
       setUnread(0);
     } catch (err) {
       toast(err.message, 'error', 5000);
@@ -227,7 +229,7 @@ function RiderDashboard() {
   const selectedAvailability = availability?.[vehicleType];
   const noDriverForSelected = selectedAvailability != null && selectedAvailability.count === 0;
   const insufficientWallet =
-    walletBalance != null && selectedFare && walletBalance < selectedFare.total;
+    walletBalance != null && selectedFare && Boolean(bookingPaymentProblem(paymentMethod, walletBalance, selectedFare.total));
 
   const mapProps = useMemo(() => {
     if (phase === 'active' && ride) {
@@ -357,17 +359,36 @@ function RiderDashboard() {
                   </div>
                 )}
 
-                {/* Payment — wallet only */}
-                <div
-                  className="flex items-center justify-between mt-4"
-                  style={{ padding: '10px 14px', background: 'var(--ink-50)', borderRadius: 12 }}
-                >
-                  <span className="flex items-center gap-2 tiny" style={{ fontWeight: 600 }}>
-                    <Wallet size={16} /> Paiement avec le portefeuille </span>
-                  <span className="tiny mono-nums muted">
-                    {walletBalance != null ? money(walletBalance) : '—'}
-                  </span>
+                {/* Payment — wallet or cash */}
+                <div className="flex gap-2 mt-4" role="radiogroup" aria-label="Mode de paiement">
+                  {[
+                    { id: 'wallet', icon: Wallet, label: 'Portefeuille', detail: walletBalance != null ? money(walletBalance) : '—' },
+                    { id: 'cash', icon: Banknote, label: 'Espèces', detail: 'au chauffeur' },
+                  ].map(({ id, icon: Icon, label, detail }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={paymentMethod === id}
+                      onClick={() => setPaymentMethod(id)}
+                      className="flex-1 flex items-center justify-between"
+                      style={{
+                        padding: '10px 14px', background: 'var(--ink-50)', borderRadius: 12, cursor: 'pointer',
+                        border: `2px solid ${paymentMethod === id ? 'var(--ink-900)' : 'transparent'}`,
+                      }}
+                    >
+                      <span className="flex items-center gap-2 tiny" style={{ fontWeight: 600 }}>
+                        <Icon size={16} /> {label}
+                      </span>
+                      <span className="tiny mono-nums muted">{detail}</span>
+                    </button>
+                  ))}
                 </div>
+                {paymentMethod === 'cash' && selectedFare && (
+                  <p className="tiny muted mt-2">
+                    Vous réglerez {money(selectedFare.total)} en espèces directement au chauffeur à la fin de la course.
+                  </p>
+                )}
 
                 {insufficientWallet && (
                   <p className="tiny mt-2" style={{ color: 'var(--danger)' }}>
@@ -638,7 +659,7 @@ function RiderDashboard() {
                 className="flex items-center justify-between mt-2"
                 style={{ borderTop: '1px solid var(--border)', paddingTop: 10, fontWeight: 700 }}
               >
-                <span>Total ({completedRide.payment?.method})</span>
+                <span>Total ({paymentMethodLabel(completedRide.payment?.method)})</span>
                 <span className="mono-nums">{money(completedRide.fare?.total)}</span>
               </div>
             </div>
