@@ -64,3 +64,15 @@ export function settleDriverEarnings(fare, meters, activitySeconds) {
 }
 
 export function formatEuro(value=0) { return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(value); }
+
+// Modes de paiement passager : portefeuille (débité en fin de course) ou espèces (remises au chauffeur).
+export const PAYMENT_METHODS = { wallet: 'Portefeuille', cash: 'Espèces' };
+export function paymentMethodOf(value) { return value === 'cash' ? 'cash' : 'wallet'; }
+export function paymentMethodLabel(value) { return PAYMENT_METHODS[paymentMethodOf(value)]; }
+/** Raison du refus de réservation, ou null. Seul le portefeuille exige un solde suffisant. */
+export function bookingPaymentProblem(method, balance, total) {
+  if (paymentMethodOf(method) === 'cash') return null;
+  return Number(balance) < Number(total) ? 'Solde insuffisant : rechargez votre portefeuille ou payez en espèces' : null;
+}
+/** Écriture sur le portefeuille du chauffeur pour une course en espèces : il garde le prix encaissé, la part plateforme est déduite. */
+export function cashDriverWalletEntry(fare) { return round2((Number(fare.driverEarnings) || 0) - (Number(fare.total) || 0)); }

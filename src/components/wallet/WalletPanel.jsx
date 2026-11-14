@@ -18,6 +18,7 @@ const TXN_LABEL = {
   refund: 'Remboursement',
   cancellation_fee: 'Frais d’annulation',
   payout: 'Versement',
+  cash_commission: 'Commission (course payée en espèces)',
 };
 
 export default function WalletPanel() {
