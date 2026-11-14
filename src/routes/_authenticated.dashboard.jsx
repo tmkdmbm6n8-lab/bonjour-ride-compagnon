@@ -526,8 +526,6 @@ function RiderDashboard() {
                               </span>
                             )}
                           </span>
-                          )}
-                        </span>
                       </button>
                     );
                   })}
