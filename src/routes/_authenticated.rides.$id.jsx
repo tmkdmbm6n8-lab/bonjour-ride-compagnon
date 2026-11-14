@@ -9,6 +9,7 @@ import { ArrowLeft, Circle, MapPin } from 'lucide-react';
 import MapView from '@/components/ArchiveMap';
 import { RideStatusBadge, Avatar, Stars, Loading, VEHICLE_LABELS, money } from '@/components/ui/bits';
 import { formatDate, formatDistance, formatDuration } from '@/lib/utils/geo';
+import { paymentMethodLabel } from '@/lib/vtc-pricing';
 
 function RideDetailPage() {
   const { id } = useParams();
@@ -111,7 +112,7 @@ function RideDetailPage() {
                 {ride.fare.driverFloorSupplement > 0 && <Row label="Complément rémunération minimale chauffeur" value={money(ride.fare.driverFloorSupplement)} />}
                 {ride.fare.discount > 0 && <Row label="Remise" value={`−${money(ride.fare.discount)}`} />}
                 <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8 }}>
-                  <Row label={<b>Total ({ride.payment?.method})</b>} value={<b>{money(ride.fare.total)}</b>} />
+                  <Row label={<b>Total ({paymentMethodLabel(ride.payment?.method)})</b>} value={<b>{money(ride.fare.total)}</b>} />
                 </div>
               </>
             ) : (
