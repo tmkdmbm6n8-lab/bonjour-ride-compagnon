@@ -16,6 +16,12 @@ import { money } from '@/components/ui/bits';
 import useDriverState from '@/hooks/useDriverState';
 import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from '@/lib/utils/geo';
 
+const PROFIT_BADGES = {
+  very_profitable: { label: 'Très rentable', className: 'badge-success' },
+  profitable: { label: 'Rentable', className: 'badge-info' },
+  not_profitable: { label: 'Non rentable', className: 'badge-danger' },
+};
+
 function DriverDashboard() {
   const toast = useToast();
   const [chatOpen, setChatOpen] = useState(false);
@@ -317,6 +323,13 @@ function DriverDashboard() {
               {countdown}
             </div>
             <h3 style={{ fontSize: '1.2rem' }}>Nouvelle demande de course</h3>
+            {offer.profitability && (
+              <div className="mt-2">
+                <span className={`badge ${PROFIT_BADGES[offer.profitability.level].className}`}>
+                  {PROFIT_BADGES[offer.profitability.level].label} · {money(offer.profitability.perHour)}/h
+                </span>
+              </div>
+            )}
             <p className="small muted mt-1 mb-4">
               {offer.rider?.name || 'Un passager'} · {formatDistance(offer.distanceToPickupMeters)} de distance · ~{offer.etaMinutes} min jusqu’à la prise en charge
             </p>
@@ -340,7 +353,7 @@ function DriverDashboard() {
                   )}
                 </span>
                 <span style={{ fontWeight: 800, fontSize: '1.15rem' }} className="mono-nums">
-                  {money(offer.earnings)}
+                  {money(offer.profitability?.expectedEarnings ?? offer.earnings)}
                 </span>
               </div>
             </div>

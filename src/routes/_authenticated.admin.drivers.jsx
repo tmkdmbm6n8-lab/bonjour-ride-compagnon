@@ -5,7 +5,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 
 import { useCallback, useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from '@/lib/archive-navigation';
-import { Car, CheckCircle2, Ban } from 'lucide-react';
+import { Car, CheckCircle2, Ban, Star } from 'lucide-react';
 import { Avatar, Loading, Empty, VEHICLE_LABELS, money } from '@/components/ui/bits';
 import { useToast } from '@/components/ui/Toast';
 
@@ -52,12 +52,33 @@ function DriversAdmin() {
     }
   }
 
+  async function setPriority(driverId, isPriority) {
+    setBusyId(driverId);
+    try {
+      const res = await fetch('/api/admin/drivers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId, isPriority }),
+      });
+      const data = await res.json();
+      if (!res.ok) toast(data.error || 'Échec de la mise à jour', 'error');
+      else {
+        toast(isPriority ? 'Chauffeur prioritaire : il recevra les courses en premier' : 'Chauffeur repassé en niveau normal', 'success');
+        load();
+      }
+    } catch {
+      toast('Échec de la mise à jour', 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <div className="content-pad">
       <div className="flex items-center justify-between mb-6 wrap gap-3">
         <div>
           <h1 className="page-title">Chauffeurs</h1>
-          <p className="page-sub">Approuvez, suivez et gérez votre flotte</p>
+          <p className="page-sub">Approuvez, suivez et gérez votre flotte. Les chauffeurs prioritaires reçoivent chaque course en premier.</p>
         </div>
         <div className="segmented">
           <button className={!pendingOnly ? 'active' : ''} onClick={() => setPendingOnly(false)}>Tous</button>
@@ -82,6 +103,7 @@ function DriversAdmin() {
                 <th>Note</th>
                 <th>Revenus</th>
                 <th>Statut</th>
+                <th>Priorité</th>
                 <th></th>
               </tr>
             </thead>
@@ -113,6 +135,17 @@ function DriversAdmin() {
                     ) : (
                       <span className="badge badge-warning badge-dot">En attente</span>
                     )}
+                  </td>
+                  <td>
+                    <button
+                      className={`btn btn-sm ${d.isPriority ? 'btn-primary' : 'btn-secondary'}`}
+                      disabled={busyId === d._id}
+                      onClick={() => setPriority(d._id, !d.isPriority)}
+                      aria-pressed={d.isPriority}
+                      title={d.isPriority ? 'Reçoit les courses avant les autres chauffeurs' : 'Rendre prioritaire'}
+                    >
+                      <Star size={14} fill={d.isPriority ? 'currentColor' : 'none'} /> {d.isPriority ? 'Prioritaire' : 'Normal'}
+                    </button>
                   </td>
                   <td className="text-right">
                     {d.isApproved ? (

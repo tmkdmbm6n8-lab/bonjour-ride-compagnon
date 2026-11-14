@@ -16,6 +16,9 @@
 - [ ] Indicateurs annuels d'activité et de revenus des chauffeurs à publier (art. L7342-9 Code du travail) — à confirmer avec l'utilisateur.
 
 # Attribution des courses
-- [ ] Niveau prioritaire par chauffeur, choisi par l'admin.
-- [ ] Envoi : prioritaires tous ensemble → le plus proche seul quelques secondes → tous ensemble, le premier qui accepte.
-- [ ] Notification du chauffeur prioritaire : distance jusqu'au client et mention « très rentable / rentable / non rentable », il choisit d'y aller ou non.
+- [x] Niveau prioritaire par chauffeur, choisi par l'admin.
+- [x] Envoi : prioritaires tous ensemble → le plus proche seul quelques secondes → tous ensemble, le premier qui accepte.
+- [x] Notification du chauffeur prioritaire : distance jusqu'au client et mention « très rentable / rentable / non rentable », il choisit d'y aller ou non.
+
+# Logo
+- [x] Remplacer le logo « K » par un logo « SD » dans le même style (carré noir arrondi, point doré).

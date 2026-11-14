@@ -30,14 +30,14 @@ function PrivacyPage() {
 
       <h2>3. Pourquoi et sur quelle base légale</h2>
       <ul>
-        <li><strong>Fournir le service</strong> (compte, devis, attribution au chauffeur disponible le plus proche, suivi, paiement, rémunération du chauffeur) — exécution du contrat (art. 6.1.b RGPD).</li>
+        <li><strong>Fournir le service</strong> (compte, devis, attribution de la course aux chauffeurs disponibles selon leur niveau de priorité et leur distance, suivi, paiement, rémunération du chauffeur) — exécution du contrat (art. 6.1.b RGPD).</li>
         <li><strong>Sécurité</strong> (code PIN, notes réciproques, prévention de la fraude) — intérêt légitime à protéger passagers et chauffeurs (art. 6.1.f).</li>
         <li><strong>Comptabilité et obligations légales</strong> (conservation des opérations financières, réponses aux autorités) — obligation légale (art. 6.1.c).</li>
         <li><strong>Assistance</strong> — exécution du contrat ou intérêt légitime à répondre à vos demandes.</li>
         <li><strong>Mesure d’audience</strong> sans cookie (voir section 7) — intérêt légitime à améliorer le service.</li>
         <li><strong>Position du passager</strong> — votre accord, donné et retirable à tout moment dans les réglages de votre navigateur.</li>
       </ul>
-      <p> L’attribution d’une course au chauffeur le plus proche et le calcul du prix sont automatisés ; ils ne produisent pas d’effet juridique vous concernant au sens de l’article 22 du RGPD. </p>
+      <p> L’attribution d’une course (d’abord aux chauffeurs prioritaires désignés par StrasDrive, puis au chauffeur le plus proche, puis à tous les chauffeurs disponibles) et le calcul du prix sont automatisés ; ils ne produisent pas d’effet juridique vous concernant au sens de l’article 22 du RGPD. </p>
 
       <h2>4. Qui reçoit vos données</h2>
       <ul>

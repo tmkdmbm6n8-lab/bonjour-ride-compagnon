@@ -65,3 +65,21 @@ describe('attribution des courses', () => {
     expect(planDispatch(r, all, NOW)?.status).toBe('no_drivers');
   });
 });
+
+import { profitability, approachSecondsFor } from '@/lib/vtc-dispatch';
+
+describe('rentabilité affichée au chauffeur prioritaire (gain net par heure, approche comprise)', () => {
+  it('très rentable dès 45 € de l’heure', () => {
+    expect(profitability(15, 600, 600).level).toBe('very_profitable'); // 15 € en 20 min = 45 €/h
+  });
+  it('rentable de 30 € à moins de 45 € de l’heure', () => {
+    expect(profitability(10, 600, 600).level).toBe('profitable'); // 30 €/h
+    expect(profitability(14.9, 600, 600).level).toBe('profitable');
+  });
+  it('non rentable sous 30 € de l’heure', () => {
+    expect(profitability(9.9, 600, 600).level).toBe('not_profitable');
+  });
+  it('le temps jusqu’au client compte : 5 km d’approche = 12 minutes', () => {
+    expect(Math.round(approachSecondsFor(5000))).toBe(720);
+  });
+});
