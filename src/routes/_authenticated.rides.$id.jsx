@@ -9,6 +9,7 @@ import { ArrowLeft, Circle, MapPin } from 'lucide-react';
 import MapView from '@/components/ArchiveMap';
 import { RideStatusBadge, Avatar, Stars, Loading, VEHICLE_LABELS, money } from '@/components/ui/bits';
 import { formatDate, formatDistance, formatDuration } from '@/lib/utils/geo';
+import { paymentMethodLabel } from '@/lib/vtc-pricing';
 
 function RideDetailPage() {
   const { id } = useParams();

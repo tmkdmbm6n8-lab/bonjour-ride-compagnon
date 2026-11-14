@@ -241,6 +241,15 @@ function DriverDashboard() {
                 {money(ride.fare?.driverEarnings)}
               </span>
             </div>
+            {ride.payment?.method === 'cash' && (
+              <div
+                className="flex items-center justify-between mb-3 small"
+                style={{ background: 'var(--ink-50)', borderRadius: 12, padding: '10px 14px', fontWeight: 700 }}
+              >
+                <span>Paiement en espèces</span>
+                <span className="mono-nums">À encaisser : {money(ride.fare?.total)}</span>
+              </div>
+            )}
 
             {liveLeg && (
               <div
@@ -372,6 +381,12 @@ function DriverDashboard() {
                   {money(offer.profitability?.expectedEarnings ?? offer.earnings)}
                 </span>
               </div>
+              {offer.paymentMethod === 'cash' && (
+                <div className="flex items-center justify-between mt-2 tiny" style={{ fontWeight: 700 }}>
+                  <span className="badge badge-warning">Paiement en espèces</span>
+                  <span className="mono-nums">À encaisser : {money(offer.total)}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">
@@ -425,7 +440,7 @@ function DriverDashboard() {
             <div style={{ fontSize: '2.4rem', fontWeight: 800 }} className="mono-nums">
               {money(receipt.fare?.driverEarnings)}
             </div>
-            <p className="small muted mt-1 mb-4">{receipt.isTest ? 'Course test : rien n’a été versé sur votre portefeuille' : 'gagnés sur cette course · versés sur votre portefeuille'}</p>
+            <p className="small muted mt-1 mb-4">{receipt.isTest ? 'Course test : rien n’a été versé sur votre portefeuille' : receipt.payment?.method === 'cash' ? `gagnés sur cette course · encaissez ${money(receipt.fare?.total)} en espèces, la commission est déduite de votre portefeuille` : 'gagnés sur cette course · versés sur votre portefeuille'}</p>
             <button className="btn btn-primary btn-full" onClick={() => setReceipt(null)}> Reprendre la conduite </button>
           </div>
         )}
