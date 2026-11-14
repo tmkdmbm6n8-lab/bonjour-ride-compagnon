@@ -16,7 +16,10 @@ import { money, VEHICLE_LABELS } from '@/components/ui/bits';
 import useDriverState from '@/hooks/useDriverState';
 import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from '@/lib/utils/geo';
 import { playSound, startRinging } from '@/lib/sounds';
-import { NAV_APPS, getNavApp, setNavApp, getNavAuto, setNavAuto, openNavigation, fetchLegGeometry } from '@/lib/navigation';
+import { NAV_APPS, getNavApp, setNavApp, getNavAuto, setNavAuto, openNavigation } from '@/lib/navigation';
+import { useLiveRoute } from '@/hooks/useLiveRoute';
+import { routeQualityLabel } from '@/lib/vtc-routing';
+import { drawableRoute, arrivalClock } from '@/lib/utils/route-display';
 
 const PROFIT_BADGES = {
   very_profitable: { label: 'Très rentable', className: 'badge-success' },
@@ -158,21 +161,27 @@ function DriverDashboard() {
     }
   }
 
-  // Live navigation readout — distance/ETA from the driver's own GPS to
-  // whichever leg they're on right now.
+  // Live navigation readout — traffic-aware time from the server (Google Routes),
+  // with a rough on-device estimate until the first answer arrives.
+  const liveRoute = useLiveRoute(ride?.id, ride?.status);
   const liveLeg = useMemo(() => {
-    if (!ride || !position) return null;
-    const target =
-      ride.status === 'in_progress'
-        ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng }
-        : { lat: ride.pickup.lat, lng: ride.pickup.lng };
-    const meters = roadDistanceMeters(position, target);
-    return {
-      meters,
-      minutes: etaFor(meters),
-      label: ride.status === 'in_progress' ? 'jusqu’à destination' : 'jusqu’au point de prise en charge',
-    };
-  }, [ride, position]);
+    if (!ride || (ride.status !== 'accepted' && ride.status !== 'in_progress')) return null;
+    const label = ride.status === 'in_progress' ? 'jusqu’à destination' : 'jusqu’au point de prise en charge';
+    if (liveRoute) {
+      return {
+        meters: liveRoute.distanceMeters,
+        minutes: Math.max(1, Math.round(liveRoute.durationSeconds / 60)),
+        seconds: liveRoute.durationSeconds,
+        label,
+        quality: routeQualityLabel(liveRoute),
+        approximate: liveRoute.approximate,
+      };
+    }
+    if (!position) return null;
+    const target = ride.status === 'in_progress' ? ride.dropoff : ride.pickup;
+    const meters = roadDistanceMeters(position, { lat: target.lat, lng: target.lng });
+    return { meters, minutes: etaFor(meters), seconds: etaFor(meters) * 60, label, quality: 'Calcul de l’itinéraire…', approximate: true };
+  }, [ride, position, liveRoute]);
 
   // In-app navigation leg: driver → pickup, then driver → destination
   const legTarget = ride
@@ -183,23 +192,6 @@ function DriverDashboard() {
         : null
     : null;
   const navigating = Boolean(legTarget);
-  const [legGeometry, setLegGeometry] = useState(null);
-  const positionRef = useRef(position);
-  useEffect(() => { positionRef.current = position; }, [position]);
-  const hasPosition = Boolean(position);
-  useEffect(() => {
-    setLegGeometry(null);
-    if (!legTarget || !hasPosition) return undefined;
-    const ctrl = new AbortController();
-    const load = async () => {
-      const geom = await fetchLegGeometry(positionRef.current, legTarget, ctrl.signal);
-      if (!ctrl.signal.aborted && geom) setLegGeometry(geom);
-    };
-    load();
-    const timer = setInterval(load, 45000);
-    return () => { ctrl.abort(); clearInterval(timer); };
-  }, [ride?.id, ride?.status, hasPosition]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const needsVehicle = profile && !profile.vehicle?.plate;
   const center = position || { lat: 40.7128, lng: -74.006 };
 
@@ -212,7 +204,7 @@ function DriverDashboard() {
           userPosition={position || undefined}
           pickup={ride ? { lat: ride.pickup.lat, lng: ride.pickup.lng } : undefined}
           dropoff={ride && ride.status === 'in_progress' ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng } : undefined}
-          routeGeometry={legGeometry || (ride?.status === 'in_progress' ? ride.route?.geometry : undefined)}
+          routeGeometry={drawableRoute(liveRoute?.geometry) || (ride?.status === 'in_progress' ? drawableRoute(ride.route?.geometry) : undefined)}
           fit={Boolean(ride)}
           followPosition={navigating && position ? position : undefined}
         />
@@ -307,11 +299,19 @@ function DriverDashboard() {
                 className="flex items-center justify-between mb-3"
                 style={{ background: 'var(--ink-50)', borderRadius: 12, padding: '10px 14px' }}
               >
-                <span className="small" style={{ fontWeight: 700 }}>
-                  {formatDistance(liveLeg.meters)} {liveLeg.label}
+                <span style={{ minWidth: 0 }}>
+                  <span className="small" style={{ fontWeight: 700, display: 'block' }}>
+                    {formatDistance(liveLeg.meters)} {liveLeg.label}
+                  </span>
+                  <span className="tiny" style={{ display: 'block', color: liveLeg.approximate ? 'var(--warning, var(--gold-700))' : 'var(--text-2)' }}>
+                    {liveLeg.quality}
+                  </span>
                 </span>
-                <span className="small mono-nums" style={{ fontWeight: 700, color: 'var(--gold-700)' }}>
-                  ~{liveLeg.minutes} min
+                <span className="mono-nums" style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <span className="small" style={{ fontWeight: 700, color: 'var(--gold-700)', display: 'block' }}>
+                    {liveLeg.approximate ? '~' : ''}{liveLeg.minutes} min
+                  </span>
+                  <span className="tiny muted" style={{ display: 'block' }}>Arrivée {arrivalClock(liveLeg.seconds)}</span>
                 </span>
               </div>
             )}
@@ -361,8 +361,8 @@ function DriverDashboard() {
               <div className="flex items-center justify-between mt-1">
                 <span className="muted">Course</span>
                 <span className="mono-nums">
-                  {formatDistance(ride.route?.distanceMeters || 0)} ·{' '}
-                  {formatDuration(ride.route?.durationSeconds || 0)}
+                  {formatDistance(ride.route?.distanceMeters || 0)} · {ride.route?.approximate ? '~' : ''}
+                  {formatDuration(ride.route?.durationSeconds || 0)} de trajet
                 </span>
               </div>
             </div>
@@ -454,7 +454,7 @@ function DriverDashboard() {
               </div>
               <div className="flex items-center justify-between mt-3" style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
                 <span className="tiny muted">
-                  {formatDistance(offer.distanceMeters)} · {formatDuration(offer.durationSeconds)}
+                  {formatDistance(offer.distanceMeters)} · {formatDuration(offer.durationSeconds)} de trajet{offer.routeQuality ? ` · ${offer.routeQuality}` : ''}
                   {offer.surgeMultiplier > 1 && (
                     <span className="badge badge-warning" style={{ marginLeft: 8 }}>
                       <TrendingUp size={11} /> {offer.surgeMultiplier}×
