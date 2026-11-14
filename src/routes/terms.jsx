@@ -1,6 +1,7 @@
 import {createFileRoute} from '@tanstack/react-router';
 import PublicLayout from '@/components/PublicLayout';
 import {COMPANY, LEGAL_UPDATED_LABEL} from '@/lib/legal';
+import {EARLY_PAYOUT_FEE} from '@/lib/vtc-payouts';
 import {DRIVER_MIN_NET_PER_RIDE, DRIVER_MIN_NET_PER_HOUR, DRIVER_MIN_NET_PER_KM, DEFAULT_PRICING, formatEuro} from '@/lib/vtc-pricing';
 
 const linkStyle = { fontWeight: 600, color: 'var(--text)' };
@@ -46,6 +47,9 @@ function TermsPage() {
         <li>Le chauffeur exerce en indépendant. Il doit détenir une carte professionnelle VTC valide, être inscrit au registre des exploitants VTC, disposer d’un véhicule conforme et d’une assurance couvrant le transport de personnes à titre onéreux. Son compte est activé après vérification par StrasDrive des documents suivants : pièce d’identité, permis B de plus de 3 ans, carte professionnelle VTC, immatriculation de l’entreprise (Kbis, RNE ou SIRENE de moins de 3 mois), inscription au registre VTC, carte grise, assurance transport de personnes à titre onéreux, responsabilité civile professionnelle, signalétique VTC et attestation de vigilance URSSAF de moins de 6 mois (plus le contrôle technique si le véhicule y est soumis). Le chauffeur tient ces documents à jour : un document expiré ou refusé l’empêche de passer en ligne jusqu’à son remplacement.</li>
         <li>Le chauffeur choisit librement ses horaires : il se connecte et se déconnecte quand il le souhaite. Avant d’accepter une course, il voit le lieu de prise en charge, la destination, la distance, la durée et sa rémunération. Il peut refuser une course sans pénalité (article L7342-8 du Code du travail).</li>
         <li>Commission de la plateforme : {DEFAULT_PRICING.economy.platformCommission} % du prix de la course ({DEFAULT_PRICING.premium.platformCommission} % pour la gamme Premium). Le reste revient au chauffeur.</li>
+        <li>Les gains du chauffeur sont conservés sur son solde StrasDrive et virés automatiquement sur son compte bancaire chaque semaine, dans la nuit de dimanche à lundi à minuit (heure de Paris), sans frais. Le virement bancaire passe par Stripe, une fois les coordonnées bancaires du chauffeur vérifiées.</li>
+        <li>Le chauffeur peut retirer son solde avant cette date : des frais de retrait anticipé de {formatEuro(EARLY_PAYOUT_FEE)} sont alors déduits.</li>
+        <li>Pour une course payée en espèces, la commission due à StrasDrive est inscrite au débit du solde du chauffeur et reprise automatiquement sur ses courses suivantes payées par portefeuille, avant tout virement.</li>
       </ul>
 
       <h2>6. Rémunération minimale des chauffeurs</h2>

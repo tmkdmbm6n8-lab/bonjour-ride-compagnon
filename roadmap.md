@@ -36,3 +36,12 @@
 - [x] Itinéraire calculé par Google Routes avec trafic en temps réel (OSRM en secours)
 - [x] Temps de trajet et heure d’arrivée affichés sur la course (client, chauffeur, offre)
 - [x] Plus de ligne droite muette : « durée estimée » affichée, aucun tracé
+
+## Alerte de message bien visible
+- [x] Grande alerte « Nouveau message » en haut de l'écran + bouton Discussion mis en évidence (passager et chauffeur)
+
+## Virements chauffeurs hebdomadaires
+- [x] Gains chauffeurs conservés sur la plateforme, virement automatique chaque semaine dimanche→lundi minuit (heure de Paris)
+- [x] Retrait anticipé avant la date : 0,50 € de frais
+- [x] Course en espèces : la commission (5 %) que le chauffeur doit est récupérée automatiquement sur sa prochaine course payée par carte/portefeuille
+- [ ] Virement réel vers la banque des chauffeurs — en attente de la connexion d'un compte Stripe (clé secrète)
