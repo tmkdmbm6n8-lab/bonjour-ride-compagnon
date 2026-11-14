@@ -7,6 +7,8 @@
  */
 
 const ROAD = 'M29.2 15A6 6 0 1 0 24 24A6 6 0 1 1 18.8 33';
+// Centre line stops just ahead of the arrow: the stretch behind it is already driven.
+const CENTRE_LINE = 'M29.2 15A6 6 0 1 0 24 24A6 6 0 0 1 25.55 35.8';
 
 export function KovaIcon({ size = 32, className = '' }) {
   return (
@@ -24,7 +26,7 @@ export function KovaIcon({ size = 32, className = '' }) {
       {/* The S is the road */}
       <path d={ROAD} stroke="#FAFAF9" strokeWidth="8" strokeLinecap="round" />
       {/* Dashed centre line */}
-      <path d={ROAD} stroke="#0C0A09" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2.2 2.4" />
+      <path d={CENTRE_LINE} stroke="#0C0A09" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2.2 2.4" />
       {/* Navigation arrow, a little way along the road from the bottom end */}
       <path
         d="M0 -3.5L2.9 3L0 1.5L-2.9 3Z"
