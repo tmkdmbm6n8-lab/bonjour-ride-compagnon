@@ -102,6 +102,7 @@ export type Database = {
       }
       drivers: {
         Row: {
+          accepts_classes: string[]
           id: string
           is_approved: boolean
           is_online: boolean
@@ -112,8 +113,10 @@ export type Database = {
           updated_at: string
           user_id: string
           vehicle: Json
+          vehicle_class: string
         }
         Insert: {
+          accepts_classes?: string[]
           id?: string
           is_approved?: boolean
           is_online?: boolean
@@ -124,8 +127,10 @@ export type Database = {
           updated_at?: string
           user_id: string
           vehicle?: Json
+          vehicle_class?: string
         }
         Update: {
+          accepts_classes?: string[]
           id?: string
           is_approved?: boolean
           is_online?: boolean
@@ -136,6 +141,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           vehicle?: Json
+          vehicle_class?: string
         }
         Relationships: [
           {

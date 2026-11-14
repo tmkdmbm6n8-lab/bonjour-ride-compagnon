@@ -1,4 +1,5 @@
 import {haversineDistance} from './utils/geo';
+import {canServe} from './vtc-classes';
 
 // Ride dispatch, in three steps:
 // 1. "priority": every available priority driver sees the ride at once, whatever the distance; first to accept wins.
@@ -15,10 +16,10 @@ export function distanceToPickupKm(ride, driver) {
   return haversineDistance(driver.location.lat, driver.location.lng, ride.pickup.lat, ride.pickup.lng);
 }
 
-/** Drivers (already online, approved and free) who can still receive this ride. */
+/** Drivers (already online, approved and free) who can still receive this ride: its class, or a higher class that opted into it. */
 export function availableFor(ride, drivers) {
   const declined = ride.declined || [];
-  return drivers.filter((d) => d.vehicle?.type === ride.vehicle_type && !declined.includes(d.user_id));
+  return drivers.filter((d) => canServe(d, ride.vehicle_type) && !declined.includes(d.user_id));
 }
 
 /** Returns the update to apply to a searching ride, or null when its current step is still running. */

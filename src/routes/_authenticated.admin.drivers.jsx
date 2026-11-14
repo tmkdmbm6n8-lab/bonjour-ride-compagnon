@@ -139,6 +139,24 @@ function DriversAdmin() {
     }
   }
 
+  async function setVehicleClass(driverId, vehicleClass) {
+    setBusyId(driverId);
+    try {
+      const res = await fetch('/api/admin/drivers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId, vehicleClass }),
+      });
+      const data = await res.json();
+      if (!res.ok) toast(data.error || 'Échec de la mise à jour', 'error');
+      else { toast(`Gamme attribuée : ${VEHICLE_LABELS[vehicleClass]}`, 'success'); load(); }
+    } catch {
+      toast('Échec de la mise à jour', 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function setPriority(driverId, isPriority) {
     setBusyId(driverId);
     try {
@@ -211,7 +229,21 @@ function DriversAdmin() {
                       ? `${d.vehicle.color} ${d.vehicle.make} ${d.vehicle.model} · ${d.vehicle.plate}`
                       : <span className="muted tiny">Aucun véhicule pour le moment</span>}
                   </td>
-                  <td className="tiny">{VEHICLE_LABELS[d.vehicle?.type] || '—'}</td>
+                  <td className="tiny">
+                    <select
+                      className="input"
+                      style={{ padding: '4px 8px', minWidth: 130 }}
+                      value={d.vehicleClass || 'economy'}
+                      disabled={busyId === d._id}
+                      onChange={(e) => setVehicleClass(d._id, e.target.value)}
+                      aria-label="Gamme du chauffeur"
+                    >
+                      {Object.entries(VEHICLE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                    {d.acceptsClasses?.length > 0 && (
+                      <div className="tiny muted mt-1">Accepte aussi : {d.acceptsClasses.map((c) => VEHICLE_LABELS[c]).join(', ')}</div>
+                    )}
+                  </td>
                   <td className="small mono-nums">{d.stats?.totalTrips || 0}</td>
                   <td className="small mono-nums">{(d.stats?.averageRating ?? 5).toFixed(1)}</td>
                   <td className="small mono-nums">{money(d.stats?.totalEarnings || 0)}</td>

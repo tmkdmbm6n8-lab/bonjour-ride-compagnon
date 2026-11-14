@@ -12,7 +12,7 @@ import MapView from '@/components/ArchiveMap';
 import ChatSheet from '@/components/ride/ChatSheet';
 import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { money } from '@/components/ui/bits';
+import { money, VEHICLE_LABELS } from '@/components/ui/bits';
 import useDriverState from '@/hooks/useDriverState';
 import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from '@/lib/utils/geo';
 
@@ -323,6 +323,16 @@ function DriverDashboard() {
               {countdown}
             </div>
             <h3 style={{ fontSize: '1.2rem' }}>Nouvelle demande de course</h3>
+            {offer.rideClass && (
+              <div className="mt-2">
+                <span className={`badge ${offer.lowerClass ? 'badge-warning' : 'badge-neutral'}`}>
+                  Course {VEHICLE_LABELS[offer.rideClass]}{offer.lowerClass ? ` · tarif ${VEHICLE_LABELS[offer.rideClass]}` : ''}
+                </span>
+                {offer.lowerClass && (
+                  <p className="tiny muted mt-1">Gamme inférieure à la vôtre : si vous acceptez, vous êtes payé au tarif {VEHICLE_LABELS[offer.rideClass]}.</p>
+                )}
+              </div>
+            )}
             {offer.profitability && (
               <div className="mt-2">
                 <span className={`badge ${PROFIT_BADGES[offer.profitability.level].className}`}>
