@@ -1,8 +1,13 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Map as MLMap, Marker, LngLatBounds, NavigationControl } from 'maplibre-gl';
+import { Map as MLMap, Marker, LngLatBounds, NavigationControl, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+// Bundlers don't emit MapLibre's worker next to the pre-bundled library, so point to it explicitly
+// (without it the route line and other vector work never draw).
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+
+setWorkerUrl(maplibreWorkerUrl);
 
 /**
  * MapLibre GL map with standard OpenStreetMap tiles (no API key).
