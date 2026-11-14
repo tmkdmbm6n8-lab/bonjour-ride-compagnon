@@ -17,6 +17,9 @@ import { useToast } from '@/components/ui/Toast';
 import { Avatar, Stars, StarPicker, VEHICLE_LABELS, money } from '@/components/ui/bits';
 import useRiderRide from '@/hooks/useRiderRide';
 import { bookingPaymentProblem, paymentMethodLabel } from '@/lib/vtc-pricing';
+import { playSound } from '@/lib/sounds';
+import useVisualViewport from '@/hooks/useVisualViewport';
+import { haversineDistance } from '@/lib/utils/geo';
 import useGeolocation from '@/hooks/useGeolocation';
 import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from '@/lib/utils/geo';
 
@@ -58,12 +61,31 @@ function RiderDashboard() {
   const [ratingComment, setRatingComment] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const blurTimerRef = useRef(null);
+  const onSearchFocus = useCallback((focused) => {
+    clearTimeout(blurTimerRef.current);
+    if (focused) setSearchFocused(true);
+    else blurTimerRef.current = setTimeout(() => setSearchFocused(false), 150);
+  }, []);
+  const [isPhone, setIsPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)');
+    const update = () => setIsPhone(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  const vv = useVisualViewport(isPhone && searchFocused);
   const chatOpenRef = useRef(false);
   useEffect(() => {
     chatOpenRef.current = chatOpen;
   }, [chatOpen]);
 
   const onRideEvent = useCallback((type, data) => {
+    const sound = { accepted: 'driver-found', arrived: 'arrived', started: 'started', 'driver-cancelled': 'cancelled', 'no-drivers': 'cancelled', completed: 'completed' }[type];
+    if (sound) playSound(sound);
+    if (type === 'message' && data?.from === 'driver') playSound('message');
     if (type === 'accepted') toast('Chauffeur trouvé — il est en route !', 'success');
     if (type === 'arrived') toast('Votre chauffeur est arrivé', 'success', 5000);
     if (type === 'started') toast('Course démarrée — bon trajet', 'info');
@@ -233,21 +255,32 @@ function RiderDashboard() {
 
   const mapProps = useMemo(() => {
     if (phase === 'active' && ride) {
+      const beforePickup = ride.status !== 'in_progress';
+      const p = { lat: ride.pickup.lat, lng: ride.pickup.lng };
       return {
-        pickup: { lat: ride.pickup.lat, lng: ride.pickup.lng },
+        pickup: p,
         dropoff: { lat: ride.dropoff.lat, lng: ride.dropoff.lng },
         routeGeometry: ride.status === 'in_progress' ? ride.route?.geometry : undefined,
         driverPosition,
         fit: true,
+        // Before pickup, zoom on the driver coming to the rider
+        fitTo: beforePickup && driverPosition ? [p, driverPosition] : undefined,
+        fitKey: `${ride.status}|${driverPosition ? 'd' : '-'}`,
       };
     }
+    // Once an address is set, frame the nearby available drivers around it
+    const close = pickup
+      ? nearby.filter((d) => d.location && haversineDistance(pickup, d.location) <= 15000).map((d) => d.location)
+      : [];
     return {
       pickup: pickup ? { lat: pickup.lat, lng: pickup.lng } : undefined,
       dropoff: dropoff ? { lat: dropoff.lat, lng: dropoff.lng } : undefined,
       routeGeometry: estimate?.route?.geometry,
       drivers: nearby,
       userPosition: geo || undefined,
-      fit: Boolean(pickup && dropoff),
+      fit: Boolean(pickup),
+      fitTo: pickup ? [pickup, dropoff, ...close, ...(dropoff && estimate?.route?.geometry ? estimate.route.geometry.map(([lng, lat]) => ({ lat, lng })) : [])].filter(Boolean) : undefined,
+      fitKey: `${pickup?.lat},${pickup?.lng}|${dropoff?.lat},${dropoff?.lng}|${estimate ? 'r' : '-'}|${nearby.map((d) => d.id).sort().join(',')}`,
     };
   }, [phase, ride, driverPosition, pickup, dropoff, estimate, nearby, geo]);
 
@@ -259,7 +292,10 @@ function RiderDashboard() {
         <MapView center={center} zoom={13} {...mapProps} />
       </div>
 
-      <div className="ride-panel">
+      <div
+        className="ride-panel"
+        style={vv ? { position: 'fixed', top: vv.top + 8, bottom: 'auto', maxHeight: vv.height - 16, zIndex: 45 } : undefined}
+      >
         {/* ── IDLE: booking form ── */}
         {phase === 'idle' && !loadingActive && (
           <div className="card card-pad animate-in">
@@ -276,6 +312,7 @@ function RiderDashboard() {
                 onSelect={(r) => { setPickup(r); setPickupText(r.address); }}
                 committedValue={pickup?.address}
                 placeholder="Lieu de prise en charge"
+                onFocusChange={onSearchFocus}
                 icon={Circle}
                 bias={geo || undefined}
               />
@@ -285,6 +322,7 @@ function RiderDashboard() {
                 onSelect={(r) => { setDropoff(r); setDropoffText(r.address); }}
                 committedValue={dropoff?.address}
                 placeholder="Quelle est votre destination ?"
+                onFocusChange={onSearchFocus}
                 icon={MapPin}
                 bias={geo || undefined}
                 autoFocus={Boolean(pickup)}
