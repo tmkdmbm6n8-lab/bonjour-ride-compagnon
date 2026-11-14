@@ -15,6 +15,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
  *  - driverPosition {lat,lng,heading} — the assigned driver (animated)
  *  - userPosition {lat,lng} — rider's own dot
  *  - fit — when true, fits bounds to pickup/dropoff/route
+ *  - fitTo [{lat,lng}] — explicit points to frame instead (refit when fitKey changes)
+ *  - followPosition {lat,lng} — keep the camera on this point (driver navigation);
+ *    a manual two-finger move pauses following for a few seconds
  *  - onClick(lngLat)
  */
 
@@ -58,6 +61,9 @@ export default function MapView({
   driverPosition,
   userPosition,
   fit = false,
+  fitTo,
+  fitKey,
+  followPosition,
   onClick,
   className = '',
   style,
@@ -71,6 +77,7 @@ export default function MapView({
   // Latest route geometry — the style 'load' handler reads this so a route
   // that arrives before the style finishes loading still gets drawn.
   const routeGeomRef = useRef(null);
+  const lastUserMoveRef = useRef(0);
   const onClickRef = useRef(onClick);
   useEffect(() => {
     onClickRef.current = onClick;
@@ -86,7 +93,18 @@ export default function MapView({
       center: [center.lng, center.lat],
       zoom,
       attributionControl: { compact: true },
+      // On phones the map fills the screen behind the panel: one finger scrolls
+      // the page, two fingers move/zoom the map (avoids accidental drags).
+      cooperativeGestures: typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches,
+      locale: {
+        'CooperativeGesturesHandler.WindowsHelpText': 'Utilisez Ctrl + molette pour zoomer sur la carte',
+        'CooperativeGesturesHandler.MacHelpText': 'Utilisez ⌘ + molette pour zoomer sur la carte',
+        'CooperativeGesturesHandler.MobileHelpText': 'Utilisez deux doigts pour déplacer la carte',
+      },
     });
+    const markUserMove = (e) => { if (e?.originalEvent) lastUserMoveRef.current = Date.now(); };
+    map.on('dragstart', markUserMove);
+    map.on('zoomstart', markUserMove);
 
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right');
 
@@ -252,13 +270,17 @@ export default function MapView({
   // ── Fit bounds ──
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !fit) return;
+    if (!map || !fit || followPosition) return;
 
     const points = [];
-    if (pickup) points.push([pickup.lng, pickup.lat]);
-    if (dropoff) points.push([dropoff.lng, dropoff.lat]);
-    if (driverPosition) points.push([driverPosition.lng, driverPosition.lat]);
-    if (routeGeometry?.length) points.push(...routeGeometry);
+    if (fitTo) {
+      for (const p of fitTo) if (p && Number.isFinite(p.lat) && Number.isFinite(p.lng)) points.push([p.lng, p.lat]);
+    } else {
+      if (pickup) points.push([pickup.lng, pickup.lat]);
+      if (dropoff) points.push([dropoff.lng, dropoff.lat]);
+      if (driverPosition) points.push([driverPosition.lng, driverPosition.lat]);
+      if (routeGeometry?.length) points.push(...routeGeometry);
+    }
     if (points.length < 2) {
       if (points.length === 1) map.easeTo({ center: points[0], zoom: 15, duration: 600 });
       return;
@@ -272,12 +294,20 @@ export default function MapView({
     // driverPosition is intentionally not a dep — refitting on every GPS
     // ping would make the camera jitter. It's included in bounds whenever
     // a route/endpoint change triggers a refit.
-  }, [fit, pickup?.lat, dropoff?.lat, routeGeometry]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fit, pickup?.lat, dropoff?.lat, routeGeometry, fitKey, Boolean(followPosition)]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Follow (navigation) ──
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !followPosition) return;
+    if (Date.now() - lastUserMoveRef.current < 8000) return;
+    map.easeTo({ center: [followPosition.lng, followPosition.lat], zoom: Math.max(map.getZoom(), 15.5), duration: 800 });
+  }, [followPosition?.lat, followPosition?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Recenter when no fit target ──
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || fit || pickup || dropoff) return;
+    if (!map || fit || followPosition || pickup || dropoff) return;
     map.easeTo({ center: [center.lng, center.lat], zoom, duration: 600 });
   }, [center.lat, center.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
