@@ -46,3 +46,6 @@ use the editor.
 - Sign-out uses local scope and a request without a session sends the user to `/login?expired=1` (in `archive-fetch.js`); a global sign-out on one device silently broke the driver's phone.
 - Admin account deletion goes through the service-role-only `admin_delete_account` SQL function (atomic) plus storage and auth cleanup in `vtc.server.js`; other users keep their payment lines, unlinked from the deleted rides.
 - Ride payment method lives in `rides.payment.method` (`wallet`|`cash`), sanitized by `paymentMethodOf` in `src/lib/vtc-pricing.js`; `settle_ride` debits only the driver's platform share for cash rides, so the rider wallet is never touched and the driver's negative-balance limit still applies.
+- `MapView.jsx` sets MapLibre's worker URL explicitly (Vite `?url` import); without it the bundled worker 404s and GeoJSON layers such as the route line never draw.
+- Driver navigation (Google Maps/Waze deep links, keyless OSRM legs) lives in `src/lib/navigation.js`; notification melodies are synthesized in `src/lib/sounds.js` (no audio files), one distinct melody per event.
+- Inputs that open the phone keyboard (address search, PIN, chat) position themselves with `useVisualViewport`; fixed/portal positioning alone drifts when iOS scrolls the page.
