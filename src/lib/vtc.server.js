@@ -185,6 +185,47 @@ async function liveRoute(admin, r) {
   required(await admin.from("rides").update({ live_route: value }).eq("id", r.id).eq("status", r.status));
   return value;
 }
+async function geoSearch(q) {
+    // Photon (OpenStreetMap) — service gratuit, sans clé, comme dans l'archive d'origine
+    const PHOTON_BASE = "https://photon.komoot.io";
+    const reverse = q.get("reverse") === "1",
+      lat = parseFloat(q.get("lat")),
+      lng = parseFloat(q.get("lng")),
+      text = (q.get("q") || "").trim();
+    let endpoint;
+    if (reverse) {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Latitude et longitude requises");
+      endpoint = `${PHOTON_BASE}/reverse?lon=${lng}&lat=${lat}&limit=1&lang=fr`;
+    } else {
+      if (text.length < 2) return { results: [] };
+      endpoint = `${PHOTON_BASE}/api/?q=${encodeURIComponent(text)}&limit=6&lang=fr`;
+      if (Number.isFinite(lat) && Number.isFinite(lng))
+        endpoint += `&lat=${lat}&lon=${lng}&zoom=14&location_bias_scale=0.4`;
+    }
+    let res;
+    try {
+      res = await fetch(endpoint, { signal: AbortSignal.timeout(5000), headers: { "User-Agent": "strasdrive/1.0" } });
+    } catch {
+      throw new Error("La recherche d’adresse est momentanément indisponible");
+    }
+    if (!res.ok) throw new Error("La recherche d’adresse est momentanément indisponible");
+    const j = await res.json();
+    return {
+      results: (j.features || []).map((f) => {
+        const x = f.properties || {};
+        const parts = [x.name, x.street, x.housenumber, x.district, x.city, x.state, x.country]
+          .filter(Boolean)
+          .filter((v, i, a) => a.indexOf(v) === i);
+        return {
+          name: x.name || x.street || "Lieu inconnu",
+          address: parts.join(", "),
+          lat: f.geometry.coordinates[1],
+          lng: f.geometry.coordinates[0],
+          type: x.osm_value || x.type || "",
+        };
+      }),
+    };
+  }
 async function estimates(db, a, b) {
   const route = await routeBetween(a, b);
   const rows = required(await db.from("pricing_rules").select("*"));
@@ -274,47 +315,7 @@ export async function handleVtc(input, context) {
     const fresh = required(await db.from("profiles").select("*").eq("id", uid).single());
     return { user: { ...profileShape(fresh, context.claims.email), role } };
   }
-  if (p === "/api/geo/search") {
-    // Photon (OpenStreetMap) — service gratuit, sans clé, comme dans l'archive d'origine
-    const PHOTON_BASE = "https://photon.komoot.io";
-    const reverse = q.get("reverse") === "1",
-      lat = parseFloat(q.get("lat")),
-      lng = parseFloat(q.get("lng")),
-      text = (q.get("q") || "").trim();
-    let endpoint;
-    if (reverse) {
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Latitude et longitude requises");
-      endpoint = `${PHOTON_BASE}/reverse?lon=${lng}&lat=${lat}&limit=1&lang=fr`;
-    } else {
-      if (text.length < 2) return { results: [] };
-      endpoint = `${PHOTON_BASE}/api/?q=${encodeURIComponent(text)}&limit=6&lang=fr`;
-      if (Number.isFinite(lat) && Number.isFinite(lng))
-        endpoint += `&lat=${lat}&lon=${lng}&zoom=14&location_bias_scale=0.4`;
-    }
-    let res;
-    try {
-      res = await fetch(endpoint, { signal: AbortSignal.timeout(5000), headers: { "User-Agent": "strasdrive/1.0" } });
-    } catch {
-      throw new Error("La recherche d’adresse est momentanément indisponible");
-    }
-    if (!res.ok) throw new Error("La recherche d’adresse est momentanément indisponible");
-    const j = await res.json();
-    return {
-      results: (j.features || []).map((f) => {
-        const x = f.properties || {};
-        const parts = [x.name, x.street, x.housenumber, x.district, x.city, x.state, x.country]
-          .filter(Boolean)
-          .filter((v, i, a) => a.indexOf(v) === i);
-        return {
-          name: x.name || x.street || "Lieu inconnu",
-          address: parts.join(", "),
-          lat: f.geometry.coordinates[1],
-          lng: f.geometry.coordinates[0],
-          type: x.osm_value || x.type || "",
-        };
-      }),
-    };
-  }
+  if (p === "/api/geo/search") return geoSearch(q);
   if (p === "/api/rides/estimate") return estimates(admin, body.pickup, body.dropoff);
   if (p === "/api/drivers/me") {
     if (method === "PATCH") {
@@ -1092,8 +1093,11 @@ async function assignOffer(db, r, pool) {
 // Visiteurs non connectés (page d'accueil) : uniquement la recherche d'adresse et l'estimation.
 export async function publicVtc(input) {
   const path = String(input?.path || "");
-  const p = new URL(path, "http://app").pathname;
-  if (p !== "/api/geo/search" && p !== "/api/rides/estimate") throw new Error("Accès refusé");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return handleVtc({ path, method: "POST", body: input.body || {} }, { supabase: supabaseAdmin, userId: "00000000-0000-0000-0000-000000000000", claims: {} });
+  const url = new URL(path, "http://app");
+  if (url.pathname === "/api/geo/search") return geoSearch(url.searchParams);
+  if (url.pathname === "/api/rides/estimate") {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return estimates(supabaseAdmin, input.body?.pickup, input.body?.dropoff);
+  }
+  throw new Error("Accès refusé");
 }
