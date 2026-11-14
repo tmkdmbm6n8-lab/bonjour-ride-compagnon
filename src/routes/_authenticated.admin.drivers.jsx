@@ -102,6 +102,7 @@ function DriversAdmin() {
   const [drivers, setDrivers] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [docsFor, setDocsFor] = useState(null);
+  const [forceFor, setForceFor] = useState(null);
 
   const load = useCallback(async () => {
     setDrivers(null);
@@ -117,13 +118,13 @@ function DriversAdmin() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function setApproval(driverId, isApproved) {
+  async function setApproval(driverId, isApproved, force = false) {
     setBusyId(driverId);
     try {
       const res = await fetch('/api/admin/drivers', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ driverId, isApproved }),
+        body: JSON.stringify({ driverId, isApproved, ...(force ? { force: true } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -287,9 +288,10 @@ function DriversAdmin() {
                     ) : (
                       <button
                         className="btn btn-success btn-sm"
-                        disabled={busyId === d._id || !d.documents?.canBeApproved}
-                        title={d.documents?.canBeApproved ? 'Approuver ce chauffeur' : 'Tous les documents obligatoires doivent être validés'}
-                        onClick={() => setApproval(d._id, true)}
+                        disabled={busyId === d._id}
+                        style={d.documents?.canBeApproved ? undefined : { opacity: 0.55 }}
+                        title={d.documents?.canBeApproved ? 'Approuver ce chauffeur' : 'Documents incomplets : cliquez pour approuver quand même'}
+                        onClick={() => (d.documents?.canBeApproved ? setApproval(d._id, true) : setForceFor(d))}
                       >
                         <CheckCircle2 size={14} /> Approuver </button>
                     )}
@@ -301,6 +303,28 @@ function DriversAdmin() {
         </div>
       )}
       {docsFor && <DriverDocuments driver={docsFor} onClose={() => setDocsFor(null)} onChanged={load} />}
+      {forceFor && (
+        <Modal open onClose={() => setForceFor(null)} title="Approuver quand même ?" maxWidth={480}>
+          <p className="mb-2">
+            Le dossier de <strong>{forceFor.userId?.name || 'ce chauffeur'}</strong> n’est pas complet :{' '}
+            {forceFor.documents?.approved ?? 0}/{forceFor.documents?.required ?? 10} documents obligatoires validés.
+          </p>
+          {forceFor.documents?.problem && <p className="tiny muted mb-2">{forceFor.documents.problem}.</p>}
+          <p className="tiny muted mb-4">
+            Vous pouvez l’approuver malgré tout. Il ne pourra passer en ligne qu’une fois ses documents validés.
+          </p>
+          <div className="flex gap-2" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setForceFor(null)}>Annuler</button>
+            <button
+              className="btn btn-success btn-sm"
+              disabled={busyId === forceFor._id}
+              onClick={async () => { const id = forceFor._id; setForceFor(null); await setApproval(id, true, true); }}
+            >
+              <CheckCircle2 size={14} /> Approuver quand même
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
