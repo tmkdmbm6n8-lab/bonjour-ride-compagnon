@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import SiteHeader from '@/components/shell/SiteHeader';
 import SiteFooter from '@/components/shell/SiteFooter';
+import HomeRideEstimator from '@/components/home/HomeRideEstimator';
 
 
 
@@ -72,6 +73,8 @@ function LandingPage() {
             <Link href="/signup?role=driver" className="btn btn-secondary btn-lg"> Conduisez et gagnez </Link>
           </div>
         </div>
+
+        <HomeRideEstimator />
 
         {/* Mock trip card */}
         <div
