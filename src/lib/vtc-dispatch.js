@@ -7,7 +7,8 @@ import {canServe} from './vtc-classes';
 // 3. "broadcast": every available driver sees it; first to accept wins. When this window ends, the ride has no driver.
 export const PRIORITY_WINDOW_SECONDS = 15;
 export const NEAREST_WINDOW_SECONDS = 10;
-export const BROADCAST_WINDOW_SECONDS = 60;
+export const BROADCAST_WINDOW_SECONDS = 4;
+export const TEST_OFFER_SECONDS = BROADCAST_WINDOW_SECONDS;
 
 const iso = (ms) => new Date(ms).toISOString();
 

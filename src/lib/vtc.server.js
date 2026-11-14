@@ -1,6 +1,6 @@
 import {DEFAULT_PRICING,calculateFare,settleDriverEarnings} from './vtc-pricing';
 import {haversineDistance} from './utils/geo';
-import {planDispatch,canSeeOffer,distanceToPickupKm,approachSecondsFor,profitability} from './vtc-dispatch';
+import {planDispatch,canSeeOffer,distanceToPickupKm,approachSecondsFor,profitability,TEST_OFFER_SECONDS} from './vtc-dispatch';
 import {LOWER_CLASSES,isVehicleClass,driverClass,sanitizeAcceptedClasses,isLowerClassRide,availabilityByClass} from './vtc-classes';
 import {DOCUMENTS_BUCKET,documentSpec,validateDocumentInput,driverCompliance,complianceProblem} from './vtc-documents';
 const active=['searching','accepted','arrived','in_progress'];
@@ -220,7 +220,7 @@ export async function handleVtc(input,context){
  }
  throw new Error('Ce service n’est pas encore disponible');
 }
-const TEST_OFFER_SECONDS=60,TEST_PIN='0000';
+const TEST_PIN='0000';
 const TEST_PICKUP={lat:48.5833,lng:7.7458,address:'Place Kléber, 67000 Strasbourg (test)'};
 const TEST_DROPOFF={lat:48.5850,lng:7.7342,address:'Gare de Strasbourg, 67000 Strasbourg (test)'};
 async function pendingTestOffer(db,uid){

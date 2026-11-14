@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planDispatch, canSeeOffer, PRIORITY_WINDOW_SECONDS, NEAREST_WINDOW_SECONDS } from '@/lib/vtc-dispatch';
+import { planDispatch, canSeeOffer, PRIORITY_WINDOW_SECONDS, NEAREST_WINDOW_SECONDS, TEST_OFFER_SECONDS } from '@/lib/vtc-dispatch';
 
 const NOW = Date.parse('2026-11-14T10:00:00Z');
 const pickup = { lat: 48.5839, lng: 7.7455 }; // Place Kléber
@@ -63,6 +63,16 @@ describe('attribution des courses', () => {
   it('personne n’accepte pendant l’envoi à tous : la course passe sans chauffeur', () => {
     const r = { ...ride(), dispatch_phase: 'broadcast', offer_expires_at: new Date(NOW).toISOString() };
     expect(planDispatch(r, all, NOW)?.status).toBe('no_drivers');
+  });
+  it('le compte à rebours de l’envoi à tous dure 4 secondes puis interdit l’acceptation', () => {
+    const r = apply(ride({dispatch_phase:'nearest'}), planDispatch(ride({dispatch_phase:'nearest'}), all, NOW));
+    expect(r.offer_expires_at).toBe(new Date(NOW + 4000).toISOString());
+    expect(canSeeOffer(r, near, NOW + 3999)).toBe(true);
+    expect(canSeeOffer(r, near, NOW + 4000)).toBe(false);
+    expect(planDispatch(r, all, NOW + 4000)?.status).toBe('no_drivers');
+  });
+  it('les demandes test durent également 4 secondes', () => {
+    expect(TEST_OFFER_SECONDS).toBe(4);
   });
 });
 
