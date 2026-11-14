@@ -1,8 +1,8 @@
 export const DEFAULT_PRICING = {
-  economy: {baseFare:2,perKmRate:1,perMinRate:.15,minimumFare:4,bookingFee:.5,platformCommission:8,surgeMultiplierCap:3},
-  comfort: {baseFare:3,perKmRate:1.5,perMinRate:.25,minimumFare:6.5,bookingFee:.75,platformCommission:8,surgeMultiplierCap:3},
+  economy: {baseFare:2,perKmRate:1,perMinRate:.15,minimumFare:4,bookingFee:.5,platformCommission:5,surgeMultiplierCap:3},
+  comfort: {baseFare:3,perKmRate:1.5,perMinRate:.25,minimumFare:6.5,bookingFee:.75,platformCommission:5,surgeMultiplierCap:3},
   premium: {baseFare:5,perKmRate:2.5,perMinRate:.4,minimumFare:12,bookingFee:1,platformCommission:10,surgeMultiplierCap:3},
-  xl: {baseFare:4,perKmRate:1.8,perMinRate:.3,minimumFare:8,bookingFee:.75,platformCommission:8,surgeMultiplierCap:3},
+  xl: {baseFare:4,perKmRate:1.8,perMinRate:.3,minimumFare:8,bookingFee:.75,platformCommission:5,surgeMultiplierCap:3},
 };
 // Taux de remise appliqué au tarif calculé (0.20 = 20 %). Mettre à 0 pour retirer la remise.
 export const DISCOUNT_RATE = 0;
