@@ -5,9 +5,95 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 
 import { useCallback, useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from '@/lib/archive-navigation';
-import { Car, CheckCircle2, Ban, Star } from 'lucide-react';
+import { Car, CheckCircle2, Ban, Star, FileText, ExternalLink, X } from 'lucide-react';
+import Modal from '@/components/ui/Modal';
+import { DRIVER_DOCUMENTS, documentState } from '@/lib/vtc-documents';
+import { STATE_BADGES, frDate } from '@/components/driver/DocumentsCard';
 import { Avatar, Loading, Empty, VEHICLE_LABELS, money } from '@/components/ui/bits';
 import { useToast } from '@/components/ui/Toast';
+
+function DriverDocuments({ driver, onClose, onChanged }) {
+  const toast = useToast();
+  const [data, setData] = useState(null);
+  const [rejecting, setRejecting] = useState(null);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const res = await fetch(`/api/admin/drivers/documents?driverId=${driver._id}`);
+    const j = await res.json();
+    setData(res.ok ? j : { documents: [] });
+  }, [driver._id]);
+  useEffect(() => { load(); }, [load]);
+
+  async function review(documentId, status) {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/drivers/documents', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId, status, reason }),
+      });
+      const j = await res.json();
+      if (!res.ok) toast(j.error || 'Échec de la mise à jour', 'error');
+      else {
+        toast(status === 'approved' ? 'Document validé' : 'Document refusé : le chauffeur verra le motif', 'success');
+        setRejecting(null); setReason('');
+        await load(); onChanged();
+      }
+    } finally { setBusy(false); }
+  }
+
+  const byType = Object.fromEntries((data?.documents || []).map((d) => [d.type, d]));
+  return (
+    <Modal open onClose={onClose} title={`Documents · ${driver.userId?.name || 'Chauffeur'}`} maxWidth={680}>
+      {!data && <Loading label="Chargement des documents…" />}
+      {data && (
+        <>
+          <p className="tiny muted mb-2">
+            {data.compliance?.approved ?? 0} / {data.compliance?.required ?? 10} documents obligatoires validés.
+            {data.compliance?.problem ? ` ${data.compliance.problem}.` : ' Dossier complet.'}
+          </p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '65vh', overflowY: 'auto' }}>
+            {DRIVER_DOCUMENTS.map((spec) => {
+              const doc = byType[spec.type];
+              const [badge, label] = STATE_BADGES[documentState(doc)];
+              return (
+                <li key={spec.type} style={{ padding: '12px 0', borderTop: '1px solid var(--border)' }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div style={{ minWidth: 0 }}>
+                      <div className="small" style={{ fontWeight: 600 }}>{spec.label}{!spec.required && <span className="muted tiny"> · facultatif</span>}</div>
+                      {doc ? (
+                        <div className="tiny muted mt-1">
+                          {doc.number ? `${doc.number} · ` : ''}{doc.validUntil ? `valable jusqu’au ${frDate(doc.validUntil)} · ` : ''}envoyé le {new Date(doc.uploadedAt).toLocaleDateString('fr-FR')}
+                        </div>
+                      ) : <div className="tiny muted mt-1">Non fourni</div>}
+                      {doc?.status === 'rejected' && doc.rejectionReason && <div className="tiny mt-1" style={{ color: 'var(--danger)' }}>Motif : {doc.rejectionReason}</div>}
+                    </div>
+                    <span className={`badge ${badge} badge-dot`} style={{ flexShrink: 0 }}>{label}</span>
+                  </div>
+                  {doc && (
+                    <div className="flex gap-2 mt-2 wrap">
+                      {doc.url && <a className="btn btn-ghost btn-sm" href={doc.url} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Voir</a>}
+                      {doc.status !== 'approved' && <button className="btn btn-success btn-sm" disabled={busy} onClick={() => review(doc.id, 'approved')}><CheckCircle2 size={14} /> Valider</button>}
+                      {doc.status !== 'rejected' && rejecting !== doc.id && <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => { setRejecting(doc.id); setReason(''); }}><X size={14} /> Refuser</button>}
+                    </div>
+                  )}
+                  {rejecting === doc?.id && (
+                    <div className="flex gap-2 mt-2">
+                      <input className="input" placeholder="Motif du refus (illisible, expiré, mauvais document…)" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Motif du refus" />
+                      <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => review(doc.id, 'rejected')}>Confirmer</button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </Modal>
+  );
+}
 
 function DriversAdmin() {
   const toast = useToast();
@@ -15,6 +101,7 @@ function DriversAdmin() {
   const [pendingOnly, setPendingOnly] = useState(searchParams.get('pending') === '1');
   const [drivers, setDrivers] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [docsFor, setDocsFor] = useState(null);
 
   const load = useCallback(async () => {
     setDrivers(null);
@@ -78,7 +165,7 @@ function DriversAdmin() {
       <div className="flex items-center justify-between mb-6 wrap gap-3">
         <div>
           <h1 className="page-title">Chauffeurs</h1>
-          <p className="page-sub">Approuvez, suivez et gérez votre flotte. Les chauffeurs prioritaires reçoivent chaque course en premier.</p>
+          <p className="page-sub">Vérifiez les documents obligatoires, approuvez et gérez votre flotte. Les chauffeurs prioritaires reçoivent chaque course en premier.</p>
         </div>
         <div className="segmented">
           <button className={!pendingOnly ? 'active' : ''} onClick={() => setPendingOnly(false)}>Tous</button>
@@ -102,6 +189,7 @@ function DriversAdmin() {
                 <th>Courses</th>
                 <th>Note</th>
                 <th>Revenus</th>
+                <th>Documents</th>
                 <th>Statut</th>
                 <th>Priorité</th>
                 <th></th>
@@ -127,6 +215,15 @@ function DriversAdmin() {
                   <td className="small mono-nums">{d.stats?.totalTrips || 0}</td>
                   <td className="small mono-nums">{(d.stats?.averageRating ?? 5).toFixed(1)}</td>
                   <td className="small mono-nums">{money(d.stats?.totalEarnings || 0)}</td>
+                  <td>
+                    <button
+                      className={`btn btn-sm ${d.documents?.canBeApproved ? 'btn-secondary' : 'btn-ghost'}`}
+                      onClick={() => setDocsFor(d)}
+                      title={d.documents?.problem || 'Dossier complet'}
+                    >
+                      <FileText size={14} /> {d.documents?.approved ?? 0}/{d.documents?.required ?? 10}
+                    </button>
+                  </td>
                   <td>
                     {d.isApproved ? (
                       d.isOnline
@@ -158,7 +255,8 @@ function DriversAdmin() {
                     ) : (
                       <button
                         className="btn btn-success btn-sm"
-                        disabled={busyId === d._id}
+                        disabled={busyId === d._id || !d.documents?.canBeApproved}
+                        title={d.documents?.canBeApproved ? 'Approuver ce chauffeur' : 'Tous les documents obligatoires doivent être validés'}
                         onClick={() => setApproval(d._id, true)}
                       >
                         <CheckCircle2 size={14} /> Approuver </button>
@@ -170,6 +268,7 @@ function DriversAdmin() {
           </table>
         </div>
       )}
+      {docsFor && <DriverDocuments driver={docsFor} onClose={() => setDocsFor(null)} onChanged={load} />}
     </div>
   );
 }
