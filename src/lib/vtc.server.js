@@ -1088,3 +1088,12 @@ async function assignOffer(db, r, pool) {
   q = r.dispatch_phase ? q.eq("dispatch_phase", r.dispatch_phase) : q.is("dispatch_phase", null);
   return required(await q.select("*"))[0] || required(await db.from("rides").select("*").eq("id", r.id).single());
 }
+
+// Visiteurs non connectés (page d'accueil) : uniquement la recherche d'adresse et l'estimation.
+export async function publicVtc(input) {
+  const path = String(input?.path || "");
+  const p = new URL(path, "http://app").pathname;
+  if (p !== "/api/geo/search" && p !== "/api/rides/estimate") throw new Error("Accès refusé");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return handleVtc({ path, method: "POST", body: input.body || {} }, { supabase: supabaseAdmin, userId: "00000000-0000-0000-0000-000000000000", claims: {} });
+}
