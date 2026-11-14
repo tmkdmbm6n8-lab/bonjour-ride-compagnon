@@ -17,7 +17,9 @@ const TXN_LABEL = {
   ride_earning: 'Revenus de course',
   refund: 'Remboursement',
   cancellation_fee: 'Frais d’annulation',
-  payout: 'Versement',
+  payout: 'Virement vers votre banque',
+  payout_fee: 'Frais de retrait anticipé',
+  payout_reversal: 'Virement refusé — recrédité',
   cash_commission: 'Commission (course payée en espèces)',
 };
 
