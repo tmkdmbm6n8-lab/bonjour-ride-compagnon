@@ -66,4 +66,5 @@ export async function handlePayments({admin,profile,uid,role,p,q,method,body}) {
   await sendTransfer(admin,stripe,{id:pid,amount:quote.amount},account.id);
   return {amount:quote.amount,fee:quote.fee};
  }
+ throw new Error('Action de versement inconnue');
 }
