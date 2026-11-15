@@ -120,6 +120,21 @@ async function serialize(db, r, actor, raw = false) {
     isTest: Boolean(r.is_test),
     live_route: undefined,
   };
+
+  // Attacher les coordonnées du passager (nom, téléphone, note) au chauffeur
+  if (r.rider_id && (actor === r.driver_id || raw)) {
+    try {
+      const rp = required(await db.from("profiles").select("name,phone,rating").eq("id", r.rider_id).single());
+      out.rider = {
+        name: rp.name || "Passager",
+        phone: rp.phone || "",
+        rating: rp.rating?.average || 5.0,
+      };
+    } catch {
+      out.rider = { name: "Passager", phone: "", rating: 5.0 };
+    }
+  }
+
   if (raw) {
     const p = required(await db.from("profiles").select("id,name,username").eq("id", r.rider_id).single());
     out.riderId = p;
@@ -127,39 +142,6 @@ async function serialize(db, r, actor, raw = false) {
   }
   return out;
 }
-const out = {
-  ...r,
-  id: r.id,
-  _id: r.id,
-  createdAt: r.created_at,
-  completedAt: r.completed_at,
-  vehicleType: r.vehicle_type,
-  driver,
-  pin: r.rider_id === actor || r.is_test ? r.pin : undefined,
-  isTest: Boolean(r.is_test),
-  live_route: undefined,
-};
-
-// Attacher les coordonnées du passager (nom, téléphone, note) au chauffeur de la course
-if (r.rider_id && (actor === r.driver_id || raw)) {
-  try {
-    const rp = required(await db.from("profiles").select("name,phone,rating").eq("id", r.rider_id).single());
-    out.rider = {
-      name: rp.name || "Passager",
-      phone: rp.phone || "",
-      rating: rp.rating?.average || 5.0,
-    };
-  } catch {
-    out.rider = { name: "Passager", phone: "", rating: 5.0 };
-  }
-}
-
-if (raw) {
-  const p = required(await db.from("profiles").select("id,name,username").eq("id", r.rider_id).single());
-  out.riderId = p;
-  out.driverId = driver;
-}
-return out;
 
 const MAPS_GATEWAY = "https://connector-gateway.lovable.dev/google_maps";
 async function googleRoute(a, b) {
