@@ -242,7 +242,7 @@ async function estimates(db, a, b) {
   // Configuration de la réduction Uber (20 % par défaut, activée par défaut)
   const discountSetting = rows.find((r) => r.vehicle_type === "uber_discount")?.rule;
   const isDiscountActive = discountSetting ? Boolean(discountSetting.enabled) : true;
-  const discountRate = discountSetting && Number.isFinite(discountSetting.rate) ? discountSetting.rate : 0.20; // 20 %
+  const discountRate = discountSetting && Number.isFinite(discountSetting.rate) ? discountSetting.rate : 0.2; // 20 %
 
   // 1. Appel en direct de l'API Uber
   let uberList = null;
@@ -320,9 +320,13 @@ async function estimates(db, a, b) {
   applyUberPrice("pet", uberPet);
   applyUberPrice("xl", uberXL);
 
-  // Vérifier qu'au moins la gamme économique
+  // Vérifier qu'au moins la gamme économique a pu être tarifée
+  if (!finalEstimates.economy) {
+    throw new Error("Impossible de récupérer les tarifs Uber pour cet itinéraire.");
+  }
 
-  
+  return { route, estimates: finalEstimates, source: "uber" };
+}
 
 export async function handleVtc(input, context) {
   const { path, method = "GET", body = {} } = input;
