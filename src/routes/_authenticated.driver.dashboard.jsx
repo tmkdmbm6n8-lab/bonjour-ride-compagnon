@@ -18,7 +18,11 @@ import {
   KeyRound,
   Flag,
   PawPrint,
+  Star,
+  Square,
+  User,
 } from "lucide-react";
+
 import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
 import MessageAlert from "@/components/ride/MessageAlert";
