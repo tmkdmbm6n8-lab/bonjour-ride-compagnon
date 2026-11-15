@@ -6,6 +6,7 @@ import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Navigation,
+  Clock,
   MapPin,
   Circle,
   Car,
@@ -471,10 +472,10 @@ function RiderDashboard() {
     };
   }, [phase, ride, driverPosition, pickup, dropoff, estimate, nearby, geo, liveRoute]);
 
-  const center = geo || { lat: 40.7128, lng: -74.006 };
+  const center = geo || { lat: 48.5734, lng: 7.7521 };
 
   return (
-    <div className="ride-page">
+    <div className="ride-page rider-workspace">
       <div className="map-fill">
         <MapView center={center} zoom={13} {...mapProps} />
       </div>
@@ -487,7 +488,11 @@ function RiderDashboard() {
       >
         {/* ── IDLE: booking form ── */}
         {phase === "idle" && !loadingActive && (
-          <div className="card card-pad animate-in">
+          <div className="card card-pad animate-in rider-booking-card">
+            <div className="rider-desktop-intro">
+              <span className="rider-eyebrow">VOTRE PROCHAIN TRAJET</span>
+              <p>Strasbourg, à votre rythme.</p>
+            </div>
             <h2 style={{ fontSize: "1.25rem", marginBottom: 14 }}>Où allez-vous ?</h2>
 
             {geoError && !pickup && (
@@ -533,6 +538,19 @@ function RiderDashboard() {
               />
             </div>
 
+            <div className="rider-booking-context">
+              <span>
+                <Clock size={15} /> Départ immédiat
+              </span>
+              <span>
+                <ShieldCheck size={15} /> Tarif avant réservation
+              </span>
+            </div>
+            {!pickup || !dropoff ? (
+              <p className="rider-booking-hint">
+                Choisissez vos adresses pour découvrir les véhicules et le prix de votre trajet.
+              </p>
+            ) : null}
             {estimating && (
               <div className="flex items-center gap-2 mt-4 muted small">
                 <span className="spinner" /> Calcul des tarifs…{" "}
@@ -581,37 +599,37 @@ function RiderDashboard() {
                         />
                         {/* Remplacer l'intérieur du bouton vehicle-row, vers la ligne 381 */}
                         <span className="flex-1" style={{ minWidth: 0 }}>
-                            <span className="small" style={{ display: 'block', fontWeight: 700 }}>
-                              {VEHICLE_LABELS[type]}
-                            </span>
-                            <span className="tiny muted truncate" style={{ display: 'block' }}>
-                              {Meta.blurb}
-                            </span>
-                            {avail && (
-                              <span
-                                className="tiny truncate"
-                                style={{
-                                  display: 'block',
-                                  fontWeight: 600,
-                                  color: avail.count ? 'var(--success)' : 'var(--danger)',
-                                }}
-                              >
-                                {avail.count
-                                  ? `${avail.count} chauffeur${avail.count > 1 ? 's' : ''} disponible${avail.count > 1 ? 's' : ''}${avail.etaMinutes ? ` · ${avail.etaMinutes} min` : ''}`
-                                  : 'Aucun chauffeur disponible'}
-                              </span>
-                            )}
+                          <span className="small" style={{ display: "block", fontWeight: 700 }}>
+                            {VEHICLE_LABELS[type]}
                           </span>
-                          <span className="flex-col" style={{ alignItems: 'flex-end' }}>
-                            <span className="small mono-nums" style={{ fontWeight: 700 }}>
-                              {money(fare.total)}
-                            </span>
-                            {fare.discount > 0 && (
-                              <span className="tiny muted mono-nums" style={{ textDecoration: 'line-through' }}>
-                                {money(fare.originalTotal)}
-                              </span>
-                            )}
+                          <span className="tiny muted truncate" style={{ display: "block" }}>
+                            {Meta.blurb}
                           </span>
+                          {avail && (
+                            <span
+                              className="tiny truncate"
+                              style={{
+                                display: "block",
+                                fontWeight: 600,
+                                color: avail.count ? "var(--success)" : "var(--danger)",
+                              }}
+                            >
+                              {avail.count
+                                ? `${avail.count} chauffeur${avail.count > 1 ? "s" : ""} disponible${avail.count > 1 ? "s" : ""}${avail.etaMinutes ? ` · ${avail.etaMinutes} min` : ""}`
+                                : "Aucun chauffeur disponible"}
+                            </span>
+                          )}
+                        </span>
+                        <span className="flex-col" style={{ alignItems: "flex-end" }}>
+                          <span className="small mono-nums" style={{ fontWeight: 700 }}>
+                            {money(fare.total)}
+                          </span>
+                          {fare.discount > 0 && (
+                            <span className="tiny muted mono-nums" style={{ textDecoration: "line-through" }}>
+                              {money(fare.originalTotal)}
+                            </span>
+                          )}
+                        </span>
                       </button>
                     );
                   })}
@@ -675,8 +693,8 @@ function RiderDashboard() {
 
                 {paymentMethod === "card" && selectedFare && !insufficientWallet && (
                   <p className="tiny muted mt-2">
-                    Vous payez {money(selectedFare.total)} par carte maintenant ; la course est lancée dès le paiement validé.
-                    En cas d’annulation, le montant reste sur votre portefeuille.
+                    Vous payez {money(selectedFare.total)} par carte maintenant ; la course est lancée dès le paiement
+                    validé. En cas d’annulation, le montant reste sur votre portefeuille.
                   </p>
                 )}
 
