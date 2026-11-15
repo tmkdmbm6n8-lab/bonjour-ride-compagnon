@@ -22,6 +22,7 @@ import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
 import MessageAlert from "@/components/ride/MessageAlert";
 import DispatchWheel from "@/components/ride/DispatchWheel";
+import DriverHome from "@/components/driver/DriverHome";
 import { pickupZoneProblem } from "@/lib/vtc-dispatch";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
@@ -272,7 +273,7 @@ function DriverDashboard() {
     : null;
   const navigating = Boolean(legTarget);
   const needsVehicle = profile && !profile.vehicle?.plate;
-  const center = position || { lat: 40.7128, lng: -74.006 };
+  const center = position || { lat: 48.5734, lng: 7.7521 }; // Strasbourg par défaut
 
   const [togglingPet, setTogglingPet] = useState(false);
   const acceptsPet = (profile?.acceptsClasses || []).includes("pet");
@@ -306,6 +307,8 @@ function DriverDashboard() {
   }
 
   return (
+    <>
+      {ride ? (
     <div className="ride-page">
       <div className="map-fill">
         <MapView
@@ -324,107 +327,6 @@ function DriverDashboard() {
       </div>
 
       <div className="ride-panel">
-        {/* ── Online toggle / status card ── */}
-        {!ride && (
-          <div className="card card-pad animate-in">
-            {loading ? (
-              <div className="skeleton" style={{ height: 52 }} />
-            ) : needsVehicle ? (
-              <>
-                <h3 style={{ fontSize: "1.1rem" }}>Vous y êtes presque</h3>
-                <p className="small muted mt-1 mb-4">
-                  {" "}
-                  Ajoutez les informations de votre véhicule pour commencer à accepter des courses.{" "}
-                </p>
-                <Link href="/driver/profile" className="btn btn-primary btn-full">
-                  <Car size={17} /> Ajouter mon véhicule{" "}
-                </Link>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 style={{ fontSize: "1.1rem" }}>{online ? "Vous êtes en ligne" : "Vous êtes hors ligne"}</h3>
-                    <p className="tiny muted mt-1">
-                      {online
-                        ? isConnected
-                          ? "En attente de demandes de course…"
-                          : "Reconnexion…"
-                        : "Passez en ligne pour recevoir des demandes"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleToggle}
-                    disabled={busy}
-                    aria-pressed={online}
-                    aria-label={online ? "Passer hors ligne" : "Passer en ligne"}
-                    className="btn-icon"
-                    style={{
-                      width: 60,
-                      height: 60,
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: online ? "var(--success)" : "var(--ink-100)",
-                      color: online ? "#fff" : "var(--ink-500)",
-                      boxShadow: online ? "0 4px 16px rgba(5,150,105,.35)" : "none",
-                      transition: "background 250ms, box-shadow 250ms",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {busy ? <span className="spinner" /> : <Power size={24} />}
-                  </button>
-                </div>
-                {online && (
-                  <div className="flex items-center gap-2 mt-4 tiny muted">
-                    <span className="badge badge-success badge-dot">En direct</span> Votre position se met à jour
-                    automatiquement lorsque vous êtes en ligne{" "}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {!ride && !needsVehicle && (
-          <div
-            className="card card-pad mt-3 flex items-center justify-between"
-            style={{ background: acceptsPet ? "var(--gold-50, #fcf9f2)" : "var(--ink-50)" }}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  background: acceptsPet ? "var(--gold-500)" : "var(--ink-200)",
-                  color: acceptsPet ? "#fff" : "var(--ink-600)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <PawPrint size={22} />
-              </div>
-              <div>
-                <div className="small" style={{ fontWeight: 700 }}>
-                  StrasDrive Pet
-                </div>
-                <div className="tiny muted">Accepter les passagers avec animal de compagnie</div>
-              </div>
-            </div>
-            <button
-              type="button"
-              className={`btn btn-sm ${acceptsPet ? "btn-primary" : "btn-secondary"}`}
-              onClick={handleTogglePet}
-              disabled={togglingPet}
-            >
-              {togglingPet ? <span className="spinner" /> : acceptsPet ? "Activé" : "Désactivé"}
-            </button>
-          </div>
-        )}
-
         {/* ── Active trip card ── */}
         {ride && (
           <div className="card card-pad animate-in">
@@ -596,6 +498,26 @@ function DriverDashboard() {
           </div>
         )}
       </div>
+    </div>
+      ) : (
+        <DriverHome
+          loading={loading}
+          online={online}
+          busy={busy}
+          isConnected={isConnected}
+          needsVehicle={needsVehicle}
+          position={position}
+          center={center}
+          onToggle={handleToggle}
+          acceptsPet={acceptsPet}
+          togglingPet={togglingPet}
+          onTogglePet={handleTogglePet}
+          navApp={navApp}
+          onChooseNavApp={chooseNavApp}
+          navAuto={navAuto}
+          onToggleNavAuto={toggleNavAuto}
+        />
+      )}
 
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
 
@@ -808,7 +730,7 @@ function DriverDashboard() {
           counterpartName="Passager"
         />
       )}
-    </div>
+    </>
   );
 }
 
