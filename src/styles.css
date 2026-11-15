@@ -1967,27 +1967,28 @@ textarea.input {
   border-bottom-color: var(--danger);
 }
 
-/* Rider desktop: quiet horizontal navigation and a separate booking column. */
-.rider-desktop-intro,
-.rider-booking-context,
-.rider-booking-hint {
+/* Rider desktop booking workspace. Mobile keeps its existing presentation. */
+.rider-desktop-heading,
+.rider-booking-context {
   display: none;
 }
 @media (min-width: 901px) {
   .shell-rider {
     flex-direction: column;
-    background: var(--surface);
+    background: #fff;
   }
   .shell-rider .sidebar {
     width: 100%;
-    height: 82px;
+    height: 57px;
+    min-height: 57px;
     flex-direction: row;
     align-items: center;
-    padding: 0 max(28px, calc((100vw - 1680px) / 2));
-    gap: 36px;
+    padding: 0 max(24px, calc((100vw - 1792px) / 2));
+    gap: 80px;
     border-right: 0;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 4px solid #e5e5e5;
     z-index: var(--z-nav);
+    background: #fff;
   }
   .shell-rider .sidebar-brand {
     padding: 0;
@@ -1995,27 +1996,38 @@ textarea.input {
   }
   .shell-rider .sidebar-nav {
     flex-direction: row;
-    gap: 8px;
-    align-items: center;
+    gap: 0;
+    align-items: stretch;
+    align-self: stretch;
   }
   .shell-rider .nav-item {
-    padding: 11px 16px;
+    padding: 0 16px;
     gap: 8px;
-    font-size: 0.875rem;
-    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 0;
+    border-bottom: 4px solid transparent;
+    margin-bottom: -4px;
+    color: #111;
   }
   .shell-rider .nav-item.active {
-    background: var(--gold-50);
-    color: var(--ink-950);
+    background: transparent;
+    border-bottom-color: #111;
+    color: #111;
   }
-  .shell-rider .nav-item.active svg {
-    color: var(--gold-600);
+  .shell-rider .nav-item:hover {
+    background: #f6f6f6;
+  }
+  .shell-rider .nav-item svg {
+    width: 18px;
+    height: 18px;
+    color: #111;
   }
   .shell-rider .sidebar-footer {
     border: 0;
     padding: 0;
     min-width: 0;
-    max-width: 250px;
+    max-width: 240px;
   }
   .shell-rider .sidebar-user {
     padding: 0;
@@ -2028,27 +2040,26 @@ textarea.input {
   }
   .shell-rider .rider-workspace {
     display: grid;
-    grid-template-columns: 370px minmax(0, 1fr);
-    gap: 32px;
+    grid-template-columns: 385px minmax(0, 1fr);
+    gap: 36px;
     width: 100%;
-    max-width: 1680px;
+    max-width: 1792px;
     margin: 0 auto;
-    padding: 32px 28px;
-    min-height: calc(100dvh - 82px);
+    padding: 32px 18px 16px;
+    min-height: calc(100dvh - 57px);
     align-items: start;
   }
   .shell-rider .rider-workspace > .map-fill {
     position: sticky;
     inset: auto;
-    top: 114px;
+    top: 89px;
     grid-column: 2;
     grid-row: 1;
-    height: calc(100dvh - 146px);
-    min-height: 480px;
-    border-radius: 24px;
+    height: calc(100dvh - 105px);
+    min-height: 440px;
+    border-radius: 12px;
     overflow: hidden;
-    border: 1px solid var(--border);
-    background: var(--ink-50);
+    background: #f3f3f3;
   }
   .shell-rider .rider-workspace > .ride-panel {
     position: relative;
@@ -2062,60 +2073,91 @@ textarea.input {
   }
   .shell-rider .ride-panel > .card {
     box-shadow: none;
-    border-radius: 20px;
-  }
-  .shell-rider .rider-booking-card {
-    padding: 24px;
-  }
-  .rider-desktop-intro {
-    display: block;
-    margin-bottom: 26px;
-  }
-  .rider-eyebrow {
-    font-size: 0.65rem;
-    letter-spacing: 0.14em;
-    font-weight: 700;
-    color: var(--gold-700);
-  }
-  .rider-desktop-intro p {
-    margin-top: 8px;
-    color: var(--text-2);
-    font-size: 0.9rem;
-  }
-  .rider-booking-card .input {
-    background: var(--ink-50);
-    min-height: 52px;
-    border-color: transparent;
+    border: 2px solid #e5e5e5;
     border-radius: 12px;
   }
+  .shell-rider .rider-booking-card {
+    padding: 16px;
+  }
+  .rider-mobile-heading {
+    display: none;
+  }
+  .rider-desktop-heading {
+    display: inline;
+  }
+  .rider-booking-card h2 {
+    color: #111;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+  .rider-booking-card .input {
+    background: #f5f5f5;
+    height: 44px;
+    min-height: 44px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    font-size: 16px;
+    color: #111;
+  }
   .rider-booking-card .input:focus {
-    background: var(--surface);
-    border-color: var(--gold-600);
+    background: #f5f5f5;
+    border-color: #111;
+    box-shadow: none;
+  }
+  .rider-booking-card .input-wrap > svg {
+    color: #111;
+    width: 16px;
+    height: 16px;
   }
   .rider-booking-context {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 18px 0 0;
-    color: var(--text-2);
-    font-size: 0.8rem;
+    margin-top: 12px;
+    color: #111;
+    font-size: 14px;
   }
-  .rider-booking-context > span {
+  .rider-pickup-time {
     display: flex;
     align-items: center;
     gap: 9px;
+    background: #f5f5f5;
+    border-radius: 9px;
+    min-height: 48px;
+    padding: 12px 16px;
   }
-  .rider-booking-context svg {
-    color: var(--gold-600);
+  .rider-passenger {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    align-self: flex-start;
+    background: #f5f5f5;
+    border-radius: 24px;
+    padding: 10px 12px;
+    font-size: 13px;
   }
-  .rider-booking-hint {
-    display: block;
-    margin-top: 22px;
-    padding-top: 18px;
-    border-top: 1px solid var(--border);
-    color: var(--text-3);
-    font-size: 0.8rem;
-    line-height: 1.6;
+  .rider-search-button {
+    margin-top: 10px;
+    width: 100%;
+    min-height: 48px;
+    background: #111;
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .rider-search-button:hover {
+    background: #292929;
+    color: #fff;
+  }
+  .shell-rider .rider-booking-card .btn-primary {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+    box-shadow: none;
+    border-radius: 8px;
   }
   .shell-rider .vehicle-row {
     padding: 12px 10px;
@@ -2128,7 +2170,7 @@ textarea.input {
     min-width: 130px;
   }
 }
-@media (min-width: 901px) and (max-width: 1150px) {
+@media (min-width: 901px) and (max-width: 1200px) {
   .shell-rider .sidebar {
     gap: 20px;
     padding-inline: 24px;
@@ -2142,6 +2184,5 @@ textarea.input {
   .shell-rider .rider-workspace {
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 24px;
-    padding-inline: 24px;
   }
 }
