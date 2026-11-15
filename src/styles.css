@@ -5811,3 +5811,73 @@ a.activity-pill:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 28px rgba(212, 160, 23, 0.45) !important;
 }
+/* ─── Harmonisation globale Cockpit : Véhicule, Documents & Profil ─── */
+.shell-dark {
+  background: #08090c !important;
+  color: #f1f5f9 !important;
+}
+
+.shell-dark .page-title,
+.shell-dark h1,
+.shell-dark h2,
+.shell-dark h3 {
+  color: #ffffff !important;
+}
+
+.shell-dark .page-sub,
+.shell-dark .muted,
+.shell-dark .text-muted {
+  color: #94a3b8 !important;
+}
+
+/* Toutes les cartes (Véhicule, Documents, Formulaires) */
+.shell-dark .card {
+  background: #0f1118 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
+  color: #f1f5f9 !important;
+}
+
+/* Champs de saisie & sélecteurs */
+.shell-dark input[type="text"],
+.shell-dark input[type="number"],
+.shell-dark input[type="file"],
+.shell-dark select,
+.shell-dark textarea {
+  background: #141722 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+}
+
+.shell-dark input:focus,
+.shell-dark select:focus {
+  border-color: #d4a017 !important;
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.2) !important;
+}
+
+/* Badges & statuts de documents */
+.shell-dark .badge-success {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: #4ade80 !important;
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+}
+
+.shell-dark .badge-warning {
+  background: rgba(234, 179, 8, 0.15) !important;
+  color: #facc15 !important;
+  border: 1px solid rgba(234, 179, 8, 0.3) !important;
+}
+
+/* Tableaux d'historique */
+.shell-dark table th {
+  background: #12141e !important;
+  color: #94a3b8 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.shell-dark table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  color: #f1f5f9 !important;
+}
