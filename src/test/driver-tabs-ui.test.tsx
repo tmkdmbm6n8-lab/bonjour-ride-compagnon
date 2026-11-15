@@ -8,7 +8,7 @@ import { Route as MenuRoute } from '@/routes/_authenticated.driver.menu';
 const fixtures = vi.hoisted(() => ({ data: {} as Record<string, any> }));
 vi.mock('@/components/shell/AppShell', () => ({ default: ({ nav, children }: any) => <><nav>{nav.map((item: any) => <a key={item.href} href={item.href}>{item.label}</a>)}</nav>{children}</> }));
 vi.mock('@/lib/archive-navigation', () => ({ default: ({ href, children, ...props }: any) => <a href={href} {...props}>{children}</a> }));
-vi.mock('@/hooks/useDriverData', () => ({ default: (path: string) => ({ data: fixtures.data[path.split('?')[0]] || null, error: '', reload: vi.fn() }) }));
+vi.mock('@/hooks/useDriverData', () => ({ default: (path: string) => ({ data: fixtures.data[path.split('?')[0] as string] || null, error: '', reload: vi.fn() }) }));
 vi.mock('@/lib/archive-auth', () => ({ useSession: () => ({ data: { user: { id: 'driver-a', name: 'Tigran' } } }), signOut: vi.fn() }));
 vi.mock('@/components/driver/PayoutCard', () => ({ default: () => <div>Versements</div> }));
 vi.mock('@/components/driver/Waybill', () => ({ default: () => null }));

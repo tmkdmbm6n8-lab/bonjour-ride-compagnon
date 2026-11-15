@@ -18,7 +18,7 @@ describe('horaires gratuits vols et trains', () => {
   });
   it('respecte les jours de circulation et exclut les autocars TER', () => {
     const first = parseTrainSchedule(schedule, '2026-11-15');
-    expect(first.map((item) => item.number)).toEqual(['123']);
+    expect(first.map((item: any) => item.number)).toEqual(['123']);
     expect(first[0].live).toBe(false);
     expect(parseTrainSchedule(schedule, '2026-11-16')[0].number).toBe('456');
     expect(parseTrainSchedule(schedule, '2026-12-15')).toEqual([]);

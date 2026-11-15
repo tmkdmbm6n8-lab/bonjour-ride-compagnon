@@ -27,7 +27,7 @@ describe('revenus chauffeur par jour parisien', () => {
     expect(summary.activitySeconds).toBe(0);
   });
   it('gère les minuits parisiens et le passage heure été/hiver', () => {
-    expect(parisDay('2026-11-15T23:30:00Z')).toBe('2026-11-16');
+    expect(parisDay(new Date('2026-11-15T23:30:00Z'))).toBe('2026-11-16');
     expect(mondayOf('2026-11-15')).toBe('2026-11-09');
     expect(parisInstant('2026-07-01')).toBe('2026-06-30T22:00:00.000Z');
     expect(parisInstant('2026-11-15')).toBe('2026-11-14T23:00:00.000Z');
