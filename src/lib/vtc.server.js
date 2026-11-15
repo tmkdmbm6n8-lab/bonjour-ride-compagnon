@@ -1,3 +1,4 @@
+import { buildWaybill, sanitizeOperator } from "./vtc-waybill";
 import { geoSearch } from "./vtc-geocoding.server";
 import {
   DEFAULT_PRICING,
@@ -370,11 +371,48 @@ export async function handleVtc(input, context) {
   }
   if (p === "/api/geo/search") return geoSearch(q);
   if (p === "/api/rides/estimate") return estimates(admin, body.pickup, body.dropoff);
+  if (p === "/api/drivers/me/operator" && method === "PATCH") {
+    const current = required(await admin.from("drivers").select("vehicle").eq("user_id", uid).single());
+    const operator = sanitizeOperator(body.operator);
+    if (!operator.legalName || !operator.address || !operator.phone)
+      throw new Error("Renseignez la raison sociale, l’adresse et le téléphone de l’exploitant");
+    required(
+      await admin
+        .from("drivers")
+        .update({ vehicle: { ...(current.vehicle || {}), operator } })
+        .eq("user_id", uid),
+    );
+    return { operator };
+  }
+  if (p === "/api/drivers/me/waybill" && method === "GET") {
+    const driver = required(await admin.from("drivers").select("vehicle").eq("user_id", uid).single());
+    const operator = sanitizeOperator(driver.vehicle?.operator);
+    const rides = required(
+      await admin
+        .from("rides")
+        .select("*")
+        .eq("driver_id", uid)
+        .in("status", ["accepted", "arrived", "in_progress"])
+        .order("created_at", { ascending: false })
+        .limit(1),
+    );
+    const ride = rides[0];
+    if (!ride) return { document: null, operator };
+    const client = required(await admin.from("profiles").select("name,phone").eq("id", ride.rider_id).single());
+    const documents = required(
+      await admin
+        .from("driver_documents")
+        .select("doc_type,document_number,status")
+        .eq("user_id", uid)
+        .in("doc_type", ["company", "vtc_register"]),
+    );
+    return { document: buildWaybill(ride, client, operator, documents), operator };
+  }
   if (p === "/api/drivers/me") {
     if (method === "PATCH") {
-      const cur = required(await db.from("drivers").select("vehicle_class").eq("user_id", uid).single());
+      const cur = required(await db.from("drivers").select("vehicle_class,vehicle").eq("user_id", uid).single());
       // La gamme est attribuée par StrasDrive : le chauffeur ne peut pas la changer lui-même.
-      const v = { ...(body.vehicle || {}), type: driverClass(cur) };
+      const v = { ...(body.vehicle || {}), operator: cur.vehicle?.operator || {}, type: driverClass(cur) };
       if (!v.make || !v.model || !v.plate || !Number.isInteger(v.year) || v.year < 1990 || v.year > 2030)
         throw new Error("Vérifiez les informations du véhicule");
       required(await db.from("drivers").update({ vehicle: v }).eq("user_id", uid));
