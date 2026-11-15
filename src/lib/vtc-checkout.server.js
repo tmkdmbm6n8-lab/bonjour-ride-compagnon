@@ -1,6 +1,6 @@
 import { createStripeClient, getStripeErrorMessage } from "./stripe.server";
 import { topupAmountProblem, toCents, isStripeEnv, cardBookingExpired, safeOrigin } from "./vtc-checkout";
-import { VEHICLE_CLASS_LABELS } from "./vtc-checkout-labels";
+const VEHICLE_CLASS_LABELS = { economy: "Go", comfort: "Comfort", pet: "Pet", xl: "XL" };
 
 // Looks up the Stripe Customer by userId metadata (then email), or creates one, so later reads stay searchable.
 async function resolveOrCreateCustomer(stripe, options) {
