@@ -1,3 +1,4 @@
+import { geoSearch } from "./vtc-geocoding.server";
 import {
   DEFAULT_PRICING,
   calculateFare,
@@ -186,47 +187,6 @@ async function liveRoute(admin, r) {
   const value = { ...route, status: r.status, target: target.kind, at: new Date().toISOString() };
   required(await admin.from("rides").update({ live_route: value }).eq("id", r.id).eq("status", r.status));
   return value;
-}
-async function geoSearch(q) {
-  // Photon (OpenStreetMap) — service gratuit, sans clé, comme dans l'archive d'origine
-  const PHOTON_BASE = "https://photon.komoot.io";
-  const reverse = q.get("reverse") === "1",
-    lat = parseFloat(q.get("lat")),
-    lng = parseFloat(q.get("lng")),
-    text = (q.get("q") || "").trim();
-  let endpoint;
-  if (reverse) {
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Latitude et longitude requises");
-    endpoint = `${PHOTON_BASE}/reverse?lon=${lng}&lat=${lat}&limit=1&lang=fr`;
-  } else {
-    if (text.length < 2) return { results: [] };
-    endpoint = `${PHOTON_BASE}/api/?q=${encodeURIComponent(text)}&limit=6&lang=fr`;
-    if (Number.isFinite(lat) && Number.isFinite(lng))
-      endpoint += `&lat=${lat}&lon=${lng}&zoom=14&location_bias_scale=0.4`;
-  }
-  let res;
-  try {
-    res = await fetch(endpoint, { signal: AbortSignal.timeout(5000), headers: { "User-Agent": "strasdrive/1.0" } });
-  } catch {
-    throw new Error("La recherche d’adresse est momentanément indisponible");
-  }
-  if (!res.ok) throw new Error("La recherche d’adresse est momentanément indisponible");
-  const j = await res.json();
-  return {
-    results: (j.features || []).map((f) => {
-      const x = f.properties || {};
-      const parts = [x.name, x.street, x.housenumber, x.district, x.city, x.state, x.country]
-        .filter(Boolean)
-        .filter((v, i, a) => a.indexOf(v) === i);
-      return {
-        name: x.name || x.street || "Lieu inconnu",
-        address: parts.join(", "),
-        lat: f.geometry.coordinates[1],
-        lng: f.geometry.coordinates[0],
-        type: x.osm_value || x.type || "",
-      };
-    }),
-  };
 }
 // === src/lib/vtc.server.js (autour de la ligne 229) ===
 async function estimates(db, a, b) {
@@ -609,7 +569,15 @@ export async function handleVtc(input, context) {
   if (p === "/api/wallet/checkout" || p === "/api/rides/card-checkout" || p === "/api/rides/card-confirm") {
     const { handleCheckout } = await import("./vtc-checkout.server");
     return handleCheckout({
-      admin, uid, role, email: context.claims?.email, p, q, method, body, quoteRide,
+      admin,
+      uid,
+      role,
+      email: context.claims?.email,
+      p,
+      q,
+      method,
+      body,
+      quoteRide,
       createRide,
       cardBookingProblem: (fare) => bookingPaymentProblem("card", profile.balance, fare.total),
       serializeRide: async (id) =>
