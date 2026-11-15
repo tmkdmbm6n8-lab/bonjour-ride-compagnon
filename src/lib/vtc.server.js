@@ -676,6 +676,10 @@ export async function handleVtc(input, context) {
         testPin: r.is_test ? r.pin : undefined,
         paymentMethod: paymentMethodOf(r.payment?.method),
         total: r.fare.total,
+        phase: r.dispatch_phase,
+        isPriority: Boolean(me.is_priority),
+        isNearest: r.offer_driver_id === me.user_id || !r.offer_driver_id,
+        rideClass: r.vehicle_type,
       },
     };
   }
