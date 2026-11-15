@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Navigation,
   Clock,
+  UserRound,
   MapPin,
   Circle,
   Car,
@@ -62,6 +63,7 @@ const CANCEL_REASONS = [
 
 function RiderDashboard() {
   const toast = useToast();
+  const bookingPanelRef = useRef(null);
   const { position: geo, error: geoError } = useGeolocation({ watch: false });
 
   // Booking form state
@@ -482,6 +484,7 @@ function RiderDashboard() {
 
       <div
         className="ride-panel"
+        ref={bookingPanelRef}
         style={
           vv ? { position: "fixed", top: vv.top + 8, bottom: "auto", maxHeight: vv.height - 16, zIndex: 45 } : undefined
         }
@@ -489,11 +492,10 @@ function RiderDashboard() {
         {/* ── IDLE: booking form ── */}
         {phase === "idle" && !loadingActive && (
           <div className="card card-pad animate-in rider-booking-card">
-            <div className="rider-desktop-intro">
-              <span className="rider-eyebrow">VOTRE PROCHAIN TRAJET</span>
-              <p>Strasbourg, à votre rythme.</p>
-            </div>
-            <h2 style={{ fontSize: "1.25rem", marginBottom: 14 }}>Où allez-vous ?</h2>
+            <h2 style={{ fontSize: "1.25rem", marginBottom: 14 }}>
+              <span className="rider-mobile-heading">Où allez-vous ?</span>
+              <span className="rider-desktop-heading">Commander une course</span>
+            </h2>
 
             {geoError && !pickup && (
               <p className="tiny muted mb-3">
@@ -539,18 +541,25 @@ function RiderDashboard() {
             </div>
 
             <div className="rider-booking-context">
-              <span>
-                <Clock size={15} /> Départ immédiat
-              </span>
-              <span>
-                <ShieldCheck size={15} /> Tarif avant réservation
-              </span>
+              <div className="rider-pickup-time">
+                <Clock size={18} />
+                <span>Prise en charge immédiate</span>
+              </div>
+              <div className="rider-passenger">
+                <UserRound size={15} /> Pour moi
+              </div>
+              {!estimate && (
+                <button
+                  className="btn rider-search-button"
+                  onClick={() => {
+                    const inputs = bookingPanelRef.current?.querySelectorAll("input");
+                    inputs?.[pickup ? 1 : 0]?.focus();
+                  }}
+                >
+                  {estimating ? "Recherche…" : "Rechercher"}
+                </button>
+              )}
             </div>
-            {!pickup || !dropoff ? (
-              <p className="rider-booking-hint">
-                Choisissez vos adresses pour découvrir les véhicules et le prix de votre trajet.
-              </p>
-            ) : null}
             {estimating && (
               <div className="flex items-center gap-2 mt-4 muted small">
                 <span className="spinner" /> Calcul des tarifs…{" "}
