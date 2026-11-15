@@ -133,6 +133,14 @@ function DiscoverPage() {
           ))}
         </div>
       )}
+      {data?.feeds?.map((feed) =>
+        feed.warning ? (
+          <div key={feed.kind} className="driver-notice mb-3" role="status">
+            <strong>{feed.warning}</strong>
+            <p>Aucun horaire disponible pour cette sélection.</p>
+          </div>
+        ) : null,
+      )}
 
       {error && (
         <div role="alert" className="driver-notice">
