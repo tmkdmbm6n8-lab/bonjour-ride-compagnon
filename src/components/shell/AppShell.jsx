@@ -3,6 +3,7 @@
 import Link from "@/lib/archive-navigation";
 import { usePathname } from "@/lib/archive-navigation";
 import { useSession, signOut } from "@/lib/archive-auth";
+import RiderAccountMenu from "@/components/shell/RiderAccountMenu";
 import { LogOut } from "lucide-react";
 import { KovaLogo } from "@/components/brand/KovaLogo";
 import { Avatar } from "@/components/ui/bits";
@@ -46,23 +47,26 @@ export default function AppShell({ nav, children, variant = "default" }) {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <Avatar name={user?.name || ""} src={user?.avatar || ""} size="sm" />
-            <div className="flex-1 truncate">
-              <div className="small truncate" style={{ fontWeight: 600 }}>
-                {user?.name || "—"}
+          {variant === "rider" && <RiderAccountMenu user={user} />}
+          <div className={variant === "rider" ? "rider-legacy-user" : undefined}>
+            <div className="sidebar-user">
+              <Avatar name={user?.name || ""} src={user?.avatar || ""} size="sm" />
+              <div className="flex-1 truncate">
+                <div className="small truncate" style={{ fontWeight: 600 }}>
+                  {user?.name || "—"}
+                </div>
+                <div className="tiny muted truncate">@{user?.username || ""}</div>
               </div>
-              <div className="tiny muted truncate">@{user?.username || ""}</div>
+              <button
+                className="btn btn-ghost btn-icon"
+                style={{ minHeight: 36, width: 36 }}
+                onClick={() => signOut({ callbackUrl: "/" })}
+                aria-label="Se déconnecter"
+                title="Se déconnecter"
+              >
+                <LogOut size={17} />
+              </button>
             </div>
-            <button
-              className="btn btn-ghost btn-icon"
-              style={{ minHeight: 36, width: 36 }}
-              onClick={() => signOut({ callbackUrl: "/" })}
-              aria-label="Se déconnecter"
-              title="Se déconnecter"
-            >
-              <LogOut size={17} />
-            </button>
           </div>
         </div>
       </aside>
