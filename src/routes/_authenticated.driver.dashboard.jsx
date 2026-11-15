@@ -27,6 +27,7 @@ import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
 import MessageAlert from "@/components/ride/MessageAlert";
 import DispatchWheel from "@/components/ride/DispatchWheel";
+import Waybill from "@/components/driver/Waybill";
 import DriverHome from "@/components/driver/DriverHome";
 import { pickupZoneProblem } from "@/lib/vtc-dispatch";
 import Modal from "@/components/ui/Modal";
@@ -48,6 +49,7 @@ const PROFIT_BADGES = {
 
 function DriverDashboard() {
   const toast = useToast();
+  const [waybillOpen, setWaybillOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [pinValue, setPinValue] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
@@ -337,6 +339,9 @@ function DriverDashboard() {
           </div>
 
           <div className="ride-panel">
+            <button className="btn btn-secondary btn-full" onClick={() => setWaybillOpen(true)}>
+              Réservation préalable · Waybill
+            </button>
             {/* ── Active trip card ── */}
             {ride && (
               <div className="card card-pad animate-in">
@@ -514,6 +519,7 @@ function DriverDashboard() {
         </div>
       ) : (
         <DriverHome
+          onWaybill={() => setWaybillOpen(true)}
           loading={loading}
           online={online}
           busy={busy}
@@ -528,6 +534,7 @@ function DriverDashboard() {
         />
       )}
 
+      <Waybill open={waybillOpen} onClose={() => setWaybillOpen(false)} />
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
 
       {/* ── Incoming offer sheet (Style moderne sombre) ── */}
