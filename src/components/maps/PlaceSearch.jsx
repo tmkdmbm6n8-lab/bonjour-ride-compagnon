@@ -1,8 +1,8 @@
-import {apiFetch as fetch} from '@/lib/archive-fetch';
-'use client';
+import { apiFetch as fetch } from "@/lib/archive-fetch";
+("use client");
 
-import { useEffect, useId, useRef, useState } from 'react';
-import { MapPin, Loader2, SearchX, WifiOff } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from "react";
+import { MapPin, Loader2, SearchX, WifiOff } from "lucide-react";
 
 /**
  * Debounced place autocomplete backed by /api/geo/search (Photon/OSM).
@@ -24,7 +24,7 @@ export default function PlaceSearch({
   onChangeText,
   onSelect,
   committedValue,
-  placeholder = 'Rechercher un lieu…',
+  placeholder = "Rechercher un lieu…",
   icon: Icon = MapPin,
   bias,
   autoFocus = false,
@@ -34,7 +34,7 @@ export default function PlaceSearch({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   // 'idle' | 'ok' | 'empty' | 'error' — what the last completed search found
-  const [outcome, setOutcome] = useState('idle');
+  const [outcome, setOutcome] = useState("idle");
   const [highlight, setHighlight] = useState(-1);
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
@@ -49,8 +49,8 @@ export default function PlaceSearch({
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
   useEffect(() => {
@@ -65,10 +65,11 @@ export default function PlaceSearch({
     if (!value || value.trim().length < 2) {
       setResults([]);
       setOpen(false);
-      setOutcome('idle');
+      setOutcome("idle");
       return undefined;
     }
 
+    let ignore = false;
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       setLoading(true);
@@ -77,26 +78,31 @@ export default function PlaceSearch({
         if (bias) url += `&lat=${bias.lat}&lng=${bias.lng}`;
         const res = await fetch(url);
         const data = await res.json().catch(() => ({}));
+        if (ignore) return;
 
         if (!res.ok) {
           setResults([]);
-          setOutcome('error');
+          setOutcome("error");
         } else {
           setResults(data.results || []);
-          setOutcome((data.results || []).length > 0 ? 'ok' : 'empty');
+          setOutcome((data.results || []).length > 0 ? "ok" : "empty");
         }
         setOpen(true);
         setHighlight(-1);
       } catch {
+        if (ignore) return;
         setResults([]);
-        setOutcome('error');
+        setOutcome("error");
         setOpen(true);
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     }, 180);
 
-    return () => clearTimeout(timerRef.current);
+    return () => {
+      ignore = true;
+      clearTimeout(timerRef.current);
+    };
   }, [value, bias?.lat, bias?.lng, committedValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function choose(r) {
@@ -104,28 +110,27 @@ export default function PlaceSearch({
     onSelect(r);
     setOpen(false);
     setResults([]);
-    setOutcome('idle');
+    setOutcome("idle");
     inputRef.current?.blur(); // closes the phone keyboard once a place is chosen
   }
 
   function onKeyDown(e) {
     if (!open || results.length === 0) return;
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setHighlight((h) => Math.min(h + 1, results.length - 1));
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlight((h) => Math.max(h - 1, 0));
-    } else if (e.key === 'Enter' && highlight >= 0) {
+    } else if (e.key === "Enter" && highlight >= 0) {
       e.preventDefault();
       choose(results[highlight]);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setOpen(false);
     }
   }
 
-  const showDropdown =
-    open && (results.length > 0 || outcome === 'empty' || outcome === 'error');
+  const showDropdown = open && (results.length > 0 || outcome === "empty" || outcome === "error");
 
   const dropdown = showDropdown ? (
     <div
@@ -134,13 +139,14 @@ export default function PlaceSearch({
       className="card"
       style={{
         marginTop: 6,
-        boxShadow: 'var(--shadow-md)',
-        overflow: 'hidden',
+        boxShadow: "var(--shadow-md)",
+        overflow: "hidden",
         maxHeight: 300,
-        overflowY: 'auto',
+        overflowY: "auto",
       }}
     >
-      {results.map((r, i) => ( <button
+      {results.map((r, i) => (
+        <button
           key={`${r.lat}-${r.lng}-${i}`}
           role="option"
           aria-selected={i === highlight}
@@ -150,58 +156,60 @@ export default function PlaceSearch({
           onMouseEnter={() => setHighlight(i)}
           className="w-full"
           style={{
-            display: 'flex',
-            alignItems: 'flex-start',
+            display: "flex",
+            alignItems: "flex-start",
             gap: 10,
-            padding: '11px 14px',
-            textAlign: 'left',
-            background: i === highlight ? 'var(--ink-100)' : 'transparent',
-            transition: 'background 120ms',
-            borderBottom: '1px solid var(--ink-100)',
+            padding: "11px 14px",
+            textAlign: "left",
+            background: i === highlight ? "var(--ink-100)" : "transparent",
+            transition: "background 120ms",
+            borderBottom: "1px solid var(--ink-100)",
           }}
         >
-          <MapPin size={15} style={{ marginTop: 3, color: 'var(--ink-400)', flexShrink: 0 }} />
+          <MapPin size={15} style={{ marginTop: 3, color: "var(--ink-400)", flexShrink: 0 }} />
           <span className="flex-1" style={{ minWidth: 0 }}>
-            <span className="small truncate" style={{ display: 'block', fontWeight: 600 }}>
+            <span className="small truncate" style={{ display: "block", fontWeight: 600 }}>
               {r.name}
             </span>
-            <span className="tiny muted truncate" style={{ display: 'block' }}>
+            <span className="tiny muted truncate" style={{ display: "block" }}>
               {r.address}
             </span>
           </span>
         </button>
       ))}
 
-      {results.length === 0 && outcome === 'empty' && (
-        <div className="flex items-center gap-2" style={{ padding: '13px 14px' }}>
-          <SearchX size={15} style={{ color: 'var(--ink-400)', flexShrink: 0 }} />
+      {results.length === 0 && outcome === "empty" && (
+        <div className="flex items-center gap-2" style={{ padding: "13px 14px" }}>
+          <SearchX size={15} style={{ color: "var(--ink-400)", flexShrink: 0 }} />
           <span className="tiny muted"> Aucun lieu trouvé — essayez d’ajouter le nom de la rue ou de la ville </span>
         </div>
       )}
 
-      {results.length === 0 && outcome === 'error' && (
-        <div className="flex items-center gap-2" style={{ padding: '13px 14px' }}>
-          <WifiOff size={15} style={{ color: 'var(--danger)', flexShrink: 0 }} />
-          <span className="tiny" style={{ color: 'var(--danger)' }}> Impossible de joindre le serveur — vérifiez votre connexion et actualisez la page </span>
+      {results.length === 0 && outcome === "error" && (
+        <div className="flex items-center gap-2" style={{ padding: "13px 14px" }}>
+          <WifiOff size={15} style={{ color: "var(--danger)", flexShrink: 0 }} />
+          <span className="tiny" style={{ color: "var(--danger)" }}>
+            {" "}
+            Impossible de joindre le serveur — vérifiez votre connexion et actualisez la page{" "}
+          </span>
         </div>
       )}
     </div>
   ) : null;
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative' }}>
+    <div ref={wrapRef} style={{ position: "relative" }}>
       <div className="input-wrap">
-        {loading ? (
-          <Loader2 size={17} style={{ animation: 'spin 700ms linear infinite' }} />
-        ) : (
-          <Icon size={17} />
-        )}
+        {loading ? <Loader2 size={17} style={{ animation: "spin 700ms linear infinite" }} /> : <Icon size={17} />}
         <input
           ref={inputRef}
           className="input"
           value={value}
           onChange={(e) => onChangeText(e.target.value)}
-          onFocus={() => { onFocusChange?.(true); if (results.length > 0 || outcome !== 'idle') setOpen(true); }}
+          onFocus={() => {
+            onFocusChange?.(true);
+            if (results.length > 0 || outcome !== "idle") setOpen(true);
+          }}
           onBlur={() => onFocusChange?.(false)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
