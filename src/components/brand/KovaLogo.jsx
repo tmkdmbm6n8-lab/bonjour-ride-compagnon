@@ -6,15 +6,18 @@
  * public/favicon.svg is a copy of this mark and must change with it.
  */
 
-import { useId } from 'react';
+import { useId } from "react";
 
-const ROAD = 'M29.2 15A6 6 0 1 0 24 24A6 6 0 1 1 18.8 33';
+const ROAD = "M29.2 15A6 6 0 1 0 24 24A6 6 0 1 1 18.8 33";
 // Centre line stops just ahead of the arrow: the stretch behind it is already driven.
-const CENTRE_LINE = 'M29.2 15A6 6 0 1 0 24 24A6 6 0 0 1 25.55 35.8';
+const CENTRE_LINE = "M29.2 15A6 6 0 1 0 24 24A6 6 0 0 1 25.55 35.8";
 
-export function KovaIcon({ size = 32, className = '' }) {
-  const uid = useId().replace(/:/g, '');
-  const tile = `sd-tile-${uid}`, road = `sd-road-${uid}`, arrow = `sd-arrow-${uid}`, glow = `sd-glow-${uid}`;
+export function KovaIcon({ size = 32, className = "" }) {
+  const uid = useId().replace(/:/g, "");
+  const tile = `sd-tile-${uid}`,
+    road = `sd-road-${uid}`,
+    arrow = `sd-arrow-${uid}`,
+    glow = `sd-glow-${uid}`;
   return (
     <svg
       width={size}
@@ -40,7 +43,14 @@ export function KovaIcon({ size = 32, className = '' }) {
           <stop offset="0" stopColor="#EAB308" />
           <stop offset="1" stopColor="#A16207" />
         </linearGradient>
-        <radialGradient id={glow} cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(22.96 35.91) scale(6)">
+        <radialGradient
+          id={glow}
+          cx="0"
+          cy="0"
+          r="1"
+          gradientUnits="userSpaceOnUse"
+          gradientTransform="translate(22.96 35.91) scale(6)"
+        >
           <stop offset="0" stopColor="#EAB308" stopOpacity="0.35" />
           <stop offset="1" stopColor="#EAB308" stopOpacity="0" />
         </radialGradient>
@@ -54,30 +64,36 @@ export function KovaIcon({ size = 32, className = '' }) {
       {/* Soft gold halo, then the navigation arrow */}
       <circle cx="22.96" cy="35.91" r="6" fill={`url(#${glow})`} />
       <g transform="translate(22.96 35.91) rotate(100)">
-        <path d="M0 -3.5L2.9 3L0 1.5L-2.9 3Z" fill={`url(#${arrow})`} stroke="#0C0A09" strokeWidth="0.7" strokeLinejoin="round" />
+        <path
+          d="M0 -3.5L2.9 3L0 1.5L-2.9 3Z"
+          fill={`url(#${arrow})`}
+          stroke="#0C0A09"
+          strokeWidth="0.7"
+          strokeLinejoin="round"
+        />
         <path d="M0 -2.3L1.2 0.6L0 0.1Z" fill="#FEF9C3" fillOpacity="0.55" />
       </g>
     </svg>
   );
 }
 
-export function KovaLogo({ size = 32, showText = true, className = '', light = false }) {
+export function KovaLogo({ size = 32, showText = true, className = "", light = true }) {
   return (
-    <span
-      className={className}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}
-    >
+    <span className={className} style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
       <KovaIcon size={size} />
       {showText && (
         <span
           style={{
             fontSize: size * 0.68,
             fontWeight: 700,
-            letterSpacing: '-0.03em',
-            color: light ? '#FAFAF9' : '#0C0A09',
+            letterSpacing: "-0.03em",
+            color: light ? "#FAFAF9" : "#0C0A09",
             lineHeight: 1,
           }}
-        > StrasDrive </span>
+        >
+          {" "}
+          StrasDrive{" "}
+        </span>
       )}
     </span>
   );
