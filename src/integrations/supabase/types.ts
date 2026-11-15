@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      card_bookings: {
+        Row: {
+          created_at: string
+          dropoff: Json
+          environment: string
+          fare: Json
+          id: string
+          pickup: Json
+          ride_id: string | null
+          rider_id: string
+          route: Json
+          status: string
+          stripe_session_id: string | null
+          vehicle_type: string
+        }
+        Insert: {
+          created_at?: string
+          dropoff: Json
+          environment: string
+          fare: Json
+          id?: string
+          pickup: Json
+          ride_id?: string | null
+          rider_id: string
+          route: Json
+          status?: string
+          stripe_session_id?: string | null
+          vehicle_type: string
+        }
+        Update: {
+          created_at?: string
+          dropoff?: Json
+          environment?: string
+          fare?: Json
+          id?: string
+          pickup?: Json
+          ride_id?: string | null
+          rider_id?: string
+          route?: Json
+          status?: string
+          stripe_session_id?: string | null
+          vehicle_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_bookings_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "card_bookings_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_messages: {
         Row: {
           created_at: string
