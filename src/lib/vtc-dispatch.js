@@ -86,13 +86,37 @@ export function planDispatch(ride, drivers, now = Date.now()) {
   };
 }
 /** Whether this driver (online, approved, free) may see and accept the ride right now. */
+/** Vérifie si un chauffeur est dans la zone proche (≤ 3 km ou ≤ 5 minutes d'approche) */
+export function isDriverInCloseZone(ride, driver) {
+  const km = distanceToPickupKm(ride, driver);
+  if (!Number.isFinite(km)) return false;
+  const meters = Math.round(km * 1350);
+  const seconds = approachSecondsFor(meters);
+  return km <= 3.0 || seconds <= 300;
+}
+
+/** Whether this driver (online, approved, free) may see and accept the ride right now. */
 export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
   if (!driver || ride.status !== "searching" || !ride.dispatch_phase) return false;
   if (!ride.offer_expires_at || new Date(ride.offer_expires_at).getTime() <= now) return false;
   const all = pool && pool.some((d) => d.user_id === driver.user_id) ? pool : [driver];
   if (!availableFor(ride, all).some((d) => d.user_id === driver.user_id)) return false;
+
+  // Phase prioritaires (chauffeurs VIP)
   if (ride.dispatch_phase === "priority") return Boolean(driver.is_priority);
-  // En phase "nearest" ou "broadcast", tous les chauffeurs éligibles reçoivent la notification
+
+  // Phase zone proche (10 secondes) : seuls les chauffeurs à ≤ 3 km ou ≤ 5 min la reçoivent
+  if (ride.dispatch_phase === "nearest") {
+    const candidates = pool || [driver];
+    const hasCloseDrivers = candidates.some((d) => isDriverInCloseZone(ride, d));
+    if (hasCloseDrivers) {
+      return isDriverInCloseZone(ride, driver);
+    }
+    // Si aucun chauffeur n'est dans les 3 km / 5 min, seul le plus proche de la ville la reçoit
+    return ride.offer_driver_id === driver.user_id;
+  }
+
+  // Phase générale ("broadcast") : tous les chauffeurs disponibles la reçoivent normalement
   return true;
 }
 
