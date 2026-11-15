@@ -2697,7 +2697,7 @@ a.activity-pill:hover {
 }
 .driver-reference .drv-map.expanded {
   position: absolute;
-  inset: 0 0 39%;
+  inset: 0 0 calc(84px + env(safe-area-inset-bottom));
   aspect-ratio: auto;
   height: auto;
   border-radius: 0;
@@ -2783,7 +2783,9 @@ a.activity-pill:hover {
 }
 .driver-status-panel {
   position: absolute;
-  inset: 61% 0 0;
+  inset: auto 0 0;
+  min-height: calc(84px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
   background: #0e0e0e;
   color: #fff;
   z-index: 2;
@@ -2910,5 +2912,99 @@ a.activity-pill:hover {
   .drv-map-tool {
     width: 48px;
     height: 48px;
+  }
+}
+/* Expanded driver map: bottom status bar, recommendations opened by the list button. */
+.driver-tools-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  background: #0e0e0e;
+  color: #fff;
+  padding-top: env(safe-area-inset-top);
+}
+.driver-tools-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 100px;
+  padding: 18px 24px;
+  border-bottom: 1px solid #333;
+}
+.driver-tools-header h2 {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(19px, 4.8vw, 30px);
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+}
+.driver-tools-header button,
+.driver-tools-footer > button,
+.driver-tools-footer > a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border: 0;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+}
+.driver-tools-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.driver-tools-panel .driver-waybill-row {
+  padding: 28px 30px;
+  gap: 32px;
+  font-size: 20px;
+}
+.driver-tools-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 28px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid #333;
+}
+.driver-tools-footer .driver-tools-status {
+  flex-direction: column;
+  gap: 12px;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+.driver-tools-hand {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: #1d1d1d;
+  display: grid;
+  place-items: center;
+}
+.driver-tools-status:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.driver-tools-panel button:focus-visible,
+.driver-tools-panel a:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+@media (max-width: 420px) {
+  .driver-tools-header {
+    min-height: 78px;
+    padding-inline: 16px;
+  }
+  .driver-tools-footer {
+    padding-inline: 20px;
+  }
+  .driver-tools-hand {
+    width: 78px;
+    height: 78px;
   }
 }
