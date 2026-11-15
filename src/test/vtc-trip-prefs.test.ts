@@ -52,6 +52,6 @@ describe('préférences de course du chauffeur', () => {
     const patch = planDispatch(r, [picky, other]);
     expect(patch?.offer_driver_id).toBe('autre');
     const live = { ...r, ...patch };
-    expect(canSeeOffer(live, picky, Date.now(), [picky, other])).toBe(false);
+    expect(canSeeOffer(live, picky, Date.now(), [picky, other] as any)).toBe(false);
   });
 });
