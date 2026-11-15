@@ -48,7 +48,6 @@ function DriverDashboard() {
   const [pinValue, setPinValue] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [offerElapsed, setOfferElapsed] = useState(0); // <-- AJOUTER CETTE LIGNE
 
   const [receipt, setReceipt] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
@@ -146,20 +145,7 @@ function DriverDashboard() {
     return () => clearInterval(timer);
   }, [offer]);
 
-  useEffect(() => {
-    if (!offer?.rideId) {
-      setOfferElapsed(0);
-      return;
-    }
-    setOfferElapsed(0);
-    const interval = setInterval(() => {
-      setOfferElapsed((s) => s + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [offer?.rideId]);
-
-  // Le plus proche voit le bouton tout de suite, les autres au bout de 4 secondes
-  const canAccept = Boolean(offer?.isNearest || offerElapsed >= 4);
+  const canAccept = true;
 
   async function handleToggle() {
     try {
