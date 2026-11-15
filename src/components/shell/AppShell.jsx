@@ -24,9 +24,10 @@ export default function AppShell({ nav, children, variant = "default" }) {
       <aside className="sidebar">
         <div className="sidebar-brand">
           <Link href={homeHref} aria-label="Accueil StrasDrive">
-            <KovaLogo size={30} />
+            <KovaLogo size={30} light={true} />
           </Link>
         </div>
+
         <nav className="sidebar-nav" aria-label="Navigation principale">
           {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
