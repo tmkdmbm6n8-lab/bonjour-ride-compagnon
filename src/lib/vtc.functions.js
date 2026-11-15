@@ -24,8 +24,8 @@ export const homeEstimate=createServerFn({method:'POST'}).inputValidator(input=>
  return {pickup:{lat:input.pickup.lat,lng:input.pickup.lng},dropoff:{lat:input.dropoff.lat,lng:input.dropoff.lng}};
 }).handler(async({data})=>{
  const {uberProducts}=await import('./vtc-uber.server');
- const uber=await uberProducts(data.pickup,data.dropoff);
- if(uber) return {source:'uber',products:uber};
+ const uber=await uberProducts(data.pickup,data.dropoff).catch(()=>null);
+ if(Array.isArray(uber)&&uber.length) return {source:'uber',products:uber};
  const {publicVtc}=await import('./vtc.server');
  const est=await publicVtc({path:'/api/rides/estimate',body:data});
  return {source:'strasdrive',route:est.route,estimates:est.estimates};
