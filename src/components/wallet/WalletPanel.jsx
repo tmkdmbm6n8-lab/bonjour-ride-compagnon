@@ -8,8 +8,9 @@ import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { Loading, Empty, money } from '@/components/ui/bits';
 import { formatRelativeTime } from '@/lib/utils/geo';
-
-const QUICK_AMOUNTS = [10, 25, 50, 100];
+import EmbeddedPayment from '@/components/payments/EmbeddedPayment';
+import { getStripeEnvironment } from '@/lib/stripe';
+import { TOPUP_MIN, TOPUP_MAX, topupAmountProblem } from '@/lib/vtc-checkout';
 
 const TXN_LABEL = {
   topup: 'Recharge du portefeuille',
@@ -32,7 +33,8 @@ export default function WalletPanel() {
   const [stripeEnabled, setStripeEnabled] = useState(false);
   const [topupOpen, setTopupOpen] = useState(false);
   const [amount, setAmount] = useState('25');
-  const [processing, setProcessing] = useState(false);
+  const [checkoutKey, setCheckoutKey] = useState(0); // >0 while Stripe's card form is shown
+  const sessionRef = useRef(null);
   const verifiedRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -60,7 +62,7 @@ export default function WalletPanel() {
     if (cancelled) {
       verifiedRef.current = true;
       toast('Recharge annulée — aucun montant n’a été débité', 'info');
-      router.replace('/wallet');
+      router.replace(window.location.pathname);
       return;
     }
     if (!sessionId) return;
@@ -68,9 +70,11 @@ export default function WalletPanel() {
 
     (async () => {
       try {
-        const res = await fetch(`/api/wallet/checkout?session_id=${encodeURIComponent(sessionId)}`);
+        const res = await fetch(`/api/wallet/checkout?session_id=${encodeURIComponent(sessionId)}&env=${getStripeEnvironment()}`);
         const data = await res.json();
-        if (res.ok && data.paid) {
+        if (res.ok && data.error) {
+          toast(data.error, 'error', 6000);
+        } else if (res.ok && data.paid) {
           toast(
             data.credited
               ? `${money(data.amount)} ajoutés à votre portefeuille`
@@ -86,55 +90,57 @@ export default function WalletPanel() {
       } catch {
         toast('Impossible de vérifier le paiement — actualisez dans un instant', 'error', 6000);
       } finally {
-        router.replace('/wallet');
+        router.replace(window.location.pathname);
         load();
       }
     })();
   }, [searchParams, router, toast, load]);
 
-  async function topup() {
-    const value = parseFloat(amount);
-    if (!Number.isFinite(value) || value <= 0) {
-      toast('Saisissez un montant valide', 'error');
+  function startTopup() {
+    const problem = topupAmountProblem(amount);
+    if (problem) {
+      toast(problem, 'error');
       return;
     }
-    setProcessing(true);
-    try {
-      if (stripeEnabled) {
-        // Real card payment via Stripe Checkout
-        const res = await fetch('/api/wallet/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: value }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          toast(data.error || 'Impossible de lancer le paiement', 'error', 5000);
-        } else {
-          window.location.href = data.url; // hand off to Stripe
-          return;
-        }
-      } else {
-        // Demo credit (no processor configured)
-        const res = await fetch('/api/wallet', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: value }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          toast(data.error || 'Échec de la recharge', 'error');
-        } else {
-          toast(`${money(value)} ajoutés à votre portefeuille`, 'success');
-          setTopupOpen(false);
-          load();
-        }
-      }
-    } catch {
-      toast('Échec de la recharge', 'error');
-    } finally {
-      setProcessing(false);
+    sessionRef.current = null;
+    setCheckoutKey((k) => k + 1);
+  }
+
+  const fetchClientSecret = useCallback(async () => {
+    const res = await fetch('/api/wallet/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: Number(amount), environment: getStripeEnvironment(), origin: window.location.origin }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      toast(data.error || 'Impossible de lancer le paiement', 'error', 6000);
+      throw new Error(data.error || 'Impossible de lancer le paiement');
     }
+    sessionRef.current = data.sessionId;
+    return data.clientSecret;
+  }, [amount, toast]);
+
+  const onPaid = useCallback(async () => {
+    const sessionId = sessionRef.current;
+    setCheckoutKey(0);
+    setTopupOpen(false);
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`/api/wallet/checkout?session_id=${encodeURIComponent(sessionId)}&env=${getStripeEnvironment()}`);
+      const data = await res.json();
+      if (res.ok && data.paid) toast(`${money(data.amount)} ajoutés à votre portefeuille`, 'success', 5000);
+      else toast(data.error || 'Paiement en cours de vérification — votre solde sera mis à jour', 'info', 6000);
+    } catch {
+      toast('Paiement reçu — actualisez dans un instant pour voir votre solde', 'info', 6000);
+    } finally {
+      load();
+    }
+  }, [toast, load]);
+
+  function closeTopup() {
+    setCheckoutKey(0);
+    setTopupOpen(false);
   }
 
   const owes = wallet ? wallet.balance < 0 : false;
@@ -219,47 +225,35 @@ export default function WalletPanel() {
         })}
       </div>
 
-      <Modal open={topupOpen} onClose={() => setTopupOpen(false)} title="Ajouter des fonds">
-        <div className="flex-col gap-4">
-          <div className="flex gap-2">
-            {QUICK_AMOUNTS.map((a) => ( <button
-                key={a}
-                className={`vehicle-row justify-center ${amount === String(a) ? 'selected' : ''}`}
-                style={{ padding: '10px 0', justifyContent: 'center' }}
-                onClick={() => setAmount(String(a))}
-              >
-                <span className="small" style={{ fontWeight: 700 }}>{money(a)}</span>
-              </button>
-            ))}
+      <Modal open={topupOpen} onClose={closeTopup} title="Ajouter des fonds" maxWidth={checkoutKey ? 520 : 440}>
+        {checkoutKey ? (
+          <EmbeddedPayment key={checkoutKey} fetchClientSecret={fetchClientSecret} onComplete={onPaid} />
+        ) : (
+          <div className="flex-col gap-4">
+            <div className="field">
+              <label htmlFor="custom-amount">Montant à ajouter (€)</label>
+              <input
+                id="custom-amount"
+                className="input"
+                type="number"
+                inputMode="decimal"
+                min={TOPUP_MIN}
+                max={TOPUP_MAX}
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+            <p className="tiny muted">
+              {stripeEnabled
+                ? `Entre ${money(TOPUP_MIN)} et ${money(TOPUP_MAX)}. Le paiement se fait par carte sur le formulaire sécurisé Stripe ; les fonds sont disponibles dès le paiement validé.`
+                : 'Le paiement par carte n’est pas encore activé.'}
+            </p>
+            <button className="btn btn-primary btn-full" onClick={startTopup} disabled={!stripeEnabled}>
+              <CreditCard size={17} /> Payer {money(parseFloat(amount) || 0)} par carte
+            </button>
           </div>
-          <div className="field">
-            <label htmlFor="custom-amount">Montant personnalisé</label>
-            <input
-              id="custom-amount"
-              className="input"
-              type="number"
-              min={stripeEnabled ? 5 : 1}
-              max="1000"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-          <p className="tiny muted">
-            {stripeEnabled
-              ? 'Vous serez redirigé vers une page Stripe sécurisée pour payer par carte. Les fonds sont disponibles immédiatement après le paiement.'
-              : 'Portefeuille de démonstration — les fonds sont crédités instantanément sans débit de carte bancaire.'}
-          </p>
-          <button className="btn btn-primary btn-full" onClick={topup} disabled={processing}>
-            {processing ? (
-              <span className="spinner" />
-            ) : stripeEnabled ? (
-              <><CreditCard size={17} /> Payer {money(parseFloat(amount) || 0)} par carte</>
-            ) : (
-              `Ajouter ${money(parseFloat(amount) || 0)}`
-            )}
-          </button>
-        </div>
+        )}
       </Modal>
     </div>
   );

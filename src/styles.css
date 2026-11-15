@@ -1339,3 +1339,16 @@ textarea.input { padding: 12px 16px; resize: vertical; min-height: 80px; }
   .shell-dark .nav-item.active { background: transparent; color: var(--text-invert); }
   .shell-dark .nav-item.active svg { color: var(--text-invert); }
 }
+
+/* ── Card payments: test-mode notice ── */
+.pay-banner {
+  width: 100%;
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 0.8rem;
+  background: var(--warning-bg);
+  color: var(--warning);
+  border-bottom: 1px solid var(--warning);
+}
+.pay-banner a { text-decoration: underline; font-weight: 600; }
+.pay-banner-danger { background: var(--danger-bg); color: var(--danger); border-bottom-color: var(--danger); }

@@ -36,7 +36,7 @@ function TermsPage() {
 
       <h2>4. Portefeuille et paiement</h2>
       <ul>
-        <li>Les courses sont payées avec le solde de votre portefeuille StrasDrive, que vous rechargez par carte bancaire via notre prestataire de paiement Stripe. StrasDrive ne voit ni ne conserve votre numéro de carte.</li>
+        <li>Les courses sont payées avec le solde de votre portefeuille StrasDrive (que vous rechargez du montant de votre choix, entre 5 € et 1 000 €), en espèces au chauffeur, ou par carte bancaire au moment de la commande. Une course payée par carte est créditée sur votre portefeuille puis débitée à la fin de la course ; si elle est annulée, le montant reste sur votre portefeuille. Les paiements par carte passent par notre prestataire Stripe : StrasDrive ne voit ni ne conserve votre numéro de carte.</li>
         <li>Le prix de la course est débité à la fin de celle-ci. Chaque opération figure dans l’historique de votre portefeuille.</li>
         <li>Vous pouvez aussi choisir de payer en espèces au moment de la réservation : vous remettez alors le prix annoncé directement au chauffeur à la fin de la course, sans débit de votre portefeuille. La commission StrasDrive est alors déduite du portefeuille du chauffeur. Aucun frais d’annulation n’est prélevé sur une course payée en espèces.</li>
         <li>Le solde n’est utilisable que pour des courses StrasDrive et n’est pas transférable. Vous disposez de 14 jours pour vous rétracter d’une recharge non utilisée (article L221-18 du Code de la consommation). Le solde non utilisé est remboursé sur demande à la clôture du compte.</li>

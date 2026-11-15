@@ -14,6 +14,7 @@ import {
   Zap,
   Wallet,
   Banknote,
+  CreditCard,
   MessageCircle,
   X,
   ShieldCheck,
@@ -30,6 +31,8 @@ import { useToast } from "@/components/ui/Toast";
 import { Avatar, Stars, StarPicker, VEHICLE_LABELS, money } from "@/components/ui/bits";
 import useRiderRide from "@/hooks/useRiderRide";
 import { bookingPaymentProblem, paymentMethodLabel } from "@/lib/vtc-pricing";
+import EmbeddedPayment from "@/components/payments/EmbeddedPayment";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { playSound } from "@/lib/sounds";
 import useVisualViewport from "@/hooks/useVisualViewport";
 import useGeolocation from "@/hooks/useGeolocation";
@@ -63,7 +66,9 @@ function RiderDashboard() {
   // Booking form state
   const [pickup, setPickup] = useState(null); // {address, lat, lng}
   const [dropoff, setDropoff] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("wallet"); // 'wallet' | 'cash'
+  const [paymentMethod, setPaymentMethod] = useState("wallet"); // 'wallet' | 'cash' | 'card'
+  const [cardKey, setCardKey] = useState(0); // >0 while Stripe's card form is shown
+  const cardRef = useRef({ booking: null, sessionId: null });
   const [pickupText, setPickupText] = useState("");
   const [dropoffText, setDropoffText] = useState("");
   const [estimate, setEstimate] = useState(null); // {route, estimates}
@@ -146,6 +151,7 @@ function RiderDashboard() {
     clearCompleted,
     loadingActive,
     book,
+    adoptRide,
     cancel,
     rate,
   } = useRiderRide({ onEvent: onRideEvent });
@@ -263,6 +269,11 @@ function RiderDashboard() {
   // ── Book ──
   async function handleBook() {
     if (!pickup || !dropoff || booking) return;
+    if (paymentMethod === "card") {
+      cardRef.current = { booking: { pickup, dropoff, vehicleType }, sessionId: null };
+      setCardKey((k) => k + 1);
+      return;
+    }
     setBooking(true);
     try {
       await book({ pickup, dropoff, vehicleType, paymentMethod });
@@ -274,6 +285,75 @@ function RiderDashboard() {
       setBooking(false);
     }
   }
+
+  // ── Card payment: Stripe form in the app, then the ride is booked with the paid price ──
+  const fetchCardSecret = useCallback(async () => {
+    const res = await fetch("/api/rides/card-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...cardRef.current.booking,
+        environment: getStripeEnvironment(),
+        origin: window.location.origin,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      toast(data.error || "Impossible de lancer le paiement", "error", 6000);
+      setCardKey(0);
+      throw new Error(data.error || "Impossible de lancer le paiement");
+    }
+    cardRef.current.sessionId = data.sessionId;
+    return data.clientSecret;
+  }, [toast]);
+
+  const confirmCard = useCallback(
+    async (sessionId) => {
+      if (!sessionId) return;
+      setBooking(true);
+      try {
+        const res = await fetch("/api/rides/card-confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, environment: getStripeEnvironment() }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) toast(data.error || "Impossible de confirmer le paiement", "error", 7000);
+        else if (!data.paid) toast("Paiement non effectué — aucun montant n’a été débité", "info", 5000);
+        else if (data.ride) {
+          adoptRide(data.ride);
+          setUnread(0);
+          setLastMsg(null);
+          toast("Paiement accepté — recherche d’un chauffeur", "success");
+        } else if (data.expired)
+          toast("Paiement reçu, mais la réservation a expiré : le montant est sur votre portefeuille", "info", 7000);
+        else if (!data.booked) toast("Paiement reçu : le montant a été ajouté à votre portefeuille", "info", 6000);
+      } catch {
+        toast("Paiement reçu — actualisez la page dans un instant", "info", 6000);
+      } finally {
+        setBooking(false);
+        refreshWallet();
+      }
+    },
+    [adoptRide, toast, refreshWallet],
+  );
+
+  const onCardPaid = useCallback(() => {
+    const id = cardRef.current.sessionId;
+    setCardKey(0);
+    confirmCard(id);
+  }, [confirmCard]);
+
+  // Back from a payment method that leaves the page (bank redirect): confirm once, then clean the address bar.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("card_session");
+    if (!sessionId) return;
+    params.delete("card_session");
+    const rest = params.toString();
+    window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+    confirmCard(sessionId);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCancel(reason) {
     setCancelling(true);
@@ -338,10 +418,11 @@ function RiderDashboard() {
   const surge = selectedFare?.surgeMultiplier > 1;
   const selectedAvailability = availability?.[vehicleType];
   const noDriverForSelected = selectedAvailability != null && selectedAvailability.count === 0;
-  const insufficientWallet =
-    walletBalance != null &&
-    selectedFare &&
-    Boolean(bookingPaymentProblem(paymentMethod, walletBalance, selectedFare.total));
+  const payProblem =
+    walletBalance != null && selectedFare
+      ? bookingPaymentProblem(paymentMethod, walletBalance, selectedFare.total)
+      : null;
+  const insufficientWallet = Boolean(payProblem);
 
   const mapProps = useMemo(() => {
     if (phase === "active" && ride) {
@@ -561,6 +642,7 @@ function RiderDashboard() {
                       label: "Portefeuille",
                       detail: walletBalance != null ? money(walletBalance) : "—",
                     },
+                    { id: "card", icon: CreditCard, label: "Carte", detail: "" },
                     { id: "cash", icon: Banknote, label: "Espèces", detail: "" },
                   ].map(({ id, icon: Icon, label, detail }) => (
                     <button
@@ -591,7 +673,23 @@ function RiderDashboard() {
                   </p>
                 )}
 
-                {insufficientWallet && (
+                {paymentMethod === "card" && selectedFare && !insufficientWallet && (
+                  <p className="tiny muted mt-2">
+                    Vous payez {money(selectedFare.total)} par carte maintenant ; la course est lancée dès le paiement validé.
+                    En cas d’annulation, le montant reste sur votre portefeuille.
+                  </p>
+                )}
+
+                {insufficientWallet && paymentMethod === "card" && (
+                  <p className="tiny mt-2" style={{ color: "var(--danger)" }}>
+                    {payProblem} —{" "}
+                    <Link href="/wallet" style={{ fontWeight: 700, textDecoration: "underline" }}>
+                      ouvrir le portefeuille
+                    </Link>
+                  </p>
+                )}
+
+                {insufficientWallet && paymentMethod !== "card" && (
                   <p className="tiny mt-2" style={{ color: "var(--danger)" }}>
                     Solde du portefeuille insuffisant —{" "}
                     <Link href="/wallet" style={{ fontWeight: 700, textDecoration: "underline" }}>
@@ -611,6 +709,10 @@ function RiderDashboard() {
                     <span className="spinner" />
                   ) : noDriverForSelected ? (
                     <>Aucun chauffeur {VEHICLE_LABELS[vehicleType]} disponible</>
+                  ) : paymentMethod === "card" ? (
+                    <>
+                      <CreditCard size={18} /> Payer {money(selectedFare?.total || 0)} et réserver
+                    </>
                   ) : (
                     <>
                       Réserver {VEHICLE_LABELS[vehicleType]} · {money(selectedFare?.total || 0)}
@@ -858,6 +960,15 @@ function RiderDashboard() {
       )}
 
       {/* Cancel confirm */}
+      <Modal
+        open={cardKey > 0}
+        onClose={() => setCardKey(0)}
+        title={`Paiement par carte · ${VEHICLE_LABELS[cardRef.current.booking?.vehicleType] || ""}`}
+        maxWidth={520}
+      >
+        {cardKey > 0 && <EmbeddedPayment key={cardKey} fetchClientSecret={fetchCardSecret} onComplete={onCardPaid} />}
+      </Modal>
+
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Annuler cette course ?">
         <div className="flex-col gap-2">
           {CANCEL_REASONS.map((r) => (

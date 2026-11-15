@@ -149,6 +149,13 @@ export default function useRiderRide({ onEvent } = {}) {
     return data.ride;
   }, []);
 
+  // A ride booked elsewhere (card payment confirmation) becomes the current ride.
+  const adoptRide = useCallback((next) => {
+    if (!next) return;
+    setOffersSent(0);
+    setRide(next);
+  }, []);
+
   const cancel = useCallback(async (reason) => {
     const current = rideRef.current;
     if (!current) return;
@@ -195,6 +202,7 @@ export default function useRiderRide({ onEvent } = {}) {
     loadingActive,
     isConnected,
     book,
+    adoptRide,
     cancel,
     rate,
   };

@@ -45,7 +45,7 @@ function PrivacyPage() {
       <ul>
         <li><strong>L’autre participant à la course</strong> — le chauffeur voit votre nom, le lieu de départ et la destination ; le passager voit le nom, la photo, la note, le véhicule et la plaque du chauffeur. Les numéros de téléphone ne sont pas échangés : la discussion passe par l’application.</li>
         <li><strong>{HOST.name}</strong> ({HOST.address}) — hébergement de l’application et de la base de données, envoi des e-mails de confirmation de compte, mesure d’audience.</li>
-        <li><strong>Stripe</strong> — paiement des recharges et versements aux chauffeurs.</li>
+        <li><strong>Stripe</strong> — paiement par carte des recharges et des courses (e-mail et identifiant de compte transmis pour rattacher le paiement), et versements aux chauffeurs.</li>
         <li><strong>Services cartographiques gratuits</strong> — Photon (komoot, Allemagne) reçoit le texte des adresses recherchées et les coordonnées à convertir en adresse ; Google Maps Platform (Google, États-Unis / Irlande) reçoit les coordonnées de départ et d’arrivée, puis, pendant la course, la position du chauffeur, pour calculer l’itinéraire et le temps de trajet avec le trafic en temps réel ; OSRM (FOSSGIS, Allemagne) les reçoit uniquement si Google ne répond pas ; ces demandes passent par nos serveurs, sans votre identité. Les fonds de carte sont chargés par votre navigateur depuis les serveurs d’OpenStreetMap, qui reçoivent donc votre adresse IP.</li>
         <li><strong>Autorités</strong> — uniquement lorsque la loi l’exige.</li>
       </ul>
