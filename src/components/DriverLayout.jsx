@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { Gauge, DollarSign, Clock, UserRound, Wallet } from 'lucide-react';
+import { Home, Compass, BarChart3, Mail, Menu } from "lucide-react";
 
-import AppShell from '@/components/shell/AppShell';
+import AppShell from "@/components/shell/AppShell";
 
 const NAV = [
-  { href: '/driver/dashboard', label: 'Conduire', icon: Gauge },
-  { href: '/driver/earnings', label: 'Revenus', icon: DollarSign },
-  { href: '/driver/wallet', label: 'Portefeuille', icon: Wallet },
-  { href: '/driver/trips', label: 'Courses', icon: Clock },
-  { href: '/driver/profile', label: 'Profil', icon: UserRound },
+  { href: "/driver/dashboard", label: "Accueil", icon: Home },
+  { href: "/driver/preferences", label: "Découvrir", icon: Compass },
+  { href: "/driver/earnings", label: "Revenus", icon: BarChart3 },
+  { href: "/driver/trips", label: "Courses", icon: Mail },
+  { href: "/driver/profile", label: "Menu", icon: Menu },
 ];
 
 export default function DriverLayout({ children }) {
