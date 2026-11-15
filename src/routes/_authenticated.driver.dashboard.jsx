@@ -147,6 +147,21 @@ function DriverDashboard() {
     return () => clearInterval(timer);
   }, [offer]);
 
+  useEffect(() => {
+    if (!offer?.rideId) {
+      setOfferElapsed(0);
+      return;
+    }
+    setOfferElapsed(0);
+    const interval = setInterval(() => {
+      setOfferElapsed((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [offer?.rideId]);
+
+  // Le plus proche voit le bouton tout de suite, les autres au bout de 4 secondes
+  const canAccept = Boolean(offer?.isNearest || offerElapsed >= 4);
+
   async function handleToggle() {
     try {
       if (online) await goOffline();
