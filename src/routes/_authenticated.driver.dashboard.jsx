@@ -619,15 +619,13 @@ function DriverDashboard() {
               <button className="btn btn-secondary flex-1" onClick={decline} disabled={actionBusy}>
                 Refuser
               </button>
-              {canAccept && (
-                <button
-                  className="btn btn-success btn-lg flex-1"
-                  onClick={handleAccept}
-                  disabled={actionBusy || countdown === 0}
-                >
-                  {actionBusy ? <span className="spinner" /> : "Accepter"}
-                </button>
-              )}
+              <button
+                className="btn btn-success btn-lg flex-1"
+                onClick={handleAccept}
+                disabled={actionBusy || countdown === 0}
+              >
+                {actionBusy ? <span className="spinner" /> : "Accepter"}
+              </button>
             </div>
           </div>
         )}
