@@ -505,66 +505,51 @@ function DriverDashboard() {
       <Waybill open={waybillOpen} onClose={() => setWaybillOpen(false)} />
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
 
-      {/* ── Incoming offer sheet (Style moderne sombre) ── */}
+      {/* ── Notification de course : Cockpit StrasDrive (Design Original) ── */}
       <Modal open={Boolean(offer)} onClose={decline} closable={false}>
         {offer && (
           <div
             style={{
-              background: "#18191b",
+              background: "linear-gradient(180deg, #13151f 0%, #0a0b10 100%)",
               color: "#ffffff",
-              borderRadius: 20,
-              padding: "20px 18px 16px",
+              borderRadius: 24,
+              padding: "24px 20px 20px",
               margin: "-16px -16px",
+              border: "1px solid rgba(212, 160, 23, 0.25)",
+              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(212, 160, 23, 0.12)",
             }}
           >
-            {offer.airportReturn && (
-              <div className="airport-return-alert" role="status">
-                <strong>✈ {offer.airportReturn.title}</strong>
-                <p>
-                  Arrivée du vol {offer.airportReturn.flightNumber}
-                  {offer.airportReturn.city ? ` depuis ${offer.airportReturn.city}` : ""} à{" "}
-                  {transportClock(offer.airportReturn.arrivalAt)}.
-                </p>
-                <p>{offer.airportReturn.statusText}</p>
-                <small>{offer.airportReturn.message}</small>
-              </div>
-            )}
-            {/* 1. Ligne du haut : Pilule de gamme à gauche + Croix de refus à droite */}
-            <div className="flex items-center justify-between mb-3">
+            {/* 1. En-tête : Badge StrasDrive Or + Bouton Ignorer */}
+            <div className="flex items-center justify-between mb-4">
               <div
                 style={{
-                  background: "#ffffff",
-                  color: "#121214",
+                  background: "rgba(212, 160, 23, 0.15)",
+                  color: "#facc15",
+                  border: "1px solid rgba(212, 160, 23, 0.35)",
                   fontWeight: 700,
-                  fontSize: "0.92rem",
+                  fontSize: "0.85rem",
                   padding: "6px 14px",
                   borderRadius: 9999,
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 8,
+                  letterSpacing: "0.02em",
                 }}
               >
-                {offer.rideClass === "pet" ? (
-                  <PawPrint size={15} />
-                ) : offer.rideClass === "xl" ? (
-                  <Car size={15} />
-                ) : (
-                  <User size={15} />
-                )}
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#facc15" }} />
                 <span>{VEHICLE_LABELS[offer.rideClass] || "StrasDrive Go"}</span>
               </div>
 
-              {/* Bouton croix pour refuser d'un clic */}
               <button
                 onClick={decline}
                 disabled={actionBusy}
-                aria-label="Refuser la course"
+                aria-label="Ignorer la course"
                 style={{
-                  background: "#2b2c2f",
-                  border: "none",
-                  color: "#d1d5db",
-                  width: 38,
-                  height: 38,
+                  background: "rgba(255, 255, 255, 0.06)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  color: "#9ca3af",
+                  width: 34,
+                  height: 34,
                   borderRadius: "50%",
                   display: "flex",
                   alignItems: "center",
@@ -572,178 +557,174 @@ function DriverDashboard() {
                   cursor: "pointer",
                 }}
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            {/* 2. Prix net géant */}
-            <div
-              style={{
-                fontSize: "2.8rem",
-                fontWeight: 800,
-                letterSpacing: "-0.03em",
-                lineHeight: 1.1,
-                marginBottom: 10,
-                textAlign: "left",
-              }}
-            >
-              {money(offer.profitability?.expectedEarnings ?? offer.earnings)}
-            </div>
-
-            {/* 3. Badges chips (Mode de paiement, Note passager, Net chauffeur) */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {offer.paymentMethod === "cash" ? (
-                <div
-                  style={{
-                    background: "#2b2c2f",
-                    color: "var(--gold-400, #fbbf24)",
-                    padding: "5px 12px",
-                    borderRadius: 8,
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                  }}
-                >
-                  Espèces ({money(offer.total)})
-                </div>
-              ) : (
-                <div
-                  style={{
-                    background: "#2b2c2f",
-                    color: "#e5e7eb",
-                    padding: "5px 12px",
-                    borderRadius: 8,
-                    fontSize: "0.82rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  Portefeuille
-                </div>
-              )}
-
+            {/* 2. Gain net en or géant */}
+            <div style={{ textAlign: "center", marginBottom: 14 }}>
               <div
                 style={{
-                  background: "#2b2c2f",
-                  color: "#ffffff",
-                  padding: "5px 12px",
-                  borderRadius: 8,
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
+                  fontSize: "3rem",
+                  fontWeight: 800,
+                  letterSpacing: "-0.03em",
+                  lineHeight: 1,
+                  color: "#facc15",
                 }}
               >
-                <Star size={13} fill="#fbbf24" stroke="#fbbf24" />
-                <span>5.00</span>
+                {money(offer.profitability?.expectedEarnings ?? offer.earnings)}
               </div>
-
-              <div
+              <span
                 style={{
-                  background: "#2b2c2f",
+                  fontSize: "0.8rem",
                   color: "#9ca3af",
-                  padding: "5px 12px",
-                  borderRadius: 8,
-                  fontSize: "0.82rem",
+                  fontWeight: 500,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Net chauffeur garanti
+              </span>
+            </div>
+
+            {/* 3. Badges d'infos (Paiement, Note passager) */}
+            <div className="flex justify-center gap-2 mb-5">
+              <span
+                style={{
+                  background: offer.paymentMethod === "cash" ? "rgba(234, 179, 8, 0.15)" : "rgba(255, 255, 255, 0.05)",
+                  color: offer.paymentMethod === "cash" ? "#facc15" : "#e5e7eb",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  padding: "4px 12px",
+                  borderRadius: 10,
+                  fontSize: "0.8rem",
                   fontWeight: 600,
                 }}
               >
-                Net chauffeur
-              </div>
+                {offer.paymentMethod === "cash" ? `Espèces (${money(offer.total)})` : "Portefeuille"}
+              </span>
+
+              <span
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  padding: "4px 12px",
+                  borderRadius: 10,
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <Star size={12} fill="#facc15" stroke="#facc15" /> 5.0
+              </span>
             </div>
 
-            {/* Ligne fine séparatrice */}
-            <div style={{ height: 1, background: "rgba(255,255,255,0.1)", marginBottom: 14 }} />
-
-            {/* 4. Itinéraire vertical (Prise en charge + Destination) */}
-            <div className="text-left mb-4" style={{ paddingLeft: 4 }}>
-              {/* Point de départ */}
-              <div className="flex gap-3 items-start relative">
-                <div className="flex flex-col items-center" style={{ width: 14 }}>
-                  <Circle size={10} strokeWidth={3} style={{ color: "#ffffff", marginTop: 4 }} />
-                  <div
-                    style={{
-                      width: 2,
-                      height: 38,
-                      background: "rgba(255,255,255,0.25)",
-                      margin: "4px 0",
-                    }}
-                  />
-                </div>
-                <div className="flex-1 min-w-0 pb-2">
-                  <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#ffffff" }}>
-                    {offer.etaMinutes} min ({formatDistance(offer.distanceToPickupMeters)})
+            {/* 4. Trajet : Prise en charge & Destination */}
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid rgba(255, 255, 255, 0.06)",
+                borderRadius: 16,
+                padding: "14px 14px",
+                marginBottom: 18,
+              }}
+            >
+              <div className="flex gap-3 items-start mb-3">
+                <Circle size={10} strokeWidth={3} style={{ color: "#4ade80", marginTop: 4, flexShrink: 0 }} />
+                <div className="flex-1 min-w-0">
+                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#ffffff" }}>
+                    Prise en charge ({offer.etaMinutes} min · {formatDistance(offer.distanceToPickupMeters)})
                   </div>
-                  <div className="truncate" style={{ fontSize: "0.82rem", color: "#9ca3af", marginTop: 2 }}>
+                  <div className="truncate" style={{ fontSize: "0.78rem", color: "#9ca3af" }}>
                     {offer.pickup.address}
                   </div>
                 </div>
               </div>
 
-              {/* Point d'arrivée */}
+              <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "8px 0 8px 18px" }} />
+
               <div className="flex gap-3 items-start">
-                <div className="flex items-center justify-center" style={{ width: 14 }}>
-                  <Square size={10} fill="#ffffff" strokeWidth={0} style={{ marginTop: 2 }} />
-                </div>
+                <MapPin size={11} style={{ color: "#facc15", marginTop: 3, flexShrink: 0 }} />
                 <div className="flex-1 min-w-0">
-                  <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#ffffff" }}>
-                    {formatDistance(offer.distanceMeters)} ({formatDuration(offer.durationSeconds)})
+                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#ffffff" }}>
+                    Destination ({formatDistance(offer.distanceMeters)} · {formatDuration(offer.durationSeconds)})
                   </div>
-                  <div className="truncate" style={{ fontSize: "0.82rem", color: "#9ca3af", marginTop: 2 }}>
+                  <div className="truncate" style={{ fontSize: "0.78rem", color: "#9ca3af" }}>
                     {offer.dropoff.address}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 5. Bouton Accepter large avec barre de décompte en arrière-plan */}
+            {/* 5. Bouton Accepter Doré avec décompte */}
             {(() => {
               const maxSec = offer.expiresInSeconds || 15;
               const progressPct = Math.max(0, Math.min(100, (countdown / maxSec) * 100));
               return (
-                <button
-                  onClick={handleAccept}
-                  disabled={actionBusy || countdown === 0}
-                  style={{
-                    width: "100%",
-                    height: 52,
-                    borderRadius: 12,
-                    border: "none",
-                    position: "relative",
-                    overflow: "hidden",
-                    fontWeight: 700,
-                    fontSize: "1.05rem",
-                    cursor: countdown === 0 ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "#2b2c2f",
-                    color: "#121214",
-                  }}
-                >
-                  {/* Jauge animée qui s'écoule au rythme des secondes */}
-                  <div
+                <div className="flex gap-3">
+                  <button
+                    onClick={decline}
+                    disabled={actionBusy}
                     style={{
-                      position: "absolute",
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: `${progressPct}%`,
-                      background: "linear-gradient(90deg, #d1d5db 0%, #e5e7eb 100%)",
-                      transition: "width 0.25s linear",
-                      zIndex: 1,
+                      flex: "0 0 80px",
+                      height: 52,
+                      borderRadius: 14,
+                      background: "rgba(255, 255, 255, 0.06)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      color: "#9ca3af",
+                      fontWeight: 600,
+                      cursor: "pointer",
                     }}
-                  />
-                  {/* Texte du bouton */}
-                  <span style={{ position: "relative", zIndex: 2 }}>
-                    {actionBusy ? (
-                      <span className="spinner" />
-                    ) : countdown === 0 ? (
-                      <span style={{ color: "#9ca3af" }}>Expiré</span>
-                    ) : (
-                      `Accepter (${countdown}s)`
-                    )}
-                  </span>
-                </button>
+                  >
+                    Passer
+                  </button>
+
+                  <button
+                    onClick={handleAccept}
+                    disabled={actionBusy || countdown === 0}
+                    style={{
+                      flex: 1,
+                      height: 52,
+                      borderRadius: 14,
+                      border: "none",
+                      position: "relative",
+                      overflow: "hidden",
+                      fontWeight: 800,
+                      fontSize: "1rem",
+                      cursor: countdown === 0 ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "linear-gradient(135deg, #eab308 0%, #ca8a04 100%)",
+                      color: "#0c0d12",
+                      boxShadow: "0 8px 24px rgba(212, 160, 23, 0.35)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: `${progressPct}%`,
+                        background: "rgba(255, 255, 255, 0.25)",
+                        transition: "width 0.25s linear",
+                        zIndex: 1,
+                      }}
+                    />
+                    <span style={{ position: "relative", zIndex: 2 }}>
+                      {actionBusy ? (
+                        <span className="spinner" />
+                      ) : countdown === 0 ? (
+                        "Expirée"
+                      ) : (
+                        `Accepter (${countdown}s)`
+                      )}
+                    </span>
+                  </button>
+                </div>
               );
             })()}
           </div>
