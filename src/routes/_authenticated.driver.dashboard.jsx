@@ -22,6 +22,7 @@ import {
   Star,
   Square,
   User,
+  Phone,
 } from "lucide-react";
 
 import MapView from "@/components/ArchiveMap";
