@@ -20,7 +20,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
     user?.role === "driver" ? "/driver/dashboard" : user?.role === "admin" ? "/admin/dashboard" : "/dashboard";
 
   return (
-    <div className={`shell ${variant === "rider" ? "shell-rider" : ""} ${["/driver/dashboard", "/driver/preferences", "/driver/discover", "/driver/earnings", "/driver/inbox", "/driver/menu"].includes(pathname) ? "shell-dark" : ""}`}>
+    <div className={`shell ${variant === "rider" ? "shell-rider" : ""} shell-dark`}>
       <aside className="sidebar">
         <div className="sidebar-brand">
           <Link href={homeHref} aria-label="Accueil StrasDrive">
@@ -31,7 +31,12 @@ export default function AppShell({ nav, children, variant = "default" }) {
           {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
-              <Link key={href} href={href} className={`nav-item ${active ? "active" : ""}`} aria-current={active ? "page" : undefined}>
+              <Link
+                key={href}
+                href={href}
+                className={`nav-item ${active ? "active" : ""}`}
+                aria-current={active ? "page" : undefined}
+              >
                 <Icon size={19} strokeWidth={2} />
                 <span>{label}</span>
               </Link>
@@ -42,24 +47,24 @@ export default function AppShell({ nav, children, variant = "default" }) {
         <div className="sidebar-footer">
           {variant === "rider" && <RiderAccountMenu user={user} />}
           <div className={variant === "rider" ? "rider-legacy-user" : undefined}>
-          <div className="sidebar-user">
-            <Avatar name={user?.name || ""} src={user?.avatar || ""} size="sm" />
-            <div className="flex-1 truncate">
-              <div className="small truncate" style={{ fontWeight: 600 }}>
-                {user?.name || "—"}
+            <div className="sidebar-user">
+              <Avatar name={user?.name || ""} src={user?.avatar || ""} size="sm" />
+              <div className="flex-1 truncate">
+                <div className="small truncate" style={{ fontWeight: 600 }}>
+                  {user?.name || "—"}
+                </div>
+                <div className="tiny muted truncate">@{user?.username || ""}</div>
               </div>
-              <div className="tiny muted truncate">@{user?.username || ""}</div>
+              <button
+                className="btn btn-ghost btn-icon"
+                style={{ minHeight: 36, width: 36 }}
+                onClick={() => signOut({ callbackUrl: "/" })}
+                aria-label="Se déconnecter"
+                title="Se déconnecter"
+              >
+                <LogOut size={17} />
+              </button>
             </div>
-            <button
-              className="btn btn-ghost btn-icon"
-              style={{ minHeight: 36, width: 36 }}
-              onClick={() => signOut({ callbackUrl: "/" })}
-              aria-label="Se déconnecter"
-              title="Se déconnecter"
-            >
-              <LogOut size={17} />
-            </button>
-          </div>
           </div>
         </div>
       </aside>
