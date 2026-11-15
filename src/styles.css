@@ -1782,6 +1782,7 @@ button.activity-pill:hover, a.activity-pill:hover { background: #e9e9e9; }
 .driver-earnings-pill { min-height: 46px; padding: 6px 18px; gap: 8px; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; background: color-mix(in oklab, var(--drv-bg) 86%, transparent); border: 1px solid var(--drv-line-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: var(--drv-text); }
 .driver-earnings-pill span::first-letter { color: inherit; }
 .driver-earnings-pill span { color: var(--drv-accent); }
+.driver-map-tools-right { bottom: 40px; }
 .drv-map-tool { width: 48px; height: 48px; border-radius: var(--drv-radius-sm); background: color-mix(in oklab, var(--drv-bg) 86%, transparent); border: 1px solid var(--drv-line-strong); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: var(--drv-text); }
 .drv-map-tool svg { width: 21px; height: 21px; }
 .driver-opportunities-icon { color: var(--drv-accent); }
