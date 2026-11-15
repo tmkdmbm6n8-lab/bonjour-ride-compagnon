@@ -8,6 +8,7 @@ import PlaceSearch from "@/components/maps/PlaceSearch";
 import Modal from "@/components/ui/Modal";
 import { money } from "@/components/ui/bits";
 import useGeolocation from "@/hooks/useGeolocation";
+import { KovaIcon } from "@/components/brand/KovaLogo";
 
 export default function DriverHome({ loading, online, busy, isConnected, needsVehicle, position, center, onToggle, acceptsPet, togglingPet, onTogglePet, onWaybill }) {
   const [expanded, setExpanded] = useState(false);
@@ -57,9 +58,11 @@ export default function DriverHome({ loading, online, busy, isConnected, needsVe
   return <div className={`drv-home driver-reference ${expanded ? 'driver-map-mode' : ''} ${online ? 'driver-is-online' : ''}`}>
     <div className="drv-home-inner">
       <div className="drv-top">
+        <span className="drv-brand"><KovaIcon size={34} /><span>StrasDrive<small>Espace chauffeur</small></span></span>
         <Link href="/driver/profile" className="drv-round" aria-label="Sécurité et documents"><ShieldCheck size={27} className="driver-shield" /></Link>
         <Link href="/driver/preferences" className="drv-round" aria-label="Préférences de conduite"><SlidersHorizontal size={27} /></Link>
       </div>
+      <p className={`drv-state ${online ? 'on' : ''}`}><i />{online ? 'En ligne' : 'Hors ligne'}</p>
       <h1 className="drv-title">{loading ? '…' : title}</h1>
       <p className="drv-sub">{needsVehicle ? 'Ajoutez votre véhicule pour commencer' : online ? status : 'Prêt à partir ?'}</p>
       <div className={`drv-map driver-dark-map ${expanded ? 'expanded' : ''}`}>

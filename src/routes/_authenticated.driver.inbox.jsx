@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import { Archive, BellRing, MessageCircle, Megaphone, Plus, Send } from 'lucide-react';
+import { BellRing, MessageCircle, Megaphone, Plus, Send } from 'lucide-react';
 import DriverLayout from '@/components/DriverLayout';
 import useDriverData from '@/hooks/useDriverData';
 import { apiFetch } from '@/lib/archive-fetch';
@@ -47,7 +47,7 @@ function InboxPage() {
   }
   const visible = entries.filter((entry) => filter === 'all' || entry.category === filter);
   return <div className="driver-tab-page inbox-page">
-    <div className="inbox-archive"><Archive size={23} /></div><div className="driver-tab-title"><h1>Inbox</h1><button className="driver-icon-button" onClick={() => { setCompose(true); setSelectedId(null); setText(''); setSubject(''); setSendError(''); }} aria-label="Écrire à l’administration"><Plus size={26} /></button></div>
+    <div className="driver-tab-title"><div><p className="drv-eyebrow">Clients & assistance</p><h1>Inbox</h1></div><button className="driver-icon-button" onClick={() => { setCompose(true); setSelectedId(null); setText(''); setSubject(''); setSendError(''); }} aria-label="Écrire à l’administration"><Plus size={26} /></button></div>
     <div className="driver-filter-row">{[['all', 'Tout'], ['messages', 'Messages'], ['alerts', 'Alertes'], ['updates', 'Actualités']].map(([key, label]) => <button key={key} onClick={() => setFilter(key)} className={`driver-chip ${filter === key ? 'selected' : ''}`}>{label}</button>)}</div>
     <h2 className="inbox-section-title">Vos conversations</h2>
     {error && <p className="driver-notice" role="alert">{error}<button className="driver-chip" onClick={reload}>Réessayer</button></p>}

@@ -21,7 +21,7 @@ function EarningsPage() {
   const selected = week.byDay.find((row) => row._id === selectedDay);
   const ride = data.recentRides[rideIndex];
   return <div className="driver-tab-page earnings-page">
-    <h1>Revenus</h1>
+    <div className="driver-tab-title"><div><p className="drv-eyebrow">Courses terminées</p><h1>Revenus</h1></div></div>
     {error && <p className="driver-notice" role="alert">Les données n’ont pas pu être actualisées. {error}</p>}
     <div className="earnings-week-controls"><button onClick={() => { setDay(shiftDay(day, -7)); setSelectedDay(null); }} aria-label="Semaine précédente"><ChevronLeft size={23} /></button><span>{date(week.start)} – {date(shiftDay(week.end, -1))}</span><button disabled={week.end > parisDay()} onClick={() => { setDay(shiftDay(day, 7)); setSelectedDay(null); }} aria-label="Semaine suivante"><ChevronRight size={23} /></button></div>
     <div className="earnings-overview"><div><p>{selected ? date(selected._id) : 'Cette semaine'}</p><strong>{money(selected ? selected.earnings : week.total)}</strong></div><div className="earnings-chart" aria-label="Revenus journaliers">{week.byDay.map((row, index) => <button key={row._id} className={selectedDay === row._id ? 'selected' : ''} onClick={() => setSelectedDay(selectedDay === row._id ? null : row._id)} aria-label={`${date(row._id)} : ${money(row.earnings)}, ${row.trips} courses, ${workDuration(row.activitySeconds)}`} aria-pressed={selectedDay === row._id}><span style={{ height: row.earnings > 0 ? `${Math.max(3, row.earnings / max * 100)}%` : 0 }} /><small>{['L', 'M', 'M', 'J', 'V', 'S', 'D'][index]}</small></button>)}</div></div>
