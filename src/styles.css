@@ -5586,7 +5586,7 @@ a.activity-pill:hover {
 /* Barre basse et Bouton GO compact */
 .drv-cockpit-bottom-bar {
   position: absolute;
-  bottom: 84px;
+  bottom: 24px; /* Abaissé de 84px à 24px pour être plus bas sur l'écran */
   left: 0;
   right: 0;
   display: flex;
@@ -5595,32 +5595,17 @@ a.activity-pill:hover {
   z-index: 25;
   pointer-events: none;
 }
-.drv-go-btn {
-  pointer-events: auto;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 12px 28px;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+
+/* État quand on est en ligne : bouton HORS LIGNE en ROUGE */
+.drv-go-btn.is-online {
+  background: linear-gradient(135deg, #240d10 0%, #150608 100%);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.4);
 }
-.drv-go-btn.is-offline {
-  background: linear-gradient(135deg, #181a1f 0%, #0d0e12 100%);
-  color: var(--drv-gold);
-  border-color: rgba(212, 160, 23, 0.4);
-}
-.drv-go-btn.is-offline:hover {
+.drv-go-btn.is-online:hover {
   transform: translateY(-2px);
-  border-color: var(--drv-gold);
-  box-shadow: 0 14px 36px rgba(212, 160, 23, 0.25);
+  border-color: #f87171;
+  box-shadow: 0 14px 36px rgba(248, 113, 113, 0.25);
 }
 .drv-go-btn.is-online {
   background: linear-gradient(135deg, #0e1e14 0%, #09130d 100%);
