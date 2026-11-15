@@ -35,6 +35,7 @@ import { Route as AuthenticatedDriverTripsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedDriverWalletRouteImport } from './routes/_authenticated.driver.wallet'
 import { Route as AuthenticatedRidesIdRouteImport } from './routes/_authenticated.rides.$id'
 import { Route as ApiPublicJobsWeeklyPayoutsRouteImport } from './routes/api/public/jobs/weekly-payouts'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -176,6 +177,12 @@ const ApiPublicJobsWeeklyPayoutsRoute =
     path: '/api/public/jobs/weekly-payouts',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -203,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -230,6 +238,7 @@ export interface FileRoutesByTo {
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -259,6 +268,7 @@ export interface FileRoutesById {
   '/_authenticated/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/_authenticated/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/driver/wallet'
     | '/rides/$id'
     | '/api/public/jobs/weekly-payouts'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/driver/wallet'
     | '/rides/$id'
     | '/api/public/jobs/weekly-payouts'
+    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
@@ -343,6 +355,7 @@ export interface FileRouteTypes {
     | '/_authenticated/driver/wallet'
     | '/_authenticated/rides/$id'
     | '/api/public/jobs/weekly-payouts'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -355,6 +368,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   ApiPublicJobsWeeklyPayoutsRoute: typeof ApiPublicJobsWeeklyPayoutsRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -541,6 +555,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsWeeklyPayoutsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -606,6 +627,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   ApiPublicJobsWeeklyPayoutsRoute: ApiPublicJobsWeeklyPayoutsRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
