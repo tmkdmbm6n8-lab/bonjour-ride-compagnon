@@ -233,7 +233,16 @@ async function estimates(db, a, b) {
   const route = await routeBetween(a, b);
   const rows = required(await db.from("pricing_rules").select("*"));
   const rules = { ...DEFAULT_PRICING };
-  for (const row of rows) rules[row.vehicle_type] = row.rule;
+  for (const row of rows) {
+    if (row.vehicle_type !== "uber_discount") {
+      rules[row.vehicle_type] = row.rule;
+    }
+  }
+
+  // Configuration de la réduction Uber (20 % par défaut, activée par défaut)
+  const discountSetting = rows.find((r) => r.vehicle_type === "uber_discount")?.rule;
+  const isDiscountActive = discountSetting ? Boolean(discountSetting.enabled) : true;
+  const discountRate = discountSetting && Number.isFinite(discountSetting.rate) ? discountSetting.rate : 0.20; // 20 %
 
   // 1. Appel en direct de l'API Uber
   let uberList = null;
@@ -266,24 +275,42 @@ async function estimates(db, a, b) {
   const finalEstimates = {};
 
   const applyUberPrice = (type, product) => {
-    let price = product?.price;
+    let rawPrice = product?.price;
 
     // Si Uber Pet n'est pas actif dans la ville, barème officiel Uber : UberX + 4,00 €
-    if (!price && type === "pet" && uberX?.price) {
-      price = Math.round((uberX.price + 4.0) * 100) / 100;
+    if (!rawPrice && type === "pet" && uberX?.price) {
+      rawPrice = Math.round((uberX.price + 4.0) * 100) / 100;
     }
 
-    if (price && Number.isFinite(price) && price > 0) {
+    if (rawPrice && Number.isFinite(rawPrice) && rawPrice > 0) {
       const commRate = rules[type]?.platformCommission || 5;
+
+      // Calcul du prix réduit de 20 %
+      let price = rawPrice;
+      if (isDiscountActive) {
+        price = Math.round(rawPrice * (1 - discountRate) * 100) / 100;
+      }
+
+      // ── Plancher légal ARPE : 9,00 € nets min par course pour le chauffeur ──
+      // Avec 5 % de commission, le prix payé par le client ne descend jamais sous 9,47 €
+      const minNetDriver = 9.0;
+      const minLegalPrice = Math.round((minNetDriver / (1 - commRate / 100)) * 100) / 100;
+      if (price < minLegalPrice) {
+        price = minLegalPrice;
+      }
+
       const platformFee = Math.round(price * commRate) / 100;
+      const driverEarnings = Math.round((price - platformFee) * 100) / 100;
+
       finalEstimates[type] = {
         total: price,
         estimatedTotal: price,
-        originalTotal: price,
+        originalTotal: rawPrice, // Le prix Uber de référence avant réduction
         platformFee,
-        driverEarnings: Math.round((price - platformFee) * 100) / 100,
+        driverEarnings,
         uberProduct: product ? product.name : type === "pet" ? "Uber Pet" : null,
         isUberPrice: true,
+        discountRate: isDiscountActive ? discountRate : 0,
       };
     }
   };
@@ -293,13 +320,9 @@ async function estimates(db, a, b) {
   applyUberPrice("pet", uberPet);
   applyUberPrice("xl", uberXL);
 
-  // Vérifier qu'au moins la gamme économique a pu être tarifée
-  if (!finalEstimates.economy) {
-    throw new Error("Impossible de récupérer les tarifs Uber pour cet itinéraire.");
-  }
+  // Vérifier qu'au moins la gamme économique
 
-  return { route, estimates: finalEstimates, source: "uber" };
-}
+  
 
 export async function handleVtc(input, context) {
   const { path, method = "GET", body = {} } = input;
