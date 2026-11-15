@@ -76,13 +76,16 @@ export function KovaIcon({ size = 32, className = "" }) {
     </svg>
   );
 }
-
-export function KovaLogo({ size = 32, showText = true, className = "", light = true }) {
+export function KovaLogo({ size = 32, showText = true, className = "", light = false }) {
   return (
-    <span className={className} style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
+    <span
+      className={`sd-brand-logo ${className}`}
+      style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}
+    >
       <KovaIcon size={size} />
       {showText && (
         <span
+          className="sd-brand-text"
           style={{
             fontSize: size * 0.68,
             fontWeight: 700,
@@ -91,8 +94,7 @@ export function KovaLogo({ size = 32, showText = true, className = "", light = t
             lineHeight: 1,
           }}
         >
-          {" "}
-          StrasDrive{" "}
+          StrasDrive
         </span>
       )}
     </span>
