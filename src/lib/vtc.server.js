@@ -1,3 +1,7 @@
+import { discoverBoard, returnHintForRide } from "./vtc-transport.server";
+import { driverWeekSummary } from "./vtc-driver-stats";
+import { parisDay, validDay } from "./vtc-dates";
+import { inboxForDriver, sendSupportMessage } from "./vtc-support.server";
 import { buildWaybill, sanitizeOperator } from "./vtc-waybill";
 import { geoSearch } from "./vtc-geocoding.server";
 import {
@@ -371,41 +375,40 @@ export async function handleVtc(input, context) {
   }
   if (p === "/api/geo/search") return geoSearch(q);
   if (p === "/api/rides/estimate") return estimates(admin, body.pickup, body.dropoff);
+  if (p === "/api/drivers/me/discover" && method === "GET") return discoverBoard(q.get("day") || parisDay());
+  if (p === "/api/drivers/me/inbox" && method === "GET") return inboxForDriver(admin, uid, context.claims?.email, q.get("page"));
+  if (p === "/api/drivers/me/inbox/support" && method === "POST") return sendSupportMessage(admin, { uid, email: context.claims?.email, name: profile.name, role, body });
+  if (p === "/api/admin/support/reply" && method === "POST") return sendSupportMessage(admin, { uid, email: context.claims?.email, name: profile.name, role, body });
+  if (p === "/api/drivers/me/earnings") {
+    const day = q.get("day") || parisDay();
+    if (!validDay(day)) throw new Error("Date invalide");
+    const range = driverWeekSummary([], day);
+    const rows = [];
+    for (let offset = 0; ; offset += 500) {
+      const batch = required(await db.from("rides").select("*").eq("driver_id", uid).eq("is_test", false).eq("status", "completed").gte("completed_at", range.fromUtc).or(`accepted_at.lt.${range.toUtc},and(accepted_at.is.null,completed_at.lt.${range.toUtc})`).order("completed_at", { ascending: false }).range(offset, offset + 499));
+      rows.push(...batch);
+      if (batch.length < 500) break;
+    }
+    const driver = required(await db.from("drivers").select("stats").eq("user_id", uid).single());
+    const week = driverWeekSummary(rows, day);
+    const finishedThisWeek = rows.filter((ride) => { const completedDay = parisDay(ride.completed_at); return completedDay >= week.start && completedDay < week.end; });
+    return { wallet: { balance: Number(profile.balance) }, stats: driver.stats, today: week.today, week, recentRides: await Promise.all(finishedThisWeek.slice(0, 30).map((ride) => serialize(admin, ride, uid, true))) };
+  }
   if (p === "/api/drivers/me/operator" && method === "PATCH") {
     const current = required(await admin.from("drivers").select("vehicle").eq("user_id", uid).single());
     const operator = sanitizeOperator(body.operator);
-    if (!operator.legalName || !operator.address || !operator.phone)
-      throw new Error("Renseignez la raison sociale, l’adresse et le téléphone de l’exploitant");
-    required(
-      await admin
-        .from("drivers")
-        .update({ vehicle: { ...(current.vehicle || {}), operator } })
-        .eq("user_id", uid),
-    );
+    if (!operator.legalName || !operator.address || !operator.phone) throw new Error("Renseignez la raison sociale, l’adresse et le téléphone de l’exploitant");
+    required(await admin.from("drivers").update({ vehicle: { ...(current.vehicle || {}), operator } }).eq("user_id", uid));
     return { operator };
   }
   if (p === "/api/drivers/me/waybill" && method === "GET") {
     const driver = required(await admin.from("drivers").select("vehicle").eq("user_id", uid).single());
     const operator = sanitizeOperator(driver.vehicle?.operator);
-    const rides = required(
-      await admin
-        .from("rides")
-        .select("*")
-        .eq("driver_id", uid)
-        .in("status", ["accepted", "arrived", "in_progress"])
-        .order("created_at", { ascending: false })
-        .limit(1),
-    );
+    const rides = required(await admin.from("rides").select("*").eq("driver_id", uid).in("status", ["accepted", "arrived", "in_progress"]).order("created_at", { ascending: false }).limit(1));
     const ride = rides[0];
     if (!ride) return { document: null, operator };
     const client = required(await admin.from("profiles").select("name,phone").eq("id", ride.rider_id).single());
-    const documents = required(
-      await admin
-        .from("driver_documents")
-        .select("doc_type,document_number,status")
-        .eq("user_id", uid)
-        .in("doc_type", ["company", "vtc_register"]),
-    );
+    const documents = required(await admin.from("driver_documents").select("doc_type,document_number,status").eq("user_id", uid).in("doc_type", ["company", "vtc_register"]));
     return { document: buildWaybill(ride, client, operator, documents), operator };
   }
   if (p === "/api/drivers/me") {
@@ -607,15 +610,7 @@ export async function handleVtc(input, context) {
   if (p === "/api/wallet/checkout" || p === "/api/rides/card-checkout" || p === "/api/rides/card-confirm") {
     const { handleCheckout } = await import("./vtc-checkout.server");
     return handleCheckout({
-      admin,
-      uid,
-      role,
-      email: context.claims?.email,
-      p,
-      q,
-      method,
-      body,
-      quoteRide,
+      admin, uid, role, email: context.claims?.email, p, q, method, body, quoteRide,
       createRide,
       cardBookingProblem: (fare) => bookingPaymentProblem("card", profile.balance, fare.total),
       serializeRide: async (id) =>
@@ -693,6 +688,7 @@ export async function handleVtc(input, context) {
     const rider = required(await admin.from("profiles").select("name").eq("id", r.rider_id).single());
     return {
       offer: {
+        airportReturn: await returnHintForRide(r, approachSecondsFor(approachMeters || 0), routeBetween),
         rideId: r.id,
         pickup: r.pickup,
         dropoff: r.dropoff,
@@ -1087,6 +1083,8 @@ export async function handleVtc(input, context) {
     if (target === uid) throw new Error("Vous ne pouvez pas supprimer votre propre compte");
     const files = (await admin.storage.from(DOCUMENTS_BUCKET).list(target, { limit: 1000 })).data || [];
     const removed = required(await admin.rpc("admin_delete_account", { _user: target }));
+    // Inbox threads are owned by immutable account id even after an e-mail change.
+    required(await admin.from("contact_messages").delete().eq("topic", "driver_conversation").like("message", '%"userId":"' + target + '"%'));
     if (files.length) await admin.storage.from(DOCUMENTS_BUCKET).remove(files.map((f) => `${target}/${f.name}`));
     const { error } = await admin.auth.admin.deleteUser(target);
     if (error && !/not.?found/i.test(error.message))
@@ -1126,7 +1124,7 @@ export async function handleVtc(input, context) {
       ).map((m) => ({ ...m, _id: m.id, createdAt: m.created_at, resolvedAt: m.resolved_at })),
     };
   }
-  if (p === "/api/drivers/me/earnings" || p === "/api/admin/overview") {
+  if (p === "/api/admin/overview") {
     const rs = required(
       await (role === "admin" ? admin : db)
         .from("rides")

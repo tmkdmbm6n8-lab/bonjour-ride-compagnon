@@ -28,7 +28,10 @@ import { Route as AuthenticatedAdminRidesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated.admin.support'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated.admin.users'
 import { Route as AuthenticatedDriverDashboardRouteImport } from './routes/_authenticated.driver.dashboard'
+import { Route as AuthenticatedDriverDiscoverRouteImport } from './routes/_authenticated.driver.discover'
 import { Route as AuthenticatedDriverEarningsRouteImport } from './routes/_authenticated.driver.earnings'
+import { Route as AuthenticatedDriverInboxRouteImport } from './routes/_authenticated.driver.inbox'
+import { Route as AuthenticatedDriverMenuRouteImport } from './routes/_authenticated.driver.menu'
 import { Route as AuthenticatedDriverPreferencesRouteImport } from './routes/_authenticated.driver.preferences'
 import { Route as AuthenticatedDriverProfileRouteImport } from './routes/_authenticated.driver.profile'
 import { Route as AuthenticatedDriverTripsRouteImport } from './routes/_authenticated.driver.trips'
@@ -136,12 +139,29 @@ const AuthenticatedDriverDashboardRoute =
     path: '/driver/dashboard',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDriverDiscoverRoute =
+  AuthenticatedDriverDiscoverRouteImport.update({
+    id: '/driver/discover',
+    path: '/driver/discover',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDriverEarningsRoute =
   AuthenticatedDriverEarningsRouteImport.update({
     id: '/driver/earnings',
     path: '/driver/earnings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDriverInboxRoute =
+  AuthenticatedDriverInboxRouteImport.update({
+    id: '/driver/inbox',
+    path: '/driver/inbox',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDriverMenuRoute = AuthenticatedDriverMenuRouteImport.update({
+  id: '/driver/menu',
+  path: '/driver/menu',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDriverPreferencesRoute =
   AuthenticatedDriverPreferencesRouteImport.update({
     id: '/driver/preferences',
@@ -203,7 +223,10 @@ export interface FileRoutesByFullPath {
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/driver/dashboard': typeof AuthenticatedDriverDashboardRoute
+  '/driver/discover': typeof AuthenticatedDriverDiscoverRoute
   '/driver/earnings': typeof AuthenticatedDriverEarningsRoute
+  '/driver/inbox': typeof AuthenticatedDriverInboxRoute
+  '/driver/menu': typeof AuthenticatedDriverMenuRoute
   '/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
   '/driver/profile': typeof AuthenticatedDriverProfileRoute
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
@@ -231,7 +254,10 @@ export interface FileRoutesByTo {
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/driver/dashboard': typeof AuthenticatedDriverDashboardRoute
+  '/driver/discover': typeof AuthenticatedDriverDiscoverRoute
   '/driver/earnings': typeof AuthenticatedDriverEarningsRoute
+  '/driver/inbox': typeof AuthenticatedDriverInboxRoute
+  '/driver/menu': typeof AuthenticatedDriverMenuRoute
   '/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
   '/driver/profile': typeof AuthenticatedDriverProfileRoute
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
@@ -261,7 +287,10 @@ export interface FileRoutesById {
   '/_authenticated/admin/support': typeof AuthenticatedAdminSupportRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/driver/dashboard': typeof AuthenticatedDriverDashboardRoute
+  '/_authenticated/driver/discover': typeof AuthenticatedDriverDiscoverRoute
   '/_authenticated/driver/earnings': typeof AuthenticatedDriverEarningsRoute
+  '/_authenticated/driver/inbox': typeof AuthenticatedDriverInboxRoute
+  '/_authenticated/driver/menu': typeof AuthenticatedDriverMenuRoute
   '/_authenticated/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
   '/_authenticated/driver/profile': typeof AuthenticatedDriverProfileRoute
   '/_authenticated/driver/trips': typeof AuthenticatedDriverTripsRoute
@@ -291,7 +320,10 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/users'
     | '/driver/dashboard'
+    | '/driver/discover'
     | '/driver/earnings'
+    | '/driver/inbox'
+    | '/driver/menu'
     | '/driver/preferences'
     | '/driver/profile'
     | '/driver/trips'
@@ -319,7 +351,10 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/users'
     | '/driver/dashboard'
+    | '/driver/discover'
     | '/driver/earnings'
+    | '/driver/inbox'
+    | '/driver/menu'
     | '/driver/preferences'
     | '/driver/profile'
     | '/driver/trips'
@@ -348,7 +383,10 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/support'
     | '/_authenticated/admin/users'
     | '/_authenticated/driver/dashboard'
+    | '/_authenticated/driver/discover'
     | '/_authenticated/driver/earnings'
+    | '/_authenticated/driver/inbox'
+    | '/_authenticated/driver/menu'
     | '/_authenticated/driver/preferences'
     | '/_authenticated/driver/profile'
     | '/_authenticated/driver/trips'
@@ -506,11 +544,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDriverDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/driver/discover': {
+      id: '/_authenticated/driver/discover'
+      path: '/driver/discover'
+      fullPath: '/driver/discover'
+      preLoaderRoute: typeof AuthenticatedDriverDiscoverRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/driver/earnings': {
       id: '/_authenticated/driver/earnings'
       path: '/driver/earnings'
       fullPath: '/driver/earnings'
       preLoaderRoute: typeof AuthenticatedDriverEarningsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/driver/inbox': {
+      id: '/_authenticated/driver/inbox'
+      path: '/driver/inbox'
+      fullPath: '/driver/inbox'
+      preLoaderRoute: typeof AuthenticatedDriverInboxRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/driver/menu': {
+      id: '/_authenticated/driver/menu'
+      path: '/driver/menu'
+      fullPath: '/driver/menu'
+      preLoaderRoute: typeof AuthenticatedDriverMenuRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/driver/preferences': {
@@ -588,7 +647,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedDriverDashboardRoute: typeof AuthenticatedDriverDashboardRoute
+  AuthenticatedDriverDiscoverRoute: typeof AuthenticatedDriverDiscoverRoute
   AuthenticatedDriverEarningsRoute: typeof AuthenticatedDriverEarningsRoute
+  AuthenticatedDriverInboxRoute: typeof AuthenticatedDriverInboxRoute
+  AuthenticatedDriverMenuRoute: typeof AuthenticatedDriverMenuRoute
   AuthenticatedDriverPreferencesRoute: typeof AuthenticatedDriverPreferencesRoute
   AuthenticatedDriverProfileRoute: typeof AuthenticatedDriverProfileRoute
   AuthenticatedDriverTripsRoute: typeof AuthenticatedDriverTripsRoute
@@ -607,7 +669,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedDriverDashboardRoute: AuthenticatedDriverDashboardRoute,
+  AuthenticatedDriverDiscoverRoute: AuthenticatedDriverDiscoverRoute,
   AuthenticatedDriverEarningsRoute: AuthenticatedDriverEarningsRoute,
+  AuthenticatedDriverInboxRoute: AuthenticatedDriverInboxRoute,
+  AuthenticatedDriverMenuRoute: AuthenticatedDriverMenuRoute,
   AuthenticatedDriverPreferencesRoute: AuthenticatedDriverPreferencesRoute,
   AuthenticatedDriverProfileRoute: AuthenticatedDriverProfileRoute,
   AuthenticatedDriverTripsRoute: AuthenticatedDriverTripsRoute,

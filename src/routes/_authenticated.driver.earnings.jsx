@@ -1,176 +1,38 @@
-import {createFileRoute} from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
+import { useState } from 'react';
+import { BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import DriverLayout from '@/components/DriverLayout';
-import {apiFetch as fetch} from '@/lib/archive-fetch';
-'use client';
-
 import Link from '@/lib/archive-navigation';
 import PayoutCard from '@/components/driver/PayoutCard';
-
-import { useEffect, useState } from 'react';
-import { DollarSign, TrendingUp, Star, CheckCircle2 } from 'lucide-react';
-import { Loading, Empty, money } from '@/components/ui/bits';
-import { formatRelativeTime, formatDistance } from '@/lib/utils/geo';
+import { Loading, money } from '@/components/ui/bits';
+import useDriverData from '@/hooks/useDriverData';
+import { parisDay, shiftDay, workDuration } from '@/lib/vtc-dates';
+import MapView from '@/components/ArchiveMap';
+import Modal from '@/components/ui/Modal';
+import { drawableRoute } from '@/lib/utils/route-display';
 
 function EarningsPage() {
-  const [data, setData] = useState(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let ignore = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/drivers/me/earnings');
-        if (!res.ok) throw new Error();
-        const payload = await res.json();
-        if (!ignore) setData(payload);
-      } catch {
-        if (!ignore) setFailed(true);
-      }
-    })();
-    return () => { ignore = true; };
-  }, []);
-
-  if (failed) {
-    return (
-      <div className="content-pad">
-        <Empty icon={DollarSign} title="Impossible de charger les revenus" hint="Vérifiez votre connexion et actualisez la page." />
-      </div>
-    );
-  }
-  if (!data) return <div className="content-pad"><Loading label="Chargement des revenus…" /></div>;
-
-  const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-  const byDay = new Map((data.week.byDay || []).map((d) => [d._id, d]));
-  const weekBars = [];
-  const monday = new Date();
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  let maxDay = 0;
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const key = d.toISOString().slice(0, 10);
-    const earnings = byDay.get(key)?.earnings || 0;
-    maxDay = Math.max(maxDay, earnings);
-    weekBars.push({ label: days[i], earnings, isToday: key === new Date().toISOString().slice(0, 10) });
-  }
-
-  return (
-    <div className="content-pad" style={{ maxWidth: 860 }}>
-      <h1 className="page-title">Revenus</h1>
-      <p className="page-sub mb-6">Vos revenus en un coup d’œil</p>
-
-      <PayoutCard />
-
-      {data.wallet?.balance < 0 && (
-        <div
-          className="card card-pad mb-4 flex items-center justify-between wrap gap-3"
-          style={{ borderColor: 'var(--danger)', background: 'var(--danger-bg)' }}
-        >
-          <div>
-            <div className="small" style={{ fontWeight: 700, color: 'var(--danger)' }}>
-              Solde débiteur : {money(Math.abs(data.wallet.balance))}
-            </div>
-            <div className="tiny muted mt-1"> Rechargez votre portefeuille pour le régler — la conduite est suspendue lorsque votre dette dépasse 25 €. </div>
-          </div>
-          <Link href="/driver/wallet" className="btn btn-primary btn-sm">Régler le solde</Link>
-        </div>
-      )}
-
-      <div className="grid-3">
-        <div className="card card-pad stat">
-          <span className="stat-label">Aujourd’hui</span>
-          <span className="stat-value">{money(data.today.earnings)}</span>
-          <span className="tiny muted">{data.today.trips} course{data.today.trips === 1 ? '' : 's'}</span>
-        </div>
-        <div className="card card-pad stat">
-          <span className="stat-label">Cette semaine</span>
-          <span className="stat-value">{money(data.week.total)}</span>
-          <span className="tiny muted">{data.week.trips} course{data.week.trips === 1 ? '' : 's'}</span>
-        </div>
-        <div className="card card-pad stat">
-          <span className="stat-label">Depuis le début</span>
-          <span className="stat-value">{money(data.stats.totalEarnings || 0)}</span>
-          <span className="tiny muted">{data.stats.totalTrips || 0} courses</span>
-        </div>
-      </div>
-
-      {/* Week chart */}
-      <div className="card card-pad mt-4">
-        <h3 className="small mb-4" style={{ fontWeight: 700 }}>Cette semaine</h3>
-        <div className="flex items-center gap-2" style={{ height: 120, alignItems: 'flex-end' }}>
-          {weekBars.map((bar) => ( <div key={bar.label} className="flex-col items-center gap-2 flex-1">
-              <div
-                title={money(bar.earnings)}
-                style={{
-                  width: '100%',
-                  maxWidth: 44,
-                  height: Math.max(4, maxDay ? (bar.earnings / maxDay) * 90 : 4),
-                  borderRadius: 6,
-                  background: bar.isToday ? 'var(--gold-600)' : 'var(--ink-900)',
-                  opacity: bar.earnings === 0 ? 0.15 : 1,
-                  transition: 'height 400ms var(--ease)',
-                }}
-              />
-              <span className="tiny muted">{bar.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Performance */}
-      <div className="grid-3 mt-4">
-        <div className="card card-pad flex items-center gap-3">
-          <Star size={20} style={{ color: 'var(--gold-600)' }} />
-          <div>
-            <div style={{ fontWeight: 700 }} className="mono-nums">{(data.stats.averageRating ?? 5).toFixed(1)}</div>
-            <div className="tiny muted">Note</div>
-          </div>
-        </div>
-        <div className="card card-pad flex items-center gap-3">
-          <CheckCircle2 size={20} style={{ color: 'var(--success)' }} />
-          <div>
-            <div style={{ fontWeight: 700 }} className="mono-nums">{data.stats.acceptanceRate ?? 100}%</div>
-            <div className="tiny muted">Taux d’acceptation</div>
-          </div>
-        </div>
-        <div className="card card-pad flex items-center gap-3">
-          <TrendingUp size={20} style={{ color: 'var(--info)' }} />
-          <div>
-            <div style={{ fontWeight: 700 }} className="mono-nums">{data.stats.totalTrips || 0}</div>
-            <div className="tiny muted">Total des courses</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent trips */}
-      <h2 className="small mt-8 mb-3" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)' }}> Courses récentes </h2>
-      {data.recentRides.length === 0 ? (
-        <Empty icon={DollarSign} title="Aucune course pour le moment" hint="Passez en ligne pour commencer à gagner de l’argent." />
-      ) : (
-        <div className="card">
-          {data.recentRides.map((r, i) => ( <div
-              key={r._id}
-              className="flex items-center gap-3"
-              style={{ padding: '14px 18px', borderBottom: i < data.recentRides.length - 1 ? '1px solid var(--ink-100)' : 'none' }}
-            >
-              <div className="flex-1" style={{ minWidth: 0 }}>
-                <div className="small truncate" style={{ fontWeight: 600 }}>
-                  {r.dropoff?.address}
-                </div>
-                <div className="tiny muted">
-                  {formatRelativeTime(r.completedAt)} · {formatDistance(r.route?.distanceMeters || 0)}
-                </div>
-              </div>
-              <span className="small mono-nums" style={{ fontWeight: 700, color: 'var(--success)' }}>
-                +{money(r.fare?.driverEarnings)}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  const [day, setDay] = useState(parisDay()), [details, setDetails] = useState(false), [selectedDay, setSelectedDay] = useState(null), [mapOpen, setMapOpen] = useState(false), [rideIndex, setRideIndex] = useState(0);
+  const { data, error, reload } = useDriverData(`/api/drivers/me/earnings?day=${day}`);
+  const date = (value) => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short' }).format(new Date(`${value}T12:00:00Z`));
+  if (!data) return <div className="driver-tab-page"><h1>Revenus</h1>{error ? <div role="alert"><p>{error}</p><button className="driver-chip" onClick={reload}>Réessayer</button></div> : <Loading label="Chargement des revenus…" />}</div>;
+  const week = data.week;
+  const max = Math.max(1, ...week.byDay.map((row) => row.earnings));
+  const selected = week.byDay.find((row) => row._id === selectedDay);
+  const ride = data.recentRides[rideIndex];
+  return <div className="driver-tab-page earnings-page">
+    <h1>Revenus</h1>
+    {error && <p className="driver-notice" role="alert">Les données n’ont pas pu être actualisées. {error}</p>}
+    <div className="earnings-week-controls"><button onClick={() => { setDay(shiftDay(day, -7)); setSelectedDay(null); }} aria-label="Semaine précédente"><ChevronLeft size={23} /></button><span>{date(week.start)} – {date(shiftDay(week.end, -1))}</span><button disabled={week.end > parisDay()} onClick={() => { setDay(shiftDay(day, 7)); setSelectedDay(null); }} aria-label="Semaine suivante"><ChevronRight size={23} /></button></div>
+    <div className="earnings-overview"><div><p>{selected ? date(selected._id) : 'Cette semaine'}</p><strong>{money(selected ? selected.earnings : week.total)}</strong></div><div className="earnings-chart" aria-label="Revenus journaliers">{week.byDay.map((row, index) => <button key={row._id} className={selectedDay === row._id ? 'selected' : ''} onClick={() => setSelectedDay(selectedDay === row._id ? null : row._id)} aria-label={`${date(row._id)} : ${money(row.earnings)}, ${row.trips} courses, ${workDuration(row.activitySeconds)}`} aria-pressed={selectedDay === row._id}><span style={{ height: row.earnings > 0 ? `${Math.max(3, row.earnings / max * 100)}%` : 0 }} /><small>{['L', 'M', 'M', 'J', 'V', 'S', 'D'][index]}</small></button>)}</div></div>
+    <div className="earnings-stats"><div><span>Temps en course</span><strong>{workDuration(selected ? selected.activitySeconds : week.activitySeconds)}</strong></div><div><span>Courses</span><strong>{selected ? selected.trips : week.trips}</strong></div><div><span>Note chauffeur</span><strong>{Number(data.stats?.averageRating ?? 5).toFixed(2)}</strong></div></div>
+    <p className="driver-feed-note">Temps réellement enregistré pendant les courses terminées, approche comprise. Le temps d’attente hors course n’est pas comptabilisé.</p>
+    <button className="earnings-details-button" onClick={() => setDetails(!details)} aria-expanded={details}>{details ? 'Masquer les détails' : 'Voir les détails'}</button>
+    {details && <section className="earnings-daily"><h2>Chaque jour</h2>{week.byDay.map((row) => <div key={row._id}><span>{date(row._id)}<small>{row.trips} courses · {workDuration(row.activitySeconds)}</small></span><strong>{money(row.earnings)}</strong></div>)}<h2>Courses récentes de cette semaine</h2>{data.recentRides.length === 0 && <p className="driver-muted">Aucune course terminée.</p>}{data.recentRides.map((ride) => <Link className="driver-menu-row" key={ride.id} href="/driver/trips"><span>{ride.dropoff?.address}<small>{new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(ride.completedAt))}</small></span><strong>{money(ride.fare?.driverEarnings)}</strong></Link>)}</section>}
+    <Link href="/driver/wallet" className="driver-menu-row earnings-balance"><span>Solde</span><strong>{money(data.wallet.balance)}</strong><ChevronRight size={21} /></Link>
+    <details className="earnings-payout"><summary>Versements et retraits</summary><PayoutCard /></details>
+    <button className="earnings-map-banner" onClick={() => setMapOpen(true)}><BarChart3 size={25} /><span>Voir la carte de mes courses de la semaine</span><ChevronRight size={22} /></button>
+    <Modal open={mapOpen} onClose={() => setMapOpen(false)} title="Mes courses de la semaine" maxWidth={700}>{!ride ? <p>Aucune course terminée pour cette semaine.</p> : <><select className="input" aria-label="Choisir une course" value={rideIndex} onChange={(e) => setRideIndex(Number(e.target.value))}>{data.recentRides.map((item, index) => <option key={item.id} value={index}>{item.dropoff?.address} · {money(item.fare?.driverEarnings)}</option>)}</select><div className="earnings-route-map"><MapView key={ride.id} center={ride.pickup} pickup={ride.pickup} dropoff={ride.dropoff} routeGeometry={drawableRoute(ride.route?.geometry)} fit /></div></>}</Modal>
+  </div>;
 }
-
-export const Route=createFileRoute('/_authenticated/driver/earnings')({head:()=>({meta:[{title:"Revenus · StrasDrive"},{name:'description',content:"StrasDrive — revenus, service de mise en relation VTC et tarifs en euros."},{property:'og:title',content:"Revenus · StrasDrive"},{property:'og:description',content:"StrasDrive — revenus, service de mise en relation VTC et tarifs en euros."},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:() => <DriverLayout><EarningsPage/></DriverLayout>});
+export const Route = createFileRoute('/_authenticated/driver/earnings')({ head: () => ({ meta: [{ title: 'Revenus · StrasDrive' }] }), component: () => <DriverLayout><EarningsPage /></DriverLayout> });

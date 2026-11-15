@@ -1,3 +1,4 @@
+import { clock as transportClock } from "@/lib/vtc-dates";
 import { createFileRoute } from "@tanstack/react-router";
 import DriverLayout from "@/components/DriverLayout";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
@@ -68,6 +69,7 @@ function DriverDashboard() {
 
   const onEvent = useCallback(
     (type, data) => {
+      if ((type === "offer" || type === "offer-updated") && data?.airportReturn) toast(`Retour potentiel possible · vol ${data.airportReturn.flightNumber} à ${transportClock(data.airportReturn.arrivalAt)}`, "info", 7000);
       if (type === "offer-expired") toast("Demande expirée", "info", 2500);
       if (type === "offer-withdrawn") toast("La demande a été annulée", "info", 2500);
       if (type === "rider-cancelled") {
@@ -339,9 +341,7 @@ function DriverDashboard() {
           </div>
 
           <div className="ride-panel">
-            <button className="btn btn-secondary btn-full" onClick={() => setWaybillOpen(true)}>
-              Réservation préalable · Waybill
-            </button>
+            <button className="btn btn-secondary btn-full" onClick={() => setWaybillOpen(true)}>Réservation préalable · Waybill</button>
             {/* ── Active trip card ── */}
             {ride && (
               <div className="card card-pad animate-in">
@@ -549,6 +549,12 @@ function DriverDashboard() {
               margin: "-16px -16px",
             }}
           >
+            {offer.airportReturn && <div className="airport-return-alert" role="status">
+              <strong>✈ {offer.airportReturn.title}</strong>
+              <p>Arrivée du vol {offer.airportReturn.flightNumber}{offer.airportReturn.city ? ` depuis ${offer.airportReturn.city}` : ''} à {transportClock(offer.airportReturn.arrivalAt)}.</p>
+              <p>{offer.airportReturn.statusText}</p>
+              <small>{offer.airportReturn.message}</small>
+            </div>}
             {/* 1. Ligne du haut : Pilule de gamme à gauche + Croix de refus à droite */}
             <div className="flex items-center justify-between mb-3">
               <div
