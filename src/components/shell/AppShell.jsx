@@ -11,7 +11,7 @@ import { Avatar } from "@/components/ui/bits";
  * Authenticated app shell: sidebar on desktop, bottom tab bar on mobile.
  * @param {{nav: Array<{href:string,label:string,icon:any}>, children:any}} props
  */
-export default function AppShell({ nav, children }) {
+export default function AppShell({ nav, children, variant = "default" }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user;
@@ -19,7 +19,9 @@ export default function AppShell({ nav, children }) {
     user?.role === "driver" ? "/driver/dashboard" : user?.role === "admin" ? "/admin/dashboard" : "/dashboard";
 
   return (
-    <div className={`shell ${pathname === "/driver/dashboard" || pathname === "/driver/preferences" ? "shell-dark" : ""}`}>
+    <div
+      className={`shell ${variant === "rider" ? "shell-rider" : ""} ${pathname === "/driver/dashboard" || pathname === "/driver/preferences" ? "shell-dark" : ""}`}
+    >
       <aside className="sidebar">
         <div className="sidebar-brand">
           <Link href={homeHref} aria-label="Accueil StrasDrive">
@@ -30,7 +32,12 @@ export default function AppShell({ nav, children }) {
           {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
-              <Link key={href} href={href} className={`nav-item ${active ? "active" : ""}`}>
+              <Link
+                key={href}
+                href={href}
+                className={`nav-item ${active ? "active" : ""}`}
+                aria-current={active ? "page" : undefined}
+              >
                 <Icon size={19} strokeWidth={2} />
                 <span>{label}</span>
               </Link>
