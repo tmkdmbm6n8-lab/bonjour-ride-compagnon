@@ -555,24 +555,24 @@ export async function handleVtc(input, context) {
         balanceAfter: Number(t.balance_after),
         createdAt: t.created_at,
       })),
-      stripeEnabled: Boolean(process.env.STRIPE_SECRET_KEY),
+      stripeEnabled: Boolean(process.env.STRIPE_SANDBOX_API_KEY || process.env.STRIPE_LIVE_API_KEY),
     };
   }
-  if (p === "/api/wallet/checkout" || p === "/api/drivers/me/payouts") {
+  if (p === "/api/drivers/me/payouts") {
     const { handlePayments } = await import("./vtc-payments.server");
     return handlePayments({ admin, profile, uid, role, p, q, method, body });
   }
-  if (p === "/api/rides" && method === "POST") {
-    if (role !== "rider") throw new Error("Seuls les clients peuvent réserver");
-    if (!DEFAULT_PRICING[body.vehicleType]) throw new Error("Gamme invalide");
-    const quote = await estimates(admin, body.pickup, body.dropoff);
-    const fare = quote.estimates[body.vehicleType];
+  // Validated live quote for a booking (shared by wallet/cash booking and card checkout).
+  const quoteRide = async (b) => {
+    if (!DEFAULT_PRICING[b.vehicleType]) throw new Error("Gamme invalide");
+    const quote = await estimates(admin, b.pickup, b.dropoff);
+    const fare = quote.estimates[b.vehicleType];
     if (!fare) throw new Error("Tarif indisponible pour cette gamme, réessayez");
     if (quote.route.distanceMeters < 100 || quote.route.distanceMeters > 200000)
       throw new Error("Le trajet doit être compris entre 100 m et 200 km");
-    const paymentMethod = paymentMethodOf(body.paymentMethod);
-    const payProblem = bookingPaymentProblem(paymentMethod, profile.balance, fare.total);
-    if (payProblem) throw new Error(payProblem);
+    return { fare, route: quote.route };
+  };
+  const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment }) => {
     const pin = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000).padStart(4, "0");
     // Note moyenne laissée par les chauffeurs, figée à la commande (filtre « note minimale » des chauffeurs).
     const past = required(
@@ -591,20 +591,50 @@ export async function handleVtc(input, context) {
         .from("rides")
         .insert({
           rider_id: uid,
-          vehicle_type: body.vehicleType,
-          pickup: body.pickup,
-          dropoff: body.dropoff,
-          route: quote.route,
+          vehicle_type: vehicleType,
+          pickup,
+          dropoff,
+          route,
           fare,
           pin,
-          payment: { method: paymentMethod },
+          payment,
           rider_rating: riderRating,
         })
         .select("*")
         .single(),
     );
     await assignOffer(admin, r);
-    return { ride: await serialize(admin, r, uid) };
+    return serialize(admin, r, uid);
+  };
+  if (p === "/api/wallet/checkout" || p === "/api/rides/card-checkout" || p === "/api/rides/card-confirm") {
+    const { handleCheckout } = await import("./vtc-checkout.server");
+    return handleCheckout({
+      admin, uid, role, email: context.claims?.email, p, q, method, body, quoteRide,
+      createRide: async (args) => {
+        const problem = bookingPaymentProblem("card", profile.balance, args.fare.total);
+        if (problem) throw new Error(problem);
+        return createRide(args);
+      },
+      serializeRide: async (id) =>
+        serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid),
+    });
+  }
+  if (p === "/api/rides" && method === "POST") {
+    if (role !== "rider") throw new Error("Seuls les clients peuvent réserver");
+    const paymentMethod = paymentMethodOf(body.paymentMethod);
+    if (paymentMethod === "card") throw new Error("Le paiement par carte se fait depuis l’écran de paiement sécurisé");
+    const { fare, route } = await quoteRide(body);
+    const payProblem = bookingPaymentProblem(paymentMethod, profile.balance, fare.total);
+    if (payProblem) throw new Error(payProblem);
+    const ride = await createRide({
+      vehicleType: body.vehicleType,
+      pickup: body.pickup,
+      dropoff: body.dropoff,
+      route,
+      fare,
+      payment: { method: paymentMethod },
+    });
+    return { ride };
   }
   if (p === "/api/rides/active") {
     const list = required(
