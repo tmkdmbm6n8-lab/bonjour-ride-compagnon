@@ -2186,3 +2186,384 @@ textarea.input {
     gap: 24px;
   }
 }
+/* Account popover and real rider activity. */
+.rider-account {
+  display: none;
+}
+.activity-page {
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 56px;
+  color: #111;
+}
+.activity-side {
+  padding-top: 10px;
+  font-size: 16px;
+}
+.activity-main {
+  min-width: 0;
+}
+.activity-main h1,
+.activity-section-heading h2 {
+  font-size: 28px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+  margin: 0;
+}
+.activity-main h1 {
+  margin-bottom: 18px;
+}
+.activity-upcoming-card,
+.activity-ride-card {
+  border: 2px solid #e5e5e5;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.activity-banner {
+  width: 100%;
+  height: 134px;
+  display: block;
+}
+.activity-upcoming-body {
+  padding: 14px 16px 16px;
+}
+.activity-upcoming-body h2 {
+  font-size: 20px;
+  line-height: 1.4;
+  letter-spacing: -0.4px;
+  margin-bottom: 10px;
+}
+.activity-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f6f6f6;
+  border: 0;
+  color: #111;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+button.activity-pill,
+a.activity-pill {
+  cursor: pointer;
+}
+button.activity-pill:hover,
+a.activity-pill:hover {
+  background: #e9e9e9;
+}
+.activity-pill:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.activity-past {
+  margin-top: 38px;
+}
+.activity-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.activity-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.activity-filters select {
+  background: transparent;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  max-width: 180px;
+}
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.activity-ride-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  min-height: 208px;
+}
+.activity-map {
+  position: relative;
+  width: 300px;
+  height: 180px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: #eef1f4;
+}
+.activity-map .maplibregl-ctrl-top-right,
+.activity-map .maplibregl-ctrl-top-left,
+.activity-map .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group {
+  display: none;
+}
+.activity-ride-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  align-items: flex-start;
+  flex: 1;
+}
+.activity-destination {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.activity-ride-info p {
+  font-size: 13px;
+  margin: 0;
+}
+.activity-status {
+  margin-top: 8px;
+}
+.activity-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+.activity-card-actions .activity-pill {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.activity-empty {
+  padding: 28px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.activity-empty p {
+  font-size: 14px;
+  color: #666;
+}
+.activity-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 24px;
+  font-size: 14px;
+}
+@media (min-width: 901px) {
+  .shell-rider .rider-legacy-user {
+    display: none;
+  }
+  .shell-rider .sidebar-footer {
+    max-width: none;
+  }
+  .shell-rider .sidebar-nav > a:not(:first-child) {
+    display: none;
+  }
+  .rider-account {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .rider-activity-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f6f6f6;
+    padding: 10px 14px;
+    border-radius: 24px;
+    font-size: 14px;
+    color: #111;
+  }
+  .rider-account-trigger {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    color: #111;
+  }
+  .rider-account-trigger .avatar {
+    width: 40px;
+    height: 40px;
+  }
+  .rider-account-popover {
+    position: absolute;
+    top: calc(100% + 16px);
+    right: 0;
+    width: 376px;
+    max-width: calc(100vw - 32px);
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    border-radius: 13px;
+    padding: 10px 16px 16px;
+    box-shadow: 0 3px 13px #0003;
+    color: #111;
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
+  }
+  .rider-account-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .rider-account-heading h2 {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.7px;
+    padding-top: 0;
+    overflow-wrap: anywhere;
+  }
+  .rider-account-heading .avatar {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+  }
+  .rider-account-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .rider-account-shortcuts > * {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    height: 84px;
+    border-radius: 12px;
+    background: #f6f6f6;
+    border: 0;
+    font: inherit;
+    font-size: 15px;
+    color: #111;
+    cursor: pointer;
+  }
+  .rider-account-balance {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    min-height: 56px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #f6f6f6;
+    font-size: 15px;
+  }
+  .rider-account-balance strong {
+    font-size: 24px;
+    letter-spacing: -0.5px;
+  }
+  .rider-account-links {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+  .rider-account-links > * {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-height: 64px;
+    padding: 12px 24px;
+    background: transparent;
+    border: 0;
+    color: #111;
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .rider-account-links > :first-child {
+    border-bottom: 1px solid #f1f1f1;
+  }
+  .rider-account-signout {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    border-radius: 9px;
+    background: #f6f6f6;
+    color: #e00032;
+    border: 0;
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .rider-account-shortcuts > *:hover,
+  .rider-account-links > *:hover,
+  .rider-account-balance:hover,
+  .rider-account-signout:hover {
+    background: #ededed;
+  }
+  .rider-account button:focus-visible,
+  .rider-account a:focus-visible,
+  .activity-page a:focus-visible,
+  .activity-page button:focus-visible {
+    outline: 2px solid #111;
+    outline-offset: 3px;
+  }
+}
+@media (max-width: 1100px) {
+  .activity-page {
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 24px;
+  }
+  .activity-map {
+    width: 230px;
+  }
+}
+@media (max-width: 900px) {
+  .activity-page {
+    display: block;
+    padding: 24px 16px 40px;
+  }
+  .activity-side {
+    display: none;
+  }
+  .activity-main h1,
+  .activity-section-heading h2 {
+    font-size: 24px;
+  }
+  .activity-section-heading {
+    flex-wrap: wrap;
+  }
+  .activity-filters {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .activity-ride-card {
+    flex-direction: column;
+  }
+  .activity-map {
+    width: 100%;
+    height: 180px;
+  }
+  .activity-banner {
+    height: 115px;
+  }
+}
