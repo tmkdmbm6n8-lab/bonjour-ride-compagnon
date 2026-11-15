@@ -23,6 +23,7 @@ import {
   Square,
   User,
   Phone,
+  FileText,
 } from "lucide-react";
 
 import MapView from "@/components/ArchiveMap";
