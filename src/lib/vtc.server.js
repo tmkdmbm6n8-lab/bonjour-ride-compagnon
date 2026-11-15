@@ -253,10 +253,9 @@ async function estimates(db, a, b) {
     uberList = null;
   }
 
-  // 2. Si Uber ne répond pas ou renvoie une erreur : on stoppe et on affiche l'erreur
-  if (!uberList || !Array.isArray(uberList) || !uberList.length) {
-    throw new Error("Tarifs en direct momentanément indisponibles. Veuillez réessayer dans quelques instants.");
-  }
+  // 2. Si Uber ne répond pas (cookie expiré, lenteur, erreur) : on ne bloque jamais le client,
+  //    chaque gamme sans prix Uber retombe sur la grille StrasDrive (plancher ARPE inclus).
+  if (!Array.isArray(uberList)) uberList = [];
 
   // 3. Correspondance avec les gammes StrasDrive (Go, Comfort, Pet, XL)
   const findProduct = (keywords) => {
@@ -320,12 +319,18 @@ async function estimates(db, a, b) {
   applyUberPrice("pet", uberPet);
   applyUberPrice("xl", uberXL);
 
-  // Vérifier qu'au moins la gamme économique a pu être tarifée
-  if (!finalEstimates.economy) {
-    throw new Error("Impossible de récupérer les tarifs Uber pour cet itinéraire.");
+  // 4. Repli : toute gamme non tarifée par Uber utilise la grille StrasDrive
+  let fallback = false;
+  for (const type of Object.keys(DEFAULT_PRICING)) {
+    if (finalEstimates[type] || !rules[type]) continue;
+    fallback = true;
+    finalEstimates[type] = {
+      ...calculateFare(rules[type], route.distanceMeters, route.durationSeconds),
+      isUberPrice: false,
+    };
   }
 
-  return { route, estimates: finalEstimates, source: "uber" };
+  return { route, estimates: finalEstimates, source: fallback ? (uberList.length ? "mixed" : "strasdrive") : "uber" };
 }
 
 export async function handleVtc(input, context) {
@@ -562,6 +567,7 @@ export async function handleVtc(input, context) {
     if (!DEFAULT_PRICING[body.vehicleType]) throw new Error("Gamme invalide");
     const quote = await estimates(admin, body.pickup, body.dropoff);
     const fare = quote.estimates[body.vehicleType];
+    if (!fare) throw new Error("Tarif indisponible pour cette gamme, réessayez");
     if (quote.route.distanceMeters < 100 || quote.route.distanceMeters > 200000)
       throw new Error("Le trajet doit être compris entre 100 m et 200 km");
     const paymentMethod = paymentMethodOf(body.paymentMethod);
