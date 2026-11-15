@@ -1,5 +1,6 @@
 import { haversineDistance } from "./utils/geo";
 import { canServe } from "./vtc-classes";
+import { tripPrefsAllow } from "./vtc-trip-prefs";
 
 // Ride dispatch, in three steps:
 // 1. "priority": every available priority driver sees the ride at once, whatever the distance; first to accept wins.
@@ -33,10 +34,12 @@ export function isThrottled(driver, pool) {
   return mine > avg * FAIR_SHARE_RATIO;
 }
 
-/** Drivers (already online, approved and free) who can still receive this ride: its class, or a higher class that opted into it, minus fair-share throttled drivers when someone else can take it. */
+/** Drivers (already online, approved and free) who can still receive this ride: its class, or a higher class that opted into it, minus drivers whose trip preferences (cash, rider rating, pay per km) refuse it and fair-share throttled drivers when someone else can take it. */
 export function availableFor(ride, drivers) {
   const declined = ride.declined || [];
-  const pool = drivers.filter((d) => canServe(d, ride.vehicle_type) && !declined.includes(d.user_id));
+  const pool = drivers.filter(
+    (d) => canServe(d, ride.vehicle_type) && !declined.includes(d.user_id) && tripPrefsAllow(d, ride),
+  );
   const fair = pool.filter((d) => !isThrottled(d, pool));
   return fair.length ? fair : pool;
 }
