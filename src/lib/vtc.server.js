@@ -40,6 +40,7 @@ import {
   TEST_OFFER_SECONDS,
   pickupZoneProblem,
 } from "./vtc-dispatch";
+import { sanitizeTripPrefs, tripPrefsOf, riderAverage } from "./vtc-trip-prefs";
 const active = ["searching", "accepted", "arrived", "in_progress"];
 function required(result) {
   if (result.error) throw new Error(result.error.message);
@@ -59,6 +60,7 @@ function driverShape(d) {
     vehicleClass: vc,
     acceptsClasses: sanitizeAcceptedClasses(vc, d.accepts_classes),
     lowerClasses: LOWER_CLASSES[vc],
+    tripPrefs: tripPrefsOf(d),
   };
 }
 function docShape(d) {
@@ -401,6 +403,13 @@ export async function handleVtc(input, context) {
     );
     return { driver: driverShape(required(await db.from("drivers").select("*").eq("user_id", uid).single())) };
   }
+  if (p === "/api/drivers/me/preferences" && method === "PATCH") {
+    // Préférences de course : écrites uniquement par le serveur, après nettoyage.
+    const cur = required(await db.from("drivers").select("trip_prefs").eq("user_id", uid).single());
+    const next = sanitizeTripPrefs({ ...tripPrefsOf(cur), ...(body.tripPrefs || {}) });
+    required(await admin.from("drivers").update({ trip_prefs: next }).eq("user_id", uid));
+    return { driver: driverShape(required(await db.from("drivers").select("*").eq("user_id", uid).single())) };
+  }
   if (p === "/api/drivers/me/documents") {
     if (method === "POST") {
       const spec = documentSpec(body.type);
@@ -532,6 +541,18 @@ export async function handleVtc(input, context) {
     const payProblem = bookingPaymentProblem(paymentMethod, profile.balance, fare.total);
     if (payProblem) throw new Error(payProblem);
     const pin = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000).padStart(4, "0");
+    // Note moyenne laissée par les chauffeurs, figée à la commande (filtre « note minimale » des chauffeurs).
+    const past = required(
+      await admin
+        .from("rides")
+        .select("rating")
+        .eq("rider_id", uid)
+        .eq("status", "completed")
+        .eq("is_test", false)
+        .order("completed_at", { ascending: false })
+        .limit(200),
+    );
+    const riderRating = riderAverage(past.map((x) => x.rating?.byDriver).filter((n) => n != null));
     const r = required(
       await admin
         .from("rides")
@@ -544,6 +565,7 @@ export async function handleVtc(input, context) {
           fare,
           pin,
           payment: { method: paymentMethod },
+          rider_rating: riderRating,
         })
         .select("*")
         .single(),

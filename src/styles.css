@@ -1237,6 +1237,92 @@ textarea.input { padding: 12px 16px; resize: vertical; min-height: 80px; }
   box-shadow: none;
 }
 
+/* Driver preferences page (same dark look as the driver home) */
+.drv-pref-head { display: flex; align-items: center; gap: 18px; padding: 6px 0 4px; }
+.drv-pref-head h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; color: var(--text-invert); }
+.drv-back { width: 44px; height: 44px; margin-left: -8px; display: grid; place-items: center; border-radius: 50%; color: var(--text-invert); }
+.drv-back:hover { background: var(--ink-800); }
+.drv-banner {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(202, 138, 4, 0.18);
+  color: var(--text-invert);
+  font-size: 1.05rem;
+}
+.drv-pref-title { margin-top: 26px; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text-invert); }
+.drv-pref-note { margin-top: 10px; font-size: 0.9rem; color: rgba(250, 250, 249, 0.6); }
+.drv-divider { height: 10px; margin: 30px -20px 0; background: var(--ink-900); }
+.drv-tiles { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.drv-tile {
+  position: relative;
+  min-height: 150px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  color: var(--text-invert);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--fast), background var(--fast);
+}
+.drv-tile.on { border-color: var(--text-invert); }
+.drv-tile.locked { cursor: default; }
+.drv-tile:disabled { cursor: default; }
+.drv-tile-label { font-size: 1.1rem; font-weight: 600; }
+.drv-tile-hint { font-size: 0.78rem; color: rgba(250, 250, 249, 0.55); margin-top: -6px; }
+.drv-check {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  display: grid;
+  place-items: center;
+  color: var(--ink-950);
+}
+.drv-tile.on .drv-check { background: var(--text-invert); border-color: var(--text-invert); }
+.drv-row-label { display: flex; flex-direction: column; }
+.drv-row-sub { margin-top: 3px; font-size: 0.92rem; font-weight: 400; color: rgba(250, 250, 249, 0.62); line-height: 1.35; }
+.drv-row:disabled { cursor: default; }
+.drv-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 0 16px 36px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.drv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: var(--text-invert);
+  font-weight: 600;
+  cursor: pointer;
+}
+.drv-chip.on { background: var(--gold-500); border-color: var(--gold-500); color: var(--ink-950); }
+.drv-options { padding: 6px 0 16px 36px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.drv-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 2px;
+  background: transparent;
+  border: none;
+  color: var(--text-invert);
+  font-size: 1rem;
+  cursor: pointer;
+  text-align: left;
+}
+.drv-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.4); flex-shrink: 0; }
+.drv-option.on .drv-radio, .drv-option-row.on .drv-radio { border: 7px solid var(--gold-500); }
+
 /* Dark app chrome on the driver home */
 .shell-dark { background: var(--ink-950); }
 .shell-dark .sidebar { background: var(--ink-950); border-color: rgba(255, 255, 255, 0.08); }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch as fetch } from "@/lib/archive-fetch";
 import Link from "@/lib/archive-navigation";
 import {
   ShieldCheck,
@@ -17,9 +18,7 @@ import {
   Car,
 } from "lucide-react";
 import MapView from "@/components/ArchiveMap";
-import Modal from "@/components/ui/Modal";
 import { money } from "@/components/ui/bits";
-import { NAV_APPS } from "@/lib/navigation";
 
 /**
  * Accueil chauffeur (aucune course en cours) : titre hors ligne / en ligne,
@@ -37,14 +36,9 @@ export default function DriverHome({
   acceptsPet,
   togglingPet,
   onTogglePet,
-  navApp,
-  onChooseNavApp,
-  navAuto,
-  onToggleNavAuto,
 }) {
   const [expanded, setExpanded] = useState(false);
   const [recenterKey, setRecenterKey] = useState(0);
-  const [prefsOpen, setPrefsOpen] = useState(false);
   const [today, setToday] = useState(null);
   const [balance, setBalance] = useState(null);
 
@@ -79,9 +73,9 @@ export default function DriverHome({
           <Link href="/driver/profile" className="drv-round" aria-label="Sécurité et documents">
             <ShieldCheck size={24} style={{ color: "var(--gold-500)" }} />
           </Link>
-          <button type="button" className="drv-round" aria-label="Préférences de conduite" onClick={() => setPrefsOpen(true)}>
+          <Link href="/driver/preferences" className="drv-round" aria-label="Préférences de conduite">
             <SlidersHorizontal size={22} />
-          </button>
+          </Link>
         </div>
 
         <h1 className="drv-title">{loading ? "…" : title}</h1>
@@ -173,40 +167,6 @@ export default function DriverHome({
         )}
       </div>
 
-      <Modal open={prefsOpen} onClose={() => setPrefsOpen(false)} title="Préférences de conduite">
-        <div className="flex items-center justify-between mb-4" style={{ gap: 12 }}>
-          <div>
-            <div className="small" style={{ fontWeight: 700 }}>StrasDrive Pet</div>
-            <div className="tiny muted">Accepter les passagers avec animal de compagnie</div>
-          </div>
-          <button
-            type="button"
-            className={`btn btn-sm ${acceptsPet ? "btn-primary" : "btn-secondary"}`}
-            onClick={onTogglePet}
-            disabled={togglingPet}
-          >
-            {togglingPet ? <span className="spinner" /> : acceptsPet ? "Activé" : "Désactivé"}
-          </button>
-        </div>
-        <div className="small" style={{ fontWeight: 700 }}>Application GPS</div>
-        <div className="flex gap-2 mt-2 mb-3" role="radiogroup" aria-label="Application GPS">
-          {Object.entries(NAV_APPS).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="radio"
-              aria-checked={navApp === id}
-              className={`btn btn-sm ${navApp === id ? "btn-primary" : "btn-secondary"}`}
-              onClick={() => onChooseNavApp(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <label className="flex items-center gap-2 small" style={{ cursor: "pointer" }}>
-          <input type="checkbox" checked={navAuto} onChange={onToggleNavAuto} /> Ouvrir le GPS automatiquement
-        </label>
-      </Modal>
     </div>
   );
 }
