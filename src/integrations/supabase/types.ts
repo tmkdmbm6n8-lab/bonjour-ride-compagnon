@@ -111,6 +111,7 @@ export type Database = {
           location: Json | null
           payout: Json
           stats: Json
+          trip_prefs: Json
           updated_at: string
           user_id: string
           vehicle: Json
@@ -126,6 +127,7 @@ export type Database = {
           location?: Json | null
           payout?: Json
           stats?: Json
+          trip_prefs?: Json
           updated_at?: string
           user_id: string
           vehicle?: Json
@@ -141,6 +143,7 @@ export type Database = {
           location?: Json | null
           payout?: Json
           stats?: Json
+          trip_prefs?: Json
           updated_at?: string
           user_id?: string
           vehicle?: Json
@@ -315,6 +318,7 @@ export type Database = {
           pin: string
           rating: Json
           rider_id: string
+          rider_rating: number | null
           route: Json
           status: string
           vehicle_type: string
@@ -341,6 +345,7 @@ export type Database = {
           pin: string
           rating?: Json
           rider_id: string
+          rider_rating?: number | null
           route: Json
           status?: string
           vehicle_type: string
@@ -367,6 +372,7 @@ export type Database = {
           pin?: string
           rating?: Json
           rider_id?: string
+          rider_rating?: number | null
           route?: Json
           status?: string
           vehicle_type?: string

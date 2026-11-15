@@ -78,6 +78,13 @@
       "when": 1794654094601,
       "tag": "0010_driver_weekly_payouts",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794701627352,
+      "tag": "0011_driver_trip_preferences",
+      "breakpoints": true
     }
   ]
 }
