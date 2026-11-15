@@ -1,3 +1,4 @@
+import SupportConversation from "@/components/admin/SupportConversation";
 import {createFileRoute} from '@tanstack/react-router';
 import AdminLayout from '@/components/AdminLayout';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
@@ -13,6 +14,7 @@ const TOPIC_LABEL = {
   general: 'Général',
   ride_issue: 'Problème de course',
   driver_support: 'Assistance chauffeurs',
+  driver_conversation: 'Conversation chauffeur',
   payments: 'Paiements',
   safety: 'Sécurité',
   data_request: 'Demande concernant les données',
@@ -33,8 +35,8 @@ function AdminSupportPage() {
   const [messages, setMessages] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
-  const load = useCallback(async () => {
-    setMessages(null);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setMessages(null);
     try {
       const res = await fetch(`/api/admin/support?status=${status}`);
       const data = await res.json();
@@ -46,6 +48,8 @@ function AdminSupportPage() {
 
   useEffect(() => {
     load();
+    const timer = setInterval(() => load(true), 15000);
+    return () => clearInterval(timer);
   }, [load]);
 
   async function setMessageStatus(id, next) {
@@ -115,9 +119,7 @@ function AdminSupportPage() {
               <span className="tiny muted">{formatRelativeTime(m.createdAt)}</span>
             </div>
 
-            <p className="small" style={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-              {m.message}
-            </p>
+            <SupportConversation row={m} onSent={() => load(true)} />
 
             <div className="flex justify-between items-center mt-3" style={{ borderTop: '1px solid var(--ink-100)', paddingTop: 10 }}>
               <span className="tiny muted">

@@ -10,7 +10,8 @@ export const contactRequest=createServerFn({method:'POST'}).inputValidator(input
  const {supabaseAdmin}=await import('@/integrations/supabase/client.server');
  if(data.company) return {ok:true};
  if(typeof data.name!=='string'||data.name.trim().length<2||data.name.length>100||!/^\S+@\S+\.\S+$/.test(data.email)||typeof data.message!=='string'||data.message.length<10||data.message.length>2000) throw new Error('Vérifiez votre nom, votre e-mail et votre message.');
- const {error}=await supabaseAdmin.from('contact_messages').insert({name:data.name.trim(),email:data.email.toLowerCase(),topic:data.topic,message:data.message});
+ const allowedTopics=['general','ride_issue','driver_support','payments','safety','data_request'];
+ const {error}=await supabaseAdmin.from('contact_messages').insert({name:data.name.trim(),email:data.email.toLowerCase(),topic:allowedTopics.includes(data.topic)?data.topic:'general',message:data.message});
  if(error) throw new Error('Votre message n’a pas pu être envoyé.');
  return {ok:true};
 });

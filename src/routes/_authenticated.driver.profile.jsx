@@ -132,7 +132,7 @@ function DriverProfilePage() {
       <p className="page-sub mb-6">Votre compte, votre véhicule et vos documents</p>
 
       <ProfileCard>
-        <div className="card card-pad mt-4">
+        <div className="card card-pad mt-4" id="driver-vehicle">
           <div className="flex items-center justify-between mb-4">
             <h3 className="flex items-center gap-2" style={{ fontSize: '1.05rem' }}>
               <Car size={19} /> Véhicule </h3>
@@ -181,7 +181,7 @@ function DriverProfilePage() {
           </form>
         </div>
         <LowerClassesCard driver={driver} onSaved={setDriver} />
-        <DocumentsCard />
+        <div id="driver-documents"><DocumentsCard /></div>
       </ProfileCard>
     </div>
   );

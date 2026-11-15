@@ -6,7 +6,7 @@ export function SocketProvider({children}){
  const {data:session,status}=useSession(),[socket,setSocket]=useState(null);
  useEffect(()=>{
   if(status!=='authenticated')return;
-  const listeners=new Map();let previous=null,offerId=null,offerKey=null,stopped=false;
+  const listeners=new Map();let previous=null,offerId=null,offerKey=null,offerMetadata=null,stopped=false;
   const fire=(event,data)=>listeners.get(event)?.forEach(fn=>fn(data));
   const instance={on:(event,fn)=>{if(!listeners.has(event))listeners.set(event,new Set());listeners.get(event).add(fn)},off:(event,fn)=>listeners.get(event)?.delete(fn),emit:(event,data)=>{if(event==='driver:location')apiFetch('/api/drivers/location',{method:'POST',body:JSON.stringify(data)});}};
   setSocket(instance);
@@ -14,7 +14,7 @@ export function SocketProvider({children}){
    if(stopped)return;
    try{
     if(session.user.role==='driver'){
-     const res=await apiFetch('/api/drivers/offers');const j=await res.json();const key=j.offer?`${j.offer.rideId}:${j.offer.phase||''}`:null;if(j.offer&&key!==offerKey){offerId=j.offer.rideId;offerKey=key;fire('ride:offer',j.offer)}if(!j.offer&&offerId){fire('ride:offer-expired',{rideId:offerId});offerId=null;offerKey=null;}
+     const res=await apiFetch('/api/drivers/offers');const j=await res.json();const key=j.offer?`${j.offer.rideId}:${j.offer.phase||''}`:null;if(j.offer){const metadata=JSON.stringify(j.offer.airportReturn||null);if(key!==offerKey){offerId=j.offer.rideId;offerKey=key;offerMetadata=metadata;fire('ride:offer',j.offer)}else if(metadata!==offerMetadata){offerMetadata=metadata;fire('ride:offer-updated',j.offer)}}if(!j.offer&&offerId){fire('ride:offer-expired',{rideId:offerId});offerId=null;offerKey=null;offerMetadata=null;}
     }
     if(session.user.role==='admin'){fire('ride:updated',{});return;}
     const res=await apiFetch('/api/rides/active');if(!res.ok)return;const {ride}=await res.json();

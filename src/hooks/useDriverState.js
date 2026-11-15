@@ -115,6 +115,11 @@ export default function useDriverState({ onEvent } = {}) {
         setOffer({ ...data, receivedAt: Date.now() });
         notify('offer', data);
       },
+      'ride:offer-updated': (data) => {
+        // Enrich the current offer without restarting the countdown or ringing.
+        setOffer((current) => current?.rideId === data.rideId ? { ...current, airportReturn: data.airportReturn } : current);
+        notify('offer-updated', data);
+      },
       'ride:offer-expired': (data) => {
         setOffer((o) => (o && o.rideId === data.rideId ? null : o));
         notify('offer-expired', data);
