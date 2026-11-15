@@ -243,7 +243,12 @@ function RiderDashboard() {
           }),
         });
         const data = await res.json();
-        if (!ignore && res.ok) setEstimate(data);
+        if (ignore) return;
+        if (res.ok && data?.estimates) setEstimate(data);
+        else {
+          setEstimate(null);
+          toast(data?.error || "Impossible d’estimer le tarif — réessayez dans un instant", "error");
+        }
       } catch {
         if (!ignore) toast("Impossible d’estimer le tarif — vérifiez votre connexion", "error");
       } finally {
