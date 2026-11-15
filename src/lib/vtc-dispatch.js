@@ -85,7 +85,6 @@ export function planDispatch(ride, drivers, now = Date.now()) {
     offer_expires_at: iso(now + BROADCAST_WINDOW_SECONDS * 1000),
   };
 }
-
 /** Whether this driver (online, approved, free) may see and accept the ride right now. */
 export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
   if (!driver || ride.status !== "searching" || !ride.dispatch_phase) return false;
@@ -93,8 +92,8 @@ export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
   const all = pool && pool.some((d) => d.user_id === driver.user_id) ? pool : [driver];
   if (!availableFor(ride, all).some((d) => d.user_id === driver.user_id)) return false;
   if (ride.dispatch_phase === "priority") return Boolean(driver.is_priority);
-  if (ride.dispatch_phase === "nearest") return ride.offer_driver_id === driver.user_id;
-  return ride.dispatch_phase === "broadcast";
+  // En phase "nearest" ou "broadcast", tous les chauffeurs éligibles reçoivent la notification
+  return true;
 }
 
 // Profitability shown to priority drivers: expected net gain per hour, counting the drive to the passenger.
