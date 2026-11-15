@@ -48,6 +48,9 @@ function DriverDashboard() {
   const [pinValue, setPinValue] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [offerElapsed, setOfferElapsed] = useState(0); // <-- AJOUTER CETTE LIGNE
+
   const [receipt, setReceipt] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [countdown, setCountdown] = useState(0);
