@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import DriverLayout from "@/components/DriverLayout";
+import { apiFetch as fetch } from "@/lib/archive-fetch";
 ("use client");
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -512,10 +513,6 @@ function DriverDashboard() {
           acceptsPet={acceptsPet}
           togglingPet={togglingPet}
           onTogglePet={handleTogglePet}
-          navApp={navApp}
-          onChooseNavApp={chooseNavApp}
-          navAuto={navAuto}
-          onToggleNavAuto={toggleNavAuto}
         />
       )}
 
