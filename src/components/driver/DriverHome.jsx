@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/archive-fetch";
 import Link from "@/lib/archive-navigation";
 import {
@@ -20,6 +20,7 @@ import {
   FileText,
   ChevronDown,
   Route,
+  Hand,
 } from "lucide-react";
 import MapView from "@/components/ArchiveMap";
 import PlaceSearch from "@/components/maps/PlaceSearch";
@@ -49,6 +50,7 @@ export default function DriverHome({
   const [searchText, setSearchText] = useState("");
   const [searchedPoint, setSearchedPoint] = useState(null);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsPanelRef = useRef(null);
   const { position: localPosition } = useGeolocation({ watch: false });
   const mapCenter = searchedPoint || position || localPosition || center;
   useEffect(() => {
@@ -57,11 +59,14 @@ export default function DriverHome({
   useEffect(() => {
     if (!expanded) return;
     const escape = (e) => {
-      if (e.key === "Escape") setExpanded(false);
+      if (e.key === "Escape") {
+        if (toolsOpen) setToolsOpen(false);
+        else setExpanded(false);
+      }
     };
     document.addEventListener("keydown", escape);
     return () => document.removeEventListener("keydown", escape);
-  }, [expanded]);
+  }, [expanded, toolsOpen]);
   useEffect(() => {
     let alive = true;
     apiFetch("/api/drivers/me/earnings")
@@ -76,6 +81,30 @@ export default function DriverHome({
       alive = false;
     };
   }, [online]);
+  useEffect(() => {
+    if (!toolsOpen) return;
+    const previous = document.activeElement;
+    const panel = toolsPanelRef.current;
+    panel?.querySelector("button")?.focus();
+    const trapFocus = (event) => {
+      if (event.key !== "Tab") return;
+      const items = panel?.querySelectorAll("button:not(:disabled), a[href]");
+      const first = items?.[0],
+        last = items?.[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    panel?.addEventListener("keydown", trapFocus);
+    return () => {
+      panel?.removeEventListener("keydown", trapFocus);
+      previous?.focus();
+    };
+  }, [toolsOpen]);
   const title = needsVehicle ? "Vous y êtes presque" : online ? "Vous êtes en ligne" : "Vous êtes hors ligne";
   const status = loading
     ? "Chargement…"
@@ -188,11 +217,6 @@ export default function DriverHome({
               <span className="drv-row-value">{balance === null ? "—" : money(balance)}</span>
               <ChevronRight size={20} />
             </Link>
-            <button className="drv-row" onClick={onWaybill}>
-              <FileText size={22} />
-              <span className="drv-row-label">Waybill</span>
-              <ChevronRight size={20} />
-            </button>
             {!needsVehicle && (
               <button className="drv-row" onClick={onTogglePet} disabled={togglingPet}>
                 <PawPrint size={22} />
@@ -231,16 +255,15 @@ export default function DriverHome({
               <SlidersHorizontal size={26} />
             </Link>
             <span role="status">{status}</span>
-            <button onClick={() => setToolsOpen(true)} aria-label="Options de conduite">
+            <button
+              onClick={() => setToolsOpen(true)}
+              aria-label="Options de conduite"
+              aria-expanded={toolsOpen}
+              aria-controls="driver-tools-panel"
+            >
               <List size={29} />
             </button>
           </div>
-          {!online && (
-            <button className="driver-waybill-row" onClick={onWaybill}>
-              <FileText size={26} />
-              <span>Waybill</span>
-            </button>
-          )}
         </div>
       )}
       <Modal open={searchOpen} onClose={() => setSearchOpen(false)} title="Rechercher sur la carte" keyboardSafe>
@@ -256,41 +279,66 @@ export default function DriverHome({
           autoFocus
         />
       </Modal>
-      <Modal open={toolsOpen} onClose={() => setToolsOpen(false)} title="Conduite">
-        <div className="flex-col gap-3">
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              setToolsOpen(false);
-              onWaybill();
-            }}
-          >
-            <FileText size={20} />
-            Réservation préalable · Waybill
-          </button>
-          {online && (
+      {toolsOpen && (
+        <section
+          id="driver-tools-panel"
+          className="driver-tools-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Recommandé pour vous"
+          ref={toolsPanelRef}
+        >
+          <header className="driver-tools-header">
+            <button onClick={() => setToolsOpen(false)} aria-label="Fermer les recommandations">
+              <ChevronDown size={28} />
+            </button>
+            <h2>Recommandé pour vous</h2>
+            <button onClick={() => setToolsOpen(false)} aria-label="Retour à la carte">
+              <List size={30} />
+            </button>
+          </header>
+          <div className="driver-tools-content">
             <button
-              className="btn btn-danger"
+              className="driver-waybill-row"
+              onClick={() => {
+                setToolsOpen(false);
+                onWaybill();
+              }}
+            >
+              <FileText size={30} />
+              <span>Waybill</span>
+            </button>
+          </div>
+          <footer className="driver-tools-footer">
+            <Link href="/driver/preferences" aria-label="Préférences de conduite">
+              <SlidersHorizontal size={30} />
+            </Link>
+            <button
+              className="driver-tools-status"
               onClick={() => {
                 setToolsOpen(false);
                 onToggle();
               }}
-              disabled={busy}
+              disabled={busy || loading || needsVehicle}
+              aria-label={online ? "Passer hors ligne" : "Passer en ligne"}
             >
-              Passer hors ligne
+              <span className="driver-tools-hand">
+                {busy ? <span className="spinner" /> : <Hand size={45} fill="currentColor" />}
+              </span>
+              <span>{online ? "EN LIGNE" : "HORS LIGNE"}</span>
             </button>
-          )}
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              setToolsOpen(false);
-              setExpanded(false);
-            }}
-          >
-            Retour à l’accueil
-          </button>
-        </div>
-      </Modal>
+            <button
+              onClick={() => {
+                setToolsOpen(false);
+                setSearchOpen(true);
+              }}
+              aria-label="Rechercher une adresse sur la carte"
+            >
+              <Search size={30} />
+            </button>
+          </footer>
+        </section>
+      )}
     </div>
   );
 }
