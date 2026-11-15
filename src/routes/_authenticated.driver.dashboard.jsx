@@ -530,107 +530,235 @@ function DriverDashboard() {
 
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
 
-      {/* ── Incoming offer ── */}
-      <Modal open={Boolean(offer)} onClose={() => {}} closable={false} title="">
+      {/* ── Incoming offer sheet (Style moderne sombre) ── */}
+      <Modal open={Boolean(offer)} onClose={decline} closable={false}>
         {offer && (
-          <div className="text-center">
-            <div
-              className="mono-nums"
-              style={{
-                width: 64,
-                height: 64,
-                margin: "0 auto 12px",
-                borderRadius: "50%",
-                border: "3px solid var(--gold-600)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.5rem",
-                fontWeight: 800,
-                color: countdown <= 5 ? "var(--danger)" : "var(--text)",
-              }}
-              aria-live="polite"
-            >
-              {countdown}
-            </div>
-            <h3 style={{ fontSize: "1.2rem" }}>Nouvelle demande de course</h3>
-            {offer.isTest && (
-              <div className="mt-2">
-                <span className="badge badge-warning">Demande test · aucun paiement · code PIN {offer.testPin}</span>
-              </div>
-            )}
-            {offer.rideClass && (
-              <div className="mt-2">
-                <span className={`badge ${offer.lowerClass ? "badge-warning" : "badge-neutral"}`}>
-                  Course {VEHICLE_LABELS[offer.rideClass]}
-                  {offer.lowerClass ? ` · tarif ${VEHICLE_LABELS[offer.rideClass]}` : ""}
-                </span>
-                {offer.lowerClass && (
-                  <p className="tiny muted mt-1">
-                    Gamme inférieure à la vôtre : si vous acceptez, vous êtes payé au tarif{" "}
-                    {VEHICLE_LABELS[offer.rideClass]}.
-                  </p>
-                )}
-              </div>
-            )}
-            {offer.profitability && (
-              <div className="mt-2">
-                <span className={`badge ${PROFIT_BADGES[offer.profitability.level].className}`}>
-                  {PROFIT_BADGES[offer.profitability.level].label} · {money(offer.profitability.perHour)}/h
-                </span>
-              </div>
-            )}
-            <p className="small muted mt-1 mb-4">
-              {offer.rider?.name || "Un passager"} · {formatDistance(offer.distanceToPickupMeters)} de distance · ~
-              {offer.etaMinutes} min jusqu’à la prise en charge
-            </p>
-
-            <div className="card card-pad text-left mb-4" style={{ background: "var(--ink-50)", border: "none" }}>
-              <div className="flex gap-2 small mb-2">
-                <Circle size={13} style={{ marginTop: 4, flexShrink: 0 }} />
-                <span className="truncate">{offer.pickup.address}</span>
-              </div>
-              <div className="flex gap-2 small">
-                <MapPin size={13} style={{ marginTop: 4, color: "var(--gold-600)", flexShrink: 0 }} />
-                <span className="truncate">{offer.dropoff.address}</span>
-              </div>
+          <div
+            style={{
+              background: "#18191b",
+              color: "#ffffff",
+              borderRadius: 20,
+              padding: "20px 18px 16px",
+              margin: "-16px -16px",
+            }}
+          >
+            {/* 1. Ligne du haut : Pilule de gamme à gauche + Croix de refus à droite */}
+            <div className="flex items-center justify-between mb-3">
               <div
-                className="flex items-center justify-between mt-3"
-                style={{ borderTop: "1px solid var(--border)", paddingTop: 10 }}
+                style={{
+                  background: "#ffffff",
+                  color: "#121214",
+                  fontWeight: 700,
+                  fontSize: "0.92rem",
+                  padding: "6px 14px",
+                  borderRadius: 9999,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
               >
-                <span className="tiny muted">
-                  {formatDistance(offer.distanceMeters)} · {formatDuration(offer.durationSeconds)} de trajet
-                  {offer.routeQuality ? ` · ${offer.routeQuality}` : ""}
-                  {offer.surgeMultiplier > 1 && (
-                    <span className="badge badge-warning" style={{ marginLeft: 8 }}>
-                      <TrendingUp size={11} /> {offer.surgeMultiplier}×
-                    </span>
-                  )}
-                </span>
-                <span style={{ fontWeight: 800, fontSize: "1.15rem" }} className="mono-nums">
-                  {money(offer.profitability?.expectedEarnings ?? offer.earnings)}
-                </span>
+                {offer.rideClass === "pet" ? (
+                  <PawPrint size={15} />
+                ) : offer.rideClass === "xl" ? (
+                  <Car size={15} />
+                ) : (
+                  <User size={15} />
+                )}
+                <span>{VEHICLE_LABELS[offer.rideClass] || "StrasDrive Go"}</span>
               </div>
-              {offer.paymentMethod === "cash" && (
-                <div className="flex items-center justify-between mt-2 tiny" style={{ fontWeight: 700 }}>
-                  <span className="badge badge-warning">Paiement en espèces</span>
-                  <span className="mono-nums">À encaisser : {money(offer.total)}</span>
+
+              {/* Bouton croix pour refuser d'un clic */}
+              <button
+                onClick={decline}
+                disabled={actionBusy}
+                aria-label="Refuser la course"
+                style={{
+                  background: "#2b2c2f",
+                  border: "none",
+                  color: "#d1d5db",
+                  width: 38,
+                  height: 38,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 2. Prix net géant */}
+            <div
+              style={{
+                fontSize: "2.8rem",
+                fontWeight: 800,
+                letterSpacing: "-0.03em",
+                lineHeight: 1.1,
+                marginBottom: 10,
+                textAlign: "left",
+              }}
+            >
+              {money(offer.profitability?.expectedEarnings ?? offer.earnings)}
+            </div>
+
+            {/* 3. Badges chips (Mode de paiement, Note passager, Net chauffeur) */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {offer.paymentMethod === "cash" ? (
+                <div
+                  style={{
+                    background: "#2b2c2f",
+                    color: "var(--gold-400, #fbbf24)",
+                    padding: "5px 12px",
+                    borderRadius: 8,
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                  }}
+                >
+                  Espèces ({money(offer.total)})
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: "#2b2c2f",
+                    color: "#e5e7eb",
+                    padding: "5px 12px",
+                    borderRadius: 8,
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Portefeuille
                 </div>
               )}
+
+              <div
+                style={{
+                  background: "#2b2c2f",
+                  color: "#ffffff",
+                  padding: "5px 12px",
+                  borderRadius: 8,
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                <Star size={13} fill="#fbbf24" stroke="#fbbf24" />
+                <span>5.00</span>
+              </div>
+
+              <div
+                style={{
+                  background: "#2b2c2f",
+                  color: "#9ca3af",
+                  padding: "5px 12px",
+                  borderRadius: 8,
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                }}
+              >
+                Net chauffeur
+              </div>
             </div>
 
-            <div className="flex gap-3">
-              <button className="btn btn-secondary flex-1" onClick={decline} disabled={actionBusy}>
-                Refuser
-              </button>
-              <button
-                className="btn btn-success btn-lg flex-1"
-                onClick={handleAccept}
-                disabled={actionBusy || countdown === 0}
-              >
-                {actionBusy ? <span className="spinner" /> : "Accepter"}
-              </button>
+            {/* Ligne fine séparatrice */}
+            <div style={{ height: 1, background: "rgba(255,255,255,0.1)", marginBottom: 14 }} />
+
+            {/* 4. Itinéraire vertical (Prise en charge + Destination) */}
+            <div className="text-left mb-4" style={{ paddingLeft: 4 }}>
+              {/* Point de départ */}
+              <div className="flex gap-3 items-start relative">
+                <div className="flex flex-col items-center" style={{ width: 14 }}>
+                  <Circle size={10} strokeWidth={3} style={{ color: "#ffffff", marginTop: 4 }} />
+                  <div
+                    style={{
+                      width: 2,
+                      height: 38,
+                      background: "rgba(255,255,255,0.25)",
+                      margin: "4px 0",
+                    }}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 pb-2">
+                  <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#ffffff" }}>
+                    {offer.etaMinutes} min ({formatDistance(offer.distanceToPickupMeters)})
+                  </div>
+                  <div className="truncate" style={{ fontSize: "0.82rem", color: "#9ca3af", marginTop: 2 }}>
+                    {offer.pickup.address}
+                  </div>
+                </div>
+              </div>
+
+              {/* Point d'arrivée */}
+              <div className="flex gap-3 items-start">
+                <div className="flex items-center justify-center" style={{ width: 14 }}>
+                  <Square size={10} fill="#ffffff" strokeWidth={0} style={{ marginTop: 2 }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#ffffff" }}>
+                    {formatDistance(offer.distanceMeters)} ({formatDuration(offer.durationSeconds)})
+                  </div>
+                  <div className="truncate" style={{ fontSize: "0.82rem", color: "#9ca3af", marginTop: 2 }}>
+                    {offer.dropoff.address}
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* 5. Bouton Accepter large avec barre de décompte en arrière-plan */}
+            {(() => {
+              const maxSec = offer.expiresInSeconds || 15;
+              const progressPct = Math.max(0, Math.min(100, (countdown / maxSec) * 100));
+              return (
+                <button
+                  onClick={handleAccept}
+                  disabled={actionBusy || countdown === 0}
+                  style={{
+                    width: "100%",
+                    height: 52,
+                    borderRadius: 12,
+                    border: "none",
+                    position: "relative",
+                    overflow: "hidden",
+                    fontWeight: 700,
+                    fontSize: "1.05rem",
+                    cursor: countdown === 0 ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#2b2c2f",
+                    color: "#121214",
+                  }}
+                >
+                  {/* Jauge animée qui s'écoule au rythme des secondes */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: `${progressPct}%`,
+                      background: "linear-gradient(90deg, #d1d5db 0%, #e5e7eb 100%)",
+                      transition: "width 0.25s linear",
+                      zIndex: 1,
+                    }}
+                  />
+                  {/* Texte du bouton */}
+                  <span style={{ position: "relative", zIndex: 2 }}>
+                    {actionBusy ? (
+                      <span className="spinner" />
+                    ) : countdown === 0 ? (
+                      <span style={{ color: "#9ca3af" }}>Expiré</span>
+                    ) : (
+                      `Accepter (${countdown}s)`
+                    )}
+                  </span>
+                </button>
+              );
+            })()}
           </div>
         )}
       </Modal>
