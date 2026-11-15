@@ -12,13 +12,13 @@ describe('enrichissement de l’offre avec une arrivée aéroport', () => {
     const { result } = renderHook(() => useDriverState());
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => state.handlers.get('ride:offer')({ rideId: 'ride-1', expiresInSeconds: 60 }));
-    expect(result.current.offer!.receivedAt).toBe(10000);
+    expect((result.current.offer as any).receivedAt).toBe(10000);
     now.mockReturnValue(20000);
     act(() => state.handlers.get('ride:offer-updated')({ rideId: 'ride-1', expiresInSeconds: 50, airportReturn: { flightNumber: 'V7 123' } }));
-    expect(result.current.offer!.receivedAt).toBe(10000);
-    expect(result.current.offer!.expiresInSeconds).toBe(60);
-    expect(result.current.offer!.airportReturn.flightNumber).toBe('V7 123');
+    expect((result.current.offer as any).receivedAt).toBe(10000);
+    expect((result.current.offer as any).expiresInSeconds).toBe(60);
+    expect((result.current.offer as any).airportReturn.flightNumber).toBe('V7 123');
     act(() => state.handlers.get('ride:offer-updated')({ rideId: 'another-ride', airportReturn: null }));
-    expect(result.current.offer!.airportReturn.flightNumber).toBe('V7 123');
+    expect((result.current.offer as any).airportReturn.flightNumber).toBe('V7 123');
   });
 });
