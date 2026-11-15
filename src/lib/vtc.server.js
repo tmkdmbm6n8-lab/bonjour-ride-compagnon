@@ -919,6 +919,18 @@ export async function handleVtc(input, context) {
   }
   if (p === "/api/admin/pricing") {
     if (method === "PUT") {
+      // Configuration spéciale pour la réduction Uber
+      if (body.vehicleType === "uber_discount") {
+        const enabled = Boolean(body.enabled);
+        const rate = Number.isFinite(Number(body.rate)) ? Number(body.rate) : 0.2;
+        required(
+          await admin
+            .from("pricing_rules")
+            .upsert({ vehicle_type: "uber_discount", rule: { enabled, rate } }, { onConflict: "vehicle_type" }),
+        );
+        return { rule: { vehicleType: "uber_discount", enabled, rate } };
+      }
+
       if (
         !DEFAULT_PRICING[body.vehicleType] ||
         Object.values(DEFAULT_PRICING[body.vehicleType]).some(
@@ -937,6 +949,7 @@ export async function handleVtc(input, context) {
       })),
     };
   }
+
   if (p === "/api/admin/drivers/documents") {
     if (method === "PATCH") {
       if (!["approved", "rejected"].includes(body.status)) throw new Error("Statut invalide");
