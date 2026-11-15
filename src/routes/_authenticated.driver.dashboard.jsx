@@ -350,11 +350,11 @@ function DriverDashboard() {
   return (
     <>
       {ride ? (
-        <div className="ride-page">
+        <div className="ride-page drv-active-ride-page">
           <div className="map-fill">
             <MapView
               center={center}
-              zoom={14}
+              zoom={15}
               userPosition={position || undefined}
               pickup={ride ? { lat: ride.pickup.lat, lng: ride.pickup.lng } : undefined}
               dropoff={
@@ -365,187 +365,119 @@ function DriverDashboard() {
                 (ride?.status === "in_progress" ? drawableRoute(ride.route?.geometry) : undefined)
               }
               fit={Boolean(ride)}
-              followPosition={navigating && position ? position : undefined}
+              followPosition={position || undefined}
             />
           </div>
 
-          <div className="ride-panel">
-            <button className="btn btn-secondary btn-full" onClick={() => setWaybillOpen(true)}>
-              Réservation préalable · Waybill
-            </button>
-            {/* ── Active trip card ── */}
-            {ride && (
-              <div className="card card-pad animate-in">
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`badge badge-dot ${ride.status === "in_progress" ? "badge-info" : "badge-gold"}`}>
-                    {ride.status === "accepted" && "Rejoignez le point de prise en charge"}
-                    {ride.status === "arrived" && "En attente du passager"}
-                    {ride.status === "in_progress" && "Course en cours"}
-                  </span>
-                  {ride.isTest && <span className="badge badge-warning">Test · PIN {ride.pin}</span>}
-                  <span className="small mono-nums" style={{ fontWeight: 700 }}>
-                    {money(ride.fare?.driverEarnings)}
-                  </span>
+          <div className="ride-panel drv-cockpit-ride-panel">
+            {/* ── Fiche passager avec Appel direct & Waybill ── */}
+            <div className="drv-client-card">
+              <div className="drv-client-meta">
+                <div className="drv-client-avatar">
+                  <User size={20} />
                 </div>
-                {ride.payment?.method === "cash" && (
-                  <div
-                    className="flex items-center justify-between mb-3 small"
-                    style={{ background: "var(--ink-50)", borderRadius: 12, padding: "10px 14px", fontWeight: 700 }}
-                  >
-                    <span>Paiement en espèces</span>
-                    <span className="mono-nums">À encaisser : {money(ride.fare?.total)}</span>
-                  </div>
-                )}
-
-                {liveLeg && (
-                  <div
-                    className="flex items-center justify-between mb-3"
-                    style={{ background: "var(--ink-50)", borderRadius: 12, padding: "10px 14px" }}
-                  >
-                    <span style={{ minWidth: 0 }}>
-                      <span className="small" style={{ fontWeight: 700, display: "block" }}>
-                        {formatDistance(liveLeg.meters)} {liveLeg.label}
-                      </span>
-                      <span
-                        className="tiny"
-                        style={{ display: "block", color: liveLeg.approximate ? "var(--warning)" : "var(--text-2)" }}
-                      >
-                        {liveLeg.quality}
-                      </span>
-                    </span>
-                    <span className="mono-nums" style={{ textAlign: "right", flexShrink: 0 }}>
-                      <span className="small" style={{ fontWeight: 700, color: "var(--gold-700)", display: "block" }}>
-                        {liveLeg.approximate ? "~" : ""}
-                        {liveLeg.minutes} min
-                      </span>
-                      <span className="tiny muted" style={{ display: "block" }}>
-                        Arrivée {arrivalClock(liveLeg.seconds)}
-                      </span>
-                    </span>
-                  </div>
-                )}
-
-                {legTarget && (
-                  <div className="mb-3">
-                    <button className="btn btn-secondary btn-full" onClick={() => launchGps(legTarget)}>
-                      <Navigation size={17} /> Lancer le GPS · {NAV_APPS[navApp]}
-                    </button>
-                    <div className="flex items-center justify-between mt-2 tiny" style={{ gap: 8 }}>
-                      <span className="flex items-center gap-1" role="radiogroup" aria-label="Application GPS">
-                        <span className="muted">GPS :</span>
-                        {Object.entries(NAV_APPS).map(([id, label]) => (
-                          <button
-                            key={id}
-                            type="button"
-                            role="radio"
-                            aria-checked={navApp === id}
-                            onClick={() => chooseNavApp(id)}
-                            style={{
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                              padding: "3px 9px",
-                              borderRadius: 999,
-                              fontWeight: 600,
-                              background: navApp === id ? "var(--gold-50)" : "transparent",
-                              color: navApp === id ? "var(--gold-700)" : "var(--text-2)",
-                              border: `1px solid ${navApp === id ? "var(--gold-600)" : "var(--border)"}`,
-                            }}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </span>
-                      <label
-                        className="flex items-center gap-1 muted"
-                        style={{ cursor: "pointer", whiteSpace: "nowrap" }}
-                      >
-                        <input type="checkbox" checked={navAuto} onChange={toggleNavAuto} /> Auto
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex-col gap-2 small mb-4">
-                  <div className="flex gap-2">
-                    <Circle size={14} style={{ marginTop: 4, color: "var(--ink-950)", flexShrink: 0 }} />
-                    <span className="muted">{ride.pickup.address}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <MapPin size={14} style={{ marginTop: 4, color: "var(--gold-600)", flexShrink: 0 }} />
-                    <span className="muted">{ride.dropoff.address}</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="muted">Course</span>
-                    <span className="mono-nums">
-                      {formatDistance(ride.route?.distanceMeters || 0)} · {ride.route?.approximate ? "~" : ""}
-                      {formatDuration(ride.route?.durationSeconds || 0)} de trajet
-                    </span>
-                  </div>
-                </div>
-
-                {zoneProblem && (
-                  <p className="small text-center mb-2" style={{ color: "var(--warning)", fontWeight: 600 }}>
-                    {zoneProblem}
-                  </p>
-                )}
-                {ride.status === "accepted" && (
-                  <button
-                    className="btn btn-primary btn-lg btn-full"
-                    onClick={() => run(arrive, "Le passager a été informé de votre arrivée")}
-                    disabled={actionBusy || Boolean(zoneProblem)}
-                  >
-                    {actionBusy ? (
-                      <span className="spinner" />
-                    ) : (
-                      <>
-                        <Flag size={18} /> Je suis arrivé
-                      </>
-                    )}
-                  </button>
-                )}
-                {ride.status === "arrived" && (
-                  <button
-                    className="btn btn-primary btn-lg btn-full"
-                    onClick={() => setPinOpen(true)}
-                    disabled={actionBusy || Boolean(zoneProblem)}
-                  >
-                    <KeyRound size={18} /> Saisir le code PIN pour démarrer{" "}
-                  </button>
-                )}
-                {ride.status === "in_progress" && (
-                  <button className="btn btn-success btn-lg btn-full" onClick={handleComplete} disabled={actionBusy}>
-                    {actionBusy ? (
-                      <span className="spinner" />
-                    ) : (
-                      <>
-                        <CheckCircle2 size={18} /> Terminer la course
-                      </>
-                    )}
-                  </button>
-                )}
-
-                <div className="flex gap-2 mt-3">
-                  <button
-                    className={`btn flex-1 ${unread > 0 ? "chat-btn-unread" : "btn-secondary"}`}
-                    onClick={() => {
-                      setChatOpen(true);
-                      setUnread(0);
-                      setLastMsg(null);
-                    }}
-                    style={{ position: "relative" }}
-                  >
-                    <MessageCircle size={16} />{" "}
-                    {unread > 0 ? (unread > 1 ? `${unread} nouveaux messages` : "Nouveau message") : "Discussion"}
-                    {unread > 0 && <span className="chat-unread-badge mono-nums">{unread}</span>}
-                  </button>
-                  {ride.status !== "in_progress" && (
-                    <button className="btn btn-danger flex-1" onClick={() => setCancelOpen(true)}>
-                      <X size={16} /> Annuler{" "}
-                    </button>
-                  )}
+                <div>
+                  <h3 className="drv-client-name">{ride.rider?.name || "Passager"}</h3>
+                  <span className="drv-client-rating">
+                    ★ {ride.rider?.rating ? ride.rider.rating.toFixed(1) : "5.0"}
+                  </span>
                 </div>
               </div>
-            )}
+
+              <div className="drv-client-actions">
+                {ride.rider?.phone ? (
+                  <a href={`tel:${ride.rider.phone}`} className="drv-circle-btn is-call" title="Appeler le passager">
+                    <Phone size={18} />
+                  </a>
+                ) : null}
+                <button
+                  className={`drv-circle-btn ${unread > 0 ? "has-unread" : ""}`}
+                  onClick={() => {
+                    setChatOpen(true);
+                    setUnread(0);
+                    setLastMsg(null);
+                  }}
+                  title="Message"
+                >
+                  <MessageCircle size={18} />
+                  {unread > 0 && <span className="drv-badge-dot" />}
+                </button>
+                <button className="drv-circle-btn" onClick={() => setWaybillOpen(true)} title="Feuille de route légale">
+                  <FileText size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* ── Détails & Actions de la course ── */}
+            <div className="drv-trip-card">
+              <div className="flex items-center justify-between mb-3">
+                <span className={`badge badge-dot ${ride.status === "in_progress" ? "badge-info" : "badge-gold"}`}>
+                  {ride.status === "accepted" && "Rejoignez le passager"}
+                  {ride.status === "arrived" && "Passager informé de votre arrivée"}
+                  {ride.status === "in_progress" && "Course en cours"}
+                </span>
+                <span className="drv-trip-gain mono-nums">{money(ride.fare?.driverEarnings)}</span>
+              </div>
+
+              {ride.payment?.method === "cash" && (
+                <div className="drv-cash-alert">
+                  <span>Paiement en espèces</span>
+                  <strong>À encaisser : {money(ride.fare?.total)}</strong>
+                </div>
+              )}
+
+              {/* Navigation GPS intégrée */}
+              {legTarget && (
+                <div className="mb-3">
+                  <button className="btn btn-secondary btn-full drv-gps-btn" onClick={() => launchGps(legTarget)}>
+                    <Navigation size={17} /> GPS ({NAV_APPS[navApp]})
+                  </button>
+                </div>
+              )}
+
+              {/* Adresses */}
+              <div className="drv-addresses mb-4">
+                <div className="flex gap-2 items-start">
+                  <Circle size={12} className="text-gold mt-1 flex-shrink-0" />
+                  <span className="small text-muted">{ride.pickup.address}</span>
+                </div>
+                <div className="flex gap-2 items-start mt-2">
+                  <MapPin size={12} className="text-gold mt-1 flex-shrink-0" />
+                  <span className="small text-muted">{ride.dropoff.address}</span>
+                </div>
+              </div>
+
+              {/* Bouton d'action principal */}
+              {ride.status === "accepted" && (
+                <button
+                  className="btn btn-primary btn-lg btn-full"
+                  onClick={() => run(arrive, "Le passager a été informé de votre arrivée")}
+                  disabled={actionBusy || Boolean(zoneProblem)}
+                >
+                  <Flag size={18} /> Je suis arrivé
+                </button>
+              )}
+              {ride.status === "arrived" && (
+                <button
+                  className="btn btn-primary btn-lg btn-full"
+                  onClick={() => setPinOpen(true)}
+                  disabled={actionBusy || Boolean(zoneProblem)}
+                >
+                  <KeyRound size={18} /> Saisir le PIN pour démarrer
+                </button>
+              )}
+              {ride.status === "in_progress" && (
+                <button className="btn btn-success btn-lg btn-full" onClick={handleComplete} disabled={actionBusy}>
+                  <CheckCircle2 size={18} /> Terminer la course
+                </button>
+              )}
+
+              {ride.status !== "in_progress" && (
+                <button className="btn btn-danger btn-full mt-2" onClick={() => setCancelOpen(true)}>
+                  <X size={16} /> Annuler la course
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ) : (
@@ -562,6 +494,9 @@ function DriverDashboard() {
           acceptsPet={acceptsPet}
           togglingPet={togglingPet}
           onTogglePet={handleTogglePet}
+          acceptsCash={acceptsCash}
+          togglingCash={togglingCash}
+          onToggleCash={handleToggleCash}
         />
       )}
 
