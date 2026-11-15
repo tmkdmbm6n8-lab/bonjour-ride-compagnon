@@ -727,7 +727,15 @@ export async function handleVtc(input, context) {
         .eq("id", id)
         .eq("status", "searching")
         .eq("dispatch_phase", r.dispatch_phase);
-      if (r.dispatch_phase === "nearest") claim = claim.eq("offer_driver_id", uid);
+      // En phase nearest, le plus proche peut accepter tout de suite ;
+      // les autres peuvent accepter si le délai de priorité de 4 s est écoulé
+      if (r.dispatch_phase === "nearest" && r.offer_driver_id !== uid) {
+        const remaining = Math.ceil((new Date(r.offer_expires_at) - Date.now()) / 1000);
+        // Si plus de 6 secondes restent sur les 10 secondes initiales, les 4 secondes ne sont pas passées
+        if (remaining > 6) {
+          throw new Error("Course temporairement réservée au chauffeur le plus proche");
+        }
+      }
       const claimed = required(await claim.select("*"))[0];
       if (!claimed) throw new Error("Course déjà acceptée");
       return { ride: await serialize(admin, claimed, uid) };
