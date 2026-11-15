@@ -122,17 +122,21 @@ export function formatEuro(value = 0) {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(value);
 }
 
-// Modes de paiement passager : portefeuille (débité en fin de course) ou espèces (remises au chauffeur).
-export const PAYMENT_METHODS = { wallet: "Portefeuille", cash: "Espèces" };
+// Modes de paiement passager : portefeuille (débité en fin de course), espèces (remises au chauffeur)
+// ou carte (payée à la commande, créditée sur le portefeuille puis débitée en fin de course).
+export const PAYMENT_METHODS = { wallet: "Portefeuille", cash: "Espèces", card: "Carte bancaire" };
 export function paymentMethodOf(value) {
-  return value === "cash" ? "cash" : "wallet";
+  return value === "cash" || value === "card" ? value : "wallet";
 }
 export function paymentMethodLabel(value) {
   return PAYMENT_METHODS[paymentMethodOf(value)];
 }
-/** Raison du refus de réservation, ou null. Seul le portefeuille exige un solde suffisant. */
+/** Raison du refus de réservation, ou null. Le portefeuille exige un solde suffisant ; la carte, un solde non débiteur. */
 export function bookingPaymentProblem(method, balance, total) {
-  if (paymentMethodOf(method) === "cash") return null;
+  const m = paymentMethodOf(method);
+  if (m === "cash") return null;
+  if (m === "card")
+    return Number(balance) < 0 ? "Votre portefeuille est débiteur : rechargez-le avant de réserver" : null;
   return Number(balance) < Number(total)
     ? "Solde insuffisant : rechargez votre portefeuille ou payez en espèces"
     : null;

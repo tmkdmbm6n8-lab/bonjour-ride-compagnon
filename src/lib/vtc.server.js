@@ -610,11 +610,8 @@ export async function handleVtc(input, context) {
     const { handleCheckout } = await import("./vtc-checkout.server");
     return handleCheckout({
       admin, uid, role, email: context.claims?.email, p, q, method, body, quoteRide,
-      createRide: async (args) => {
-        const problem = bookingPaymentProblem("card", profile.balance, args.fare.total);
-        if (problem) throw new Error(problem);
-        return createRide(args);
-      },
+      createRide,
+      cardBookingProblem: (fare) => bookingPaymentProblem("card", profile.balance, fare.total),
       serializeRide: async (id) =>
         serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid),
     });

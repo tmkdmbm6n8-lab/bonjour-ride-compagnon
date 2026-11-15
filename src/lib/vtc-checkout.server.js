@@ -58,7 +58,7 @@ function embeddedSession(stripe, { uid, customer, amount, name, returnUrl, metad
  * Card payments: wallet top-up (free amount) and ride paid by card at booking.
  * A card ride credits the exact fare to the wallet, then the ride is booked with that fare and settled from the wallet.
  */
-export async function handleCheckout({ admin, uid, role, email, p, q, method, body, createRide, quoteRide, serializeRide }) {
+export async function handleCheckout({ admin, uid, role, email, p, q, method, body, createRide, quoteRide, serializeRide, cardBookingProblem }) {
   const env = method === "GET" ? q.get("env") : body.environment;
   if (!isStripeEnv(env)) throw new Error("Paiement par carte indisponible pour le moment");
   let stripe;
@@ -94,6 +94,8 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
       const origin = safeOrigin(body.origin);
       if (!origin) return { error: "Adresse de retour invalide" };
       const { fare, route } = await quoteRide(body);
+      const payProblem = cardBookingProblem(fare);
+      if (payProblem) return { error: payProblem };
       const { data: booking, error } = await admin
         .from("card_bookings")
         .insert({ rider_id: uid, vehicle_type: body.vehicleType, pickup: body.pickup, dropoff: body.dropoff, route, fare, environment: env })
