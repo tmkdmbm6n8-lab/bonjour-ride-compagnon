@@ -100,9 +100,11 @@ export default function MapView({
   const lastMoveRef = useRef(0);
   const previousRef = useRef(null);
   const headingRef = useRef(0);
+  const followPreviousRef = useRef(null);
   const progressRef = useRef({ original: null, progress: 0 });
   const centeredRef = useRef(false);
   const [ready, setReady] = useState(false);
+  const [flatOnly, setFlatOnly] = useState(false);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   onClickRef.current = onClick;
@@ -125,17 +127,20 @@ export default function MapView({
           fullscreenControl: false,
           gestureHandling: "greedy",
           clickableIcons: false,
-          // Google keeps its logo, copyright and terms visible in every map, including previews.
-          styles: [
-            { elementType: "geometry", stylers: [{ color: "#1b2230" }] },
-            { elementType: "labels.text.fill", stylers: [{ color: "#b7c2d0" }] },
-            { elementType: "labels.text.stroke", stylers: [{ color: "#141a24" }] },
-            { featureType: "road", elementType: "geometry", stylers: [{ color: "#394353" }] },
-            { featureType: "water", elementType: "geometry", stylers: [{ color: "#101e32" }] },
-            { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
-          ],
+          // Explicit vector rendering enables tilt/heading on road maps, including mobile.
+          renderingType: maps.RenderingType.VECTOR,
+          colorScheme: maps.ColorScheme.DARK,
+          tiltInteractionEnabled: true,
+          headingInteractionEnabled: true,
+          // Google attribution stays visible in every map.
         });
         mapRef.current = map;
+        const checkRendering = () => {
+          const type = map.getRenderingType();
+          setFlatOnly(type === maps.RenderingType.RASTER);
+        };
+        checkRendering();
+        map.addListener("renderingtype_changed", checkRendering);
         cameraRef.current = cameraViewport(map, maps);
         map.addListener("click", (event) => {
           if (event.latLng) onClickRef.current?.(event.latLng.toJSON());
@@ -222,7 +227,17 @@ export default function MapView({
         if (alert.maxspeed) node.title += ` · ${alert.maxspeed} km/h`;
         add(alert, node);
       }
-    return () => markers.forEach((marker) => marker.remove());
+    const rotateArrow = () => {
+      const arrow = containerRef.current?.querySelector(".waze-nav-arrow-body");
+      if (arrow)
+        arrow.style.transform = `rotate(${headingRef.current - (map.getHeading() || 0)}deg)`;
+    };
+    const headingListener = map.addListener("heading_changed", rotateArrow);
+    rotateArrow();
+    return () => {
+      headingListener.remove();
+      markers.forEach((marker) => marker.remove());
+    };
   }, [
     ready,
     pickup,
@@ -317,11 +332,31 @@ export default function MapView({
   useEffect(() => {
     if (!ready || !followPosition || Date.now() - lastMoveRef.current < 8000) return;
     const map = mapRef.current;
-    map.panTo({ lat: followPosition.lat, lng: followPosition.lng });
-    map.setZoom(navigationMode ? 17 : Math.max(map.getZoom(), 15.5));
-    map.setTilt(navigationMode ? 45 : 0);
-    map.setHeading(navigationMode ? headingRef.current : 0);
-  }, [ready, followPosition?.lat, followPosition?.lng, followPosition?.heading, navigationMode]);
+    const previous = followPreviousRef.current;
+    let heading = followPosition.heading;
+    if (!Number.isFinite(heading)) {
+      heading =
+        previous &&
+        Math.hypot(previous.lat - followPosition.lat, previous.lng - followPosition.lng) > 0.00005
+          ? computeBearing(previous, followPosition)
+          : headingRef.current;
+    }
+    followPreviousRef.current = followPosition;
+    headingRef.current = heading;
+    map.moveCamera({
+      center: { lat: followPosition.lat, lng: followPosition.lng },
+      zoom: navigationMode ? 18 : Math.max(map.getZoom(), 15.5),
+      tilt: navigationMode && !flatOnly ? 60 : 0,
+      heading: navigationMode && !flatOnly ? heading : 0,
+    });
+  }, [
+    ready,
+    followPosition?.lat,
+    followPosition?.lng,
+    followPosition?.heading,
+    navigationMode,
+    flatOnly,
+  ]);
 
   return (
     <div
@@ -346,6 +381,11 @@ export default function MapView({
               Réessayer
             </button>
           )}
+        </div>
+      )}
+      {ready && navigationMode && flatOnly && (
+        <div role="status" className="google-map-flat-notice">
+          Vue 3D indisponible sur cet appareil. Le suivi GPS reste actif en 2D.
         </div>
       )}
       {showRoadAlerts && !compact && (

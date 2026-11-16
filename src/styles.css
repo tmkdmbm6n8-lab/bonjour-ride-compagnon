@@ -7051,3 +7051,16 @@ a.activity-pill:hover {
   text-align: center;
 }
 .google-map img { max-width: none; }
+
+.google-map-flat-notice {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #141a24e6;
+  color: #f1f5f9;
+  font-size: 12px;
+  pointer-events: none;
+}

@@ -9,6 +9,9 @@ const fakes = vi.hoisted(() => ({
   panTo: vi.fn(),
   remove: vi.fn(),
   line: vi.fn(),
+  mapOptions: vi.fn(),
+  moveCamera: vi.fn(),
+  rendering: "VECTOR",
 }));
 vi.mock("@/lib/google-maps-browser", () => ({
   loadGoogleMaps: fakes.load,
@@ -23,6 +26,7 @@ vi.mock("@/hooks/useMapSpeedCameras", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fakes.rendering = "VECTOR";
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -32,7 +36,19 @@ beforeEach(() => {
   );
   fakes.marker.mockImplementation(() => ({ remove: fakes.remove }));
   fakes.load.mockResolvedValue({
+    RenderingType: { VECTOR: "VECTOR", RASTER: "RASTER" },
+    ColorScheme: { DARK: "DARK" },
     Map: class {
+      constructor(_container: unknown, options: unknown) {
+        fakes.mapOptions(options);
+      }
+      getRenderingType() {
+        return fakes.rendering;
+      }
+      getHeading() {
+        return 0;
+      }
+      moveCamera = fakes.moveCamera;
       addListener() {
         return { remove() {} };
       }
@@ -107,6 +123,34 @@ describe("carte Google et radars", () => {
             { lat: 48.58, lng: 7.76 },
           ],
         }),
+      ),
+    );
+  });
+  it("active le rendu vectoriel et suit le cap en vue inclinée", async () => {
+    render(<MapView navigationMode followPosition={{ lat: 48.57, lng: 7.75, heading: 95 }} />);
+    await waitFor(() =>
+      expect(fakes.moveCamera).toHaveBeenCalledWith({
+        center: { lat: 48.57, lng: 7.75 },
+        zoom: 18,
+        tilt: 60,
+        heading: 95,
+      }),
+    );
+    expect(fakes.mapOptions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        renderingType: "VECTOR",
+        tiltInteractionEnabled: true,
+        headingInteractionEnabled: true,
+      }),
+    );
+  });
+  it("signale le mode 2D si l’appareil refuse le rendu vectoriel", async () => {
+    fakes.rendering = "RASTER";
+    render(<MapView navigationMode followPosition={{ lat: 48.57, lng: 7.75, heading: 95 }} />);
+    expect(await screen.findByText(/Vue 3D indisponible/)).toBeTruthy();
+    await waitFor(() =>
+      expect(fakes.moveCamera).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tilt: 0, heading: 0 }),
       ),
     );
   });

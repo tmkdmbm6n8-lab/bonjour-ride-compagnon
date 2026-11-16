@@ -17,3 +17,9 @@ La carte interne conserve le tracé, les positions en direct, le suivi et les ra
 ## Vérification avant mise en ligne
 
 Avec la configuration activée, vérifier sur le domaine autorisé : chargement de chaque carte (chauffeur, passager, administration, aperçu d’une course), recherche d’adresse et géolocalisation inverse, calcul avec trafic, suivi de course, radars réservés aux chauffeurs et attribution Google visible. Les tests locaux ne valident pas les autorisations, quotas ou la facturation des API réelles.
+
+## Vue inclinée dans le navigateur
+
+La carte demande explicitement `RenderingType.VECTOR`, le thème sombre Google et les gestes d’inclinaison/rotation. Le suivi en conduite utilise une caméra à zoom 18, inclinaison demandée de 60° et cap GPS (ou cap calculé à partir des déplacements si le téléphone n’en fournit pas). La flèche reste orientée relativement au cap de la carte. Google peut limiter l’inclinaison selon le zoom et l’appareil ; un navigateur sans rendu vectoriel affiche un message et conserve le suivi en 2D. Cette vue n’est ni Street View ni une garantie de bâtiments photoréalistes.
+
+Sur le site iPhone/navigateur, le Navigation SDK natif Google n’est pas disponible. Le guidage vocal Google et les instructions virage par virage restent dans l’application Google Maps ouverte par le bouton de navigation. La vue inclinée dans le site ne constitue pas ce guidage.
