@@ -1,7 +1,9 @@
 "use client";
 
 import { Gauge, Route as RouteIcon, Wallet, MessagesSquare, Menu } from "lucide-react";
+import { useEffect } from "react";
 import AppShell from "@/components/shell/AppShell";
+import { registerDriverPush } from "@/lib/native-push";
 
 const NAV = [
   { href: "/driver/dashboard", label: "Accueil", icon: Gauge },
@@ -12,5 +14,8 @@ const NAV = [
 ];
 
 export default function DriverLayout({ children }) {
+  useEffect(() => {
+    registerDriverPush();
+  }, []);
   return <AppShell nav={NAV}>{children}</AppShell>;
 }

@@ -53,6 +53,8 @@ import {
 } from "./vtc-dispatch";
 import { sanitizeTripPrefs, tripPrefsOf, riderAverage } from "./vtc-trip-prefs";
 import { evaluateDriverProgress } from "./vtc-tracking";
+import { newlyOfferedDriverIds, validPushToken } from "./vtc-push";
+import { pushRideOffer } from "./vtc-push.server";
 import {
   ALERT_KINDS,
   NEARBY_RADIUS_KM,
@@ -514,6 +516,22 @@ export async function handleVtc(input, context) {
         .eq("user_id", uid),
     );
     return { driver: driverShape(required(await db.from("drivers").select("*").eq("user_id", uid).single())) };
+  }
+  if (p === "/api/drivers/me/push-token") {
+    // Phone notification address: written only by the server, one owner per phone.
+    const token = validPushToken(body.token);
+    if (!token) throw new Error("Notification invalide");
+    if (method === "DELETE") {
+      required(await admin.from("push_tokens").delete().eq("token", token).eq("user_id", uid));
+      return { ok: true };
+    }
+    const platform = ["android", "ios", "web"].includes(body.platform) ? body.platform : "android";
+    required(
+      await admin
+        .from("push_tokens")
+        .upsert({ token, user_id: uid, platform, updated_at: new Date().toISOString() }, { onConflict: "token" }),
+    );
+    return { ok: true };
   }
   if (p === "/api/drivers/me/preferences" && method === "PATCH") {
     // Préférences de course : écrites uniquement par le serveur, après nettoyage.
@@ -1065,6 +1083,8 @@ export async function handleVtc(input, context) {
         .select("id")
         .single(),
     );
+    const testRide = required(await admin.from("rides").select("*").eq("id", r.id).single());
+    await pushRideOffer(admin, testRide, [d.user_id]);
     return { ok: true, rideId: r.id, expiresInSeconds: TEST_OFFER_SECONDS, driverOnline: Boolean(d.is_online) };
   }
   if (p === "/api/admin/pricing") {
@@ -1204,6 +1224,7 @@ export async function handleVtc(input, context) {
     if (target === uid) throw new Error("Vous ne pouvez pas supprimer votre propre compte");
     const files = (await admin.storage.from(DOCUMENTS_BUCKET).list(target, { limit: 1000 })).data || [];
     const removed = required(await admin.rpc("admin_delete_account", { _user: target }));
+    required(await admin.from("push_tokens").delete().eq("user_id", target));
     // Inbox threads are owned by immutable account id even after an e-mail change.
     required(
       await admin
@@ -1369,11 +1390,15 @@ async function assignOffer(db, r, pool) {
       )[0] || r
     );
   }
-  const patch = planDispatch(r, pool || (await dispatchPool(db)));
+  const drivers = pool || (await dispatchPool(db));
+  const patch = planDispatch(r, drivers);
   if (!patch) return r;
   let q = db.from("rides").update(patch).eq("id", r.id).eq("status", "searching");
   q = r.dispatch_phase ? q.eq("dispatch_phase", r.dispatch_phase) : q.is("dispatch_phase", null);
-  return required(await q.select("*"))[0] || required(await db.from("rides").select("*").eq("id", r.id).single());
+  const won = required(await q.select("*"))[0];
+  // Only the request whose phase-guarded update succeeded sends the pushes, so each step notifies once.
+  if (won) await pushRideOffer(db, won, newlyOfferedDriverIds(r, won, drivers));
+  return won || required(await db.from("rides").select("*").eq("id", r.id).single());
 }
 
 // Visiteurs non connectés (page d'accueil) : uniquement la recherche d'adresse et l'estimation.
