@@ -9,6 +9,7 @@ import Link from "@/lib/archive-navigation";
 import {
   Power,
   Navigation,
+  Radar,
   MapPin,
   Circle,
   MessageCircle,
@@ -508,11 +509,18 @@ function DriverDashboard() {
             )}
             <div className="mb-3">
               {navigating && (
-                <p className="text-sm text-gold mb-2" role="status">
-                  {routeRadars.count == null
-                    ? routeRadars.loading ? "Comptage des radars…" : "Nombre de radars indisponible"
-                    : `${routeRadars.count} radar${routeRadars.count > 1 ? "s" : ""} connu${routeRadars.count > 1 ? "s" : ""} ${ride.status === "in_progress" ? "jusqu’à l’arrivée" : "jusqu’au passager"}`}
-                </p>
+                <div className={`drv-route-radars ${routeRadars.count > 0 ? "has-radars" : ""}`} role="status">
+                  <Radar className="drv-route-radars-icon" size={28} aria-hidden="true" />
+                  <div className="drv-route-radars-copy">
+                    <strong>
+                      {routeRadars.count == null
+                        ? routeRadars.loading ? "Comptage des radars…" : "Radars indisponibles"
+                        : `${routeRadars.count} radar${routeRadars.count > 1 ? "s" : ""} connu${routeRadars.count > 1 ? "s" : ""}`}
+                    </strong>
+                    <span>{ride.status === "in_progress" ? "Sur votre trajet jusqu’à l’arrivée" : "Sur votre trajet jusqu’au passager"}</span>
+                  </div>
+                  {routeRadars.count != null && <span className="drv-route-radars-count" aria-hidden="true">{routeRadars.count}</span>}
+                </div>
               )}
               <div className="flex gap-2 items-center text-sm">
                 <Circle size={10} className="text-gold flex-shrink-0" />

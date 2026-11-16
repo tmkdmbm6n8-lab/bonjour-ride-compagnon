@@ -6233,6 +6233,52 @@ a.activity-pill:hover {
   color: #facc15;
 }
 
+.drv-route-radars {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 2px solid #596474;
+  border-radius: 14px;
+  background: #202a38;
+  color: #f1f5f9;
+}
+.drv-route-radars.has-radars {
+  background: #facc15;
+  border-color: #fef08a;
+  color: #1c1605;
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.24);
+}
+.drv-route-radars-icon { flex-shrink: 0; }
+.drv-route-radars-copy { flex: 1; min-width: 0; }
+.drv-route-radars-copy strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.drv-route-radars-copy > span {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.drv-route-radars-count {
+  display: grid;
+  place-items: center;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.12);
+  font-size: 28px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
 .drv-sheet-details {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 12px;
