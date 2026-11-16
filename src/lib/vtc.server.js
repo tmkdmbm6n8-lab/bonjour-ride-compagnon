@@ -47,6 +47,7 @@ import {
   pickupZoneProblem,
 } from "./vtc-dispatch";
 import { sanitizeTripPrefs, tripPrefsOf, riderAverage } from "./vtc-trip-prefs";
+import { evaluateDriverProgress } from "./vtc-tracking";
 const active = ["searching", "accepted", "arrived", "in_progress"];
 function required(result) {
   if (result.error) throw new Error(result.error.message);
@@ -885,7 +886,10 @@ export async function handleVtc(input, context) {
     } else if (action === "cancel") {
       if (!participant || !["searching", "accepted", "arrived"].includes(r.status))
         throw new Error("Annulation impossible");
+
+      // ── A. Le CHAUFFEUR annule (remise en recherche + mémorisation du motif) ──
       if (r.driver_id === uid) {
+        const cancelReason = typeof body?.reason === "string" ? body.reason.slice(0, 200) : null;
         required(
           await admin
             .from("rides")
@@ -897,13 +901,32 @@ export async function handleVtc(input, context) {
               dispatch_phase: null,
               accepted_at: null,
               declined: [...r.declined, uid],
+              cancel_reason: cancelReason,
             })
             .eq("id", id)
             .eq("status", r.status),
         );
       } else {
-        const patch = { status: "cancelled", offer_driver_id: null };
-        if (r.status === "arrived" && !r.is_test && paymentMethodOf(r.payment?.method) !== "cash") {
+        // ── B. Le CLIENT annule ──
+        const patch = {
+          status: "cancelled",
+          offer_driver_id: null,
+          cancel_reason: typeof body?.reason === "string" ? body.reason.slice(0, 200) : null,
+        };
+
+        // Vérification anti-fraude : le chauffeur était-il immobile ou en mauvaise direction ?
+        const driverLoc = r.driver_id
+          ? (await admin.from("drivers").select("location").eq("user_id", r.driver_id).single()).data?.location
+          : null;
+        const progress = evaluateDriverProgress(r, driverLoc);
+
+        // Frais d'annulation de 3 € uniquement si le chauffeur est arrivé ET n'est pas en faute
+        if (
+          r.status === "arrived" &&
+          !r.is_test &&
+          paymentMethodOf(r.payment?.method) !== "cash" &&
+          !progress.canCancelFree
+        ) {
           required(await admin.rpc("wallet_entry", { _user: uid, _amount: -3, _type: "cancellation_fee", _ride: id }));
           if (r.driver_id)
             required(
@@ -913,9 +936,7 @@ export async function handleVtc(input, context) {
         }
         required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
       }
-    } else if (action === "messages") {
-      if (!participant) throw new Error("Accès refusé");
-      if (method === "GET") return { messages: r.messages };
+
       if (
         !["accepted", "arrived", "in_progress"].includes(r.status) ||
         typeof body.text !== "string" ||
