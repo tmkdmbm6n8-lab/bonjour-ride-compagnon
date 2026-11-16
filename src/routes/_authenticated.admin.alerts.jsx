@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { Radar, Siren, Trash2, CheckCircle2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { PoliceCapIcon, FrenchRadarIcon } from "@/components/icons/road-alert-icons";
 import AdminLayout from "@/components/AdminLayout";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { Loading, Empty } from "@/components/ui/bits";
 import { useToast } from "@/components/ui/Toast";
 import { formatRelativeTime } from "@/lib/utils/geo";
-import { RADAR_VALIDATIONS } from "@/lib/vtc-road-alerts";
 
 function AdminAlertsPage() {
   const toast = useToast();
@@ -30,16 +30,31 @@ function AdminAlertsPage() {
     return () => clearInterval(t);
   }, [load]);
 
-  async function act(id, action) {
-    if (action === "delete" && !window.confirm("Supprimer ce signalement ?")) return;
+  async function remove(id) {
+    if (!window.confirm("Supprimer ce signalement ?")) return;
     setBusyId(id);
     try {
-      const res = await fetch(`/api/admin/road-alerts/${id}${action === "validate" ? "/validate" : ""}`, {
-        method: action === "validate" ? "POST" : "DELETE",
-      });
+      const res = await fetch(`/api/admin/road-alerts/${id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Action impossible");
-      toast(action === "validate" ? "Radar validé définitivement" : "Signalement supprimé", "success");
+      toast("Signalement supprimé", "success");
+      await load();
+    } catch (err) {
+      toast(err.message, "error");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function removeAll() {
+    const label = filter === "radar" ? "tous les radars" : "tous les contrôles de police";
+    if (!window.confirm(`Supprimer ${label} ? Cette action est définitive.`)) return;
+    setBusyId("all");
+    try {
+      const res = await fetch(`/api/admin/road-alerts?kind=${filter}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Action impossible");
+      toast(filter === "radar" ? "Tous les radars ont été supprimés" : "Tous les contrôles ont été supprimés", "success");
       await load();
     } catch (err) {
       toast(err.message, "error");
@@ -56,19 +71,24 @@ function AdminAlertsPage() {
         <div>
           <h1 className="page-title">Signalements</h1>
           <p className="page-subtitle">
-            Radars et contrôles signalés par les chauffeurs. Un radar devient définitif après {RADAR_VALIDATIONS}{" "}
-            confirmations ou votre validation.
+            Radars et contrôles signalés par les chauffeurs. Un radar reste fixe jusqu'à ce que vous le supprimiez ; un
+            contrôle de police disparaît seul 2 h après son dernier signalement.
           </p>
         </div>
       </div>
 
       <div className="flex gap-2" style={{ marginBottom: 16 }}>
         <button className={`btn btn-sm ${filter === "radar" ? "btn-primary" : "btn-secondary"}`} onClick={() => setFilter("radar")}>
-          <Radar size={15} /> Radars
+          <FrenchRadarIcon size={16} /> Radars
         </button>
         <button className={`btn btn-sm ${filter === "police" ? "btn-primary" : "btn-secondary"}`} onClick={() => setFilter("police")}>
-          <Siren size={15} /> Police
+          <PoliceCapIcon size={16} /> Police
         </button>
+        {list.length > 0 && (
+          <button className="btn btn-sm btn-danger" style={{ marginLeft: "auto" }} disabled={busyId === "all"} onClick={removeAll}>
+            <Trash2 size={14} /> {filter === "radar" ? "Supprimer tous les radars" : "Supprimer tous les contrôles"}
+          </button>
+        )}
       </div>
 
       {alerts === null ? (
@@ -101,27 +121,21 @@ function AdminAlertsPage() {
                     </a>
                   </td>
                   <td>
-                    {a.permanent ? (
-                      <span className="badge badge-gold">{a.validatedByAdmin ? "Validé (admin)" : "Définitif"}</span>
+                    {a.kind === "radar" ? (
+                      <span className="badge badge-gold">Fixe</span>
                     ) : a.active ? (
-                      <span className="badge badge-info">En attente</span>
+                      <span className="badge badge-info">Actif</span>
                     ) : (
                       <span className="badge badge-neutral">Expiré</span>
                     )}
                   </td>
                   <td className="mono-nums">
                     {a.confirmations}
-                    {a.kind === "radar" && !a.permanent ? ` / ${RADAR_VALIDATIONS}` : ""}
                     {a.denials ? ` · ${a.denials} « plus là »` : ""}
                   </td>
                   <td>{formatRelativeTime(a.createdAt)}</td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                    {a.kind === "radar" && !a.permanent && (
-                      <button className="btn btn-secondary btn-sm" disabled={busyId === a.id} onClick={() => act(a.id, "validate")}>
-                        <CheckCircle2 size={14} /> Valider
-                      </button>
-                    )}{" "}
-                    <button className="btn btn-danger btn-sm" disabled={busyId === a.id} onClick={() => act(a.id, "delete")}>
+                    <button className="btn btn-danger btn-sm" disabled={busyId === a.id} onClick={() => remove(a.id)}>
                       <Trash2 size={14} /> Supprimer
                     </button>
                   </td>
