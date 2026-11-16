@@ -39,6 +39,7 @@ export default function DriverHome({
   roadAlerts,
   reporting,
   onReport,
+  canReportRadar = false,
 }) {
   const [today, setToday] = useState(null);
   const [lastRide, setLastRide] = useState(null);
@@ -190,7 +191,7 @@ export default function DriverHome({
       {/* ── Signalements police / radar (aussi sans course) ── */}
       {roadAlerts && (
         <>
-          <RoadAlertButtons roadAlerts={roadAlerts} reporting={reporting} onReport={onReport} className="is-home" />
+          <RoadAlertButtons roadAlerts={roadAlerts} reporting={reporting} onReport={onReport} canReportRadar={canReportRadar} className="is-home" />
           <RoadAlertPrompt roadAlerts={roadAlerts} className="is-home" />
         </>
       )}

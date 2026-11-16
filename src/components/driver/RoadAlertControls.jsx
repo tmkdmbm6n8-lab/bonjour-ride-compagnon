@@ -3,7 +3,7 @@ import { Volume2, VolumeX } from "lucide-react";
 import { PoliceCapIcon, FrenchRadarIcon } from "@/components/icons/road-alert-icons";
 
 /** Boutons Son / Radar / Police, partagés entre l'accueil chauffeur et l'écran de course. */
-export function RoadAlertButtons({ roadAlerts, reporting, onReport, className = "" }) {
+export function RoadAlertButtons({ roadAlerts, reporting, onReport, canReportRadar = false, className = "" }) {
   return (
     <div className={`drv-alert-stack ${className}`}>
       <button
@@ -14,7 +14,7 @@ export function RoadAlertButtons({ roadAlerts, reporting, onReport, className = 
       >
         {roadAlerts.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
       </button>
-      <button
+      {canReportRadar && <button
         className="drv-alert-btn is-radar"
         onClick={() => onReport("radar")}
         disabled={reporting === "radar"}
@@ -22,7 +22,7 @@ export function RoadAlertButtons({ roadAlerts, reporting, onReport, className = 
         title="Signaler un radar"
       >
         <FrenchRadarIcon size={22} />
-      </button>
+      </button>}
       <button
         className="drv-alert-btn is-police"
         onClick={() => onReport("police")}

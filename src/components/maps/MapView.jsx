@@ -5,6 +5,8 @@ import { Map as MLMap, Marker, LngLatBounds, AttributionControl, setWorkerUrl } 
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { policeCapSvg, frenchRadarSvg } from "@/components/icons/road-alert-icons";
+import useMapSpeedCameras from "@/hooks/useMapSpeedCameras";
+import { mergeCameraAlerts } from "@/lib/vtc-speed-cameras";
 
 setWorkerUrl(maplibreWorkerUrl);
 
@@ -257,13 +259,15 @@ export default function MapView({
     }
   }, [drivers]);
 
-  // Signalements police / radar
+  const osmCameras = useMapSpeedCameras(mapRef, !compact);
+
+  // Signalements communautaires et radars OpenStreetMap.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const dots = alertDotsRef.current;
     const seen = new Set();
-    for (const a of alerts || []) {
+    for (const a of mergeCameraAlerts(alerts || [], osmCameras)) {
       if (!Number.isFinite(a?.lat) || !Number.isFinite(a?.lng)) continue;
       const key = `${a.id}:${a.kind}:${a.permanent ? 1 : 0}`;
       seen.add(key);
@@ -275,7 +279,7 @@ export default function MapView({
         `marker-road-alert is-${a.kind}${a.permanent ? " is-permanent" : ""}`,
         a.kind === "police" ? POLICE_SVG : RADAR_SVG,
       );
-      node.title = a.kind === "police" ? "Contrôle de police signalé" : "Radar fixe";
+      node.title = a.source === "osm" ? `Radar OpenStreetMap${a.maxspeed ? ` · ${a.maxspeed}` : ''}` : a.kind === "police" ? "Contrôle de police signalé" : "Radar fixe";
       dots.set(key, new Marker({ element: node }).setLngLat([a.lng, a.lat]).addTo(map));
     }
     for (const [key, marker] of dots) {
@@ -284,7 +288,7 @@ export default function MapView({
         dots.delete(key);
       }
     }
-  }, [alerts]);
+  }, [alerts, osmCameras]);
 
   // Tracé d'itinéraire
   useEffect(() => {

@@ -452,7 +452,7 @@ function DriverDashboard() {
 
           {/* 3. Au-dessus du volet bas : Pause 2 min à gauche / Annuler à droite */}
           <div className="drv-mid-actions-bar">
-            <RoadAlertButtons roadAlerts={roadAlerts} reporting={reporting} onReport={handleReport} />
+            <RoadAlertButtons roadAlerts={roadAlerts} reporting={reporting} onReport={handleReport} canReportRadar={profile?.isPriority === true} />
             <button
               className={`drv-action-pill drv-pause-pill ${pauseSeconds > 0 ? "is-active" : ""}`}
               onClick={() => {
@@ -583,6 +583,7 @@ function DriverDashboard() {
           roadAlerts={roadAlerts}
           reporting={reporting}
           onReport={handleReport}
+          canReportRadar={profile?.isPriority === true}
         />
       )}
 

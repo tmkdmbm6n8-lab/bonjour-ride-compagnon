@@ -4,6 +4,9 @@ import { parisDay, validDay } from "./vtc-dates";
 import { inboxForDriver, sendSupportMessage } from "./vtc-support.server";
 import { buildWaybill, sanitizeOperator } from "./vtc-waybill";
 import { geoSearch } from "./vtc-geocoding.server";
+import { speedCameras } from "./vtc-speed-cameras.server";
+import { mergeCameraAlerts } from "./vtc-speed-cameras";
+import { requireRadarReporter } from "./vtc-road-alerts.server";
 import {
   DEFAULT_PRICING,
   calculateFare,
@@ -398,6 +401,7 @@ export async function handleVtc(input, context) {
     return { user: { ...profileShape(fresh, context.claims.email), role } };
   }
   if (p === "/api/geo/search") return geoSearch(q);
+  if (p === "/api/maps/speed-cameras" && method === "GET") return speedCameras(q.get("bbox"));
   if (p === "/api/rides/estimate") return estimates(admin, body.pickup, body.dropoff);
   if (p === "/api/drivers/me/discover" && method === "GET") return discoverBoard(q.get("day") || parisDay());
   if (p === "/api/drivers/me/inbox" && method === "GET")
@@ -1437,12 +1441,18 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
   if (p === "/api/drivers/me/road-alerts") {
     if (method === "GET") {
       const center = validPoint({ lat: q.get("lat"), lng: q.get("lng") });
-      return { alerts: await withVotes(await load(center)) };
+      const alerts = await withVotes(await load(center));
+      if (!center) return { alerts };
+      const dLat = NEARBY_RADIUS_KM / 111;
+      const dLng = Math.min(0.49, dLat / Math.max(0.2, Math.cos(center.lat * Math.PI / 180)));
+      const osm = await speedCameras([Math.max(-180, center.lng - dLng), Math.max(-90, center.lat - dLat), Math.min(180, center.lng + dLng), Math.min(90, center.lat + dLat)]);
+      return { alerts: mergeCameraAlerts(alerts, osm.cameras), osmAvailable: osm.available };
     }
     if (method === "POST") {
       const point = validPoint(body);
       if (!point) throw new Error("Position GPS introuvable");
       if (!ALERT_KINDS.includes(body.kind)) throw new Error("Type de signalement invalide");
+      await requireRadarReporter(admin, uid, body.kind);
       const near = await load(point);
       const target = findMergeTarget(near, body.kind, point);
       if (target) {

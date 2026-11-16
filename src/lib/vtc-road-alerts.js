@@ -9,6 +9,10 @@ export const CONFIRM_RADIUS_M = 250; // on demande « toujours là ? » à moins
 export const BEEP_START_M = 100; // le bip commence à 100 m
 export const NEARBY_RADIUS_KM = 25;
 
+export function assertRadarReportPermission(kind, isPriority) {
+  if (kind === 'radar' && isPriority !== true) throw new Error('Seuls les chauffeurs prioritaires peuvent ajouter un radar');
+}
+
 const distM = (a, b) => haversineDistance(a.lat, a.lng, b.lat, b.lng) * 1000;
 
 export function validPoint(p) {
