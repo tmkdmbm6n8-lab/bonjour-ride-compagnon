@@ -410,8 +410,8 @@ function drawRoute(map, geometry) {
     const layers = [
       { id: "route-halo", paint: { "line-color": "#ffffff", "line-width": 22, "line-opacity": 0.35, "line-blur": 6 } },
       { id: "route-casing", paint: { "line-color": "#ffffff", "line-width": 15, "line-opacity": 1 } },
-      { id: "route-line", paint: { "line-color": "#0a0a0a", "line-width": 9 } },
-      { id: "route-core", paint: { "line-color": "#3a3a3a", "line-width": 2.5, "line-opacity": 0.9 } },
+      { id: "route-line", paint: { "line-color": "#1f1f1f", "line-width": 9 } },
+      { id: "route-core", paint: { "line-color": "#000000", "line-width": 3 } },
     ];
     for (const l of layers) {
       if (map.getLayer(l.id)) continue;
