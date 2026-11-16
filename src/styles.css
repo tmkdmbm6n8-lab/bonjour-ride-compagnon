@@ -6035,3 +6035,206 @@ a.activity-pill:hover {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
   color: #f1f5f9 !important;
 }
+/* ─── Écran de course active Cockpit StrasDrive ─── */
+.drv-active-ride-page {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: #08090c;
+}
+
+/* 1. Fiche passager en haut */
+.drv-top-passenger-bar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(15, 17, 24, 0.96) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 160, 23, 0.25);
+  border-radius: 18px;
+  padding: 12px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+}
+
+.drv-client-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drv-client-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(212, 160, 23, 0.15);
+  color: #facc15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(212, 160, 23, 0.3);
+}
+
+.drv-client-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.drv-client-rating {
+  font-size: 0.82rem;
+  color: #facc15;
+  font-weight: 600;
+}
+
+.drv-client-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drv-circle-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.drv-circle-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: #d4a017;
+  color: #facc15;
+}
+
+.drv-circle-btn.is-call {
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+
+/* 2. Barre d'action médiane (Pause à gauche, Annuler à droite) */
+.drv-mid-actions-bar {
+  position: absolute;
+  bottom: calc(var(--bottom-sheet-height, 160px) + 20px);
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 15;
+  pointer-events: none;
+}
+
+.drv-action-pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.drv-pause-pill {
+  background: rgba(15, 17, 24, 0.92);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+}
+.drv-pause-pill.is-active {
+  background: rgba(234, 179, 8, 0.25);
+  border-color: #facc15;
+  animation: pulse 1.5s infinite;
+}
+
+.drv-cancel-pill {
+  background: rgba(24, 10, 12, 0.92);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+.drv-cancel-pill:hover {
+  background: rgba(45, 15, 18, 0.95);
+  border-color: #ef4444;
+}
+
+/* 3. Volet d'infos rétractable en bas (Opaque et net) */
+.drv-bottom-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #0f1118 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px 24px 0 0;
+  padding: 16px 20px 24px;
+  z-index: 20;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+}
+
+.drv-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.drv-sheet-toggle {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.drv-sheet-toggle:hover {
+  color: #facc15;
+}
+
+.drv-sheet-details {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+/* Modale d'annulation cockpit */
+.drv-cancel-choice {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.drv-cancel-choice:hover,
+.drv-cancel-choice.is-selected {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: #f87171;
+  color: #ffffff;
+}
