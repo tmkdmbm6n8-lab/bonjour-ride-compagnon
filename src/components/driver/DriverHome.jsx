@@ -164,10 +164,28 @@ export default function DriverHome({
         </div>
       </header>
 
-      {/* ── Gains du jour à gauche en temps réel ── */}
-      <div className="drv-floating-earnings">
-        <span className="drv-float-label">Aujourd'hui</span>
-        <strong className="drv-float-val">{today ? money(today.earnings) : "0,00 €"}</strong>
+      {/* ── Gains du jour / Dernière course avec geste fluide au doigt ── */}
+      <div
+        className="drv-floating-earnings"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onClick={handleToggleEarnings}
+        role="button"
+        tabIndex={0}
+        aria-label="Basculer entre la recette du jour et la dernière course"
+      >
+        <div key={earningsView} className="drv-float-content">
+          <span className="drv-float-label">{earningsView === "today" ? "Aujourd'hui" : "Dernière course"}</span>
+          <strong className="drv-float-val">
+            {earningsView === "today"
+              ? today
+                ? money(today.earnings)
+                : "0,00 €"
+              : lastRide != null
+                ? money(lastRide)
+                : "0,00 €"}
+          </strong>
+        </div>
       </div>
 
       {/* ── Signalements police / radar (aussi sans course) ── */}
