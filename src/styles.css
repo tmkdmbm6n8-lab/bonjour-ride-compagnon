@@ -6678,3 +6678,103 @@ a.activity-pill:hover {
   border: 3px solid #f0f7fc !important;
   box-shadow: 0 0 0 7px #8cc8f025 !important;
 }
+
+/* Rider booking stays anchored above the tabs, including while typing. */
+.shell-rider .rider-trip-panel {
+  overflow-anchor: none;
+  overscroll-behavior: contain;
+  scroll-padding-block: 12px;
+}
+@media (max-width: 900px) {
+  .shell-rider .rider-workspace > .rider-trip-panel {
+    position: fixed;
+    top: auto;
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    left: 12px;
+    right: 12px;
+    max-height: calc(100dvh - 118px - env(safe-area-inset-bottom));
+  }
+  .rider-trip-panel.is-editing .rider-booking-context { display: none; }
+  .rider-trip-panel.is-editing [role="listbox"] { max-height: 180px !important; }
+}
+.shell-rider .rider-payment-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.shell-rider .rider-payment-options .rider-payment-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 68px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid #3b4656;
+  background: #1c2532;
+  color: #f1f5f9;
+  cursor: pointer;
+}
+.shell-rider .rider-payment-options .rider-payment-option[aria-checked="true"] {
+  background: #30291b;
+  color: #ffe0a3;
+  border-color: #e9be70;
+  box-shadow: inset 0 0 0 1px #e9be70;
+}
+.rider-payment-detail { color: #bac6d5; }
+.rider-payment-option:focus-visible,
+.rider-cancel-button:focus-visible { outline: 3px solid #8cc8f0; outline-offset: 3px; }
+.rider-trip-toolbar {
+  position: sticky;
+  top: -1px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0 14px;
+  margin-bottom: 12px;
+  background: #10121a;
+  border-bottom: 1px solid #ffffff14;
+}
+.rider-cancel-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #fb718566;
+  border-radius: 12px;
+  background: #371d29;
+  color: #fecdd3;
+  font-weight: 600;
+  cursor: pointer;
+}
+.driver-offer-preview { margin-bottom: 18px; }
+.driver-offer-map {
+  height: clamp(165px, 25dvh, 230px);
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid #ffffff18;
+}
+.driver-offer-legend {
+  display: flex;
+  gap: 18px;
+  padding-top: 10px;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+.driver-offer-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.driver-offer-legend i { width: 9px; height: 9px; display: inline-block; }
+.offer-pickup-dot { border-radius: 50%; background: #f4cf85; }
+.offer-dropoff-dot { border-radius: 2px; background: #edf3f7; }
+.driver-offer-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: #0a0b10;
+  padding-block: 12px;
+  box-shadow: 0 -12px 20px #0a0b10e6;
+}

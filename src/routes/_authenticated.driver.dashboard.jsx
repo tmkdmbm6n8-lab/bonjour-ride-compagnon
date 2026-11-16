@@ -603,6 +603,24 @@ function DriverDashboard() {
               boxShadow: "0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(212, 160, 23, 0.12)",
             }}
           >
+            <div className="driver-offer-preview" aria-label="Aperçu du trajet proposé">
+              <div className="driver-offer-map">
+                <MapView
+                  key={offer.rideId}
+                  center={offer.pickup}
+                  pickup={offer.pickup}
+                  dropoff={offer.dropoff}
+                  routeGeometry={drawableRoute(offer.routeGeometry)}
+                  fit
+                  fitTo={[offer.pickup, offer.dropoff]}
+                  compact
+                />
+              </div>
+              <div className="driver-offer-legend">
+                <span><i className="offer-pickup-dot" /> Prise en charge</span>
+                <span><i className="offer-dropoff-dot" /> Dépôt</span>
+              </div>
+            </div>
             {/* 1. En-tête : Badge StrasDrive Or + Bouton Ignorer */}
             <div className="flex items-center justify-between mb-4">
               <div
@@ -747,7 +765,7 @@ function DriverDashboard() {
               const maxSec = offer.expiresInSeconds || 15;
               const progressPct = Math.max(0, Math.min(100, (countdown / maxSec) * 100));
               return (
-                <div className="flex gap-3">
+                <div className="flex gap-3 driver-offer-actions">
                   <button
                     onClick={decline}
                     disabled={actionBusy}

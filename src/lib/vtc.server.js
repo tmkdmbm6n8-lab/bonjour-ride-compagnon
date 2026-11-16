@@ -774,6 +774,7 @@ export async function handleVtc(input, context) {
         distanceMeters: r.route.distanceMeters,
         durationSeconds: r.route.durationSeconds,
         routeQuality: routeQualityLabel(r.route),
+        routeGeometry: r.route?.geometry || null,
         surgeMultiplier: r.fare.surgeMultiplier,
         expiresInSeconds: Math.max(0, Math.ceil((new Date(r.offer_expires_at) - Date.now()) / 1000)),
         ownClass: driverClass(me),

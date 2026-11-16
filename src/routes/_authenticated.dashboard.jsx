@@ -39,7 +39,6 @@ import EmbeddedPayment from "@/components/payments/EmbeddedPayment";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { playSound } from "@/lib/sounds";
 import useVisualViewport from "@/hooks/useVisualViewport";
-import useGeolocation from "@/hooks/useGeolocation";
 import { useLiveRoute } from "@/hooks/useLiveRoute";
 import { routeQualityLabel } from "@/lib/vtc-routing";
 import { drawableRoute, arrivalClock } from "@/lib/utils/route-display";
@@ -66,7 +65,8 @@ const CANCEL_REASONS = [
 function RiderDashboard() {
   const toast = useToast();
   const bookingPanelRef = useRef(null);
-  const { position: geo, error: geoError } = useGeolocation({ watch: false });
+  const [geo, setGeo] = useState(null);
+  const locationRequestRef = useRef(0);
 
   // Booking form state
   const [pickup, setPickup] = useState(null); // {address, lat, lng}
@@ -106,7 +106,9 @@ function RiderDashboard() {
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
-  const vv = useVisualViewport(isPhone && searchFocused);
+  const vv = useVisualViewport(isPhone);
+  useEffect(() => () => { locationRequestRef.current += 1; clearTimeout(blurTimerRef.current); }, []);
+  const keyboardOpen = Boolean(vv && window.innerHeight - vv.height > 150);
   const chatOpenRef = useRef(false);
   useEffect(() => {
     chatOpenRef.current = chatOpen;
@@ -178,42 +180,18 @@ function RiderDashboard() {
     refreshWallet();
   }, [refreshWallet]);
 
-  // ── Default pickup = current location (reverse geocoded) ──
-  useEffect(() => {
-    if (!geo || pickup) return;
-    let ignore = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/geo/search?reverse=1&lat=${geo.lat}&lng=${geo.lng}`);
-        const data = await res.json();
-        const place = data.results?.[0];
-        if (!ignore) {
-          const address = place?.address || "Position actuelle";
-          setPickup({ address, lat: geo.lat, lng: geo.lng });
-          setPickupText(address);
-        }
-      } catch {
-        if (!ignore) {
-          setPickup({ address: "Position actuelle", lat: geo.lat, lng: geo.lng });
-          setPickupText("Position actuelle");
-        }
-      }
-    })();
-    return () => {
-      ignore = true;
-    };
-  }, [geo, pickup]);
-
-  // ── Bouton « Me localiser » : remplit la prise en charge à la demande ──
+  // Pickup location is requested only by the explicit location button.
   const [locating, setLocating] = useState(false);
   function handleLocateMe() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       toast("La localisation n’est pas disponible sur cet appareil", "error");
       return;
     }
+    const requestId = ++locationRequestRef.current;
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        if (requestId !== locationRequestRef.current) return;
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         let address = "Position actuelle";
@@ -224,11 +202,14 @@ function RiderDashboard() {
         } catch {
           /* adresse générique */
         }
+        if (requestId !== locationRequestRef.current) return;
+        setGeo({ lat, lng });
         setPickup({ address, lat, lng });
         setPickupText(address);
         setLocating(false);
       },
       () => {
+        if (requestId !== locationRequestRef.current) return;
         setLocating(false);
         toast("Impossible d’obtenir votre position — autorisez la localisation", "error", 5000);
       },
@@ -517,10 +498,18 @@ function RiderDashboard() {
       </div>
 
       <div
-        className="ride-panel"
+        className={`ride-panel rider-trip-panel ${searchFocused ? "is-editing" : ""}`}
         ref={bookingPanelRef}
         style={
-          vv ? { position: "fixed", top: vv.top + 8, bottom: "auto", maxHeight: vv.height - 16, zIndex: 45 } : undefined
+          vv ? {
+            position: "fixed",
+            top: "auto",
+            bottom: keyboardOpen
+              ? Math.max(0, window.innerHeight - vv.top - vv.height) + 12
+              : "calc(86px + env(safe-area-inset-bottom))",
+            maxHeight: Math.max(120, vv.height - (keyboardOpen ? 24 : 106)),
+            zIndex: 45,
+          } : undefined
         }
       >
         {/* ── IDLE: booking form ── */}
@@ -531,12 +520,6 @@ function RiderDashboard() {
               <span className="rider-desktop-heading">Commander une course</span>
             </h2>
 
-            {geoError && !pickup && (
-              <p className="tiny muted mb-3">
-                {" "}
-                L’accès à la localisation est désactivé — recherchez plutôt votre point de prise en charge.{" "}
-              </p>
-            )}
 
             <div className="flex-col gap-3">
               <div className="rider-pickup-row">
@@ -544,10 +527,14 @@ function RiderDashboard() {
               <PlaceSearch
                 value={pickupText}
                 onChangeText={(t) => {
+                  locationRequestRef.current += 1;
+                  setLocating(false);
                   setPickupText(t);
                   if (pickup) setPickup(null);
                 }}
                 onSelect={(r) => {
+                  locationRequestRef.current += 1;
+                  setLocating(false);
                   setPickup(r);
                   setPickupText(r.address);
                   // Focus destination uniquement après un choix explicite du départ
@@ -617,7 +604,7 @@ function RiderDashboard() {
               </div>
             )}
 
-            {estimate && !estimating && (
+            {estimate && !estimating && !searchFocused && (
               <>
                 <div className="flex items-center justify-between mt-4 mb-2">
                   <span className="tiny" style={{ minWidth: 0 }}>
@@ -712,7 +699,7 @@ function RiderDashboard() {
                 )}
 
                 {/* Payment — wallet or cash */}
-                <div className="flex gap-2 mt-4" role="radiogroup" aria-label="Mode de paiement">
+                <div className="rider-payment-options mt-4" role="radiogroup" aria-label="Mode de paiement">
                   {[
                     {
                       id: "wallet",
@@ -729,19 +716,12 @@ function RiderDashboard() {
                       role="radio"
                       aria-checked={paymentMethod === id}
                       onClick={() => setPaymentMethod(id)}
-                      className="flex-1 flex items-center justify-between"
-                      style={{
-                        padding: "10px 14px",
-                        background: "var(--ink-50)",
-                        borderRadius: 12,
-                        cursor: "pointer",
-                        border: `2px solid ${paymentMethod === id ? "var(--ink-900)" : "transparent"}`,
-                      }}
+                      className="rider-payment-option"
                     >
                       <span className="flex items-center gap-2 tiny" style={{ fontWeight: 600 }}>
                         <Icon size={16} /> {label}
                       </span>
-                      <span className="tiny mono-nums muted">{detail}</span>
+                      <span className="tiny mono-nums rider-payment-detail">{detail}</span>
                     </button>
                   ))}
                 </div>
@@ -836,6 +816,14 @@ function RiderDashboard() {
         {/* ── ACTIVE ── */}
         {phase === "active" && ride && (
           <div className="card card-pad animate-in">
+            {ride.status !== "in_progress" && (
+              <div className="rider-trip-toolbar">
+                <strong>Votre course</strong>
+                <button type="button" className="rider-cancel-button" onClick={() => setCancelOpen(true)} disabled={cancelling}>
+                  <X size={16} /> Annuler la course
+                </button>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-3 wrap gap-2">
               <span className={`badge badge-dot ${ride.status === "in_progress" ? "badge-info" : "badge-gold"}`}>
                 {ride.status === "accepted" &&
@@ -986,11 +974,7 @@ function RiderDashboard() {
                 {unread > 0 ? (unread > 1 ? `${unread} nouveaux messages` : "Nouveau message") : "Discussion"}
                 {unread > 0 && <span className="chat-unread-badge mono-nums">{unread}</span>}
               </button>
-              {ride.status !== "in_progress" && (
-                <button className="btn btn-danger flex-1" onClick={() => setCancelOpen(true)}>
-                  <X size={17} /> Annuler{" "}
-                </button>
-              )}
+
             </div>
 
             {ride.status === "arrived" && (
@@ -1048,6 +1032,9 @@ function RiderDashboard() {
       </Modal>
 
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Annuler cette course ?">
+        {ride?.status === "arrived" && (
+          <p className="small mb-3">Des frais d’annulation tardive peuvent s’appliquer : 3,00 € selon les conditions de la course.</p>
+        )}
         <div className="flex-col gap-2">
           {CANCEL_REASONS.map((r) => (
             <button key={r} className="vehicle-row" onClick={() => handleCancel(r)} disabled={cancelling}>

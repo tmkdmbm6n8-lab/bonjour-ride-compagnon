@@ -84,6 +84,7 @@ export default function MapView({
   fit = false,
   fitTo,
   fitKey,
+  compact = false,
   followPosition,
   navigationMode = false,
   alerts = [],
@@ -312,8 +313,8 @@ export default function MapView({
     }
 
     const bounds = points.reduce((b, p) => b.extend(p), new LngLatBounds(points[0], points[0]));
-    map.fitBounds(bounds, { padding: fitPadding(map), duration: 700, maxZoom: 16 });
-  }, [fit, pickup?.lat, dropoff?.lat, routeGeometry, fitKey, Boolean(followPosition), navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
+    map.fitBounds(bounds, { padding: compact ? 38 : fitPadding(map), duration: 700, maxZoom: 16 });
+  }, [fit, pickup?.lat, dropoff?.lat, routeGeometry, fitKey, Boolean(followPosition), navigationMode, compact]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Suivi GPS temps réel 3D (type Waze)
   useEffect(() => {
