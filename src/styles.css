@@ -6390,3 +6390,146 @@ a.activity-pill:hover {
 .shell-dark .maplibregl-canvas {
   filter: invert(92%) hue-rotate(180deg) brightness(85%) contrast(90%);
 }
+
+/* ---------- Signalements police / radar (cockpit course) ---------- */
+.drv-active-ride-page .drv-mid-actions-bar {
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 10px;
+}
+.drv-active-ride-page .drv-mid-actions-bar .drv-cancel-pill {
+  margin-left: auto;
+}
+.drv-alert-stack {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.drv-alert-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(17, 20, 26, 0.92);
+  border: 1px solid rgba(250, 204, 21, 0.22);
+  color: #f5f5f4;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.drv-alert-btn:active {
+  transform: scale(0.92);
+}
+.drv-alert-btn:disabled {
+  opacity: 0.55;
+}
+.drv-alert-btn.is-police {
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.45);
+  box-shadow: 0 0 14px rgba(96, 165, 250, 0.25), 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.drv-alert-btn.is-radar {
+  color: #fb923c;
+  border-color: rgba(251, 146, 60, 0.45);
+  box-shadow: 0 0 14px rgba(251, 146, 60, 0.22), 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.drv-alert-btn.is-sound {
+  color: #facc15;
+}
+.drv-alert-btn.is-sound.is-muted {
+  color: #a8a29e;
+  border-color: rgba(168, 162, 158, 0.35);
+}
+
+.drv-alert-confirm {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(var(--bottom-sheet-height, 160px) + 190px);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(17, 20, 26, 0.96);
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  color: #f5f5f4;
+  animation: drv-alert-in 0.25s ease-out;
+}
+.drv-alert-confirm p {
+  flex: 1;
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.drv-alert-confirm-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.06);
+}
+.drv-alert-confirm-icon.is-police {
+  color: #60a5fa;
+}
+.drv-alert-confirm-icon.is-radar {
+  color: #fb923c;
+}
+.drv-alert-yes,
+.drv-alert-no {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.drv-alert-yes {
+  background: #facc15;
+  color: #11141a;
+}
+.drv-alert-no {
+  background: transparent;
+  color: #f5f5f4;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+@keyframes drv-alert-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.marker-road-alert {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #11141a;
+  border: 2px solid currentColor;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+.marker-road-alert.is-police {
+  color: #60a5fa;
+  animation: drv-police-blink 1.4s ease-in-out infinite;
+}
+.marker-road-alert.is-radar {
+  color: #fb923c;
+}
+.marker-road-alert.is-radar.is-permanent {
+  color: #facc15;
+}
+@keyframes drv-police-blink {
+  50% {
+    box-shadow: 0 0 0 6px rgba(96, 165, 250, 0.25), 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+}
