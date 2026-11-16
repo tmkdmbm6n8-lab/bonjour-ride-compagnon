@@ -507,7 +507,23 @@ useEffect(() => {
           </div>
         </div>
       ) : (
-        <DriverHome ... />
+        <DriverHome
+          onWaybill={() => setWaybillOpen(true)}
+          loading={loading}
+          online={online}
+          busy={busy}
+          isConnected={isConnected}
+          needsVehicle={needsVehicle}
+          position={position}
+          center={center}
+          onToggle={handleToggle}
+          acceptsPet={acceptsPet}
+          togglingPet={togglingPet}
+          onTogglePet={handleTogglePet}
+          acceptsCash={acceptsCash}
+          togglingCash={togglingCash}
+          onToggleCash={handleToggleCash}
+        />
       )}
 
 
