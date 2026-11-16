@@ -92,7 +92,6 @@ export function liveRouteFresh(cached, status, now = Date.now()) {
 export function routeQualityLabel(route) {
   if (!route) return '';
   if (route.approximate) return 'Itinéraire indisponible — durée estimée';
-  if (route.source === 'waze') return 'Waze ? trafic';
   if (route.traffic) return route.trafficDelaySeconds >= 60 ? `Trafic en temps réel · +${Math.round(route.trafficDelaySeconds / 60)} min de bouchons` : 'Trafic en temps réel';
   return 'Sans info trafic';
 }

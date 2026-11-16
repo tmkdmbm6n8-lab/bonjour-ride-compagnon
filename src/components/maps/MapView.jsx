@@ -110,20 +110,6 @@ export default function MapView({
   const driverDotsRef = useRef(new Map());
   const alertDotsRef = useRef(new Map());
   const animRef = useRef(null);
-  const markerAnimations = useRef(new Map());
-  function moveMarker(marker, destination) {
-    const pending = markerAnimations.current;
-    cancelAnimationFrame(pending.get(marker));
-    const origin = marker.getLngLat();
-    const started = performance.now();
-    const step = (now) => {
-      const t = Math.min(1, (now - started) / 900);
-      marker.setLngLat([origin.lng + (destination[0] - origin.lng) * t, origin.lat + (destination[1] - origin.lat) * t]);
-      if (t < 1) pending.set(marker, requestAnimationFrame(step));
-      else pending.delete(marker);
-    };
-    pending.set(marker, requestAnimationFrame(step));
-  }
   const routeGeomRef = useRef(null);
   const lastUserMoveRef = useRef(0);
   const prevPositionRef = useRef(null);
@@ -172,8 +158,6 @@ export default function MapView({
     return () => {
       ro.disconnect();
       cancelAnimationFrame(animRef.current);
-      for (const frame of markerAnimations.current.values()) cancelAnimationFrame(frame);
-      markerAnimations.current.clear();
       markersRef.current = { pickup: null, dropoff: null, driver: null, user: null };
       driverDotsRef.current.clear();
       alertDotsRef.current.clear();
@@ -193,8 +177,6 @@ export default function MapView({
     if (!map) return;
     const markers = markersRef.current;
     if (!pos) {
-      cancelAnimationFrame(markerAnimations.current.get(markers[key]));
-      markerAnimations.current.delete(markers[key]);
       markers[key]?.remove();
       markers[key] = null;
       return;
@@ -202,7 +184,7 @@ export default function MapView({
     if (!markers[key]) {
       markers[key] = new Marker({ element: make() }).setLngLat([pos.lng, pos.lat]).addTo(map);
     } else {
-      moveMarker(markers[key], [pos.lng, pos.lat]);
+      markers[key].setLngLat([pos.lng, pos.lat]);
     }
   }
 
@@ -267,7 +249,7 @@ export default function MapView({
       seen.add(d.id);
       const lngLat = [d.location.lng, d.location.lat];
       if (dots.has(d.id)) {
-        moveMarker(dots.get(d.id), lngLat);
+        dots.get(d.id).setLngLat(lngLat);
       } else {
         const m = new Marker({ element: el("marker-driver", CAR_SVG) }).setLngLat(lngLat).addTo(map);
         m.getElement().style.opacity = "0.85";
@@ -277,8 +259,6 @@ export default function MapView({
 
     for (const [id, marker] of dots) {
       if (!seen.has(id)) {
-        cancelAnimationFrame(markerAnimations.current.get(marker));
-        markerAnimations.current.delete(marker);
         marker.remove();
         dots.delete(id);
       }
@@ -301,9 +281,9 @@ export default function MapView({
       }
       const node = el(
         `marker-road-alert is-${a.kind}${a.permanent ? " is-permanent" : ""}`,
-        a.kind === "police" ? POLICE_SVG : a.kind === "traffic" ? CAR_SVG : RADAR_SVG,
+        a.kind === "police" ? POLICE_SVG : RADAR_SVG,
       );
-      node.title = a.kind === "traffic" ? "Circulation ralentie" : a.kind === "police" ? "Contrôle de police signalé" : "Radar fixe";
+      node.title = a.kind === "police" ? "Contrôle de police signalé" : "Radar fixe";
       dots.set(key, new Marker({ element: node }).setLngLat([a.lng, a.lat]).addTo(map));
     }
     for (const [key, marker] of dots) {
