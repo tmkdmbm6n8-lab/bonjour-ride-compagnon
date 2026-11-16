@@ -454,6 +454,77 @@ export type Database = {
           },
         ]
       }
+      road_alert_votes: {
+        Row: {
+          alert_id: string
+          created_at: string
+          driver_id: string
+          present: boolean
+        }
+        Insert: {
+          alert_id: string
+          created_at?: string
+          driver_id: string
+          present: boolean
+        }
+        Update: {
+          alert_id?: string
+          created_at?: string
+          driver_id?: string
+          present?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "road_alert_votes_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "road_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      road_alerts: {
+        Row: {
+          confirmations: number
+          created_at: string
+          denials: number
+          id: string
+          is_permanent: boolean
+          kind: string
+          last_confirmed_at: string
+          lat: number
+          lng: number
+          reported_by: string
+          validated_by_admin: boolean
+        }
+        Insert: {
+          confirmations?: number
+          created_at?: string
+          denials?: number
+          id?: string
+          is_permanent?: boolean
+          kind: string
+          last_confirmed_at?: string
+          lat: number
+          lng: number
+          reported_by: string
+          validated_by_admin?: boolean
+        }
+        Update: {
+          confirmations?: number
+          created_at?: string
+          denials?: number
+          id?: string
+          is_permanent?: boolean
+          kind?: string
+          last_confirmed_at?: string
+          lat?: number
+          lng?: number
+          reported_by?: string
+          validated_by_admin?: boolean
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           role: string

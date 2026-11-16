@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Route, Car, Users, DollarSign, Inbox } from 'lucide-react';
+import { LayoutDashboard, Route, Car, Users, DollarSign, Inbox, Radar } from 'lucide-react';
 
 import AppShell from '@/components/shell/AppShell';
 
@@ -11,6 +11,7 @@ const NAV = [
   { href: '/admin/users', label: 'Utilisateurs', icon: Users },
   { href: '/admin/pricing', label: 'Tarification', icon: DollarSign },
   { href: '/admin/support', label: 'Assistance', icon: Inbox },
+  { href: '/admin/alerts', label: 'Signalements', icon: Radar },
 ];
 
 export default function AdminLayout({ children }) {

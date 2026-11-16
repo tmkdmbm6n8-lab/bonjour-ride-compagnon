@@ -24,7 +24,12 @@ import {
   Hand,
   ChevronUp,
   ChevronDown,
+  Siren,
+  Radar,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
+import useRoadAlerts from "@/hooks/useRoadAlerts";
 
 import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
@@ -130,6 +135,29 @@ function DriverDashboard() {
     complete,
     cancelTrip,
   } = useDriverState({ onEvent });
+
+  const roadAlerts = useRoadAlerts(position, online || Boolean(ride));
+  const [reporting, setReporting] = useState(null);
+  async function handleReport(kind) {
+    if (reporting) return;
+    setReporting(kind);
+    try {
+      const res = await roadAlerts.report(kind);
+      toast(
+        res.merged
+          ? "Merci, signalement confirmé"
+          : kind === "police"
+            ? "Contrôle de police signalé aux autres chauffeurs"
+            : "Radar signalé — il sera définitif après 10 confirmations",
+        "success",
+        3000,
+      );
+    } catch (err) {
+      toast(err.message, "error", 4000);
+    } finally {
+      setReporting(null);
+    }
+  }
 
   // Ring (Uber-style, repeated) while a ride request is on screen
   useEffect(() => {
@@ -381,6 +409,7 @@ function DriverDashboard() {
               fit={false}
               followPosition={position || undefined}
               navigationMode={true}
+              alerts={roadAlerts.alerts}
             />
           </div>
 
@@ -422,6 +451,34 @@ function DriverDashboard() {
 
           {/* 3. Au-dessus du volet bas : Pause 2 min à gauche / Annuler à droite */}
           <div className="drv-mid-actions-bar">
+            <div className="drv-alert-stack">
+              <button
+                className={`drv-alert-btn is-sound ${roadAlerts.muted ? "is-muted" : ""}`}
+                onClick={roadAlerts.toggleMute}
+                aria-label={roadAlerts.muted ? "Activer le son des alertes" : "Couper le son des alertes"}
+                title={roadAlerts.muted ? "Son coupé" : "Son actif"}
+              >
+                {roadAlerts.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              </button>
+              <button
+                className="drv-alert-btn is-radar"
+                onClick={() => handleReport("radar")}
+                disabled={reporting === "radar"}
+                aria-label="Signaler un radar"
+                title="Signaler un radar"
+              >
+                <Radar size={18} />
+              </button>
+              <button
+                className="drv-alert-btn is-police"
+                onClick={() => handleReport("police")}
+                disabled={reporting === "police"}
+                aria-label="Signaler un contrôle de police"
+                title="Signaler la police"
+              >
+                <Siren size={18} />
+              </button>
+            </div>
             <button
               className={`drv-action-pill drv-pause-pill ${pauseSeconds > 0 ? "is-active" : ""}`}
               onClick={() => {
@@ -449,6 +506,21 @@ function DriverDashboard() {
               </button>
             )}
           </div>
+
+          {roadAlerts.prompt && (
+            <div className="drv-alert-confirm" role="dialog" aria-live="polite">
+              <span className={`drv-alert-confirm-icon is-${roadAlerts.prompt.kind}`}>
+                {roadAlerts.prompt.kind === "police" ? <Siren size={18} /> : <Radar size={18} />}
+              </span>
+              <p>{roadAlerts.prompt.kind === "police" ? "Contrôle de police toujours présent ?" : "Radar toujours présent ?"}</p>
+              <button className="drv-alert-yes" onClick={() => roadAlerts.vote(roadAlerts.prompt.id, true)}>
+                Oui
+              </button>
+              <button className="drv-alert-no" onClick={() => roadAlerts.vote(roadAlerts.prompt.id, false)}>
+                Non
+              </button>
+            </div>
+          )}
 
           {/* 4. Tout en bas : Volet rétractable d'informations */}
           <div className="drv-bottom-sheet">

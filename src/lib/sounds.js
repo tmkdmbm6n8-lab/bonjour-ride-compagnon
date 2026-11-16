@@ -87,3 +87,11 @@ export function startRinging(kind = 'offer', everyMs = 1800) {
   const id = setInterval(() => playSound(kind), everyMs);
   return () => clearInterval(id);
 }
+
+/** Bip court d'approche radar / police (sonar). */
+export function playRadarBeep(kind = 'radar') {
+  const c = audio();
+  if (!c) return;
+  const t0 = c.currentTime + 0.01;
+  tone(c, kind === 'police' ? 1320 : 1760, t0, 0.09, { type: 'square', gain: 0.12 });
+}

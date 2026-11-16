@@ -36,6 +36,12 @@ const PIN_SVG =
 const SQUARE_SVG =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 
+const POLICE_SVG =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+
+const RADAR_SVG =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="14" height="10" rx="2"/><circle cx="10" cy="12" r="2.5"/><path d="M17 10l4-2v8l-4-2"/></svg>';
+
 // Flèche 3D profilée style Waze en or métallique avec ombre portée
 function make3DNavigationArrow() {
   const container = document.createElement("div");
@@ -93,6 +99,7 @@ export default function MapView({
   fitKey,
   followPosition,
   navigationMode = false,
+  alerts = [],
   onClick,
   className = "",
   style,
@@ -102,6 +109,7 @@ export default function MapView({
   const readyRef = useRef(false);
   const markersRef = useRef({ pickup: null, dropoff: null, driver: null, user: null });
   const driverDotsRef = useRef(new Map());
+  const alertDotsRef = useRef(new Map());
   const animRef = useRef(null);
   const routeGeomRef = useRef(null);
   const lastUserMoveRef = useRef(0);
@@ -159,6 +167,7 @@ export default function MapView({
       cancelAnimationFrame(animRef.current);
       markersRef.current = { pickup: null, dropoff: null, driver: null, user: null };
       driverDotsRef.current.clear();
+      alertDotsRef.current.clear();
       try {
         map.remove();
       } catch (err) {
@@ -263,6 +272,35 @@ export default function MapView({
     }
   }, [drivers]);
 
+  // Signalements police / radar
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const dots = alertDotsRef.current;
+    const seen = new Set();
+    for (const a of alerts || []) {
+      if (!Number.isFinite(a?.lat) || !Number.isFinite(a?.lng)) continue;
+      const key = `${a.id}:${a.kind}:${a.permanent ? 1 : 0}`;
+      seen.add(key);
+      if (dots.has(key)) {
+        dots.get(key).setLngLat([a.lng, a.lat]);
+        continue;
+      }
+      const node = el(
+        `marker-road-alert is-${a.kind}${a.permanent ? " is-permanent" : ""}`,
+        a.kind === "police" ? POLICE_SVG : RADAR_SVG,
+      );
+      node.title = a.kind === "police" ? "Contrôle de police signalé" : a.permanent ? "Radar confirmé" : "Radar signalé";
+      dots.set(key, new Marker({ element: node }).setLngLat([a.lng, a.lat]).addTo(map));
+    }
+    for (const [key, marker] of dots) {
+      if (!seen.has(key)) {
+        marker.remove();
+        dots.delete(key);
+      }
+    }
+  }, [alerts]);
+
   // Tracé d'itinéraire
   useEffect(() => {
     routeGeomRef.current = routeGeometry || null;
@@ -366,22 +404,23 @@ function drawRoute(map, geometry) {
 
   try {
     map.addSource("route", { type: "geojson", data });
-    if (!map.getLayer("route-casing")) {
+    // La carte passe par un filtre CSS (gris → inversion → sépia doré, voir .maplibregl-canvas).
+    // Les couleurs sont donc choisies « en négatif » : un trait noir ressort or clair,
+    // un contour blanc ressort noir. Résultat : ligne épaisse lumineuse, bien détourée.
+    const layers = [
+      { id: "route-halo", paint: { "line-color": "#ffffff", "line-width": 22, "line-opacity": 0.35, "line-blur": 6 } },
+      { id: "route-casing", paint: { "line-color": "#ffffff", "line-width": 15, "line-opacity": 1 } },
+      { id: "route-line", paint: { "line-color": "#1f1f1f", "line-width": 9 } },
+      { id: "route-core", paint: { "line-color": "#000000", "line-width": 3 } },
+    ];
+    for (const l of layers) {
+      if (map.getLayer(l.id)) continue;
       map.addLayer({
-        id: "route-casing",
+        id: l.id,
         type: "line",
         source: "route",
         layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#09090b", "line-width": 8, "line-opacity": 0.8 },
-      });
-    }
-    if (!map.getLayer("route-line")) {
-      map.addLayer({
-        id: "route-line",
-        type: "line",
-        source: "route",
-        layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#eab308", "line-width": 5 },
+        paint: l.paint,
       });
     }
     return true;

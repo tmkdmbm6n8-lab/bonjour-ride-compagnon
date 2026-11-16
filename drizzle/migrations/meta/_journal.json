@@ -92,6 +92,20 @@
       "when": 1794744864196,
       "tag": "0012_card_ride_bookings",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794791849121,
+      "tag": "0013_road_alerts",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794792030913,
+      "tag": "0014_purge_road_alerts",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as AuthenticatedRidesRouteImport } from './routes/_authenticated.rides'
 import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated.wallet'
+import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenticated.admin.alerts'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated.admin.dashboard'
 import { Route as AuthenticatedAdminDriversRouteImport } from './routes/_authenticated.admin.drivers'
 import { Route as AuthenticatedAdminPricingRouteImport } from './routes/_authenticated.admin.pricing'
@@ -99,6 +100,12 @@ const AuthenticatedWalletRoute = AuthenticatedWalletRouteImport.update({
   path: '/wallet',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminAlertsRoute =
+  AuthenticatedAdminAlertsRouteImport.update({
+    id: '/admin/alerts',
+    path: '/admin/alerts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminDashboardRoute =
   AuthenticatedAdminDashboardRouteImport.update({
     id: '/admin/dashboard',
@@ -216,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/rides': typeof AuthenticatedRidesRouteWithChildren
   '/wallet': typeof AuthenticatedWalletRoute
+  '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/admin/pricing': typeof AuthenticatedAdminPricingRoute
@@ -247,6 +255,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/rides': typeof AuthenticatedRidesRouteWithChildren
   '/wallet': typeof AuthenticatedWalletRoute
+  '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/admin/pricing': typeof AuthenticatedAdminPricingRoute
@@ -280,6 +289,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/rides': typeof AuthenticatedRidesRouteWithChildren
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
+  '/_authenticated/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/_authenticated/admin/pricing': typeof AuthenticatedAdminPricingRoute
@@ -313,6 +323,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/rides'
     | '/wallet'
+    | '/admin/alerts'
     | '/admin/dashboard'
     | '/admin/drivers'
     | '/admin/pricing'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/rides'
     | '/wallet'
+    | '/admin/alerts'
     | '/admin/dashboard'
     | '/admin/drivers'
     | '/admin/pricing'
@@ -376,6 +388,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/rides'
     | '/_authenticated/wallet'
+    | '/_authenticated/admin/alerts'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/drivers'
     | '/_authenticated/admin/pricing'
@@ -493,6 +506,13 @@ declare module '@tanstack/react-router' {
       path: '/wallet'
       fullPath: '/wallet'
       preLoaderRoute: typeof AuthenticatedWalletRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/alerts': {
+      id: '/_authenticated/admin/alerts'
+      path: '/admin/alerts'
+      fullPath: '/admin/alerts'
+      preLoaderRoute: typeof AuthenticatedAdminAlertsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/dashboard': {
@@ -640,6 +660,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedRidesRoute: typeof AuthenticatedRidesRouteWithChildren
   AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
+  AuthenticatedAdminAlertsRoute: typeof AuthenticatedAdminAlertsRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminDriversRoute: typeof AuthenticatedAdminDriversRoute
   AuthenticatedAdminPricingRoute: typeof AuthenticatedAdminPricingRoute
@@ -662,6 +683,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedRidesRoute: AuthenticatedRidesRouteWithChildren,
   AuthenticatedWalletRoute: AuthenticatedWalletRoute,
+  AuthenticatedAdminAlertsRoute: AuthenticatedAdminAlertsRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
   AuthenticatedAdminDriversRoute: AuthenticatedAdminDriversRoute,
   AuthenticatedAdminPricingRoute: AuthenticatedAdminPricingRoute,

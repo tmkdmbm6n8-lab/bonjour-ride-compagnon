@@ -48,6 +48,15 @@ import {
 } from "./vtc-dispatch";
 import { sanitizeTripPrefs, tripPrefsOf, riderAverage } from "./vtc-trip-prefs";
 import { evaluateDriverProgress } from "./vtc-tracking";
+import {
+  ALERT_KINDS,
+  NEARBY_RADIUS_KM,
+  validPoint,
+  isAlertActive,
+  applyVote,
+  findMergeTarget,
+  alertShape,
+} from "./vtc-road-alerts";
 const active = ["searching", "accepted", "arrived", "in_progress"];
 function required(result) {
   if (result.error) throw new Error(result.error.message);
@@ -397,6 +406,8 @@ export async function handleVtc(input, context) {
     return inboxForDriver(admin, uid, context.claims?.email, q.get("page"));
   if (p === "/api/drivers/me/inbox/support" && method === "POST")
     return sendSupportMessage(admin, { uid, email: context.claims?.email, name: profile.name, role, body });
+  if (p.startsWith("/api/drivers/me/road-alerts") || p.startsWith("/api/admin/road-alerts"))
+    return roadAlerts(admin, { p, method, body, q, uid, isAdmin: role === "admin" });
   if (p === "/api/admin/support/reply" && method === "POST")
     return sendSupportMessage(admin, { uid, email: context.claims?.email, name: profile.name, role, body });
   if (p === "/api/drivers/me/earnings") {
@@ -1353,4 +1364,111 @@ export async function publicVtc(input) {
     return estimates(supabaseAdmin, input.body?.pickup, input.body?.dropoff);
   }
   throw new Error("Accès refusé");
+}
+
+async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
+  const load = async (center) => {
+    let query = admin.from("road_alerts").select("*").order("created_at", { ascending: false }).limit(2000);
+    if (center) {
+      const dLat = NEARBY_RADIUS_KM / 111;
+      const dLng = NEARBY_RADIUS_KM / (111 * Math.max(0.2, Math.cos((center.lat * Math.PI) / 180)));
+      query = query
+        .gte("lat", center.lat - dLat)
+        .lte("lat", center.lat + dLat)
+        .gte("lng", center.lng - dLng)
+        .lte("lng", center.lng + dLng);
+    }
+    return required(await query).filter((a) => isAlertActive(a));
+  };
+  const withVotes = async (alerts) => {
+    if (!alerts.length) return [];
+    const votes = required(
+      await admin.from("road_alert_votes").select("alert_id, present").eq("driver_id", uid).in("alert_id", alerts.map((a) => a.id)),
+    );
+    const mine = new Map(votes.map((v) => [v.alert_id, v.present]));
+    return alerts.map((a) => alertShape(a, uid, mine.get(a.id)));
+  };
+
+  if (p === "/api/admin/road-alerts") {
+    if (!isAdmin) throw new Error("Accès administrateur requis");
+    const all = required(await admin.from("road_alerts").select("*").order("created_at", { ascending: false }).limit(500));
+    return {
+      alerts: all.map((a) => ({ ...alertShape(a, uid), active: isAlertActive(a), denials: a.denials, validatedByAdmin: a.validated_by_admin })),
+    };
+  }
+  const adminMatch = p.match(/^\/api\/admin\/road-alerts\/([0-9a-f-]{36})(?:\/(validate))?$/);
+  if (adminMatch) {
+    if (!isAdmin) throw new Error("Accès administrateur requis");
+    const [, id, action] = adminMatch;
+    if (method === "DELETE") {
+      required(await admin.from("road_alerts").delete().eq("id", id));
+      return { ok: true };
+    }
+    if (action === "validate" && method === "POST") {
+      required(
+        await admin
+          .from("road_alerts")
+          .update({ is_permanent: true, validated_by_admin: true, last_confirmed_at: new Date().toISOString() })
+          .eq("id", id),
+      );
+      return { ok: true };
+    }
+    throw new Error("Action inconnue");
+  }
+
+  if (p === "/api/drivers/me/road-alerts") {
+    if (method === "GET") {
+      const center = validPoint({ lat: q.get("lat"), lng: q.get("lng") });
+      return { alerts: await withVotes(await load(center)) };
+    }
+    if (method === "POST") {
+      const point = validPoint(body);
+      if (!point) throw new Error("Position GPS introuvable");
+      if (!ALERT_KINDS.includes(body.kind)) throw new Error("Type de signalement invalide");
+      const near = await load(point);
+      const target = findMergeTarget(near, body.kind, point);
+      if (target) {
+        const already = required(
+          await admin.from("road_alert_votes").select("alert_id").eq("alert_id", target.id).eq("driver_id", uid).maybeSingle(),
+        );
+        if (!already && target.reported_by !== uid) {
+          required(await admin.from("road_alert_votes").insert({ alert_id: target.id, driver_id: uid, present: true }));
+          const next = applyVote(target, true);
+          required(
+            await admin
+              .from("road_alerts")
+              .update({ confirmations: next.confirmations, last_confirmed_at: next.last_confirmed_at, is_permanent: next.is_permanent })
+              .eq("id", target.id),
+          );
+        }
+        return { merged: true, alerts: await withVotes(await load(point)) };
+      }
+      required(await admin.from("road_alerts").insert({ kind: body.kind, lat: point.lat, lng: point.lng, reported_by: uid }));
+      return { merged: false, alerts: await withVotes(await load(point)) };
+    }
+  }
+
+  const voteMatch = p.match(/^\/api\/drivers\/me\/road-alerts\/([0-9a-f-]{36})\/vote$/);
+  if (voteMatch && method === "POST") {
+    const id = voteMatch[1];
+    const a = required(await admin.from("road_alerts").select("*").eq("id", id).maybeSingle());
+    if (!a || !isAlertActive(a)) return { ok: true, gone: true };
+    if (a.reported_by === uid) return { ok: true };
+    const { error } = await admin.from("road_alert_votes").insert({ alert_id: id, driver_id: uid, present: Boolean(body.present) });
+    if (error) return { ok: true, already: true }; // un seul vote par chauffeur
+    const next = applyVote(a, Boolean(body.present));
+    required(
+      await admin
+        .from("road_alerts")
+        .update({
+          confirmations: next.confirmations,
+          denials: next.denials,
+          last_confirmed_at: next.last_confirmed_at,
+          is_permanent: next.is_permanent,
+        })
+        .eq("id", id),
+    );
+    return { ok: true };
+  }
+  throw new Error("Route introuvable");
 }
