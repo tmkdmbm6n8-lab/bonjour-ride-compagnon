@@ -22,6 +22,8 @@ import {
   ShieldCheck,
   Copy,
   TrendingUp,
+  LocateFixed,
+  Loader2,
 } from "lucide-react";
 import Link from "@/lib/archive-navigation";
 import MapView from "@/components/ArchiveMap";
@@ -201,6 +203,38 @@ function RiderDashboard() {
       ignore = true;
     };
   }, [geo, pickup]);
+
+  // ── Bouton « Me localiser » : remplit la prise en charge à la demande ──
+  const [locating, setLocating] = useState(false);
+  function handleLocateMe() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast("La localisation n’est pas disponible sur cet appareil", "error");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        let address = "Position actuelle";
+        try {
+          const res = await fetch(`/api/geo/search?reverse=1&lat=${lat}&lng=${lng}`);
+          const data = await res.json();
+          address = data.results?.[0]?.address || address;
+        } catch {
+          /* adresse générique */
+        }
+        setPickup({ address, lat, lng });
+        setPickupText(address);
+        setLocating(false);
+      },
+      () => {
+        setLocating(false);
+        toast("Impossible d’obtenir votre position — autorisez la localisation", "error", 5000);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  }
 
   // ── Nearby drivers (idle only, 10s poll) ──
   useEffect(() => {
@@ -505,6 +539,8 @@ function RiderDashboard() {
             )}
 
             <div className="flex-col gap-3">
+              <div className="rider-pickup-row">
+              <div className="rider-pickup-field">
               <PlaceSearch
                 value={pickupText}
                 onChangeText={(t) => {
@@ -521,6 +557,18 @@ function RiderDashboard() {
                 icon={Circle}
                 bias={geo || undefined}
               />
+              </div>
+              <button
+                type="button"
+                className="rider-locate-btn"
+                onClick={handleLocateMe}
+                disabled={locating}
+                aria-label="Me localiser"
+                title="Utiliser ma position actuelle"
+              >
+                {locating ? <Loader2 size={18} className="spin" /> : <LocateFixed size={18} />}
+              </button>
+              </div>
               <PlaceSearch
                 value={dropoffText}
                 onChangeText={(t) => {
