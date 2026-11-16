@@ -2,11 +2,10 @@
 // Les mêmes dessins servent aux boutons (React) et aux repères de la carte (chaînes SVG).
 
 const KEPI_BODY =
-  '<path d="M6.8 15L7.9 5.6Q12 4.3 16.1 5.6L17.2 15Q12 16.4 6.8 15z" fill="currentColor" fill-opacity=".25"/>' +
-  '<ellipse cx="12" cy="5.6" rx="4.1" ry="1.15"/>' +
-  '<path d="M7.2 11.7Q12 12.9 16.8 11.7"/>' +
-  '<path d="M6.8 15Q12 16.4 17.2 15Q16.7 19 12 19.5Q7.3 19 6.8 15z" fill="currentColor" fill-opacity=".7"/>' +
-  '<path d="M12 6.9l.85 1.7 1.9.27-1.38 1.33.33 1.9-1.7-.9-1.7.9.33-1.9-1.38-1.33 1.9-.27z" fill="currentColor" stroke="none"/>';
+  '<path d="M5.8 14L7 5.8Q12 4.6 17 5.8L18.2 14z" fill="currentColor" fill-opacity=".22"/>' +
+  '<path d="M6.3 11h11.4l.5 3H5.8z" fill="currentColor" stroke="none"/>' +
+  '<path d="M4.2 14h15.6Q19 18 12 18.2Q5 18 4.2 14z" fill="currentColor" fill-opacity=".55"/>' +
+  '<path d="M12 6.4l.95 1.9 2.1.3-1.52 1.48.36 2.1L12 11.2l-1.89 1-.01-.02.37-2.08L8.95 8.6l2.1-.3z" fill="currentColor" stroke="none"/>';
 
 const RADAR_BODY =
   '<path d="M16 3.2l3 1.7v9.6L16 15.6z" fill="currentColor" fill-opacity=".45"/>' +
