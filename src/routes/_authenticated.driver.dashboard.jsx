@@ -7,11 +7,24 @@ import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/lib/archive-navigation";
 import {
-  Power, Navigation, MapPin, Circle, MessageCircle, X,
-  CheckCircle2, KeyRound, Flag, PawPrint, Star, User,
-  Phone, FileText, Hand, ChevronUp, ChevronDown
+  Power,
+  Navigation,
+  MapPin,
+  Circle,
+  MessageCircle,
+  X,
+  CheckCircle2,
+  KeyRound,
+  Flag,
+  PawPrint,
+  Star,
+  User,
+  Phone,
+  FileText,
+  Hand,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
-
 
 import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
@@ -44,17 +57,17 @@ function DriverDashboard() {
   const [pinValue, setPinValue] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-const [detailsOpen, setDetailsOpen] = useState(false);
-const [pauseSeconds, setPauseSeconds] = useState(0);
-const [cancelReason, setCancelReason] = useState("");
-const [customReason, setCustomReason] = useState("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [pauseSeconds, setPauseSeconds] = useState(0);
+  const [cancelReason, setCancelReason] = useState("");
+  const [customReason, setCustomReason] = useState("");
 
-// Décompte de pause 2 min
-useEffect(() => {
-  if (pauseSeconds <= 0) return;
-  const timer = setInterval(() => setPauseSeconds((s) => s - 1), 1000);
-  return () => clearInterval(timer);
-}, [pauseSeconds]);
+  // Décompte de pause 2 min
+  useEffect(() => {
+    if (pauseSeconds <= 0) return;
+    const timer = setInterval(() => setPauseSeconds((s) => s - 1), 1000);
+    return () => clearInterval(timer);
+  }, [pauseSeconds]);
 
   const [receipt, setReceipt] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
@@ -165,7 +178,7 @@ useEffect(() => {
       if (online) await goOffline();
       else {
         await goOnline();
-        toast("Vous êtes en ligne — vous recevrez des demandes", "success");
+        // Toast d'information supprimé
       }
     } catch (err) {
       if (err.code === "NO_VEHICLE") {
@@ -349,7 +362,7 @@ useEffect(() => {
 
   return (
     <>
-         {ride ? (
+      {ride ? (
         <div className="drv-active-ride-page">
           {/* 1. Carte GPS OpenStreetMap / MapLibre en plein écran */}
           <div className="map-fill" style={{ position: "absolute", inset: 0 }}>
@@ -390,7 +403,11 @@ useEffect(() => {
               )}
               <button
                 className={`drv-circle-btn ${unread > 0 ? "has-unread" : ""}`}
-                onClick={() => { setChatOpen(true); setUnread(0); setLastMsg(null); }}
+                onClick={() => {
+                  setChatOpen(true);
+                  setUnread(0);
+                  setLastMsg(null);
+                }}
                 title="Message"
               >
                 <MessageCircle size={18} />
@@ -417,7 +434,11 @@ useEffect(() => {
               }}
             >
               <Hand size={16} />
-              <span>{pauseSeconds > 0 ? `Pause (${Math.floor(pauseSeconds / 60)}:${String(pauseSeconds % 60).padStart(2, "0")})` : "Pause 2 min"}</span>
+              <span>
+                {pauseSeconds > 0
+                  ? `Pause (${Math.floor(pauseSeconds / 60)}:${String(pauseSeconds % 60).padStart(2, "0")})`
+                  : "Pause 2 min"}
+              </span>
             </button>
 
             {ride.status !== "in_progress" && (
@@ -451,7 +472,9 @@ useEffect(() => {
             <div className="mb-3">
               <div className="flex gap-2 items-center text-sm">
                 <Circle size={10} className="text-gold flex-shrink-0" />
-                <span className="truncate">{ride.status === "in_progress" ? ride.dropoff.address : ride.pickup.address}</span>
+                <span className="truncate">
+                  {ride.status === "in_progress" ? ride.dropoff.address : ride.pickup.address}
+                </span>
               </div>
             </div>
 
@@ -525,7 +548,6 @@ useEffect(() => {
           onToggleCash={handleToggleCash}
         />
       )}
-
 
       <Waybill open={waybillOpen} onClose={() => setWaybillOpen(false)} />
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
