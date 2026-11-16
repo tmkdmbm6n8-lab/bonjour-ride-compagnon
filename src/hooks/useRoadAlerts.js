@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { playRadarBeep } from "@/lib/sounds";
-import { beepIntervalMs, beepTarget, nearestAlert, CONFIRM_RADIUS_M } from "@/lib/vtc-road-alerts";
+import { beepIntervalMs, beepTarget, nearestAlert, CONFIRM_RADIUS_M, radarBeepWindow } from "@/lib/vtc-road-alerts";
 
 const MUTE_KEY = "strasdrive.alerts.muted";
 const POLL_MS = 20000;
@@ -18,6 +18,7 @@ export default function useRoadAlerts(position, enabled = true) {
   const mutedRef = useRef(false);
   mutedRef.current = muted;
   const alertsRef = useRef([]);
+  const radarWindowsRef = useRef(new Map());
   alertsRef.current = alerts;
   const silencedRef = useRef(new Set()); // repères qu'on vient de signaler : pas de bip tant qu'on est dessus
 
@@ -100,7 +101,9 @@ export default function useRoadAlerts(position, enabled = true) {
       const { target, silenced } = beepTarget(alertsRef.current, posRef.current, silencedRef.current);
       silencedRef.current = silenced;
       const every = target ? beepIntervalMs(target.distance) : null;
-      if (every && !mutedRef.current) playRadarBeep(target.alert.kind);
+      const window = radarBeepWindow(every && !mutedRef.current ? target : null, posRef.current, radarWindowsRef.current);
+      radarWindowsRef.current = window.windows;
+      if (window.allowed) playRadarBeep(target.alert.kind);
       timer = setTimeout(loop, every || 1000);
     };
     loop();

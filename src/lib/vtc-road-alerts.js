@@ -7,6 +7,7 @@ export const DENIALS_TO_REMOVE = 3; // « plus là » : 3 chauffeurs suffisent �
 export const MERGE_RADIUS_M = 60; // même type à moins de 60 m = même repère
 export const CONFIRM_RADIUS_M = 250; // on demande « toujours là ? » à moins de 250 m (police uniquement)
 export const BEEP_START_M = 100; // le bip commence à 100 m
+export const RADAR_BEEP_MAX_MS = 10_000;
 export const NEARBY_RADIUS_KM = 25;
 
 export function assertRadarReportPermission(kind, isPriority) {
@@ -86,6 +87,19 @@ export function beepTarget(alerts, pos, silenced = new Set()) {
     pos,
   );
   return { target: n && n.distance <= BEEP_START_M ? n : null, silenced: still };
+}
+
+/** Each camera sounds for at most ten seconds, rearmed only after leaving its zone. */
+export function radarBeepWindow(target, pos, previous = new Map(), now = Date.now()) {
+  const windows = new Map(previous);
+  if (pos) for (const [id, entry] of windows) {
+    if (distM(entry, pos) > BEEP_START_M) windows.delete(id);
+  }
+  if (!target) return { allowed: false, windows };
+  if (target.alert.kind !== 'radar') return { allowed: true, windows };
+  const a = target.alert;
+  if (!windows.has(a.id)) windows.set(a.id, { lat: a.lat, lng: a.lng, startedAt: now });
+  return { allowed: now - windows.get(a.id).startedAt < RADAR_BEEP_MAX_MS, windows };
 }
 
 export function alertShape(a, uid, myVote) {

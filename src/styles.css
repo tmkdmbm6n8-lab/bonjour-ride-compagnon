@@ -6859,7 +6859,7 @@ a.activity-pill:hover {
   font: 9px/12px "DM Sans", sans-serif;
   text-align: right;
 }
-.map-source-footer summary { cursor: pointer; list-style: none; }
+.map-source-footer summary { cursor: pointer; list-style: none; display:none; }
 .map-source-footer summary::-webkit-details-marker { display: none; }
 .map-source-footer[open] summary { margin-bottom: 3px; }
 .map-source-footer summary:focus-visible { outline: 1px solid currentColor; }

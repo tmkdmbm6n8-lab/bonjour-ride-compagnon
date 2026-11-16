@@ -1,10 +1,21 @@
 import { describe, it, expect } from "vitest";
-import { applyVote, beepIntervalMs, beepTarget, isAlertActive, findMergeTarget } from "@/lib/vtc-road-alerts";
+import { applyVote, beepIntervalMs, beepTarget, isAlertActive, findMergeTarget, radarBeepWindow } from "@/lib/vtc-road-alerts";
 
 const now = Date.parse("2026-11-16T10:00:00Z");
 const base = { id: "a", lat: 48.58, lng: 7.75, confirmations: 1, denials: 0, is_permanent: false, created_at: new Date(now).toISOString(), last_confirmed_at: new Date(now).toISOString() };
 
 describe("signalements police / radar", () => {
+  it('coupe le radar après dix secondes et ne le réarme qu’après éloignement', () => {
+    const pos = { lat: 48.58, lng: 7.75 };
+    const target = { alert: { ...pos, id: 'radar-1', kind: 'radar' }, distance: 0 };
+    const first = radarBeepWindow(target, pos, new Map(), 0);
+    expect(first.allowed).toBe(true);
+    expect(radarBeepWindow(target, pos, first.windows, 9999).allowed).toBe(true);
+    expect(radarBeepWindow(target, pos, first.windows, 10000).allowed).toBe(false);
+    expect(radarBeepWindow(target, pos, first.windows, 60000).allowed).toBe(false);
+    const away = radarBeepWindow(null, { lat: 48.59, lng: 7.75 }, first.windows, 61000);
+    expect(radarBeepWindow(target, pos, away.windows, 62000).allowed).toBe(true);
+  });
   it("un contrôle de police disparaît 2 h après son dernier signalement", () => {
     const a = { ...base, kind: "police" };
     expect(isAlertActive(a, now + 119 * 60_000)).toBe(true);
