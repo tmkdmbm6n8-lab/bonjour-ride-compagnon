@@ -9,12 +9,12 @@ const radar = (id: string, lng: number, lat = 48) => ({ id, lng, lat, kind: 'rad
 describe('radars until arrival', () => {
   it('counts radars on the road, excluding other roads and police', () => {
     const cameras = [radar('a', 7.005), radar('b', 7.015), radar('other-road', 7.01, 48.002), { ...radar('police', 7.008), kind: 'police' }];
-    expect(radarsOnRoute(cameras, road).map(c => c.id)).toEqual(['a', 'b']);
+    expect(radarsOnRoute(cameras, road).map((c: any) => c.id)).toEqual(['a', 'b']);
   });
   it('decreases after passing a radar, including one less than 50 m behind', () => {
     const cameras = [radar('a', 7.005), radar('b', 7.015)];
     const remaining = remainingRoute(road, { lng: 7.0051, lat: 48 }).geometry;
-    expect(radarsOnRoute(cameras, remaining).map(c => c.id)).toEqual(['b']);
+    expect(radarsOnRoute(cameras, remaining).map((c: any) => c.id)).toEqual(['b']);
     expect(radarsOnRoute(cameras, remainingRoute(road, { lng: 7.02, lat: 48 }).geometry)).toEqual([]);
   });
   it('excludes radars before departure and beyond arrival', () => {
