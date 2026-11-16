@@ -5584,9 +5584,10 @@ a.activity-pill:hover {
 }
 
 /* Barre basse et Bouton GO compact */
+/* Barre basse et Bouton GO / HORS LIGNE */
 .drv-cockpit-bottom-bar {
   position: absolute;
-  bottom: 24px; /* Abaissé de 84px à 24px pour être plus bas sur l'écran */
+  bottom: 18px;
   left: 0;
   right: 0;
   display: flex;
@@ -5596,27 +5597,55 @@ a.activity-pill:hover {
   pointer-events: none;
 }
 
-/* État quand on est en ligne : bouton HORS LIGNE en ROUGE */
+.drv-go-btn {
+  pointer-events: auto !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  border-radius: 9999px;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  border: 1px solid transparent;
+}
+
+/* État HORS LIGNE (Pour passer EN LIGNE - Doré) */
+.drv-go-btn.is-offline {
+  background: linear-gradient(135deg, #1f1b11 0%, #12100a 100%);
+  color: #facc15;
+  border-color: rgba(250, 204, 21, 0.4);
+}
+.drv-go-btn.is-offline:hover {
+  transform: translateY(-2px);
+  border-color: #facc15;
+  box-shadow: 0 14px 36px rgba(250, 204, 21, 0.25);
+}
+
+/* État EN LIGNE (Pour passer HORS LIGNE - ROUGE VIF) */
 .drv-go-btn.is-online {
-  background: linear-gradient(135deg, #240d10 0%, #150608 100%);
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.4);
+  background: linear-gradient(135deg, #2a0b0e 0%, #180507 100%) !important;
+  color: #f87171 !important;
+  border-color: rgba(248, 113, 113, 0.45) !important;
 }
 .drv-go-btn.is-online:hover {
   transform: translateY(-2px);
-  border-color: #f87171;
-  box-shadow: 0 14px 36px rgba(248, 113, 113, 0.25);
+  border-color: #ef4444 !important;
+  box-shadow: 0 14px 36px rgba(239, 68, 68, 0.35) !important;
 }
-.drv-go-btn.is-online {
-  background: linear-gradient(135deg, #0e1e14 0%, #09130d 100%);
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.4);
+
+.drv-go-pulse {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
 }
-.drv-go-btn.is-online:hover {
-  transform: translateY(-2px);
-  border-color: #4ade80;
-  box-shadow: 0 14px 36px rgba(74, 222, 128, 0.25);
-}
+
 .drv-go-pulse {
   width: 8px;
   height: 8px;
