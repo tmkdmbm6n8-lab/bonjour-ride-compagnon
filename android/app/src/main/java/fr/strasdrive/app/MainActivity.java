@@ -1,4 +1,4 @@
-package com.example.app;
+package fr.strasdrive.app;
 
 import com.getcapacitor.BridgeActivity;
 
