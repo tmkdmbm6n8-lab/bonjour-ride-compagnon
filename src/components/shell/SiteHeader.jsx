@@ -20,14 +20,13 @@ export default function SiteHeader() {
       }}
     >
       <nav
-        className="flex items-center justify-between"
-        style={{ maxWidth: 1120, margin: "0 auto", padding: "14px 24px" }}
+        className="site-header-nav flex items-center justify-between"
         aria-label="Navigation principale"
       >
-        <Link href={user ? homeHref : "/"} aria-label="Accueil StrasDrive">
+        <Link href={user ? homeHref : "/"} className="site-header-brand" aria-label="Accueil StrasDrive">
           <KovaLogo size={32} />
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="site-header-actions flex items-center gap-3">
           {user ? (
             <Link href={homeHref} className="btn btn-primary btn-sm">
               Mon espace
