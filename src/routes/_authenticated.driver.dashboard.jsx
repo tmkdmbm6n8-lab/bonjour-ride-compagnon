@@ -364,11 +364,11 @@ function DriverDashboard() {
     <>
       {ride ? (
         <div className="drv-active-ride-page">
-          {/* 1. Carte GPS OpenStreetMap / MapLibre en plein écran */}
+          {/* 1. Carte GPS temps réel 3D en plein écran */}
           <div className="map-fill" style={{ position: "absolute", inset: 0 }}>
             <MapView
               center={center}
-              zoom={15}
+              zoom={16.5}
               userPosition={position || undefined}
               pickup={ride ? { lat: ride.pickup.lat, lng: ride.pickup.lng } : undefined}
               dropoff={
@@ -378,8 +378,9 @@ function DriverDashboard() {
                 drawableRoute(liveRoute?.geometry) ||
                 (ride?.status === "in_progress" ? drawableRoute(ride.route?.geometry) : undefined)
               }
-              fit={Boolean(ride)}
+              fit={false}
               followPosition={position || undefined}
+              navigationMode={true}
             />
           </div>
 
