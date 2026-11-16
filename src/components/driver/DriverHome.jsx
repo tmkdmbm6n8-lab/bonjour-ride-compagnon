@@ -84,6 +84,8 @@ export default function DriverHome({
       .then((d) => {
         if (!alive || !d) return;
         setToday(d.today || null);
+        const last = d.recentRides?.[0]?.fare?.driverEarnings;
+        setLastRide(typeof last === "number" ? last : null);
       })
       .catch(() => {});
     return () => {
