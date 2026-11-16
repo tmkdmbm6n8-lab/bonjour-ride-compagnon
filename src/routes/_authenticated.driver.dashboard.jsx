@@ -351,9 +351,10 @@ function DriverDashboard() {
 
   return (
     <>
-      {ride ? (
-        <div className="ride-page drv-active-ride-page">
-          <div className="map-fill">
+         {ride ? (
+        <div className="drv-active-ride-page">
+          {/* 1. Carte GPS OpenStreetMap / MapLibre en plein écran */}
+          <div className="map-fill" style={{ position: "absolute", inset: 0 }}>
             <MapView
               center={center}
               zoom={15}
@@ -371,136 +372,146 @@ function DriverDashboard() {
             />
           </div>
 
-          <div className="ride-panel drv-cockpit-ride-panel">
-            {/* ── Fiche passager avec Appel direct & Waybill ── */}
-            <div className="drv-client-card">
-              <div className="drv-client-meta">
-                <div className="drv-client-avatar">
-                  <User size={20} />
-                </div>
-                <div>
-                  <h3 className="drv-client-name">{ride.rider?.name || "Passager"}</h3>
-                  <span className="drv-client-rating">
-                    ★ {ride.rider?.rating ? ride.rider.rating.toFixed(1) : "5.0"}
-                  </span>
-                </div>
+          {/* 2. Tout en haut : Fiche passager opaque */}
+          <div className="drv-top-passenger-bar">
+            <div className="drv-client-meta">
+              <div className="drv-client-avatar">
+                <User size={22} />
               </div>
-
-              <div className="drv-client-actions">
-                {ride.rider?.phone ? (
-                  <a href={`tel:${ride.rider.phone}`} className="drv-circle-btn is-call" title="Appeler le passager">
-                    <Phone size={18} />
-                  </a>
-                ) : null}
-                <button
-                  className={`drv-circle-btn ${unread > 0 ? "has-unread" : ""}`}
-                  onClick={() => {
-                    setChatOpen(true);
-                    setUnread(0);
-                    setLastMsg(null);
-                  }}
-                  title="Message"
-                >
-                  <MessageCircle size={18} />
-                  {unread > 0 && <span className="drv-badge-dot" />}
-                </button>
-                <button className="drv-circle-btn" onClick={() => setWaybillOpen(true)} title="Feuille de route légale">
-                  <FileText size={18} />
-                </button>
+              <div>
+                <h3 className="drv-client-name">{ride.rider?.name || "Passager"}</h3>
+                <span className="drv-client-rating">★ {ride.rider?.rating ? ride.rider.rating.toFixed(1) : "5.0"}</span>
               </div>
             </div>
 
-            {/* ── Détails & Actions de la course ── */}
-            <div className="drv-trip-card">
-              <div className="flex items-center justify-between mb-3">
+            <div className="drv-client-actions">
+              {ride.rider?.phone && (
+                <a href={`tel:${ride.rider.phone}`} className="drv-circle-btn is-call" title="Appeler">
+                  <Phone size={18} />
+                </a>
+              )}
+              <button
+                className={`drv-circle-btn ${unread > 0 ? "has-unread" : ""}`}
+                onClick={() => { setChatOpen(true); setUnread(0); setLastMsg(null); }}
+                title="Message"
+              >
+                <MessageCircle size={18} />
+                {unread > 0 && <span className="drv-badge-dot" />}
+              </button>
+              <button className="drv-circle-btn" onClick={() => setWaybillOpen(true)} title="Feuille de route légale">
+                <FileText size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* 3. Au-dessus du volet bas : Pause 2 min à gauche / Annuler à droite */}
+          <div className="drv-mid-actions-bar">
+            <button
+              className={`drv-action-pill drv-pause-pill ${pauseSeconds > 0 ? "is-active" : ""}`}
+              onClick={() => {
+                if (pauseSeconds > 0) {
+                  setPauseSeconds(0);
+                  toast("Pause terminée", "info");
+                } else {
+                  setPauseSeconds(120);
+                  toast("Pause autorisée de 2 minutes activée", "info");
+                }
+              }}
+            >
+              <Hand size={16} />
+              <span>{pauseSeconds > 0 ? `Pause (${Math.floor(pauseSeconds / 60)}:${String(pauseSeconds % 60).padStart(2, "0")})` : "Pause 2 min"}</span>
+            </button>
+
+            {ride.status !== "in_progress" && (
+              <button className="drv-action-pill drv-cancel-pill" onClick={() => setCancelOpen(true)}>
+                <X size={16} />
+                <span>Annuler</span>
+              </button>
+            )}
+          </div>
+
+          {/* 4. Tout en bas : Volet rétractable d'informations */}
+          <div className="drv-bottom-sheet">
+            <div className="drv-sheet-header">
+              <div className="flex items-center gap-2">
                 <span className={`badge badge-dot ${ride.status === "in_progress" ? "badge-info" : "badge-gold"}`}>
                   {ride.status === "accepted" && "Rejoignez le passager"}
-                  {ride.status === "arrived" && "Passager informé de votre arrivée"}
+                  {ride.status === "arrived" && "Passager prévenu"}
                   {ride.status === "in_progress" && "Course en cours"}
                 </span>
-                <span className="drv-trip-gain mono-nums">{money(ride.fare?.driverEarnings)}</span>
+                <strong className="mono-nums text-gold" style={{ fontSize: "1.2rem" }}>
+                  {money(ride.fare?.driverEarnings)}
+                </strong>
               </div>
-
-              {ride.payment?.method === "cash" && (
-                <div className="drv-cash-alert">
-                  <span>Paiement en espèces</span>
-                  <strong>À encaisser : {money(ride.fare?.total)}</strong>
-                </div>
-              )}
-
-              {/* Navigation GPS intégrée */}
-              {legTarget && (
-                <div className="mb-3">
-                  <button className="btn btn-secondary btn-full drv-gps-btn" onClick={() => launchGps(legTarget)}>
-                    <Navigation size={17} /> GPS ({NAV_APPS[navApp]})
-                  </button>
-                </div>
-              )}
-
-              {/* Adresses */}
-              <div className="drv-addresses mb-4">
-                <div className="flex gap-2 items-start">
-                  <Circle size={12} className="text-gold mt-1 flex-shrink-0" />
-                  <span className="small text-muted">{ride.pickup.address}</span>
-                </div>
-                <div className="flex gap-2 items-start mt-2">
-                  <MapPin size={12} className="text-gold mt-1 flex-shrink-0" />
-                  <span className="small text-muted">{ride.dropoff.address}</span>
-                </div>
-              </div>
-
-              {/* Bouton d'action principal */}
-              {ride.status === "accepted" && (
-                <button
-                  className="btn btn-primary btn-lg btn-full"
-                  onClick={() => run(arrive, "Le passager a été informé de votre arrivée")}
-                  disabled={actionBusy || Boolean(zoneProblem)}
-                >
-                  <Flag size={18} /> Je suis arrivé
-                </button>
-              )}
-              {ride.status === "arrived" && (
-                <button
-                  className="btn btn-primary btn-lg btn-full"
-                  onClick={() => setPinOpen(true)}
-                  disabled={actionBusy || Boolean(zoneProblem)}
-                >
-                  <KeyRound size={18} /> Saisir le PIN pour démarrer
-                </button>
-              )}
-              {ride.status === "in_progress" && (
-                <button className="btn btn-success btn-lg btn-full" onClick={handleComplete} disabled={actionBusy}>
-                  <CheckCircle2 size={18} /> Terminer la course
-                </button>
-              )}
-
-              {ride.status !== "in_progress" && (
-                <button className="btn btn-danger btn-full mt-2" onClick={() => setCancelOpen(true)}>
-                  <X size={16} /> Annuler la course
-                </button>
-              )}
+              <button className="drv-sheet-toggle" onClick={() => setDetailsOpen(!detailsOpen)}>
+                {detailsOpen ? "Moins d'infos" : "Plus d'infos"}
+                {detailsOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+              </button>
             </div>
+
+            {/* Adresses principales */}
+            <div className="mb-3">
+              <div className="flex gap-2 items-center text-sm">
+                <Circle size={10} className="text-gold flex-shrink-0" />
+                <span className="truncate">{ride.status === "in_progress" ? ride.dropoff.address : ride.pickup.address}</span>
+              </div>
+            </div>
+
+            {/* Volet dépliable avec tous les détails */}
+            {detailsOpen && (
+              <div className="drv-sheet-details">
+                <div className="flex justify-between items-center mb-2 text-sm text-muted">
+                  <span>Prise en charge :</span>
+                  <span className="text-white truncate max-w-[220px]">{ride.pickup.address}</span>
+                </div>
+                <div className="flex justify-between items-center mb-2 text-sm text-muted">
+                  <span>Destination :</span>
+                  <span className="text-white truncate max-w-[220px]">{ride.dropoff.address}</span>
+                </div>
+                {ride.payment?.method === "cash" && (
+                  <div className="drv-cash-alert mb-3">
+                    <span>Espèces à encaisser :</span>
+                    <strong>{money(ride.fare?.total)}</strong>
+                  </div>
+                )}
+                {legTarget && (
+                  <button className="btn btn-secondary btn-full btn-sm mb-3" onClick={() => launchGps(legTarget)}>
+                    <Navigation size={15} /> Ouvrir dans {NAV_APPS[navApp]}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Gros bouton d'action principal */}
+            {ride.status === "accepted" && (
+              <button
+                className="btn btn-primary btn-lg btn-full"
+                onClick={() => run(arrive, "Le passager a été informé de votre arrivée")}
+                disabled={actionBusy || Boolean(zoneProblem)}
+              >
+                <Flag size={18} /> Je suis arrivé
+              </button>
+            )}
+            {ride.status === "arrived" && (
+              <button
+                className="btn btn-primary btn-lg btn-full"
+                onClick={() => setPinOpen(true)}
+                disabled={actionBusy || Boolean(zoneProblem)}
+              >
+                <KeyRound size={18} /> Saisir le PIN pour démarrer
+              </button>
+            )}
+            {ride.status === "in_progress" && (
+              <button className="btn btn-success btn-lg btn-full" onClick={handleComplete} disabled={actionBusy}>
+                <CheckCircle2 size={18} /> Terminer la course
+              </button>
+            )}
           </div>
         </div>
       ) : (
-        <DriverHome
-          onWaybill={() => setWaybillOpen(true)}
-          loading={loading}
-          online={online}
-          busy={busy}
-          isConnected={isConnected}
-          needsVehicle={needsVehicle}
-          position={position}
-          center={center}
-          onToggle={handleToggle}
-          acceptsPet={acceptsPet}
-          togglingPet={togglingPet}
-          onTogglePet={handleTogglePet}
-          acceptsCash={acceptsCash}
-          togglingCash={togglingCash}
-          onToggleCash={handleToggleCash}
-        />
+        <DriverHome ... />
       )}
+
 
       <Waybill open={waybillOpen} onClose={() => setWaybillOpen(false)} />
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
