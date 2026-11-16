@@ -7,7 +7,7 @@ const state = vi.hoisted(() => ({
   cancel: vi.fn(async () => {}), book: vi.fn(async () => {}), toast: vi.fn(),
 }));
 vi.mock('@/components/RiderLayout', () => ({ default: ({ children }: any) => children }));
-vi.mock('@/components/ArchiveMap', () => ({ default: () => <div>Carte</div> }));
+vi.mock('@/components/ArchiveMap', () => ({ default: ({ userPosition }: any) => <div data-testid="map" data-user-lat={userPosition?.lat}>Carte</div> }));
 vi.mock('@/components/ride/ChatSheet', () => ({ default: () => null }));
 vi.mock('@/components/ride/MessageAlert', () => ({ default: () => null }));
 vi.mock('@/components/payments/EmbeddedPayment', () => ({ default: () => null }));
@@ -32,14 +32,18 @@ beforeEach(() => { state.phase = 'idle'; state.ride = null; state.vv = null; sta
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('réservation client', () => {
-  it('ne demande pas le GPS au chargement et laisse saisir le départ', async () => {
-    const locate = vi.fn();
+  it('affiche la position GPS au chargement sans remplacer le départ saisi', async () => {
+    let success: any;
+    const locate = vi.fn(callback => { success = callback; });
     Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { getCurrentPosition: locate } });
     render(<Dashboard />);
     const pickup = screen.getByPlaceholderText('Lieu de prise en charge');
     fireEvent.change(pickup, { target: { value: 'Mon adresse libre' } });
     await waitFor(() => expect(pickup).toHaveValue('Mon adresse libre'));
-    expect(locate).not.toHaveBeenCalled();
+    expect(locate).toHaveBeenCalledTimes(1);
+    act(() => success({ coords: { latitude: 48.57, longitude: 7.75 }, timestamp: Date.now() }));
+    expect(screen.getByTestId('map')).toHaveAttribute('data-user-lat', '48.57');
+    expect(pickup).toHaveValue('Mon adresse libre');
   });
 
   it('une localisation tardive ne remplace pas une adresse saisie entretemps', async () => {

@@ -39,6 +39,7 @@ import EmbeddedPayment from "@/components/payments/EmbeddedPayment";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { playSound } from "@/lib/sounds";
 import useVisualViewport from "@/hooks/useVisualViewport";
+import useGeolocation from "@/hooks/useGeolocation";
 import { useLiveRoute } from "@/hooks/useLiveRoute";
 import { routeQualityLabel } from "@/lib/vtc-routing";
 import { drawableRoute, arrivalClock } from "@/lib/utils/route-display";
@@ -65,7 +66,9 @@ const CANCEL_REASONS = [
 function RiderDashboard() {
   const toast = useToast();
   const bookingPanelRef = useRef(null);
-  const [geo, setGeo] = useState(null);
+  const { position: gpsPosition } = useGeolocation({ watch: false });
+  const [locatedPosition, setGeo] = useState(null);
+  const geo = locatedPosition || gpsPosition;
   const locationRequestRef = useRef(0);
 
   // Booking form state
@@ -453,6 +456,7 @@ function RiderDashboard() {
           drawableRoute(liveRoute?.geometry) ||
           (ride.status === "in_progress" ? drawableRoute(ride.route?.geometry) : undefined),
         driverPosition,
+        userPosition: geo || undefined,
         fit: true,
         // Before pickup, zoom on the driver coming to the rider
         fitTo: beforePickup && driverPosition ? [p, driverPosition] : undefined,
@@ -471,6 +475,7 @@ function RiderDashboard() {
       routeGeometry: drawableRoute(estimate?.route?.geometry),
       drivers: nearby,
       userPosition: geo || undefined,
+      followPosition: !pickup && geo ? geo : undefined,
       fit: Boolean(pickup),
       fitTo: pickup
         ? [

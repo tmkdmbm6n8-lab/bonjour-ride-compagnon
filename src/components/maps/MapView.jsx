@@ -106,6 +106,7 @@ export default function MapView({
   const lastUserMoveRef = useRef(0);
   const prevPositionRef = useRef(null);
   const headingRef = useRef(0);
+  const initialUserCenterRef = useRef(false);
   const onClickRef = useRef(onClick);
 
   useEffect(() => {
@@ -231,6 +232,15 @@ export default function MapView({
       }
     }
   }, [userPosition?.lat, userPosition?.lng, userPosition?.heading, navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The first GPS fix must be visible, including while the driver is offline.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !userPosition || initialUserCenterRef.current || fit || followPosition || navigationMode) return;
+    initialUserCenterRef.current = true;
+    if (lastUserMoveRef.current) return;
+    map.easeTo({ center: [userPosition.lng, userPosition.lat], duration: 600 });
+  }, [userPosition?.lat, userPosition?.lng, fit, Boolean(followPosition), navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Véhicules à proximité
   useEffect(() => {
