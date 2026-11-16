@@ -7,24 +7,11 @@ import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/lib/archive-navigation";
 import {
-  Power,
-  Navigation,
-  MapPin,
-  Circle,
-  MessageCircle,
-  X,
-  Car,
-  TrendingUp,
-  CheckCircle2,
-  KeyRound,
-  Flag,
-  PawPrint,
-  Star,
-  Square,
-  User,
-  Phone,
-  FileText,
+  Power, Navigation, MapPin, Circle, MessageCircle, X,
+  CheckCircle2, KeyRound, Flag, PawPrint, Star, User,
+  Phone, FileText, Hand, ChevronUp, ChevronDown
 } from "lucide-react";
+
 
 import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
@@ -57,6 +44,17 @@ function DriverDashboard() {
   const [pinValue, setPinValue] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+const [detailsOpen, setDetailsOpen] = useState(false);
+const [pauseSeconds, setPauseSeconds] = useState(0);
+const [cancelReason, setCancelReason] = useState("");
+const [customReason, setCustomReason] = useState("");
+
+// Décompte de pause 2 min
+useEffect(() => {
+  if (pauseSeconds <= 0) return;
+  const timer = setInterval(() => setPauseSeconds((s) => s - 1), 1000);
+  return () => clearInterval(timer);
+}, [pauseSeconds]);
 
   const [receipt, setReceipt] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
