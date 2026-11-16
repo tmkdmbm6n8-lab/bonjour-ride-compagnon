@@ -6901,6 +6901,12 @@ a.activity-pill:hover {
 }
 .brand-theme .btn-primary:hover:not(:disabled),
 .brand-theme .btn-gold:hover:not(:disabled) { background: #facc15; }
+.site-start-btn {
+  background: #08090c;
+  color: #f1f5f9;
+  border: 1px solid #64748b;
+}
+.site-start-btn:hover:not(:disabled) { background: #141722; color: #fff; }
 .brand-theme .btn-secondary:hover:not(:disabled),
 .brand-theme .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
 .brand-theme .input,

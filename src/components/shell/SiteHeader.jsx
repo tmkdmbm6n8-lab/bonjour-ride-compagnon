@@ -34,13 +34,13 @@ export default function SiteHeader() {
             </Link>
           ) : (
             <>
-              <Link href="/login" className="btn btn-ghost btn-sm">
-                {" "}
-                Se connecter{" "}
-              </Link>
-              <Link href="/signup" className="btn btn-primary btn-sm">
+              <Link href="/signup" className="btn btn-secondary btn-sm site-start-btn">
                 {" "}
                 Commencer{" "}
+              </Link>
+              <Link href="/login" className="btn btn-gold btn-sm" style={{ color: '#0b0c10' }}>
+                {" "}
+                Se connecter{" "}
               </Link>
             </>
           )}
