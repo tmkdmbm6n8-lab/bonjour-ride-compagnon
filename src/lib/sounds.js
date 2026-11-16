@@ -93,5 +93,8 @@ export function playRadarBeep(kind = 'radar') {
   const c = audio();
   if (!c) return;
   const t0 = c.currentTime + 0.01;
-  tone(c, kind === 'police' ? 1320 : 1760, t0, 0.09, { type: 'square', gain: 0.12 });
+  // Carillon doux à deux notes (sinus), bien plus agréable qu'un bip carré.
+  const [a, b] = kind === 'police' ? [659, 880] : [784, 1047];
+  tone(c, a, t0, 0.22, { gain: 0.09 });
+  tone(c, b, t0 + 0.14, 0.3, { gain: 0.08 });
 }

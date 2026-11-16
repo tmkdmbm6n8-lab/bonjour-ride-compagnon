@@ -1395,6 +1395,12 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
 
   if (p === "/api/admin/road-alerts") {
     if (!isAdmin) throw new Error("Accès administrateur requis");
+    if (method === "DELETE") {
+      const kind = q.get("kind");
+      if (!ALERT_KINDS.includes(kind)) throw new Error("Type de signalement invalide");
+      required(await admin.from("road_alerts").delete().eq("kind", kind));
+      return { ok: true };
+    }
     const all = required(
       await admin.from("road_alerts").select("*").order("created_at", { ascending: false }).limit(500),
     );
@@ -1461,12 +1467,22 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
               .eq("id", target.id),
           );
         }
-        return { merged: true, alerts: await withVotes(await load(point)) };
+        return { merged: true, id: target.id, alerts: await withVotes(await load(point)) };
       }
-      required(
-        await admin.from("road_alerts").insert({ kind: body.kind, lat: point.lat, lng: point.lng, reported_by: uid }),
+      const created = required(
+        await admin
+          .from("road_alerts")
+          .insert({
+            kind: body.kind,
+            lat: point.lat,
+            lng: point.lng,
+            reported_by: uid,
+            is_permanent: body.kind === "radar", // un radar reste jusqu'à sa suppression par l'admin
+          })
+          .select("id")
+          .single(),
       );
-      return { merged: false, alerts: await withVotes(await load(point)) };
+      return { merged: false, id: created?.id, alerts: await withVotes(await load(point)) };
     }
   }
 

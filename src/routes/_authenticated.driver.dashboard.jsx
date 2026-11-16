@@ -24,12 +24,10 @@ import {
   Hand,
   ChevronUp,
   ChevronDown,
-  Siren,
-  Radar,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import useRoadAlerts from "@/hooks/useRoadAlerts";
+import useGeolocation from "@/hooks/useGeolocation";
+import { RoadAlertButtons, RoadAlertPrompt } from "@/components/driver/RoadAlertControls";
 
 import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
@@ -136,7 +134,10 @@ function DriverDashboard() {
     cancelTrip,
   } = useDriverState({ onEvent });
 
-  const roadAlerts = useRoadAlerts(position, online || Boolean(ride));
+  // Position suivie même hors ligne : les signalements restent disponibles sans course
+  const { position: idlePosition } = useGeolocation({ watch: !online && !ride });
+  const alertPosition = position || idlePosition;
+  const roadAlerts = useRoadAlerts(alertPosition, true);
   const [reporting, setReporting] = useState(null);
   async function handleReport(kind) {
     if (reporting) return;
@@ -148,7 +149,7 @@ function DriverDashboard() {
           ? "Merci, signalement confirmé"
           : kind === "police"
             ? "Contrôle de police signalé aux autres chauffeurs"
-            : "Radar signalé — il sera définitif après 10 confirmations",
+            : "Radar signalé et visible par tous les chauffeurs",
         "success",
         3000,
       );
@@ -451,34 +452,7 @@ function DriverDashboard() {
 
           {/* 3. Au-dessus du volet bas : Pause 2 min à gauche / Annuler à droite */}
           <div className="drv-mid-actions-bar">
-            <div className="drv-alert-stack">
-              <button
-                className={`drv-alert-btn is-sound ${roadAlerts.muted ? "is-muted" : ""}`}
-                onClick={roadAlerts.toggleMute}
-                aria-label={roadAlerts.muted ? "Activer le son des alertes" : "Couper le son des alertes"}
-                title={roadAlerts.muted ? "Son coupé" : "Son actif"}
-              >
-                {roadAlerts.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-              </button>
-              <button
-                className="drv-alert-btn is-radar"
-                onClick={() => handleReport("radar")}
-                disabled={reporting === "radar"}
-                aria-label="Signaler un radar"
-                title="Signaler un radar"
-              >
-                <Radar size={18} />
-              </button>
-              <button
-                className="drv-alert-btn is-police"
-                onClick={() => handleReport("police")}
-                disabled={reporting === "police"}
-                aria-label="Signaler un contrôle de police"
-                title="Signaler la police"
-              >
-                <Siren size={18} />
-              </button>
-            </div>
+            <RoadAlertButtons roadAlerts={roadAlerts} reporting={reporting} onReport={handleReport} />
             <button
               className={`drv-action-pill drv-pause-pill ${pauseSeconds > 0 ? "is-active" : ""}`}
               onClick={() => {
@@ -507,20 +481,7 @@ function DriverDashboard() {
             )}
           </div>
 
-          {roadAlerts.prompt && (
-            <div className="drv-alert-confirm" role="dialog" aria-live="polite">
-              <span className={`drv-alert-confirm-icon is-${roadAlerts.prompt.kind}`}>
-                {roadAlerts.prompt.kind === "police" ? <Siren size={18} /> : <Radar size={18} />}
-              </span>
-              <p>{roadAlerts.prompt.kind === "police" ? "Contrôle de police toujours présent ?" : "Radar toujours présent ?"}</p>
-              <button className="drv-alert-yes" onClick={() => roadAlerts.vote(roadAlerts.prompt.id, true)}>
-                Oui
-              </button>
-              <button className="drv-alert-no" onClick={() => roadAlerts.vote(roadAlerts.prompt.id, false)}>
-                Non
-              </button>
-            </div>
-          )}
+          <RoadAlertPrompt roadAlerts={roadAlerts} />
 
           {/* 4. Tout en bas : Volet rétractable d'informations */}
           <div className="drv-bottom-sheet">
@@ -619,6 +580,9 @@ function DriverDashboard() {
           acceptsCash={acceptsCash}
           togglingCash={togglingCash}
           onToggleCash={handleToggleCash}
+          roadAlerts={roadAlerts}
+          reporting={reporting}
+          onReport={handleReport}
         />
       )}
 
