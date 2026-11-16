@@ -125,14 +125,6 @@ export default function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined;
 
-    const map = new MLMap({
-      container: containerRef.current,
-      style: MAP_STYLE,
-      center: [center.lng, center.lat],
-      zoom,
-      pitch: navigationMode ? 58 : 0,
-      attributionControl: { compact: true },
-      cooperativeGestures: typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches,
       locale: {
         "CooperativeGesturesHandler.WindowsHelpText": "Utilisez Ctrl + molette pour zoomer sur la carte",
         "CooperativeGesturesHandler.MacHelpText": "Utilisez ⌘ + molette pour zoomer sur la carte",
