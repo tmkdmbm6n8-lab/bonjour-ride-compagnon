@@ -6778,3 +6778,26 @@ a.activity-pill:hover {
   padding-block: 12px;
   box-shadow: 0 -12px 20px #0a0b10e6;
 }
+
+/* Keep driver status and shortcuts above the map during pan, zoom and scroll. */
+.drv-cockpit-island {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: calc(var(--sidebar-w) + 16px);
+  right: 16px;
+  z-index: 40;
+}
+@media (max-width: 900px) {
+  .drv-cockpit-island {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+  }
+}
+/* Text credits replace the expandable information button. */
+.modern-map .maplibregl-ctrl-attrib {
+  padding: 0 5px;
+  border-radius: 5px;
+  font-size: 9px;
+  line-height: 16px;
+  background: rgba(21, 28, 36, 0.78);
+}

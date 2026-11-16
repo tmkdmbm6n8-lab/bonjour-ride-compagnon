@@ -123,7 +123,8 @@ export default function MapView({
       cooperativeGestures: false, // un seul doigt suffit pour parcourir la carte
     });
 
-    map.addControl(new AttributionControl({ compact: true }), "bottom-right");
+    // Offer previews sit over the main map, which already displays the credits.
+    if (!compact) map.addControl(new AttributionControl({ compact: false }), "bottom-right");
 
     const markUserMove = (e) => {
       if (e?.originalEvent) lastUserMoveRef.current = Date.now();
