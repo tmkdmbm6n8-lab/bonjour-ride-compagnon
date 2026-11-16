@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Map as MLMap, Marker, LngLatBounds, NavigationControl, setWorkerUrl } from "maplibre-gl";
+import { Map as MLMap, Marker, LngLatBounds, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 
@@ -125,6 +125,14 @@ export default function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined;
 
+    const map = new MLMap({
+      container: containerRef.current,
+      style: MAP_STYLE,
+      center: [center.lng, center.lat],
+      zoom,
+      pitch: navigationMode ? 58 : 0,
+      attributionControl: false,
+      cooperativeGestures: typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches,
       locale: {
         "CooperativeGesturesHandler.WindowsHelpText": "Utilisez Ctrl + molette pour zoomer sur la carte",
         "CooperativeGesturesHandler.MacHelpText": "Utilisez ⌘ + molette pour zoomer sur la carte",
