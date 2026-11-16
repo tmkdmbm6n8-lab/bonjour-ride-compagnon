@@ -195,9 +195,7 @@ async function osrmRoute(a, b) {
     return null;
   }
 }
-function validPoint(p) {
-  return p && Number.isFinite(p.lat) && Number.isFinite(p.lng) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180;
-}
+
 async function routeBetween(a, b) {
   if (!validPoint(a) || !validPoint(b)) throw new Error("Adresses invalides");
   // Google (trafic en temps réel) → OSRM (sans trafic) → estimation signalée, jamais de ligne droite.
@@ -944,7 +942,6 @@ export async function handleVtc(input, context) {
         }
         required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
       }
-
     } else if (action === "messages") {
       if (!participant) throw new Error("Accès refusé");
       if (method === "GET") return { messages: r.messages };
@@ -1383,7 +1380,14 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
   const withVotes = async (alerts) => {
     if (!alerts.length) return [];
     const votes = required(
-      await admin.from("road_alert_votes").select("alert_id, present").eq("driver_id", uid).in("alert_id", alerts.map((a) => a.id)),
+      await admin
+        .from("road_alert_votes")
+        .select("alert_id, present")
+        .eq("driver_id", uid)
+        .in(
+          "alert_id",
+          alerts.map((a) => a.id),
+        ),
     );
     const mine = new Map(votes.map((v) => [v.alert_id, v.present]));
     return alerts.map((a) => alertShape(a, uid, mine.get(a.id)));
@@ -1391,9 +1395,16 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
 
   if (p === "/api/admin/road-alerts") {
     if (!isAdmin) throw new Error("Accès administrateur requis");
-    const all = required(await admin.from("road_alerts").select("*").order("created_at", { ascending: false }).limit(500));
+    const all = required(
+      await admin.from("road_alerts").select("*").order("created_at", { ascending: false }).limit(500),
+    );
     return {
-      alerts: all.map((a) => ({ ...alertShape(a, uid), active: isAlertActive(a), denials: a.denials, validatedByAdmin: a.validated_by_admin })),
+      alerts: all.map((a) => ({
+        ...alertShape(a, uid),
+        active: isAlertActive(a),
+        denials: a.denials,
+        validatedByAdmin: a.validated_by_admin,
+      })),
     };
   }
   const adminMatch = p.match(/^\/api\/admin\/road-alerts\/([0-9a-f-]{36})(?:\/(validate))?$/);
@@ -1429,7 +1440,12 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
       const target = findMergeTarget(near, body.kind, point);
       if (target) {
         const already = required(
-          await admin.from("road_alert_votes").select("alert_id").eq("alert_id", target.id).eq("driver_id", uid).maybeSingle(),
+          await admin
+            .from("road_alert_votes")
+            .select("alert_id")
+            .eq("alert_id", target.id)
+            .eq("driver_id", uid)
+            .maybeSingle(),
         );
         if (!already && target.reported_by !== uid) {
           required(await admin.from("road_alert_votes").insert({ alert_id: target.id, driver_id: uid, present: true }));
@@ -1437,13 +1453,19 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
           required(
             await admin
               .from("road_alerts")
-              .update({ confirmations: next.confirmations, last_confirmed_at: next.last_confirmed_at, is_permanent: next.is_permanent })
+              .update({
+                confirmations: next.confirmations,
+                last_confirmed_at: next.last_confirmed_at,
+                is_permanent: next.is_permanent,
+              })
               .eq("id", target.id),
           );
         }
         return { merged: true, alerts: await withVotes(await load(point)) };
       }
-      required(await admin.from("road_alerts").insert({ kind: body.kind, lat: point.lat, lng: point.lng, reported_by: uid }));
+      required(
+        await admin.from("road_alerts").insert({ kind: body.kind, lat: point.lat, lng: point.lng, reported_by: uid }),
+      );
       return { merged: false, alerts: await withVotes(await load(point)) };
     }
   }
@@ -1454,7 +1476,9 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
     const a = required(await admin.from("road_alerts").select("*").eq("id", id).maybeSingle());
     if (!a || !isAlertActive(a)) return { ok: true, gone: true };
     if (a.reported_by === uid) return { ok: true };
-    const { error } = await admin.from("road_alert_votes").insert({ alert_id: id, driver_id: uid, present: Boolean(body.present) });
+    const { error } = await admin
+      .from("road_alert_votes")
+      .insert({ alert_id: id, driver_id: uid, present: Boolean(body.present) });
     if (error) return { ok: true, already: true }; // un seul vote par chauffeur
     const next = applyVote(a, Boolean(body.present));
     required(
