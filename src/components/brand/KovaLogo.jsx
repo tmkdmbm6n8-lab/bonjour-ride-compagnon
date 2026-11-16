@@ -90,7 +90,7 @@ export function KovaLogo({ size = 32, showText = true, className = "", light = f
             fontSize: size * 0.68,
             fontWeight: 700,
             letterSpacing: "-0.03em",
-            color: light ? "#FAFAF9" : "#0C0A09",
+            color: light ? "#FAFAF9" : "var(--text, #0C0A09)",
             lineHeight: 1,
           }}
         >
