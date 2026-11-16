@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "250093144910",
+    "project_id": "bonjour-ride-compagnon",
+    "storage_bucket": "bonjour-ride-compagnon.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:250093144910:android:4c9c42feccc7bdb54bec1f",
+        "android_client_info": {
+          "package_name": "com.example.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcpJtCTA6efyDchPIrXFwgLBQrf1O9kKM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:250093144910:android:65cb64e18d5905b44bec1f",
+        "android_client_info": {
+          "package_name": "fr.strasdrive.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcpJtCTA6efyDchPIrXFwgLBQrf1O9kKM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
