@@ -6238,3 +6238,151 @@ a.activity-pill:hover {
   border-color: #f87171;
   color: #ffffff;
 }
+/* ═══════════════════════════════════════════════════════════════════
+   MODALE D'ANNULATION COCKPIT (Noir Ardoise & Or / Rubis)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.shell-dark .overlay,
+.overlay:has(.drv-cancel-choice) {
+  background: rgba(4, 5, 8, 0.78) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+.shell-dark .modal,
+.modal:has(.drv-cancel-choice) {
+  background: #101319 !important;
+  border: 1px solid rgba(250, 204, 21, 0.16) !important;
+  border-radius: 20px !important;
+  color: #f8fafc !important;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.85),
+    0 0 40px rgba(234, 179, 8, 0.08) !important;
+}
+
+.shell-dark .modal h3,
+.modal:has(.drv-cancel-choice) h3 {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.shell-dark .modal p,
+.modal:has(.drv-cancel-choice) p {
+  color: #94a3b8 !important;
+}
+
+/* Choix prédéfinis d'annulation */
+.drv-cancel-choice {
+  width: 100%;
+  text-align: left;
+  padding: 13px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  font-size: 0.92rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drv-cancel-choice:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(250, 204, 21, 0.25);
+  color: #ffffff;
+}
+
+.drv-cancel-choice.is-selected {
+  background: rgba(239, 68, 68, 0.14) !important;
+  border-color: #f87171 !important;
+  color: #fecaca !important;
+  box-shadow: 0 0 16px rgba(248, 113, 113, 0.2) !important;
+}
+
+/* Champ de motif personnalisé */
+.modal:has(.drv-cancel-choice) textarea {
+  background: #080a0e !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+  padding: 10px 14px !important;
+  font-size: 0.9rem !important;
+}
+
+.modal:has(.drv-cancel-choice) textarea:focus {
+  border-color: #eab308 !important;
+  box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.2) !important;
+}
+
+/* Bouton de validation rouge rubis sombre */
+.modal:has(.drv-cancel-choice) .btn-danger {
+  background: #2a0b0e !important;
+  border: 1px solid rgba(248, 113, 113, 0.4) !important;
+  color: #f87171 !important;
+  font-weight: 600 !important;
+  padding: 14px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 18px rgba(220, 38, 38, 0.25) !important;
+}
+
+.modal:has(.drv-cancel-choice) .btn-danger:hover:not(:disabled) {
+  background: #3f1015 !important;
+  border-color: #f87171 !important;
+  color: #ffffff !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FLÈCHE GPS 3D TEMPS RÉEL (Type Waze)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.waze-nav-arrow-container {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.waze-nav-pulse {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(234, 179, 8, 0.22);
+  animation: wazePulse 2.4s infinite cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes wazePulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.waze-nav-arrow-shadow {
+  position: absolute;
+  width: 32px;
+  height: 14px;
+  bottom: 4px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  filter: blur(4px);
+  transform: rotateX(60deg);
+}
+
+.waze-nav-arrow-body {
+  position: relative;
+  z-index: 2;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0.38, 0.9);
+}
