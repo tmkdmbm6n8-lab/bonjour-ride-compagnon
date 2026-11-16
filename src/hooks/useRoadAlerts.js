@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { playRadarBeep } from "@/lib/sounds";
-import { beepIntervalMs, nearestAlert, CONFIRM_RADIUS_M } from "@/lib/vtc-road-alerts";
+import { beepIntervalMs, beepTarget, nearestAlert, CONFIRM_RADIUS_M } from "@/lib/vtc-road-alerts";
 
 const MUTE_KEY = "strasdrive.alerts.muted";
 const POLL_MS = 20000;
@@ -17,7 +17,9 @@ export default function useRoadAlerts(position, enabled = true) {
   posRef.current = position;
   const mutedRef = useRef(false);
   mutedRef.current = muted;
-  const nearRef = useRef(null);
+  const alertsRef = useRef([]);
+  alertsRef.current = alerts;
+  const silencedRef = useRef(new Set()); // repères qu'on vient de signaler : pas de bip tant qu'on est dessus
 
   useEffect(() => {
     try {
@@ -63,6 +65,7 @@ export default function useRoadAlerts(position, enabled = true) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Signalement impossible");
+    if (data.id) silencedRef.current = new Set(silencedRef.current).add(data.id);
     if (Array.isArray(data.alerts)) setAlerts(data.alerts);
     return data;
   }, []);
@@ -84,20 +87,20 @@ export default function useRoadAlerts(position, enabled = true) {
 
   const dismiss = useCallback((id) => setAsked((s) => new Set(s).add(id)), []);
 
-  // Distance au repère le plus proche
+  // Repère le plus proche (pour la question « toujours là ? »)
   const near = enabled ? nearestAlert(alerts, position) : null;
-  nearRef.current = near;
 
-  // Bip qui accélère tous les 10 m sous 100 m
+  // Carillon doux qui accélère tous les 10 m sous 100 m — jamais pour le chauffeur qui vient de signaler
   useEffect(() => {
     if (!enabled) return undefined;
     let timer = null;
     let stopped = false;
     const loop = () => {
       if (stopped) return;
-      const n = nearRef.current;
-      const every = n ? beepIntervalMs(n.distance) : null;
-      if (every && !mutedRef.current) playRadarBeep(n.alert.kind);
+      const { target, silenced } = beepTarget(alertsRef.current, posRef.current, silencedRef.current);
+      silencedRef.current = silenced;
+      const every = target ? beepIntervalMs(target.distance) : null;
+      if (every && !mutedRef.current) playRadarBeep(target.alert.kind);
       timer = setTimeout(loop, every || 1000);
     };
     loop();
