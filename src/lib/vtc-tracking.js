@@ -1,5 +1,10 @@
 // src/lib/vtc-tracking.js
-import { distanceMeters } from "./vtc-geo.js";
+import { haversineDistance } from "./utils/geo.js";
+
+function distanceMeters(a, b) {
+  if (!a || !b) return 0;
+  return Math.round(haversineDistance(a.lat, a.lng, b.lat, b.lng) * 1000);
+}
 
 export function evaluateDriverProgress(ride, currentDriverLoc, now = Date.now()) {
   if (!ride || ride.status !== "accepted" || !currentDriverLoc) {
