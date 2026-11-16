@@ -42,6 +42,37 @@ export default function DriverHome({
   onReport,
 }) {
   const [today, setToday] = useState(null);
+  const [lastRide, setLastRide] = useState(null);
+  const [earningsView, setEarningsView] = useState("today"); // "today" | "last"
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+
+  // Détection du glissement du doigt sans flèche
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    // Déclenchement uniquement sur glissement horizontal net (> 20px)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 20) {
+      if (deltaX < 0) {
+        // Droite vers la gauche : Recette aujourd'hui
+        setEarningsView("today");
+      } else {
+        // Gauche vers la droite : Dernière course
+        setEarningsView("last");
+      }
+    }
+  };
+
+  // Clic ou tap pour basculer facilement
+  const handleToggleEarnings = () => {
+    setEarningsView((v) => (v === "today" ? "last" : "today"));
+  };
+
   const [helpOpen, setHelpOpen] = useState(false);
   const { position: localPosition } = useGeolocation({ watch: false });
   const mapCenter = position || localPosition || center;
