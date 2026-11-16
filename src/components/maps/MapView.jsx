@@ -1,47 +1,27 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { Map as MLMap, Marker, LngLatBounds, NavigationControl, setWorkerUrl } from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
-// Bundlers don't emit MapLibre's worker next to the pre-bundled library, so point to it explicitly
-// (without it the route line and other vector work never draw).
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+import { useEffect, useRef } from "react";
+import { Map as MLMap, Marker, LngLatBounds, NavigationControl, setWorkerUrl } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 
 setWorkerUrl(maplibreWorkerUrl);
-
-/**
- * MapLibre GL map with standard OpenStreetMap tiles (no API key).
- *
- * Props:
- *  - center {lat,lng}, zoom
- *  - pickup / dropoff {lat,lng} — pin markers
- *  - routeGeometry [[lng,lat],...] — drawn as an ink line
- *  - drivers [{id, location:{lat,lng}}] — nearby cars (dots)
- *  - driverPosition {lat,lng,heading} — the assigned driver (animated)
- *  - userPosition {lat,lng} — rider's own dot
- *  - fit — when true, fits bounds to pickup/dropoff/route
- *  - fitTo [{lat,lng}] — explicit points to frame instead (refit when fitKey changes)
- *  - followPosition {lat,lng} — keep the camera on this point (driver navigation);
- *    a manual two-finger move pauses following for a few seconds
- *  - onClick(lngLat)
- */
 
 const MAP_STYLE = {
   version: 8,
   sources: {
     osm: {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
-      attribution:
-        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     },
   },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+  layers: [{ id: "osm", type: "raster", source: "osm" }],
 };
 
 function el(className, html) {
-  const div = document.createElement('div');
+  const div = document.createElement("div");
   div.className = className;
   if (html) div.innerHTML = html;
   return div;
@@ -56,6 +36,49 @@ const PIN_SVG =
 const SQUARE_SVG =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 
+// Flèche 3D profilée style Waze en or métallique avec ombre portée
+function make3DNavigationArrow() {
+  const container = document.createElement("div");
+  container.className = "waze-nav-arrow-container";
+  container.innerHTML = `
+    <div class="waze-nav-pulse"></div>
+    <div class="waze-nav-arrow-shadow"></div>
+    <div class="waze-nav-arrow-body">
+      <svg width="44" height="48" viewBox="0 0 44 48" fill="none">
+        <defs>
+          <linearGradient id="wazeGradGold" x1="22" y1="2" x2="22" y2="44" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FEF08A"/>
+            <stop offset="0.4" stop-color="#EAB308"/>
+            <stop offset="1" stop-color="#854D0E"/>
+          </linearGradient>
+          <filter id="wazeDepth" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.6"/>
+          </filter>
+        </defs>
+        <!-- Socle 3D profond -->
+        <path d="M22 4L40 42L22 34L4 42L22 4Z" fill="#3B2506" />
+        <!-- Corps de la flèche -->
+        <path d="M22 2L39 39L22 32L5 39L22 2Z" fill="url(#wazeGradGold)" stroke="#FEF9C3" stroke-width="1.8" stroke-linejoin="round" filter="url(#wazeDepth)"/>
+        <!-- Biseau lumière 3D gauche -->
+        <path d="M22 2L5 39L22 32Z" fill="rgba(255, 255, 255, 0.28)"/>
+        <!-- Cœur luminescent -->
+        <circle cx="22" cy="24" r="3" fill="#FFFFFF"/>
+      </svg>
+    </div>
+  `;
+  return container;
+}
+
+// Calcul de l'angle entre deux coordonnées quand le téléphone ne donne pas de boussole
+function computeBearing(p1, p2) {
+  const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
+  const lat1 = (p1.lat * Math.PI) / 180;
+  const lat2 = (p2.lat * Math.PI) / 180;
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(dLng);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
 export default function MapView({
   center = { lat: 40.7128, lng: -74.006 },
   zoom = 13,
@@ -69,8 +92,9 @@ export default function MapView({
   fitTo,
   fitKey,
   followPosition,
+  navigationMode = false,
   onClick,
-  className = '',
+  className = "",
   style,
 }) {
   const containerRef = useRef(null);
@@ -79,16 +103,17 @@ export default function MapView({
   const markersRef = useRef({ pickup: null, dropoff: null, driver: null, user: null });
   const driverDotsRef = useRef(new Map());
   const animRef = useRef(null);
-  // Latest route geometry — the style 'load' handler reads this so a route
-  // that arrives before the style finishes loading still gets drawn.
   const routeGeomRef = useRef(null);
   const lastUserMoveRef = useRef(0);
+  const prevPositionRef = useRef(null);
+  const headingRef = useRef(0);
   const onClickRef = useRef(onClick);
+
   useEffect(() => {
     onClickRef.current = onClick;
   }, [onClick]);
 
-  // ── Init once ──
+  // Initialisation de la carte
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined;
 
@@ -97,38 +122,32 @@ export default function MapView({
       style: MAP_STYLE,
       center: [center.lng, center.lat],
       zoom,
+      pitch: navigationMode ? 58 : 0,
       attributionControl: { compact: true },
-      // On phones the map fills the screen behind the panel: one finger scrolls
-      // the page, two fingers move/zoom the map (avoids accidental drags).
-      cooperativeGestures: typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches,
+      cooperativeGestures: typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches,
       locale: {
-        'CooperativeGesturesHandler.WindowsHelpText': 'Utilisez Ctrl + molette pour zoomer sur la carte',
-        'CooperativeGesturesHandler.MacHelpText': 'Utilisez ⌘ + molette pour zoomer sur la carte',
-        'CooperativeGesturesHandler.MobileHelpText': 'Utilisez deux doigts pour déplacer la carte',
+        "CooperativeGesturesHandler.WindowsHelpText": "Utilisez Ctrl + molette pour zoomer sur la carte",
+        "CooperativeGesturesHandler.MacHelpText": "Utilisez ⌘ + molette pour zoomer sur la carte",
+        "CooperativeGesturesHandler.MobileHelpText": "Utilisez deux doigts pour déplacer la carte",
       },
     });
-    const markUserMove = (e) => { if (e?.originalEvent) lastUserMoveRef.current = Date.now(); };
-    map.on('dragstart', markUserMove);
-    map.on('zoomstart', markUserMove);
 
-    map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right');
+    const markUserMove = (e) => {
+      if (e?.originalEvent) lastUserMoveRef.current = Date.now();
+    };
+    map.on("dragstart", markUserMove);
+    map.on("zoomstart", markUserMove);
+
+    map.addControl(new NavigationControl({ showCompass: true }), "bottom-right");
 
     const applyRoute = () => {
       readyRef.current = drawRoute(map, routeGeomRef.current);
     };
 
-    // The style may finish loading before OR after this handler is attached,
-    // and a style reload wipes custom sources — so react to both events and
-    // let drawRoute() re-create anything missing (it is idempotent).
-    map.on('load', applyRoute);
-    map.on('styledata', applyRoute);
+    map.on("load", applyRoute);
+    map.on("styledata", applyRoute);
+    map.on("click", (e) => onClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
 
-    map.on('click', (e) => {
-      onClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
-    });
-
-    // Guarantee correct canvas size even when the container lays out
-    // after map construction (flex/absolute parents, modals, HMR).
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(containerRef.current);
     requestAnimationFrame(() => map.resize());
@@ -138,24 +157,19 @@ export default function MapView({
     return () => {
       ro.disconnect();
       cancelAnimationFrame(animRef.current);
-      // Markers belong to this map instance — drop them so a remount
-      // (StrictMode/HMR) recreates them on the new map.
       markersRef.current = { pickup: null, dropoff: null, driver: null, user: null };
       driverDotsRef.current.clear();
       try {
         map.remove();
       } catch (err) {
-        // remove() can throw when torn down mid-load; never let that block
-        // the next mount from creating a fresh map.
-        console.warn('[MapView] map.remove() failed:', err?.message);
+        console.warn("[MapView] map.remove() failed:", err?.message);
       }
       if (mapRef.current === map) mapRef.current = null;
       readyRef.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Pickup / dropoff / user markers ──
+  // Synchronisation des marqueurs
   function syncMarker(key, pos, make) {
     const map = mapRef.current;
     if (!map) return;
@@ -166,70 +180,62 @@ export default function MapView({
       return;
     }
     if (!markers[key]) {
-      markers[key] = new Marker({ element: make() })
-        .setLngLat([pos.lng, pos.lat])
-        .addTo(map);
+      markers[key] = new Marker({ element: make() }).setLngLat([pos.lng, pos.lat]).addTo(map);
     } else {
       markers[key].setLngLat([pos.lng, pos.lat]);
     }
   }
 
   useEffect(() => {
-    syncMarker('pickup', pickup, () => el('marker-pin pickup', PIN_SVG));
+    syncMarker("pickup", pickup, () => el("marker-pin pickup", PIN_SVG));
   }, [pickup?.lat, pickup?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    syncMarker('dropoff', dropoff, () => el('marker-pin dropoff', SQUARE_SVG));
+    syncMarker("dropoff", dropoff, () => el("marker-pin dropoff", SQUARE_SVG));
   }, [dropoff?.lat, dropoff?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Flèche de navigation temps réel
   useEffect(() => {
-    syncMarker('user', userPosition, () => {
-      const dot = el('');
-      dot.style.cssText =
-        'width:16px;height:16px;border-radius:50%;background:#eab308;border:3px solid #0c0a09;box-shadow:0 1px 6px rgba(0,0,0,.45)';
-      return dot;
-    });
-  }, [userPosition?.lat, userPosition?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Assigned driver marker (smoothly animated) ──
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const markers = markersRef.current;
-
-    if (!driverPosition) {
-      markers.driver?.remove();
-      markers.driver = null;
+    const pos = userPosition;
+    if (!pos) {
+      syncMarker("user", null);
       return;
     }
 
-    const target = [driverPosition.lng, driverPosition.lat];
-
-    if (!markers.driver) {
-      markers.driver = new Marker({ element: el('marker-driver', CAR_SVG) })
-        .setLngLat(target)
-        .addTo(map);
-      return;
+    // Calcul du cap (direction de marche)
+    let angle = pos.heading;
+    if (angle == null || Number.isNaN(angle)) {
+      if (prevPositionRef.current) {
+        const dLat = Math.abs(pos.lat - prevPositionRef.current.lat);
+        const dLng = Math.abs(pos.lng - prevPositionRef.current.lng);
+        if (dLat > 0.00005 || dLng > 0.00005) {
+          angle = computeBearing(prevPositionRef.current, pos);
+          headingRef.current = angle;
+        } else {
+          angle = headingRef.current;
+        }
+      } else {
+        angle = headingRef.current;
+      }
+    } else {
+      headingRef.current = angle;
     }
+    prevPositionRef.current = pos;
 
-    // Lerp from current to target over ~900ms for a fluid glide
-    const from = markers.driver.getLngLat();
-    const start = performance.now();
-    const D = 900;
-    cancelAnimationFrame(animRef.current);
-    const step = (now) => {
-      const t = Math.min(1, (now - start) / D);
-      const e = 1 - Math.pow(1 - t, 3); // ease-out cubic
-      markers.driver?.setLngLat([
-        from.lng + (target[0] - from.lng) * e,
-        from.lat + (target[1] - from.lat) * e,
-      ]);
-      if (t < 1) animRef.current = requestAnimationFrame(step);
-    };
-    animRef.current = requestAnimationFrame(step);
-  }, [driverPosition?.lat, driverPosition?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+    syncMarker("user", pos, () => (navigationMode ? make3DNavigationArrow() : el("marker-dot-simple", "")));
 
-  // ── Nearby driver dots ──
+    // Orientation de la flèche
+    const userMarker = markersRef.current.user;
+    if (userMarker && navigationMode) {
+      const arrowBody = userMarker.getElement().querySelector(".waze-nav-arrow-body");
+      if (arrowBody) {
+        // En vue orientée, la flèche pointe vers le haut (0deg) ; sinon elle s'oriente selon l'angle
+        arrowBody.style.transform = `rotate(${angle}deg)`;
+      }
+    }
+  }, [userPosition?.lat, userPosition?.lng, userPosition?.heading, navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Véhicules à proximité
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -243,13 +249,8 @@ export default function MapView({
       if (dots.has(d.id)) {
         dots.get(d.id).setLngLat(lngLat);
       } else {
-        const m = new Marker({
-          element: el('marker-driver', CAR_SVG),
-        })
-          .setLngLat(lngLat)
-          .addTo(map);
-        m.getElement().style.opacity = '0.85';
-        m.getElement().style.transform += ' scale(0.85)';
+        const m = new Marker({ element: el("marker-driver", CAR_SVG) }).setLngLat(lngLat).addTo(map);
+        m.getElement().style.opacity = "0.85";
         dots.set(d.id, m);
       }
     }
@@ -262,20 +263,18 @@ export default function MapView({
     }
   }, [drivers]);
 
-  // ── Route line ──
+  // Tracé d'itinéraire
   useEffect(() => {
     routeGeomRef.current = routeGeometry || null;
     const map = mapRef.current;
     if (!map) return;
-    // drawRoute self-guards on style readiness; if the style isn't up yet the
-    // 'load'/'styledata' handlers will re-apply routeGeomRef.
     readyRef.current = drawRoute(map, routeGeometry);
   }, [routeGeometry]);
 
-  // ── Fit bounds ──
+  // Cadrage d'itinéraire (hors navigation active)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !fit || followPosition) return;
+    if (!map || !fit || followPosition || navigationMode) return;
 
     const points = [];
     if (fitTo) {
@@ -291,48 +290,51 @@ export default function MapView({
       return;
     }
 
-    const bounds = points.reduce(
-      (b, p) => b.extend(p),
-      new LngLatBounds(points[0], points[0])
-    );
+    const bounds = points.reduce((b, p) => b.extend(p), new LngLatBounds(points[0], points[0]));
     map.fitBounds(bounds, { padding: fitPadding(map), duration: 700, maxZoom: 16 });
-    // driverPosition is intentionally not a dep — refitting on every GPS
-    // ping would make the camera jitter. It's included in bounds whenever
-    // a route/endpoint change triggers a refit.
-  }, [fit, pickup?.lat, dropoff?.lat, routeGeometry, fitKey, Boolean(followPosition)]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fit, pickup?.lat, dropoff?.lat, routeGeometry, fitKey, Boolean(followPosition), navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Follow (navigation) ──
+  // Suivi GPS temps réel 3D (type Waze)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !followPosition) return;
+    // Si l'utilisateur touche la carte, pause de 8 secondes avant de reprendre le suivi
     if (Date.now() - lastUserMoveRef.current < 8000) return;
-    map.easeTo({ center: [followPosition.lng, followPosition.lat], zoom: Math.max(map.getZoom(), 15.5), padding: fitPadding(map), duration: 800 });
-  }, [followPosition?.lat, followPosition?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Recenter when no fit target ──
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || fit || followPosition || pickup || dropoff) return;
-    map.easeTo({ center: [center.lng, center.lat], zoom, duration: 600 });
-  }, [center.lat, center.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (navigationMode) {
+      map.easeTo({
+        center: [followPosition.lng, followPosition.lat],
+        zoom: 16.8,
+        pitch: 58, // Perspective fuyante 3D Waze
+        bearing: headingRef.current || 0, // La carte s'oriente dans le sens de la route
+        padding: { top: 80, bottom: 220, left: 30, right: 30 }, // Véhicule placé dans le tiers bas
+        duration: 900,
+      });
+    } else {
+      map.easeTo({
+        center: [followPosition.lng, followPosition.lat],
+        zoom: Math.max(map.getZoom(), 15.5),
+        pitch: 0,
+        bearing: 0,
+        padding: fitPadding(map),
+        duration: 800,
+      });
+    }
+  }, [followPosition?.lat, followPosition?.lng, followPosition?.heading, navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
       ref={containerRef}
       className={className}
-      style={{ width: '100%', height: '100%', ...style }}
-      aria-label="Carte"
+      style={{ width: "100%", height: "100%", ...style }}
+      aria-label="Carte GPS"
     />
   );
 }
 
-/**
- * Keep framed points clear of the floating ride panel: on phones it covers the
- * bottom of the map, on desktop the left side.
- */
 function fitPadding(map) {
   const box = map.getContainer().getBoundingClientRect();
-  const panel = document.querySelector('.ride-panel')?.getBoundingClientRect();
+  const panel = document.querySelector(".ride-panel")?.getBoundingClientRect();
   const pad = { top: 60, bottom: 60, left: 50, right: 50 };
   if (!panel || panel.height === 0) return pad;
   if (box.width <= 900) pad.bottom = Math.min(box.height - 140, Math.max(60, box.bottom - panel.top + 24));
@@ -340,32 +342,20 @@ function fitPadding(map) {
   return pad;
 }
 
-/**
- * Draw the route line, creating the source/layers if they don't exist yet.
- *
- * Idempotent and safe to call at any time: returns false (a no-op) while the
- * style isn't ready, so callers can simply try again on the next style event.
- */
 function drawRoute(map, geometry) {
   const data = {
-    type: 'Feature',
-    geometry: { type: 'LineString', coordinates: geometry || [] },
+    type: "Feature",
+    geometry: { type: "LineString", coordinates: geometry || [] },
   };
 
   try {
-    // Fast path: once the source exists, updating it never needs the style to
-    // be "loaded" — isStyleLoaded() stays false while tiles stream in, so
-    // gating on it here would drop routes indefinitely.
-    const existing = map.getSource('route');
+    const existing = map.getSource("route");
     if (existing) {
       existing.setData(data);
       return true;
     }
-  } catch {
-    // getSource throws before the style exists — fall through and wait
-  }
+  } catch {}
 
-  // Creating the source/layers does require a ready style
   let styleReady = false;
   try {
     styleReady = map.isStyleLoaded();
@@ -375,29 +365,27 @@ function drawRoute(map, geometry) {
   if (!styleReady) return false;
 
   try {
-    map.addSource('route', { type: 'geojson', data });
-    if (!map.getLayer('route-casing')) {
+    map.addSource("route", { type: "geojson", data });
+    if (!map.getLayer("route-casing")) {
       map.addLayer({
-        id: 'route-casing',
-        type: 'line',
-        source: 'route',
-        paint: { 'line-color': '#0c0a09', 'line-width': 7, 'line-opacity': 0.9 },
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        id: "route-casing",
+        type: "line",
+        source: "route",
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: { "line-color": "#09090b", "line-width": 8, "line-opacity": 0.8 },
       });
     }
-    if (!map.getLayer('route-line')) {
+    if (!map.getLayer("route-line")) {
       map.addLayer({
-        id: 'route-line',
-        type: 'line',
-        source: 'route',
-        paint: { 'line-color': '#eab308', 'line-width': 4 },
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        id: "route-line",
+        type: "line",
+        source: "route",
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: { "line-color": "#eab308", "line-width": 5 },
       });
     }
-
     return true;
-  } catch (err) {
-    console.warn('[MapView] route draw failed:', err?.message);
+  } catch {
     return false;
   }
 }
