@@ -1,4 +1,4 @@
-// Legacy import path delegates to the same Google map as the rest of the app.
+// Legacy import path delegates to the same OpenStreetMap map as the rest of the app.
 import ArchiveMap from "./ArchiveMap";
 export default function MapView() {
   return (

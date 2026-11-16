@@ -43,7 +43,7 @@ import { money, VEHICLE_LABELS } from "@/components/ui/bits";
 import useDriverState from "@/hooks/useDriverState";
 import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from "@/lib/utils/geo";
 import { playSound, startRinging } from "@/lib/sounds";
-import { NAV_APPS, getNavApp, setNavApp, getNavAuto, setNavAuto, openNavigation } from "@/lib/navigation";
+import ExternalNavigationButton from "@/components/driver/ExternalNavigationButton";
 import { useLiveRoute } from "@/hooks/useLiveRoute";
 import useRouteRadars from "@/hooks/useRouteRadars";
 import { routeQualityLabel } from "@/lib/vtc-routing";
@@ -168,27 +168,6 @@ function DriverDashboard() {
     return startRinging("offer");
   }, [offer?.rideId]);
 
-  // GPS app preference (Google Maps / Waze) and auto-launch
-  const [navApp, setNavAppState] = useState("google");
-  const [navAuto, setNavAutoState] = useState(true);
-  useEffect(() => {
-    setNavAppState(getNavApp());
-    setNavAutoState(getNavAuto());
-  }, []);
-  const chooseNavApp = (app) => {
-    setNavApp(app);
-    setNavAppState(app);
-  };
-  const toggleNavAuto = () => {
-    setNavAuto(!navAuto);
-    setNavAutoState(!navAuto);
-  };
-  function launchGps(dest, auto = false) {
-    if (auto && !navAuto) return;
-    const opened = openNavigation(navApp, dest);
-    if (!opened && auto) toast("Touchez « Lancer le GPS » pour ouvrir la navigation", "info", 5000);
-  }
-
   // Offer countdown
   useEffect(() => {
     if (!offer) {
@@ -223,7 +202,6 @@ function DriverDashboard() {
   async function handleAccept() {
     if (actionBusy) return;
     setActionBusy(true);
-    const pickupPoint = offer?.pickup ? { lat: offer.pickup.lat, lng: offer.pickup.lng } : null;
     setAward("spinning");
     const spin = new Promise((r) => setTimeout(r, 1500));
     try {
@@ -232,7 +210,6 @@ function DriverDashboard() {
       setLastMsg(null);
       setAward("won");
       playSound("driver-found");
-      if (pickupPoint) launchGps(pickupPoint, true);
     } catch (err) {
       await spin;
       if (/déjà acceptée|plus disponible/i.test(err.message || "")) {
@@ -268,7 +245,6 @@ function DriverDashboard() {
       setPinOpen(false);
       setPinValue("");
       toast("Course démarrée", "success");
-      if (ride?.dropoff) launchGps({ lat: ride.dropoff.lat, lng: ride.dropoff.lng }, true);
     } catch (err) {
       toast(err.message, "error", 4000);
     } finally {
@@ -400,7 +376,7 @@ function DriverDashboard() {
     <>
       {ride ? (
         <div className="drv-active-ride-page">
-          {/* 1. Carte GPS temps réel 3D en plein écran */}
+          {/* 1. Carte de course OpenStreetMap en plein écran */}
           <div className="map-fill" style={{ position: "absolute", inset: 0 }}>
             <MapView
               center={center}
@@ -411,27 +387,17 @@ function DriverDashboard() {
                 ride && ride.status === "in_progress" ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng } : undefined
               }
               routeGeometry={driverRoute}
-              fit={false}
-              followPosition={position || undefined}
-              navigationMode={true}
+              fit
+              fitTo={[position, ride.status === "in_progress" ? ride.dropoff : ride.pickup].filter(Boolean)}
+              navigationMode={false}
               alerts={roadAlerts.alerts}
               showRoadAlerts
             />
           </div>
 
-          {/* Destination banner: no invented turn instruction without maneuver data. */}
-          <div className="google-nav-top-banner">
-            <div className="google-nav-turn-icon" aria-hidden="true">
-              <Navigation size={32} />
-            </div>
-            <div className="google-nav-instruction">
-              <div className="google-nav-distance">
-                {ride.status === "in_progress" ? "Vers la destination" : ride.status === "arrived" ? "Au point de prise en charge" : "Vers la prise en charge"}
-              </div>
-              <div className="google-nav-street">
-                {ride.status === "in_progress" ? ride.dropoff.address : ride.pickup.address}
-              </div>
-            </div>
+          {/* 2. Tout en haut : Fiche passager opaque */}
+          <div className="drv-top-passenger-bar">
+            <PassengerInfo key={ride.id} ride={ride} />
 
             <div className="drv-client-actions">
               {ride.rider?.phone && (
@@ -492,18 +458,6 @@ function DriverDashboard() {
 
           {/* 4. Tout en bas : Volet rétractable d'informations */}
           <div className="drv-bottom-sheet">
-            {navigating && (
-              <div className="google-nav-bottom-eta" aria-label="Estimation d’arrivée">
-                <span className="google-eta-time">
-                  {liveLeg && Number.isFinite(liveLeg.seconds) ? transportClock(new Date(Date.now() + liveLeg.seconds * 1000).toISOString()) : "—"}
-                </span>
-                <span aria-hidden="true">•</span>
-                <span>{liveLeg && Number.isFinite(liveLeg.seconds) ? `${Math.max(1, Math.ceil(liveLeg.seconds / 60))} min` : "— min"}</span>
-                <span aria-hidden="true">•</span>
-                <span>{liveLeg && Number.isFinite(liveLeg.meters) ? formatDistance(liveLeg.meters) : "— km"}</span>
-                {liveLeg?.approximate && <span className="google-eta-estimate">Estimé</span>}
-              </div>
-            )}
             <div className="drv-sheet-header">
               <div className="flex items-center gap-2">
                 <span className={`badge badge-dot ${ride.status === "in_progress" ? "badge-info" : "badge-gold"}`}>
@@ -555,7 +509,6 @@ function DriverDashboard() {
             {/* Volet dépliable avec tous les détails */}
             {detailsOpen && (
               <div className="drv-sheet-details">
-                <PassengerInfo key={ride.id} ride={ride} />
                 <div className="flex justify-between items-center mb-2 text-sm text-muted">
                   <span>Prise en charge :</span>
                   <span className="text-white truncate max-w-[220px]">{ride.pickup.address}</span>
@@ -570,13 +523,11 @@ function DriverDashboard() {
                     <strong>{money(ride.fare?.total)}</strong>
                   </div>
                 )}
-                {legTarget && (
-                  <button className="btn btn-secondary btn-full btn-sm mb-3" onClick={() => launchGps(legTarget)}>
-                    <Navigation size={15} /> Ouvrir dans {NAV_APPS[navApp]}
-                  </button>
-                )}
+
               </div>
             )}
+
+            {legTarget && <ExternalNavigationButton key={`${ride.id}:${ride.status}`} destination={legTarget} />}
 
             {/* Gros bouton d'action principal */}
             {ride.status === "accepted" && (

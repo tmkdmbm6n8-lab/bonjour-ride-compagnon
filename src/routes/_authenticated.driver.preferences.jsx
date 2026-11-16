@@ -323,7 +323,7 @@ function PreferencesPage() {
                 <Zap size={24} />
                 <span className="drv-row-label">
                   Ouvrir le GPS automatiquement
-                  <span className="drv-row-sub">Dès que vous acceptez une course ou prenez le passager.</span>
+                  <span className="drv-row-sub">Au clic sur « Démarrer le trajet », ouvrir votre GPS préféré sans demander.</span>
                 </span>
                 <Switch on={navAuto} />
               </button>

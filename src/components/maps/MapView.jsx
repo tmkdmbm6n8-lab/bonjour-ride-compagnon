@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { Map as MLMap, Marker, LngLatBounds, setWorkerUrl } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { policeCapSvg, frenchRadarSvg } from "@/components/icons/road-alert-icons";
 import useMapSpeedCameras from "@/hooks/useMapSpeedCameras";
 import { mergeCameraAlerts } from "@/lib/vtc-speed-cameras";
-import { interpolateFix } from "@/lib/map-motion";
-import { remainingRoute } from "@/lib/utils/route-display";
-import { loadGoogleMaps, createHtmlMarker, cameraViewport } from "@/lib/google-maps-browser";
+import { drawRoute } from "@/lib/map-route";
+
+setWorkerUrl(maplibreWorkerUrl);
+
 
 function el(className, html) {
   const div = document.createElement("div");
@@ -28,26 +32,8 @@ const POLICE_SVG = policeCapSvg(20);
 
 const RADAR_SVG = frenchRadarSvg(20);
 
-// Navigation marker: a simple blue direction arrow, with no legacy gold styling.
-function makeNavigationArrow() {
-  return el(
-    "google-navigation-marker",
-    `<svg class="google-navigation-arrow" width="46" height="46" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5L41 41L24 33L7 41Z" fill="#1a73e8" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>`,
-  );
-}
-
-// Calcul de l'angle entre deux coordonnées quand le téléphone ne donne pas de boussole
-function computeBearing(p1, p2) {
-  const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
-  const lat1 = (p1.lat * Math.PI) / 180;
-  const lat2 = (p2.lat * Math.PI) / 180;
-  const y = Math.sin(dLng) * Math.cos(lat2);
-  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(dLng);
-  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
-}
-
 export default function MapView({
-  center = { lat: 48.5734, lng: 7.7521 },
+  center = { lat: 40.7128, lng: -74.006 },
   zoom = 13,
   pickup,
   dropoff,
@@ -69,348 +55,239 @@ export default function MapView({
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
-  const cameraRef = useRef(null);
-  const mapsRef = useRef(null);
+  const readyRef = useRef(false);
+  const markersRef = useRef({ pickup: null, dropoff: null, driver: null, user: null });
+  const driverDotsRef = useRef(new Map());
+  const alertDotsRef = useRef(new Map());
+  const animRef = useRef(null);
+  const routeGeomRef = useRef(null);
+  const lastUserMoveRef = useRef(0);
+  const initialUserCenterRef = useRef(false);
   const onClickRef = useRef(onClick);
-  const initialRef = useRef({ center, zoom });
-  const lastMoveRef = useRef(0);
-  const motionRef = useRef(null);
-  const animationRef = useRef(null);
-  const userMarkerRef = useRef(null);
-  const userNodeRef = useRef(null);
-  const routeLinesRef = useRef([]);
-  const headingRef = useRef(0);
-  const progressRef = useRef({ original: null, progress: 0 });
-  const centeredRef = useRef(false);
-  const [ready, setReady] = useState(false);
-  const [flatOnly, setFlatOnly] = useState(false);
-  const [error, setError] = useState("");
-  const [attempt, setAttempt] = useState(0);
-  onClickRef.current = onClick;
 
   useEffect(() => {
-    let stopped = false,
-      resize,
-      map,
-      trafficLayer;
-    setError("");
-    setReady(false);
-    loadGoogleMaps()
-      .then((maps) => {
-        if (stopped) return;
-        mapsRef.current = maps;
-        map = new maps.Map(containerRef.current, {
-          center: initialRef.current.center,
-          zoom: initialRef.current.zoom,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-          gestureHandling: "greedy",
-          clickableIcons: false,
-          // Explicit vector rendering enables tilt/heading on road maps, including mobile.
-          renderingType: maps.RenderingType.VECTOR,
-          colorScheme: maps.ColorScheme.DARK,
-          tiltInteractionEnabled: true,
-          headingInteractionEnabled: true,
-          // Google attribution stays visible in every map.
-        });
-        trafficLayer = new maps.TrafficLayer({ autoRefresh: true });
-        trafficLayer.setMap(map);
-        mapRef.current = map;
-        const checkRendering = () => {
-          const type = map.getRenderingType();
-          setFlatOnly(type === maps.RenderingType.RASTER);
-        };
-        checkRendering();
-        map.addListener("renderingtype_changed", checkRendering);
-        cameraRef.current = cameraViewport(map, maps);
-        map.addListener("click", (event) => {
-          if (event.latLng) onClickRef.current?.(event.latLng.toJSON());
-        });
-        map.addListener("dragstart", () => {
-          lastMoveRef.current = Date.now();
-        });
-        // Wheel/touch zoom also pauses automatic following, without counting programmatic movement.
-        const moved = () => {
-          lastMoveRef.current = Date.now();
-        };
-        containerRef.current.addEventListener("wheel", moved, { passive: true });
-        containerRef.current.addEventListener("touchstart", moved, { passive: true });
-        const container = containerRef.current;
-        resize = new ResizeObserver(() => maps.event.trigger(map, "resize"));
-        resize.observe(container);
-        map.__cleanupInput = () => {
-          container.removeEventListener("wheel", moved);
-          container.removeEventListener("touchstart", moved);
-        };
-        setReady(true);
-      })
-      .catch((err) => {
-        if (!stopped) setError(err.message);
-      });
-    return () => {
-      stopped = true;
-      resize?.disconnect();
-      trafficLayer?.setMap(null);
-      if (map) {
-        map.__cleanupInput?.();
-        mapsRef.current.event.clearInstanceListeners(map);
-      }
-      mapRef.current = null;
-      cameraRef.current = null;
-    };
-  }, [attempt]);
+    onClickRef.current = onClick;
+  }, [onClick]);
 
-  const cameras = useMapSpeedCameras(cameraRef, ready && showRoadAlerts && !compact);
-
+  // Initialisation de la carte
   useEffect(() => {
-    if (!ready) return;
-    const map = mapRef.current,
-      maps = mapsRef.current,
-      markers = [];
-    const add = (position, node) => {
-      if (!Number.isFinite(position?.lat) || !Number.isFinite(position?.lng)) return;
-      markers.push(createHtmlMarker(maps, map, { lat: position.lat, lng: position.lng }, node));
-    };
-    add(pickup, el("marker-pin pickup", PIN_SVG));
-    add(dropoff, el("marker-pin dropoff", SQUARE_SVG));
-    add(driverPosition, el("marker-driver", CAR_SVG));
-    for (const driver of drivers) add(driver.location, el("marker-driver", CAR_SVG));
-    if (showRoadAlerts)
-      for (const alert of mergeCameraAlerts(alerts, cameras)) {
-        const node = el(
-          `marker-road-alert is-${alert.kind}${alert.permanent ? " is-permanent" : ""}`,
-          alert.kind === "police" ? POLICE_SVG : RADAR_SVG,
-        );
-        node.title =
-          alert.source === "osm"
-            ? "Radar OpenStreetMap"
-            : alert.source === "official-fr"
-              ? "Radar · Sécurité routière"
-              : alert.kind === "police"
-                ? "Contrôle de police signalé"
-                : "Radar fixe";
-        if (alert.maxspeed) node.title += ` · ${alert.maxspeed} km/h`;
-        add(alert, node);
-      }
-    return () => markers.forEach((marker) => marker.remove());
-  }, [ready, pickup, dropoff, driverPosition, drivers, showRoadAlerts, alerts, cameras]);
+    if (!containerRef.current || mapRef.current) return undefined;
 
-  useEffect(() => {
-    if (!ready) return;
-    routeLinesRef.current = [
-      { strokeColor: "#1557b0", strokeWeight: 8, strokeOpacity: 0.9, zIndex: 1 },
-      { strokeColor: "#1a73e8", strokeWeight: 5, strokeOpacity: 1, zIndex: 2 },
-    ].map(
-      (options) =>
-        new mapsRef.current.Polyline({
-          ...options,
-          path: [],
-          map: mapRef.current,
-          clickable: false,
-          geodesic: false,
-        }),
-    );
-    return () => {
-      routeLinesRef.current.forEach((line) => line.setMap(null));
-      routeLinesRef.current = [];
-    };
-  }, [ready]);
-
-  useEffect(() => {
-    if (!ready) return;
-    const tracking = progressRef.current;
-    if (tracking.original !== routeGeometry) {
-      tracking.original = routeGeometry;
-      tracking.progress = 0;
-    }
-    const remaining = navigationMode
-      ? remainingRoute(routeGeometry, userPosition, tracking.progress)
-      : { geometry: routeGeometry, progress: 0 };
-    tracking.progress = remaining.progress;
-    const path = (remaining.geometry || []).map(([lng, lat]) => ({ lat, lng }));
-    routeLinesRef.current.forEach((line) => line.setPath(path));
-  }, [ready, routeGeometry, navigationMode, userPosition?.lat, userPosition?.lng]);
-
-  useEffect(() => {
-    if (!ready || !fit || followPosition || navigationMode) return;
-    const points = fitTo || [
-      pickup,
-      dropoff,
-      driverPosition,
-      ...(routeGeometry || []).map(([lng, lat]) => ({ lat, lng })),
-    ];
-    const valid = points.filter((p) => Number.isFinite(p?.lat) && Number.isFinite(p?.lng));
-    if (!valid.length) return;
-    const map = mapRef.current;
-    if (valid.length === 1) {
-      map.setCenter(valid[0]);
-      map.setZoom(15);
-      return;
-    }
-    const bounds = new mapsRef.current.LatLngBounds();
-    valid.forEach((point) => bounds.extend({ lat: point.lat, lng: point.lng }));
-    map.fitBounds(bounds, compact ? 38 : fitPadding(map));
-    const listener = mapsRef.current.event.addListenerOnce(map, "idle", () => {
-      if (map.getZoom() > 16) map.setZoom(16);
+    const map = new MLMap({
+      container: containerRef.current,
+      style: "/map-dark.json",
+      center: [center.lng, center.lat],
+      zoom,
+      pitch: 0,
+      attributionControl: false,
+      cooperativeGestures: false, // un seul doigt suffit pour parcourir la carte
     });
-    return () => listener.remove();
-  }, [
-    ready,
-    fit,
-    fitTo,
-    pickup?.lat,
-    pickup?.lng,
-    dropoff?.lat,
-    dropoff?.lng,
-    driverPosition?.lat,
-    driverPosition?.lng,
-    routeGeometry,
-    fitKey,
-    Boolean(followPosition),
-    navigationMode,
-    compact,
-  ]);
 
-  useEffect(() => {
-    if (!ready || !userPosition || centeredRef.current || fit || followPosition || navigationMode)
-      return;
-    centeredRef.current = true;
-    if (!lastMoveRef.current)
-      mapRef.current.panTo({ lat: userPosition.lat, lng: userPosition.lng });
-  }, [ready, userPosition?.lat, userPosition?.lng, fit, Boolean(followPosition), navigationMode]);
+    // Credits are rendered in a separate footer outside the map canvas.
 
-  // Keep the user's marker mounted; GPS fixes update its position instead of rebuilding it.
-  useEffect(() => {
-    if (!ready || !userPosition) return;
-    const node = navigationMode ? makeNavigationArrow() : el("marker-dot-simple", "");
-    userNodeRef.current = node;
-    userMarkerRef.current = createHtmlMarker(
-      mapsRef.current,
-      mapRef.current,
-      motionRef.current || { lat: userPosition.lat, lng: userPosition.lng },
-      node,
-    );
-    const rotate = () => {
-      const arrow = node.querySelector(".google-navigation-arrow");
-      if (arrow)
-        arrow.style.transform = `rotate(${headingRef.current - (mapRef.current.getHeading() || 0)}deg)`;
+    const markUserMove = (e) => {
+      if (e?.originalEvent) lastUserMoveRef.current = Date.now();
     };
-    const listener = mapRef.current.addListener("heading_changed", rotate);
-    rotate();
+    map.on("dragstart", markUserMove);
+    map.on("zoomstart", markUserMove);
+
+
+    const applyRoute = () => {
+      readyRef.current = drawRoute(map, routeGeomRef.current);
+    };
+
+    map.on("load", applyRoute);
+    map.on("style.load", applyRoute);
+    map.on("idle", applyRoute);
+    map.on("click", (e) => onClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
+
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(containerRef.current);
+    requestAnimationFrame(() => map.resize());
+
+    mapRef.current = map;
+
     return () => {
-      listener.remove();
-      userMarkerRef.current?.remove();
-      userMarkerRef.current = null;
-      userNodeRef.current = null;
-    };
-  }, [ready, navigationMode, Boolean(userPosition)]);
-
-  // Camera and cursor share the same interpolated position on each animation frame.
-  useEffect(() => {
-    cancelAnimationFrame(animationRef.current);
-    if (!ready) return;
-    const position = followPosition || userPosition;
-    if (!Number.isFinite(position?.lat) || !Number.isFinite(position?.lng)) return;
-    const from = motionRef.current;
-    let heading = position.heading;
-    if (!Number.isFinite(heading)) {
-      heading =
-        from && Math.hypot(from.lat - position.lat, from.lng - position.lng) > 0.00005
-          ? computeBearing(from, position)
-          : headingRef.current;
-    }
-    const target = { lat: position.lat, lng: position.lng, heading };
-    const distance = from ? Math.hypot(from.lat - target.lat, from.lng - target.lng) : Infinity;
-    // First fix or GPS relocation: no animation across an implausibly long distance.
-    const duration = !from || distance > 0.003 ? 0 : 850;
-    const start = performance.now();
-    const frame = (now) => {
-      const progress = duration ? Math.min(1, (now - start) / duration) : 1;
-      const fix = from ? interpolateFix(from, target, progress) : target;
-      motionRef.current = fix;
-      headingRef.current = fix.heading;
-      userMarkerRef.current?.setPosition({ lat: fix.lat, lng: fix.lng });
-      const map = mapRef.current;
-      if (!map) return;
-      if (followPosition && Date.now() - lastMoveRef.current >= 8000) {
-        map.moveCamera({
-          center: { lat: fix.lat, lng: fix.lng },
-          zoom: navigationMode ? 18 : Math.max(map.getZoom(), 15.5),
-          tilt: navigationMode && !flatOnly ? 60 : 0,
-          heading: navigationMode && !flatOnly ? fix.heading : 0,
-        });
+      ro.disconnect();
+      cancelAnimationFrame(animRef.current);
+      markersRef.current = { pickup: null, dropoff: null, driver: null, user: null };
+      driverDotsRef.current.clear();
+      alertDotsRef.current.clear();
+      try {
+        map.remove();
+      } catch (err) {
+        console.warn("[MapView] map.remove() failed:", err?.message);
       }
-      const arrow = userNodeRef.current?.querySelector(".google-navigation-arrow");
-      if (arrow) arrow.style.transform = `rotate(${fix.heading - (map.getHeading() || 0)}deg)`;
-      if (progress < 1) animationRef.current = requestAnimationFrame(frame);
+      if (mapRef.current === map) mapRef.current = null;
+      readyRef.current = false;
     };
-    frame(start);
-    return () => cancelAnimationFrame(animationRef.current);
-  }, [
-    ready,
-    followPosition?.lat,
-    followPosition?.lng,
-    followPosition?.heading,
-    userPosition?.lat,
-    userPosition?.lng,
-    userPosition?.heading,
-    navigationMode,
-    flatOnly,
-  ]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Synchronisation des marqueurs
+  function syncMarker(key, pos, make) {
+    const map = mapRef.current;
+    if (!map) return;
+    const markers = markersRef.current;
+    if (!pos) {
+      markers[key]?.remove();
+      markers[key] = null;
+      return;
+    }
+    if (!markers[key]) {
+      markers[key] = new Marker({ element: make() }).setLngLat([pos.lng, pos.lat]).addTo(map);
+    } else {
+      markers[key].setLngLat([pos.lng, pos.lat]);
+    }
+  }
+
+  useEffect(() => {
+    syncMarker("pickup", pickup, () => el("marker-pin pickup", PIN_SVG));
+  }, [pickup?.lat, pickup?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    syncMarker("dropoff", dropoff, () => el("marker-pin dropoff", SQUARE_SVG));
+  }, [dropoff?.lat, dropoff?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Position only: turn-by-turn guidance belongs to the selected external GPS app.
+  useEffect(() => {
+    syncMarker("user", userPosition, () => el("marker-dot-simple", ""));
+  }, [userPosition?.lat, userPosition?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The first GPS fix must be visible, including while the driver is offline.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !userPosition || initialUserCenterRef.current || fit || followPosition || navigationMode) return;
+    initialUserCenterRef.current = true;
+    if (lastUserMoveRef.current) return;
+    map.easeTo({ center: [userPosition.lng, userPosition.lat], duration: 600 });
+  }, [userPosition?.lat, userPosition?.lng, fit, Boolean(followPosition), navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Véhicules à proximité
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const dots = driverDotsRef.current;
+    const seen = new Set();
+
+    for (const d of drivers) {
+      if (!d?.location) continue;
+      seen.add(d.id);
+      const lngLat = [d.location.lng, d.location.lat];
+      if (dots.has(d.id)) {
+        dots.get(d.id).setLngLat(lngLat);
+      } else {
+        const m = new Marker({ element: el("marker-driver", CAR_SVG) }).setLngLat(lngLat).addTo(map);
+        m.getElement().style.opacity = "0.85";
+        dots.set(d.id, m);
+      }
+    }
+
+    for (const [id, marker] of dots) {
+      if (!seen.has(id)) {
+        marker.remove();
+        dots.delete(id);
+      }
+    }
+  }, [drivers]);
+
+  const osmCameras = useMapSpeedCameras(mapRef, showRoadAlerts && !compact);
+
+  // Signalements communautaires et radars OpenStreetMap.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const dots = alertDotsRef.current;
+    const seen = new Set();
+    for (const a of showRoadAlerts ? mergeCameraAlerts(alerts || [], osmCameras) : []) {
+      if (!Number.isFinite(a?.lat) || !Number.isFinite(a?.lng)) continue;
+      const key = `${a.id}:${a.kind}:${a.permanent ? 1 : 0}`;
+      seen.add(key);
+      if (dots.has(key)) {
+        dots.get(key).setLngLat([a.lng, a.lat]);
+        continue;
+      }
+      const node = el(
+        `marker-road-alert is-${a.kind}${a.permanent ? " is-permanent" : ""}`,
+        a.kind === "police" ? POLICE_SVG : RADAR_SVG,
+      );
+      node.title = a.source === "official-fr" ? `Radar · Sécurité routière${a.maxspeed ? ` · ${a.maxspeed} km/h` : ''}` : a.source === "osm" ? `Radar OpenStreetMap${a.maxspeed ? ` · ${a.maxspeed}` : ''}` : a.kind === "police" ? "Contrôle de police signalé" : "Radar fixe";
+      dots.set(key, new Marker({ element: node }).setLngLat([a.lng, a.lat]).addTo(map));
+    }
+    for (const [key, marker] of dots) {
+      if (!seen.has(key)) {
+        marker.remove();
+        dots.delete(key);
+      }
+    }
+  }, [alerts, osmCameras, showRoadAlerts]);
+
+  // Tracé d'itinéraire
+  useEffect(() => {
+    routeGeomRef.current = routeGeometry || null;
+    const map = mapRef.current;
+    if (!map) return;
+    readyRef.current = drawRoute(map, routeGeomRef.current);
+  }, [routeGeometry, navigationMode, userPosition?.lat, userPosition?.lng]);
+
+  // Cadrage d'itinéraire (hors navigation active)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !fit || followPosition || navigationMode) return;
+
+    const points = [];
+    if (fitTo) {
+      for (const p of fitTo) if (p && Number.isFinite(p.lat) && Number.isFinite(p.lng)) points.push([p.lng, p.lat]);
+    } else {
+      if (pickup) points.push([pickup.lng, pickup.lat]);
+      if (dropoff) points.push([dropoff.lng, dropoff.lat]);
+      if (driverPosition) points.push([driverPosition.lng, driverPosition.lat]);
+      if (routeGeometry?.length) points.push(...routeGeometry);
+    }
+    if (points.length < 2) {
+      if (points.length === 1) map.easeTo({ center: points[0], zoom: 15, duration: 600 });
+      return;
+    }
+
+    const bounds = points.reduce((b, p) => b.extend(p), new LngLatBounds(points[0], points[0]));
+    map.fitBounds(bounds, { padding: compact ? 38 : fitPadding(map), duration: 700, maxZoom: 16 });
+  }, [fit, pickup?.lat, dropoff?.lat, routeGeometry, fitKey, Boolean(followPosition), navigationMode, compact]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Suivi GPS temps réel 3D (type Waze)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !followPosition) return;
+    // Si l'utilisateur touche la carte, pause de 8 secondes avant de reprendre le suivi
+    if (Date.now() - lastUserMoveRef.current < 8000) return;
+
+    map.easeTo({ center: [followPosition.lng, followPosition.lat],
+      zoom: Math.max(map.getZoom(), 15.5), pitch: 0, bearing: 0,
+      padding: fitPadding(map), duration: 800 });
+  }, [followPosition?.lat, followPosition?.lng, followPosition?.heading, navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div
-      className={`modern-map-frame google-map-frame ${className}`}
-      style={{ width: "100%", height: "100%", ...style }}
-    >
-      <div
-        ref={containerRef}
-        className="modern-map google-map"
-        style={{ width: "100%", flex: 1, minHeight: 0 }}
-        aria-label="Carte Google Maps"
-      />
-      {!ready && (
-        <div role={error ? "alert" : "status"} className="google-map-status">
-          {error || "Chargement de Google Maps…"}
-          {error && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => setAttempt((n) => n + 1)}
-            >
-              Réessayer
-            </button>
-          )}
-        </div>
-      )}
-      {ready && navigationMode && flatOnly && (
-        <div role="status" className="google-map-flat-notice">
-          Vue 3D indisponible sur cet appareil. Le suivi GPS reste actif en 2D.
-        </div>
-      )}
-      {showRoadAlerts && !compact && (
-        <div className="map-source-footer">
+    <div className={`modern-map-frame ${className}`} style={{ width: "100%", height: "100%", ...style }}>
+      <div ref={containerRef} className="modern-map" style={{ width: "100%", flex: 1, minHeight: 0 }} aria-label="Carte GPS" />
+      {!compact && (
+        <details className="map-source-footer">
+          <summary>Sources</summary>
           <span>
-            Radars : Sécurité routière ·{" "}
-            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
-              © OpenStreetMap
-            </a>{" "}
-            · Signalements des chauffeurs
+          © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>
+          {" · "}<a href="https://openfreemap.org/" target="_blank" rel="noreferrer">OpenFreeMap</a>
+          {" · "}<a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a>
           </span>
-        </div>
+        </details>
       )}
     </div>
   );
 }
 
 function fitPadding(map) {
-  const box = map.getDiv().getBoundingClientRect();
+  const box = map.getContainer().getBoundingClientRect();
   const panel = document.querySelector(".ride-panel")?.getBoundingClientRect();
   const pad = { top: 60, bottom: 60, left: 50, right: 50 };
   if (!panel || panel.height === 0) return pad;
-  if (box.width <= 900)
-    pad.bottom = Math.max(0, Math.min(box.height - 140, Math.max(60, box.bottom - panel.top + 24)));
-  else pad.left = Math.max(0, Math.min(box.width - 200, Math.max(50, panel.right - box.left + 30)));
+  if (box.width <= 900) pad.bottom = Math.min(box.height - 140, Math.max(60, box.bottom - panel.top + 24));
+  else pad.left = Math.min(box.width - 200, Math.max(50, panel.right - box.left + 30));
   return pad;
 }
+
