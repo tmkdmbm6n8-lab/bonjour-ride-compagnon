@@ -7,6 +7,7 @@ import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { policeCapSvg, frenchRadarSvg } from "@/components/icons/road-alert-icons";
 import useMapSpeedCameras from "@/hooks/useMapSpeedCameras";
 import { mergeCameraAlerts } from "@/lib/vtc-speed-cameras";
+import { remainingRoute } from "@/lib/utils/route-display";
 
 setWorkerUrl(maplibreWorkerUrl);
 
@@ -103,6 +104,7 @@ export default function MapView({
   const alertDotsRef = useRef(new Map());
   const animRef = useRef(null);
   const routeGeomRef = useRef(null);
+  const routeProgressRef = useRef({ original: null, progress: 0 });
   const lastUserMoveRef = useRef(0);
   const prevPositionRef = useRef(null);
   const headingRef = useRef(0);
@@ -302,11 +304,20 @@ export default function MapView({
 
   // Tracé d'itinéraire
   useEffect(() => {
-    routeGeomRef.current = routeGeometry || null;
+    const tracking = routeProgressRef.current;
+    if (tracking.original !== routeGeometry) {
+      tracking.original = routeGeometry;
+      tracking.progress = 0;
+    }
+    const remaining = navigationMode
+      ? remainingRoute(routeGeometry, userPosition, tracking.progress)
+      : { geometry: routeGeometry, progress: 0 };
+    tracking.progress = remaining.progress;
+    routeGeomRef.current = remaining.geometry || null;
     const map = mapRef.current;
     if (!map) return;
-    readyRef.current = drawRoute(map, routeGeometry);
-  }, [routeGeometry]);
+    readyRef.current = drawRoute(map, routeGeomRef.current);
+  }, [routeGeometry, navigationMode, userPosition?.lat, userPosition?.lng]);
 
   // Cadrage d'itinéraire (hors navigation active)
   useEffect(() => {
@@ -388,8 +399,12 @@ function fitPadding(map) {
 
 function drawRoute(map, geometry) {
   const data = {
-    type: "Feature",
-    geometry: { type: "LineString", coordinates: geometry || [] },
+    type: "FeatureCollection",
+    features: geometry?.length >= 2 ? [{
+      type: "Feature",
+      properties: {},
+      geometry: { type: "LineString", coordinates: geometry },
+    }] : [],
   };
 
   try {

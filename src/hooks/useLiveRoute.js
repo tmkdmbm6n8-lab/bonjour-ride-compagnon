@@ -14,16 +14,21 @@ export function useLiveRoute(rideId, status) {
     setRoute(null);
     if (!rideId || !live) return undefined;
     let cancelled = false;
+    let timer;
     const load = async () => {
+      let delay = 5000;
       try {
         const res = await fetch(`/api/rides/${rideId}/route`);
         const data = await res.json();
-        if (!cancelled && res.ok && data.route) setRoute(data.route);
+        if (!cancelled && res.ok && data.route) {
+          setRoute(data.route);
+          if (data.route.geometry?.length >= 2) delay = REFRESH_MS;
+        }
       } catch { /* keep the last route */ }
+      if (!cancelled) timer = setTimeout(load, delay);
     };
     load();
-    const timer = setInterval(load, REFRESH_MS);
-    return () => { cancelled = true; clearInterval(timer); };
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [rideId, status, live]);
   return route;
 }
