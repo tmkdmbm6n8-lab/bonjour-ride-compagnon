@@ -550,6 +550,10 @@ function RiderDashboard() {
                 onSelect={(r) => {
                   setPickup(r);
                   setPickupText(r.address);
+                  // Focus destination uniquement après un choix explicite du départ
+                  // (jamais au remontage de l'onglet, sinon le champ remonte en haut).
+                  const inputs = bookingPanelRef.current?.querySelectorAll("input");
+                  inputs?.[1]?.focus();
                 }}
                 committedValue={pickup?.address}
                 placeholder="Lieu de prise en charge"
@@ -584,7 +588,6 @@ function RiderDashboard() {
                 onFocusChange={onSearchFocus}
                 icon={MapPin}
                 bias={geo || undefined}
-                autoFocus={Boolean(pickup)}
               />
             </div>
 
