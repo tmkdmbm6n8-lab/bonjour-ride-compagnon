@@ -60,7 +60,7 @@ function PrivacyPage() {
         <li><strong>Adresses précises et tracé des courses</strong> — 3 ans, puis arrondis à environ 1 km.</li>
         <li><strong>Montants des courses et opérations du portefeuille</strong> — 10 ans, durée imposée pour les pièces comptables (article L123-22 du Code de commerce), puis supprimés.</li>
         <li><strong>Dernière position d’un chauffeur</strong> — effacée 24 heures après son passage hors ligne.</li>
-        <li><strong>Signalements police et radar</strong> — contrôles de police effacés au bout d’un jour, radars non confirmés au bout de 30 jours ; un radar confirmé reste jusqu’à sa suppression par l’administrateur.</li>
+        <li><strong>Signalements police et radar</strong> — contrôles de police effacés 2 heures après leur dernier signalement ; un radar reste jusqu’à sa suppression par l’administrateur.</li>
         <li><strong>Messages d’assistance (formulaire et Inbox)</strong> — 3 ans après l’envoi.</li>
         <li><strong>Preuve d’acceptation des conditions</strong> — tant que le compte est ouvert.</li>
         <li><strong>Documents des chauffeurs</strong> — tant que le compte chauffeur est ouvert, puis supprimés avec le compte. Un document remplacé par une version plus récente est supprimé immédiatement.</li>
