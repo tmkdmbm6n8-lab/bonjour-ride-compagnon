@@ -6914,6 +6914,30 @@ a.activity-pill:hover {
 .brand-theme .input:focus { border-color: var(--gold-500); }
 .brand-theme [role="option"] { border-bottom-color: var(--border) !important; }
 .brand-theme [role="option"][aria-selected="true"] { background: var(--surface-2) !important; }
+.site-header-nav {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.site-header-brand,
+.site-header-actions { flex-shrink: 0; }
+.site-header-actions { margin-left: auto; }
+@media (max-width: 600px) {
+  .site-header-nav { padding: 12px 16px; gap: 12px; }
+  .site-header-brand .sd-brand-logo { gap: 6px !important; }
+  .site-header-brand .sd-brand-logo svg { width: 24px; height: 24px; }
+  .site-header-brand .sd-brand-text { font-size: 18px !important; }
+  .site-header-actions { gap: 6px; }
+  .site-header-actions .btn {
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    box-shadow: none;
+  }
+}
 .brand-theme .sd-brand-text { color: var(--text); }
 .brand-theme.auth-page { background: radial-gradient(ellipse at top, var(--gold-50), transparent 55%), var(--bg); }
 .brand-theme .auth-card { background: var(--surface); border-color: var(--border); }
