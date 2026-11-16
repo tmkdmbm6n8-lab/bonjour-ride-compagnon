@@ -300,7 +300,7 @@ function DriverDashboard() {
   const liveLeg = useMemo(() => {
     if (!ride || (ride.status !== "accepted" && ride.status !== "in_progress")) return null;
     const label = ride.status === "in_progress" ? "jusqu’à destination" : "jusqu’au point de prise en charge";
-    if (liveRoute) {
+    if (liveRoute?.status === ride.status) {
       return {
         meters: liveRoute.distanceMeters,
         minutes: Math.max(1, Math.round(liveRoute.durationSeconds / 60)),
@@ -419,9 +419,19 @@ function DriverDashboard() {
             />
           </div>
 
-          {/* 2. Tout en haut : Fiche passager opaque */}
-          <div className="drv-top-passenger-bar">
-            <PassengerInfo key={ride.id} ride={ride} />
+          {/* Destination banner: no invented turn instruction without maneuver data. */}
+          <div className="google-nav-top-banner">
+            <div className="google-nav-turn-icon" aria-hidden="true">
+              <Navigation size={32} />
+            </div>
+            <div className="google-nav-instruction">
+              <div className="google-nav-distance">
+                {ride.status === "in_progress" ? "Vers la destination" : ride.status === "arrived" ? "Au point de prise en charge" : "Vers la prise en charge"}
+              </div>
+              <div className="google-nav-street">
+                {ride.status === "in_progress" ? ride.dropoff.address : ride.pickup.address}
+              </div>
+            </div>
 
             <div className="drv-client-actions">
               {ride.rider?.phone && (
@@ -482,6 +492,18 @@ function DriverDashboard() {
 
           {/* 4. Tout en bas : Volet rétractable d'informations */}
           <div className="drv-bottom-sheet">
+            {navigating && (
+              <div className="google-nav-bottom-eta" aria-label="Estimation d’arrivée">
+                <span className="google-eta-time">
+                  {liveLeg && Number.isFinite(liveLeg.seconds) ? transportClock(new Date(Date.now() + liveLeg.seconds * 1000).toISOString()) : "—"}
+                </span>
+                <span aria-hidden="true">•</span>
+                <span>{liveLeg && Number.isFinite(liveLeg.seconds) ? `${Math.max(1, Math.ceil(liveLeg.seconds / 60))} min` : "— min"}</span>
+                <span aria-hidden="true">•</span>
+                <span>{liveLeg && Number.isFinite(liveLeg.meters) ? formatDistance(liveLeg.meters) : "— km"}</span>
+                {liveLeg?.approximate && <span className="google-eta-estimate">Estimé</span>}
+              </div>
+            )}
             <div className="drv-sheet-header">
               <div className="flex items-center gap-2">
                 <span className={`badge badge-dot ${ride.status === "in_progress" ? "badge-info" : "badge-gold"}`}>
@@ -533,6 +555,7 @@ function DriverDashboard() {
             {/* Volet dépliable avec tous les détails */}
             {detailsOpen && (
               <div className="drv-sheet-details">
+                <PassengerInfo key={ride.id} ride={ride} />
                 <div className="flex justify-between items-center mb-2 text-sm text-muted">
                   <span>Prise en charge :</span>
                   <span className="text-white truncate max-w-[220px]">{ride.pickup.address}</span>

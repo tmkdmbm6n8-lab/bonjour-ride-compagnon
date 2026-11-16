@@ -91,7 +91,8 @@ export default function MapView({
   useEffect(() => {
     let stopped = false,
       resize,
-      map;
+      map,
+      trafficLayer;
     setError("");
     setReady(false);
     loadGoogleMaps()
@@ -113,6 +114,8 @@ export default function MapView({
           headingInteractionEnabled: true,
           // Google attribution stays visible in every map.
         });
+        trafficLayer = new maps.TrafficLayer({ autoRefresh: true });
+        trafficLayer.setMap(map);
         mapRef.current = map;
         const checkRendering = () => {
           const type = map.getRenderingType();
@@ -148,6 +151,7 @@ export default function MapView({
     return () => {
       stopped = true;
       resize?.disconnect();
+      trafficLayer?.setMap(null);
       if (map) {
         map.__cleanupInput?.();
         mapsRef.current.event.clearInstanceListeners(map);
@@ -195,9 +199,8 @@ export default function MapView({
   useEffect(() => {
     if (!ready) return;
     routeLinesRef.current = [
-      { strokeColor: "#ffffff", strokeWeight: 11 },
-      { strokeColor: "#1967d2", strokeWeight: 8 },
-      { strokeColor: "#4285f4", strokeWeight: 5 },
+      { strokeColor: "#1557b0", strokeWeight: 8, strokeOpacity: 0.9, zIndex: 1 },
+      { strokeColor: "#1a73e8", strokeWeight: 5, strokeOpacity: 1, zIndex: 2 },
     ].map(
       (options) =>
         new mapsRef.current.Polyline({
@@ -206,7 +209,6 @@ export default function MapView({
           map: mapRef.current,
           clickable: false,
           geodesic: false,
-          zIndex: 2,
         }),
     );
     return () => {

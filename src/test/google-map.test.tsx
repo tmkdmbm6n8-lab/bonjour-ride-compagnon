@@ -9,6 +9,7 @@ const fakes = vi.hoisted(() => ({
   panTo: vi.fn(),
   remove: vi.fn(),
   line: vi.fn(),
+  traffic: vi.fn(),
   path: vi.fn(),
   markerPosition: vi.fn(),
   mapOptions: vi.fn(),
@@ -41,6 +42,9 @@ beforeEach(() => {
     setPosition: fakes.markerPosition,
   }));
   fakes.load.mockResolvedValue({
+    TrafficLayer: class {
+      setMap = fakes.traffic;
+    },
     RenderingType: { VECTOR: "VECTOR", RASTER: "RASTER" },
     ColorScheme: { DARK: "DARK" },
     Map: class {
@@ -172,5 +176,12 @@ describe("carte Google et radars", () => {
       fakes.marker.mock.calls.filter((call) => call[3].className === "google-navigation-marker"),
     ).toHaveLength(1);
     expect(fakes.markerPosition).toHaveBeenCalled();
+  });
+  it("active le trafic Google et le détache au démontage", async () => {
+    const view = render(<MapView />);
+    await waitFor(() => expect(fakes.traffic).toHaveBeenCalled());
+    expect(fakes.traffic.mock.calls[0][0]).toBeTruthy();
+    view.unmount();
+    expect(fakes.traffic).toHaveBeenLastCalledWith(null);
   });
 });
