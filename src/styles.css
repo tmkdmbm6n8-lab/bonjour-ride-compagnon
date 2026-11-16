@@ -5545,7 +5545,7 @@ a.activity-pill:hover {
    COCKPIT CHAUFFEUR STRASDRIVE : GO COMPACT, GAINS & FICHE PASSAGER
    ═════════════════════════════════════════════════════════════════ */
 
-/* Gains du jour flottants à gauche */
+/* Gains du jour / dernière course flottants à gauche */
 .drv-floating-earnings {
   position: absolute;
   top: 88px;
@@ -5560,7 +5560,28 @@ a.activity-pill:hover {
   padding: 8px 14px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
   pointer-events: auto;
+  user-select: none;
+  touch-action: pan-y;
+  cursor: pointer;
+  overflow: hidden;
+  min-width: 104px;
 }
+.drv-float-content {
+  display: flex;
+  flex-direction: column;
+  animation: drvFloatSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes drvFloatSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .drv-float-label {
   font-size: 10px;
   text-transform: uppercase;
