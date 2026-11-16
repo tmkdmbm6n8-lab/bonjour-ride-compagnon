@@ -16,7 +16,7 @@ export default function PassengerInfo({ ride }) {
     <Modal open={open} onClose={() => setOpen(false)} title="Informations du passager">
       <div className="passenger-info-profile"><Avatar name={name} src={rider.avatar} size="lg" /><strong>{name}</strong><span>★ {rating}</span></div>
       <dl className="passenger-info-details">
-        <dt>Téléphone</dt><dd>{rider.phone ? <a href={`tel:${rider.phone}`}>{rider.phone}</a> : 'Non renseigné'}</dd>
+        {rider.phone?.trim() && <><dt>Téléphone</dt><dd><a href={`tel:${rider.phone}`}>{rider.phone}</a></dd></>}
         <dt>Prise en charge</dt><dd>{ride.pickup?.address || 'Non renseignée'}</dd>
         <dt>Destination</dt><dd>{ride.dropoff?.address || 'Non renseignée'}</dd>
       </dl>

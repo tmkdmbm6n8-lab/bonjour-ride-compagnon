@@ -27,4 +27,10 @@ describe('fiche passager et accès admin', () => {
     expect(screen.getByRole('link', { name: 'Assistance' })).toHaveAttribute('href', '/admin/support');
     expect(screen.getByRole('link', { name: 'Signalements' })).toHaveAttribute('href', '/admin/alerts');
   });
+  it('masque complètement le téléphone absent', () => {
+    render(<PassengerInfo ride={{ rider: { name: 'Léa Martin', phone: '' } }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Informations du passager Léa M.' }));
+    expect(screen.queryByText('Téléphone')).toBeNull();
+    expect(screen.queryByText('Non renseigné')).toBeNull();
+  });
 });

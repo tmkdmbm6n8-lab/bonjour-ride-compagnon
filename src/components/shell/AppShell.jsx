@@ -43,6 +43,12 @@ export default function AppShell({ nav, children, variant = "default" }) {
               </Link>
             );
           })}
+          {variant === "admin" && (
+            <button type="button" className="nav-item admin-signout" onClick={() => signOut({ callbackUrl: "/" })} aria-label="Se déconnecter">
+              <LogOut size={19} />
+              <span>Déconnexion</span>
+            </button>
+          )}
         </nav>
 
         <div className="sidebar-footer">
@@ -56,7 +62,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
                 </div>
                 <div className="tiny muted truncate">@{user?.username || ""}</div>
               </div>
-              <button
+              {variant !== "admin" && <button
                 className="btn btn-ghost btn-icon"
                 style={{ minHeight: 36, width: 36 }}
                 onClick={() => signOut({ callbackUrl: "/" })}
@@ -64,7 +70,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
                 title="Se déconnecter"
               >
                 <LogOut size={17} />
-              </button>
+              </button>}
             </div>
           </div>
         </div>
