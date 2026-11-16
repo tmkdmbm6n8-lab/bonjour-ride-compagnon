@@ -10,4 +10,4 @@ export function SessionProvider({children}) {
 }
 export function useSession(){return useContext(AuthContext);}
 export async function signIn(_,options){const {error}=await supabase.auth.signInWithPassword({email:options.username,password:options.password});return error?{error:'Adresse e-mail ou mot de passe incorrect',status:400}:{ok:true};}
-export async function signOut({callbackUrl='/'}){await supabase.auth.signOut({scope:'local'});window.location.href=callbackUrl;}
+export async function signOut({callbackUrl='/'}){await import('./native-push').then(m=>m.unregisterDriverPush()).catch(()=>{});await supabase.auth.signOut({scope:'local'});window.location.href=callbackUrl;}
