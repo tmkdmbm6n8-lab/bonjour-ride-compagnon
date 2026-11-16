@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Map as MLMap, Marker, LngLatBounds, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { policeCapSvg, frenchRadarSvg } from "@/components/icons/road-alert-icons";
 
 setWorkerUrl(maplibreWorkerUrl);
 
@@ -36,11 +37,9 @@ const PIN_SVG =
 const SQUARE_SVG =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 
-const POLICE_SVG =
-  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+const POLICE_SVG = policeCapSvg(20);
 
-const RADAR_SVG =
-  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="14" height="10" rx="2"/><circle cx="10" cy="12" r="2.5"/><path d="M17 10l4-2v8l-4-2"/></svg>';
+const RADAR_SVG = frenchRadarSvg(20);
 
 // Flèche 3D profilée style Waze en or métallique avec ombre portée
 function make3DNavigationArrow() {
@@ -132,12 +131,7 @@ export default function MapView({
       zoom,
       pitch: navigationMode ? 58 : 0,
       attributionControl: false,
-      cooperativeGestures: typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches,
-      locale: {
-        "CooperativeGesturesHandler.WindowsHelpText": "Utilisez Ctrl + molette pour zoomer sur la carte",
-        "CooperativeGesturesHandler.MacHelpText": "Utilisez ⌘ + molette pour zoomer sur la carte",
-        "CooperativeGesturesHandler.MobileHelpText": "Utilisez deux doigts pour déplacer la carte",
-      },
+      cooperativeGestures: false, // un seul doigt suffit pour parcourir la carte
     });
 
     const markUserMove = (e) => {
@@ -289,7 +283,7 @@ export default function MapView({
         `marker-road-alert is-${a.kind}${a.permanent ? " is-permanent" : ""}`,
         a.kind === "police" ? POLICE_SVG : RADAR_SVG,
       );
-      node.title = a.kind === "police" ? "Contrôle de police signalé" : a.permanent ? "Radar confirmé" : "Radar signalé";
+      node.title = a.kind === "police" ? "Contrôle de police signalé" : "Radar fixe";
       dots.set(key, new Marker({ element: node }).setLngLat([a.lng, a.lat]).addTo(map));
     }
     for (const [key, marker] of dots) {
