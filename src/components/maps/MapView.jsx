@@ -1,17 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Map as MLMap, Marker, LngLatBounds, setWorkerUrl } from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
-import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { useEffect, useRef, useState } from "react";
 import { policeCapSvg, frenchRadarSvg } from "@/components/icons/road-alert-icons";
 import useMapSpeedCameras from "@/hooks/useMapSpeedCameras";
 import { mergeCameraAlerts } from "@/lib/vtc-speed-cameras";
 import { remainingRoute } from "@/lib/utils/route-display";
-import { drawRoute } from "@/lib/map-route";
-
-setWorkerUrl(maplibreWorkerUrl);
-
+import { loadGoogleMaps, createHtmlMarker, cameraViewport } from "@/lib/google-maps-browser";
 
 function el(className, html) {
   const div = document.createElement("div");
@@ -77,7 +71,7 @@ function computeBearing(p1, p2) {
 }
 
 export default function MapView({
-  center = { lat: 40.7128, lng: -74.006 },
+  center = { lat: 48.5734, lng: 7.7521 },
   zoom = 13,
   pickup,
   dropoff,
@@ -99,214 +93,152 @@ export default function MapView({
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
-  const readyRef = useRef(false);
-  const markersRef = useRef({ pickup: null, dropoff: null, driver: null, user: null });
-  const driverDotsRef = useRef(new Map());
-  const alertDotsRef = useRef(new Map());
-  const animRef = useRef(null);
-  const routeGeomRef = useRef(null);
-  const routeProgressRef = useRef({ original: null, progress: 0 });
-  const lastUserMoveRef = useRef(0);
-  const prevPositionRef = useRef(null);
-  const headingRef = useRef(0);
-  const initialUserCenterRef = useRef(false);
+  const cameraRef = useRef(null);
+  const mapsRef = useRef(null);
   const onClickRef = useRef(onClick);
+  const initialRef = useRef({ center, zoom });
+  const lastMoveRef = useRef(0);
+  const previousRef = useRef(null);
+  const headingRef = useRef(0);
+  const progressRef = useRef({ original: null, progress: 0 });
+  const centeredRef = useRef(false);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  onClickRef.current = onClick;
 
   useEffect(() => {
-    onClickRef.current = onClick;
-  }, [onClick]);
-
-  // Initialisation de la carte
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return undefined;
-
-    const map = new MLMap({
-      container: containerRef.current,
-      style: "/map-dark.json",
-      center: [center.lng, center.lat],
-      zoom,
-      pitch: navigationMode ? 58 : 0,
-      attributionControl: false,
-      cooperativeGestures: false, // un seul doigt suffit pour parcourir la carte
-    });
-
-    // Credits are rendered in a separate footer outside the map canvas.
-
-    const markUserMove = (e) => {
-      if (e?.originalEvent) lastUserMoveRef.current = Date.now();
-    };
-    map.on("dragstart", markUserMove);
-    map.on("zoomstart", markUserMove);
-
-
-    const applyRoute = () => {
-      readyRef.current = drawRoute(map, routeGeomRef.current);
-    };
-
-    map.on("load", applyRoute);
-    map.on("style.load", applyRoute);
-    map.on("idle", applyRoute);
-    map.on("click", (e) => onClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
-
-    const ro = new ResizeObserver(() => map.resize());
-    ro.observe(containerRef.current);
-    requestAnimationFrame(() => map.resize());
-
-    mapRef.current = map;
-
+    let stopped = false,
+      resize,
+      map;
+    setError("");
+    setReady(false);
+    loadGoogleMaps()
+      .then((maps) => {
+        if (stopped) return;
+        mapsRef.current = maps;
+        map = new maps.Map(containerRef.current, {
+          center: initialRef.current.center,
+          zoom: initialRef.current.zoom,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          gestureHandling: "greedy",
+          clickableIcons: false,
+          // Google keeps its logo, copyright and terms visible in every map, including previews.
+          styles: [
+            { elementType: "geometry", stylers: [{ color: "#1b2230" }] },
+            { elementType: "labels.text.fill", stylers: [{ color: "#b7c2d0" }] },
+            { elementType: "labels.text.stroke", stylers: [{ color: "#141a24" }] },
+            { featureType: "road", elementType: "geometry", stylers: [{ color: "#394353" }] },
+            { featureType: "water", elementType: "geometry", stylers: [{ color: "#101e32" }] },
+            { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+          ],
+        });
+        mapRef.current = map;
+        cameraRef.current = cameraViewport(map, maps);
+        map.addListener("click", (event) => {
+          if (event.latLng) onClickRef.current?.(event.latLng.toJSON());
+        });
+        map.addListener("dragstart", () => {
+          lastMoveRef.current = Date.now();
+        });
+        // Wheel/touch zoom also pauses automatic following, without counting programmatic movement.
+        const moved = () => {
+          lastMoveRef.current = Date.now();
+        };
+        containerRef.current.addEventListener("wheel", moved, { passive: true });
+        containerRef.current.addEventListener("touchstart", moved, { passive: true });
+        const container = containerRef.current;
+        resize = new ResizeObserver(() => maps.event.trigger(map, "resize"));
+        resize.observe(container);
+        map.__cleanupInput = () => {
+          container.removeEventListener("wheel", moved);
+          container.removeEventListener("touchstart", moved);
+        };
+        setReady(true);
+      })
+      .catch((err) => {
+        if (!stopped) setError(err.message);
+      });
     return () => {
-      ro.disconnect();
-      cancelAnimationFrame(animRef.current);
-      markersRef.current = { pickup: null, dropoff: null, driver: null, user: null };
-      driverDotsRef.current.clear();
-      alertDotsRef.current.clear();
-      try {
-        map.remove();
-      } catch (err) {
-        console.warn("[MapView] map.remove() failed:", err?.message);
+      stopped = true;
+      resize?.disconnect();
+      if (map) {
+        map.__cleanupInput?.();
+        mapsRef.current.event.clearInstanceListeners(map);
       }
-      if (mapRef.current === map) mapRef.current = null;
-      readyRef.current = false;
+      mapRef.current = null;
+      cameraRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [attempt]);
 
-  // Synchronisation des marqueurs
-  function syncMarker(key, pos, make) {
-    const map = mapRef.current;
-    if (!map) return;
-    const markers = markersRef.current;
-    if (!pos) {
-      markers[key]?.remove();
-      markers[key] = null;
-      return;
-    }
-    if (!markers[key]) {
-      markers[key] = new Marker({ element: make() }).setLngLat([pos.lng, pos.lat]).addTo(map);
-    } else {
-      markers[key].setLngLat([pos.lng, pos.lat]);
-    }
-  }
+  const cameras = useMapSpeedCameras(cameraRef, ready && showRoadAlerts && !compact);
 
   useEffect(() => {
-    syncMarker("pickup", pickup, () => el("marker-pin pickup", PIN_SVG));
-  }, [pickup?.lat, pickup?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    syncMarker("dropoff", dropoff, () => el("marker-pin dropoff", SQUARE_SVG));
-  }, [dropoff?.lat, dropoff?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Flèche de navigation temps réel
-  useEffect(() => {
-    const pos = userPosition;
-    if (!pos) {
-      syncMarker("user", null);
-      return;
-    }
-
-    // Calcul du cap (direction de marche)
-    let angle = pos.heading;
-    if (angle == null || Number.isNaN(angle)) {
-      if (prevPositionRef.current) {
-        const dLat = Math.abs(pos.lat - prevPositionRef.current.lat);
-        const dLng = Math.abs(pos.lng - prevPositionRef.current.lng);
-        if (dLat > 0.00005 || dLng > 0.00005) {
-          angle = computeBearing(prevPositionRef.current, pos);
-          headingRef.current = angle;
-        } else {
-          angle = headingRef.current;
-        }
-      } else {
-        angle = headingRef.current;
+    if (!ready) return;
+    const map = mapRef.current,
+      maps = mapsRef.current,
+      markers = [];
+    const add = (position, node) => {
+      if (!Number.isFinite(position?.lat) || !Number.isFinite(position?.lng)) return;
+      markers.push(createHtmlMarker(maps, map, { lat: position.lat, lng: position.lng }, node));
+    };
+    add(pickup, el("marker-pin pickup", PIN_SVG));
+    add(dropoff, el("marker-pin dropoff", SQUARE_SVG));
+    add(driverPosition, el("marker-driver", CAR_SVG));
+    for (const driver of drivers) add(driver.location, el("marker-driver", CAR_SVG));
+    if (userPosition) {
+      let heading = userPosition.heading;
+      if (!Number.isFinite(heading)) {
+        const previous = previousRef.current;
+        heading =
+          previous &&
+          Math.hypot(previous.lat - userPosition.lat, previous.lng - userPosition.lng) > 0.00005
+            ? computeBearing(previous, userPosition)
+            : headingRef.current;
       }
-    } else {
-      headingRef.current = angle;
+      headingRef.current = heading;
+      previousRef.current = userPosition;
+      const node = navigationMode ? make3DNavigationArrow() : el("marker-dot-simple", "");
+      const arrow = node.querySelector(".waze-nav-arrow-body");
+      if (arrow) arrow.style.transform = `rotate(${heading - (map.getHeading() || 0)}deg)`;
+      add(userPosition, node);
     }
-    prevPositionRef.current = pos;
-
-    syncMarker("user", pos, () => (navigationMode ? make3DNavigationArrow() : el("marker-dot-simple", "")));
-
-    // Orientation de la flèche
-    const userMarker = markersRef.current.user;
-    if (userMarker && navigationMode) {
-      const arrowBody = userMarker.getElement().querySelector(".waze-nav-arrow-body");
-      if (arrowBody) {
-        // En vue orientée, la flèche pointe vers le haut (0deg) ; sinon elle s'oriente selon l'angle
-        arrowBody.style.transform = `rotate(${angle}deg)`;
+    if (showRoadAlerts)
+      for (const alert of mergeCameraAlerts(alerts, cameras)) {
+        const node = el(
+          `marker-road-alert is-${alert.kind}${alert.permanent ? " is-permanent" : ""}`,
+          alert.kind === "police" ? POLICE_SVG : RADAR_SVG,
+        );
+        node.title =
+          alert.source === "osm"
+            ? "Radar OpenStreetMap"
+            : alert.source === "official-fr"
+              ? "Radar · Sécurité routière"
+              : alert.kind === "police"
+                ? "Contrôle de police signalé"
+                : "Radar fixe";
+        if (alert.maxspeed) node.title += ` · ${alert.maxspeed} km/h`;
+        add(alert, node);
       }
-    }
-  }, [userPosition?.lat, userPosition?.lng, userPosition?.heading, navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => markers.forEach((marker) => marker.remove());
+  }, [
+    ready,
+    pickup,
+    dropoff,
+    driverPosition,
+    drivers,
+    userPosition,
+    navigationMode,
+    showRoadAlerts,
+    alerts,
+    cameras,
+  ]);
 
-  // The first GPS fix must be visible, including while the driver is offline.
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !userPosition || initialUserCenterRef.current || fit || followPosition || navigationMode) return;
-    initialUserCenterRef.current = true;
-    if (lastUserMoveRef.current) return;
-    map.easeTo({ center: [userPosition.lng, userPosition.lat], duration: 600 });
-  }, [userPosition?.lat, userPosition?.lng, fit, Boolean(followPosition), navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Véhicules à proximité
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const dots = driverDotsRef.current;
-    const seen = new Set();
-
-    for (const d of drivers) {
-      if (!d?.location) continue;
-      seen.add(d.id);
-      const lngLat = [d.location.lng, d.location.lat];
-      if (dots.has(d.id)) {
-        dots.get(d.id).setLngLat(lngLat);
-      } else {
-        const m = new Marker({ element: el("marker-driver", CAR_SVG) }).setLngLat(lngLat).addTo(map);
-        m.getElement().style.opacity = "0.85";
-        dots.set(d.id, m);
-      }
-    }
-
-    for (const [id, marker] of dots) {
-      if (!seen.has(id)) {
-        marker.remove();
-        dots.delete(id);
-      }
-    }
-  }, [drivers]);
-
-  const osmCameras = useMapSpeedCameras(mapRef, showRoadAlerts && !compact);
-
-  // Signalements communautaires et radars OpenStreetMap.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const dots = alertDotsRef.current;
-    const seen = new Set();
-    for (const a of showRoadAlerts ? mergeCameraAlerts(alerts || [], osmCameras) : []) {
-      if (!Number.isFinite(a?.lat) || !Number.isFinite(a?.lng)) continue;
-      const key = `${a.id}:${a.kind}:${a.permanent ? 1 : 0}`;
-      seen.add(key);
-      if (dots.has(key)) {
-        dots.get(key).setLngLat([a.lng, a.lat]);
-        continue;
-      }
-      const node = el(
-        `marker-road-alert is-${a.kind}${a.permanent ? " is-permanent" : ""}`,
-        a.kind === "police" ? POLICE_SVG : RADAR_SVG,
-      );
-      node.title = a.source === "official-fr" ? `Radar · Sécurité routière${a.maxspeed ? ` · ${a.maxspeed} km/h` : ''}` : a.source === "osm" ? `Radar OpenStreetMap${a.maxspeed ? ` · ${a.maxspeed}` : ''}` : a.kind === "police" ? "Contrôle de police signalé" : "Radar fixe";
-      dots.set(key, new Marker({ element: node }).setLngLat([a.lng, a.lat]).addTo(map));
-    }
-    for (const [key, marker] of dots) {
-      if (!seen.has(key)) {
-        marker.remove();
-        dots.delete(key);
-      }
-    }
-  }, [alerts, osmCameras, showRoadAlerts]);
-
-  // Tracé d'itinéraire
-  useEffect(() => {
-    const tracking = routeProgressRef.current;
+    if (!ready) return;
+    const tracking = progressRef.current;
     if (tracking.original !== routeGeometry) {
       tracking.original = routeGeometry;
       tracking.progress = 0;
@@ -315,87 +247,129 @@ export default function MapView({
       ? remainingRoute(routeGeometry, userPosition, tracking.progress)
       : { geometry: routeGeometry, progress: 0 };
     tracking.progress = remaining.progress;
-    routeGeomRef.current = remaining.geometry || null;
-    const map = mapRef.current;
-    if (!map) return;
-    readyRef.current = drawRoute(map, routeGeomRef.current);
-  }, [routeGeometry, navigationMode, userPosition?.lat, userPosition?.lng]);
+    const path = (remaining.geometry || []).map(([lng, lat]) => ({ lat, lng }));
+    const lines = [
+      { strokeColor: "#111923", strokeWeight: 13 },
+      { strokeColor: "#e9b95c", strokeWeight: 8 },
+      { strokeColor: "#ffe4a0", strokeWeight: 2 },
+    ].map(
+      (options) =>
+        new mapsRef.current.Polyline({
+          ...options,
+          path,
+          map: mapRef.current,
+          clickable: false,
+          geodesic: false,
+          zIndex: 2,
+        }),
+    );
+    return () => lines.forEach((line) => line.setMap(null));
+  }, [ready, routeGeometry, navigationMode, userPosition?.lat, userPosition?.lng]);
 
-  // Cadrage d'itinéraire (hors navigation active)
   useEffect(() => {
+    if (!ready || !fit || followPosition || navigationMode) return;
+    const points = fitTo || [
+      pickup,
+      dropoff,
+      driverPosition,
+      ...(routeGeometry || []).map(([lng, lat]) => ({ lat, lng })),
+    ];
+    const valid = points.filter((p) => Number.isFinite(p?.lat) && Number.isFinite(p?.lng));
+    if (!valid.length) return;
     const map = mapRef.current;
-    if (!map || !fit || followPosition || navigationMode) return;
-
-    const points = [];
-    if (fitTo) {
-      for (const p of fitTo) if (p && Number.isFinite(p.lat) && Number.isFinite(p.lng)) points.push([p.lng, p.lat]);
-    } else {
-      if (pickup) points.push([pickup.lng, pickup.lat]);
-      if (dropoff) points.push([dropoff.lng, dropoff.lat]);
-      if (driverPosition) points.push([driverPosition.lng, driverPosition.lat]);
-      if (routeGeometry?.length) points.push(...routeGeometry);
-    }
-    if (points.length < 2) {
-      if (points.length === 1) map.easeTo({ center: points[0], zoom: 15, duration: 600 });
+    if (valid.length === 1) {
+      map.setCenter(valid[0]);
+      map.setZoom(15);
       return;
     }
+    const bounds = new mapsRef.current.LatLngBounds();
+    valid.forEach((point) => bounds.extend({ lat: point.lat, lng: point.lng }));
+    map.fitBounds(bounds, compact ? 38 : fitPadding(map));
+    const listener = mapsRef.current.event.addListenerOnce(map, "idle", () => {
+      if (map.getZoom() > 16) map.setZoom(16);
+    });
+    return () => listener.remove();
+  }, [
+    ready,
+    fit,
+    fitTo,
+    pickup?.lat,
+    pickup?.lng,
+    dropoff?.lat,
+    dropoff?.lng,
+    driverPosition?.lat,
+    driverPosition?.lng,
+    routeGeometry,
+    fitKey,
+    Boolean(followPosition),
+    navigationMode,
+    compact,
+  ]);
 
-    const bounds = points.reduce((b, p) => b.extend(p), new LngLatBounds(points[0], points[0]));
-    map.fitBounds(bounds, { padding: compact ? 38 : fitPadding(map), duration: 700, maxZoom: 16 });
-  }, [fit, pickup?.lat, dropoff?.lat, routeGeometry, fitKey, Boolean(followPosition), navigationMode, compact]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Suivi GPS temps réel 3D (type Waze)
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !followPosition) return;
-    // Si l'utilisateur touche la carte, pause de 8 secondes avant de reprendre le suivi
-    if (Date.now() - lastUserMoveRef.current < 8000) return;
+    if (!ready || !userPosition || centeredRef.current || fit || followPosition || navigationMode)
+      return;
+    centeredRef.current = true;
+    if (!lastMoveRef.current)
+      mapRef.current.panTo({ lat: userPosition.lat, lng: userPosition.lng });
+  }, [ready, userPosition?.lat, userPosition?.lng, fit, Boolean(followPosition), navigationMode]);
 
-    if (navigationMode) {
-      map.easeTo({
-        center: [followPosition.lng, followPosition.lat],
-        zoom: 16.8,
-        pitch: 58, // Perspective fuyante 3D Waze
-        bearing: headingRef.current || 0, // La carte s'oriente dans le sens de la route
-        padding: { top: 80, bottom: 220, left: 30, right: 30 }, // Véhicule placé dans le tiers bas
-        duration: 900,
-      });
-    } else {
-      map.easeTo({
-        center: [followPosition.lng, followPosition.lat],
-        zoom: Math.max(map.getZoom(), 15.5),
-        pitch: 0,
-        bearing: 0,
-        padding: fitPadding(map),
-        duration: 800,
-      });
-    }
-  }, [followPosition?.lat, followPosition?.lng, followPosition?.heading, navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!ready || !followPosition || Date.now() - lastMoveRef.current < 8000) return;
+    const map = mapRef.current;
+    map.panTo({ lat: followPosition.lat, lng: followPosition.lng });
+    map.setZoom(navigationMode ? 17 : Math.max(map.getZoom(), 15.5));
+    map.setTilt(navigationMode ? 45 : 0);
+    map.setHeading(navigationMode ? headingRef.current : 0);
+  }, [ready, followPosition?.lat, followPosition?.lng, followPosition?.heading, navigationMode]);
 
   return (
-    <div className={`modern-map-frame ${className}`} style={{ width: "100%", height: "100%", ...style }}>
-      <div ref={containerRef} className="modern-map" style={{ width: "100%", flex: 1, minHeight: 0 }} aria-label="Carte GPS" />
-      {!compact && (
-        <details className="map-source-footer">
-          <summary>Sources</summary>
+    <div
+      className={`modern-map-frame google-map-frame ${className}`}
+      style={{ width: "100%", height: "100%", ...style }}
+    >
+      <div
+        ref={containerRef}
+        className="modern-map google-map"
+        style={{ width: "100%", flex: 1, minHeight: 0 }}
+        aria-label="Carte Google Maps"
+      />
+      {!ready && (
+        <div role={error ? "alert" : "status"} className="google-map-status">
+          {error || "Chargement de Google Maps…"}
+          {error && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setAttempt((n) => n + 1)}
+            >
+              Réessayer
+            </button>
+          )}
+        </div>
+      )}
+      {showRoadAlerts && !compact && (
+        <div className="map-source-footer">
           <span>
-          © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>
-          {" · "}<a href="https://openfreemap.org/" target="_blank" rel="noreferrer">OpenFreeMap</a>
-          {" · "}<a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a>
+            Radars : Sécurité routière ·{" "}
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+              © OpenStreetMap
+            </a>{" "}
+            · Signalements des chauffeurs
           </span>
-        </details>
+        </div>
       )}
     </div>
   );
 }
 
 function fitPadding(map) {
-  const box = map.getContainer().getBoundingClientRect();
+  const box = map.getDiv().getBoundingClientRect();
   const panel = document.querySelector(".ride-panel")?.getBoundingClientRect();
   const pad = { top: 60, bottom: 60, left: 50, right: 50 };
   if (!panel || panel.height === 0) return pad;
-  if (box.width <= 900) pad.bottom = Math.min(box.height - 140, Math.max(60, box.bottom - panel.top + 24));
-  else pad.left = Math.min(box.width - 200, Math.max(50, panel.right - box.left + 30));
+  if (box.width <= 900)
+    pad.bottom = Math.max(0, Math.min(box.height - 140, Math.max(60, box.bottom - panel.top + 24)));
+  else pad.left = Math.max(0, Math.min(box.width - 200, Math.max(50, panel.right - box.left + 30)));
   return pad;
 }
-

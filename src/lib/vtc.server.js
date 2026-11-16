@@ -28,7 +28,6 @@ import {
 import {
   approximateRoute,
   routeFromGoogle,
-  routeFromOsrm,
   googleRouteRequest,
   GOOGLE_ROUTE_FIELDS,
   liveTarget,
@@ -191,25 +190,11 @@ async function googleRoute(a, b) {
     return null;
   }
 }
-async function osrmRoute(a, b) {
-  try {
-    const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`,
-      { signal: AbortSignal.timeout(8000) },
-    );
-    if (!res.ok) return null;
-    return routeFromOsrm(await res.json());
-  } catch {
-    return null;
-  }
-}
-
 async function routeBetween(a, b) {
   if (!validPoint(a) || !validPoint(b)) throw new Error("Adresses invalides");
-  // Google (trafic en temps réel) → OSRM (sans trafic) → estimation signalée, jamais de ligne droite.
+  // Google only; an outage yields an explicitly approximate estimate without a road line.
   return (
     (await googleRoute(a, b)) ||
-    (await osrmRoute(a, b)) ||
     approximateRoute(haversineDistance(a.lat, a.lng, b.lat, b.lng))
   );
 }

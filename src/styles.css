@@ -7034,3 +7034,20 @@ a.activity-pill:hover {
     right: max(12px, env(safe-area-inset-right));
   }
 }
+
+/* Google renders its own map attribution; only radar data credits are custom. */
+.google-map-frame { position: relative; }
+.google-map-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: #f1f5f9;
+  background: #141a24;
+  text-align: center;
+}
+.google-map img { max-width: none; }

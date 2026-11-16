@@ -1,98 +1,55 @@
-// Photon stays keyless. Search Strasbourg and its surroundings before widening.
-const PHOTON_BASE = "https://photon.komoot.io";
+// Address lookup stays server-side through the existing managed Google Maps connector.
 export const STRASBOURG_SEARCH_CENTER = { lat: 48.5734, lng: 7.7521 };
 export const STRASBOURG_SEARCH_BBOX = [7.2, 48.22, 8.3, 48.93];
-
-function localPoint(lat, lng) {
-  const [west, south, east, north] = STRASBOURG_SEARCH_BBOX;
-  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= south && lat <= north && lng >= west && lng <= east;
-}
-
-// French national address service (Géoplateforme, keyless): fallback when Photon is slow or refuses the server.
-const GEOPF_BASE = "https://data.geopf.fr/geocodage";
-
-const hasPoint = (f) =>
-  Array.isArray(f?.geometry?.coordinates) &&
-  Number.isFinite(f.geometry.coordinates[0]) &&
-  Number.isFinite(f.geometry.coordinates[1]);
-
-function fromPhoton(f) {
-  const x = f.properties || {};
-  const parts = [x.name, x.street, x.housenumber, x.district, x.city, x.state, x.country]
-    .filter(Boolean)
-    .filter((v, i, all) => all.indexOf(v) === i);
-  return {
-    name: x.name || x.street || "Lieu inconnu",
-    address: parts.join(", "),
-    lat: f.geometry.coordinates[1],
-    lng: f.geometry.coordinates[0],
-    type: x.osm_value || x.type || "",
-  };
-}
-
-function fromGeopf(f) {
-  const x = f.properties || {};
-  return {
-    name: x.name || x.label || "Lieu inconnu",
-    address: [x.label, x.context].filter(Boolean).join(", "),
-    lat: f.geometry.coordinates[1],
-    lng: f.geometry.coordinates[0],
-    type: x.type || "",
-  };
-}
+const GATEWAY = "https://connector-gateway.lovable.dev/google_maps";
 
 export async function geoSearch(q, fetcher = fetch) {
   const reverse = q.get("reverse") === "1";
-  const lat = parseFloat(q.get("lat")),
-    lng = parseFloat(q.get("lng"));
-  const text = (q.get("q") || "").trim();
-
-  // Returns the features, or null when the service did not answer properly.
-  async function request(url, timeout) {
-    try {
-      const res = await fetcher(url, {
-        signal: AbortSignal.timeout(timeout),
-        headers: { "User-Agent": "strasdrive/1.0 (contact via app)", Accept: "application/json" },
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return (data.features || []).filter(hasPoint);
-    } catch {
-      return null;
-    }
+  const lat = Number.parseFloat(q.get("lat")),
+    lng = Number.parseFloat(q.get("lng"));
+  const text = (q.get("q") || "").trim().slice(0, 200);
+  if (
+    reverse &&
+    (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)
+  ) {
+    throw new Error("Latitude et longitude requises");
   }
-
-  if (reverse) {
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Latitude et longitude requises");
-    const photon = await request(`${PHOTON_BASE}/reverse?lon=${lng}&lat=${lat}&limit=1&lang=fr`, 3500);
-    if (photon?.length) return { results: photon.map(fromPhoton) };
-    const geopf = await request(`${GEOPF_BASE}/reverse?lon=${lng}&lat=${lat}&limit=1`, 4000);
-    if (geopf) return { results: geopf.map(fromGeopf) };
-    if (photon) return { results: [] };
-    throw new Error("La recherche d’adresse est momentanément indisponible");
+  if (!reverse && text.length < 2) return { results: [] };
+  const token = process.env.LOVABLE_API_KEY,
+    key = process.env.GOOGLE_MAPS_API_KEY;
+  if (!token || !key) throw new Error("La recherche Google Maps n’est pas encore configurée");
+  const params = new URLSearchParams({ language: "fr", region: "fr" });
+  if (reverse) params.set("latlng", `${lat},${lng}`);
+  else {
+    params.set("address", text);
+    params.set("bounds", "48.22,7.2|48.93,8.3");
   }
-
-  if (text.length < 2) return { results: [] };
-  const center = localPoint(lat, lng) ? { lat, lng } : STRASBOURG_SEARCH_CENTER;
-  const params = new URLSearchParams({
-    q: text,
-    limit: "6",
-    lang: "fr",
-    lat: String(center.lat),
-    lon: String(center.lng),
-    zoom: "12",
-    location_bias_scale: "0.1",
-  });
-  const localParams = new URLSearchParams(params);
-  localParams.set("bbox", STRASBOURG_SEARCH_BBOX.join(","));
-
-  let photon = await request(`${PHOTON_BASE}/api/?${localParams}`, 3500);
-  if (photon && !photon.length) photon = await request(`${PHOTON_BASE}/api/?${params}`, 3500);
-  if (photon?.length) return { results: photon.map(fromPhoton) };
-
-  const geopfParams = new URLSearchParams({ q: text.slice(0, 200), limit: "6", lat: String(center.lat), lon: String(center.lng) });
-  const geopf = await request(`${GEOPF_BASE}/search?${geopfParams}`, 4000);
-  if (geopf) return { results: geopf.map(fromGeopf) };
-  if (photon) return { results: [] };
-  throw new Error("La recherche d’adresse est momentanément indisponible");
+  try {
+    const response = await fetcher(`${GATEWAY}/maps/api/geocode/json?${params}`, {
+      headers: { Authorization: `Bearer ${token}`, "X-Connection-Api-Key": key },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) throw new Error("Google indisponible");
+    const data = await response.json();
+    if (data.status === "ZERO_RESULTS") return { results: [] };
+    if (data.status !== "OK") throw new Error("Google indisponible");
+    return {
+      results: (data.results || [])
+        .filter(
+          (r) =>
+            Number.isFinite(r.geometry?.location?.lat) &&
+            Number.isFinite(r.geometry?.location?.lng),
+        )
+        .slice(0, reverse ? 1 : 6)
+        .map((r) => ({
+          name: r.formatted_address?.split(",")[0] || "Adresse",
+          address: r.formatted_address || "Adresse",
+          lat: r.geometry.location.lat,
+          lng: r.geometry.location.lng,
+          type: r.types?.[0] || "",
+        })),
+    };
+  } catch {
+    throw new Error("La recherche d’adresse Google Maps est momentanément indisponible");
+  }
 }

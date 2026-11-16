@@ -1,5 +1,5 @@
-// Itinéraires : Google Routes (trafic en temps réel) en priorité, OSRM en secours sans trafic,
-// sinon une estimation signalée comme approximative et SANS tracé (jamais de ligne droite muette).
+// Itinéraires : Google Routes avec trafic en temps réel. En cas de panne,
+// estimation signalée comme approximative et SANS tracé.
 // Pure helpers only (unit-tested); the network calls live in vtc.server.js.
 
 /** Seconds before a shared live route (driver → pickup/destination) is recomputed. */
