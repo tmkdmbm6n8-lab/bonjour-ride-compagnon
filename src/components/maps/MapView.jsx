@@ -1,25 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Map as MLMap, Marker, LngLatBounds, setWorkerUrl } from "maplibre-gl";
+import { Map as MLMap, Marker, LngLatBounds, AttributionControl, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { policeCapSvg, frenchRadarSvg } from "@/components/icons/road-alert-icons";
 
 setWorkerUrl(maplibreWorkerUrl);
 
-const MAP_STYLE = {
-  version: 8,
-  sources: {
-    osm: {
-      type: "raster",
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    },
-  },
-  layers: [{ id: "osm", type: "raster", source: "osm" }],
-};
 
 function el(className, html) {
   const div = document.createElement("div");
@@ -126,13 +114,15 @@ export default function MapView({
 
     const map = new MLMap({
       container: containerRef.current,
-      style: MAP_STYLE,
+      style: "/map-dark.json",
       center: [center.lng, center.lat],
       zoom,
       pitch: navigationMode ? 58 : 0,
       attributionControl: false,
       cooperativeGestures: false, // un seul doigt suffit pour parcourir la carte
     });
+
+    map.addControl(new AttributionControl({ compact: true }), "bottom-right");
 
     const markUserMove = (e) => {
       if (e?.originalEvent) lastUserMoveRef.current = Date.now();
@@ -356,7 +346,7 @@ export default function MapView({
   return (
     <div
       ref={containerRef}
-      className={className}
+      className={`modern-map ${className}`}
       style={{ width: "100%", height: "100%", ...style }}
       aria-label="Carte GPS"
     />
@@ -397,14 +387,12 @@ function drawRoute(map, geometry) {
 
   try {
     map.addSource("route", { type: "geojson", data });
-    // La carte passe par un filtre CSS (gris → inversion → sépia doré, voir .maplibregl-canvas).
-    // Les couleurs sont donc choisies « en négatif » : un trait noir ressort or clair,
-    // un contour blanc ressort noir. Résultat : ligne épaisse lumineuse, bien détourée.
+    // Route colors are rendered directly; no canvas inversion.
     const layers = [
-      { id: "route-halo", paint: { "line-color": "#ffffff", "line-width": 22, "line-opacity": 0.35, "line-blur": 6 } },
-      { id: "route-casing", paint: { "line-color": "#ffffff", "line-width": 15, "line-opacity": 1 } },
-      { id: "route-line", paint: { "line-color": "#1f1f1f", "line-width": 9 } },
-      { id: "route-core", paint: { "line-color": "#000000", "line-width": 3 } },
+      { id: "route-halo", paint: { "line-color": "#f4c96b", "line-width": 20, "line-opacity": 0.35, "line-blur": 6 } },
+      { id: "route-casing", paint: { "line-color": "#111923", "line-width": 13, "line-opacity": 1 } },
+      { id: "route-line", paint: { "line-color": "#e9b95c", "line-width": 7 } },
+      { id: "route-core", paint: { "line-color": "#ffe4a0", "line-width": 2 } },
     ];
     for (const l of layers) {
       if (map.getLayer(l.id)) continue;

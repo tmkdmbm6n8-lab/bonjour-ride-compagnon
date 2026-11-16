@@ -6618,3 +6618,63 @@ a.activity-pill:hover {
   width: 38px;
   height: 38px;
 }
+
+/* Vector map: graphite palette, true route colors, restrained markers. */
+.modern-map {
+  background: #151c24;
+}
+.modern-map .maplibregl-canvas,
+.shell-dark .modern-map .maplibregl-canvas,
+.driver-dark-map.modern-map .maplibregl-canvas,
+.driver-dark-map .modern-map .maplibregl-canvas {
+  filter: none;
+}
+.modern-map .maplibregl-ctrl-attrib {
+  display: block;
+  background: rgba(21, 28, 36, 0.92);
+  color: #aebdc8;
+  font: 10px/20px "DM Sans", sans-serif;
+  border-radius: 10px;
+}
+.modern-map .maplibregl-ctrl-attrib a { color: #d5dfe6; }
+.modern-map .marker-driver,
+.modern-map .marker-pin {
+  background: #17212d;
+  color: #f4cf85;
+  border: 2px solid #e9be70;
+  box-shadow: 0 3px 12px #080f1c80, 0 0 0 4px #f4cf8512;
+}
+.modern-map .marker-pin.pickup { background: #f4cf85; color: #17212d; }
+.modern-map .marker-pin.dropoff { background: #edf3f7; color: #17212d; border-color: #fff; }
+.driver-dark-map.modern-map .maplibregl-marker:not(.marker-pin):not(.marker-car),
+.driver-dark-map .modern-map .maplibregl-marker:not(.marker-pin):not(.marker-car) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.driver-dark-map.modern-map .maplibregl-marker::after,
+.driver-dark-map .modern-map .maplibregl-marker::after { content: none; }
+.modern-map .marker-road-alert {
+  background: #18232f !important;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px #0005 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .modern-map .waze-nav-pulse { animation: none; }
+}
+.driver-dark-map.modern-map .marker-driver,
+.driver-dark-map .modern-map .marker-driver {
+  width: 34px !important;
+  height: 34px !important;
+  background: #17212d !important;
+  border: 2px solid #e9be70 !important;
+  box-shadow: 0 3px 12px #080f1c80 !important;
+}
+.modern-map .marker-dot-simple {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50%;
+  background: #8cc8f0 !important;
+  border: 3px solid #f0f7fc !important;
+  box-shadow: 0 0 0 7px #8cc8f025 !important;
+}
