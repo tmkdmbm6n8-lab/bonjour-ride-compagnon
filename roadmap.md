@@ -45,3 +45,8 @@
 - [x] Retrait anticipé avant la date : 0,50 € de frais
 - [x] Course en espèces : la commission (5 %) que le chauffeur doit est récupérée automatiquement sur sa prochaine course payée par carte/portefeuille
 - [ ] Virement réel vers la banque des chauffeurs — en attente de la connexion d'un compte Stripe (clé secrète)
+
+# Notifications push Android (demande du 16/11)
+- [ ] Notification push d'offre de course quand l'app Android est en arrière-plan (bannière visible, son)
+- [ ] Nouvel APK avec les notifications — en attente du fichier google-services.json de Firebase
+- [ ] App iPhone (IPA) — reportée à la demande de l'utilisateur
