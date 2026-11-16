@@ -5,7 +5,8 @@ import { inboxForDriver, sendSupportMessage } from "./vtc-support.server";
 import { buildWaybill, sanitizeOperator } from "./vtc-waybill";
 import { geoSearch } from "./vtc-geocoding.server";
 import { passengerDisplayName } from "./passenger-name";
-import { speedCameras, requireCameraReader } from "./vtc-driver-cameras.server";
+import { speedCameras, requireCameraReader, routeCameras } from "./vtc-driver-cameras.server";
+import { routeBounds, radarsOnRoute } from "./route-radars";
 import { mergeCameraAlerts } from "./vtc-speed-cameras";
 import { requireRadarReporter } from "./vtc-road-alerts.server";
 import {
@@ -864,6 +865,20 @@ export async function handleVtc(input, context) {
     }
     if (!participant && role !== "admin") throw new Error("Course inaccessible");
     if (!action) return { ride: await serialize(admin, r, uid) };
+    if (action === "radars" && method === "GET") {
+      requireCameraReader(role);
+      if (r.driver_id !== uid) throw new Error("Accès refusé");
+      if (!["accepted", "in_progress"].includes(r.status)) return { cameras: [], available: false };
+      const route = await liveRoute(admin, r);
+      const geometry = route?.geometry || (r.status === "in_progress" ? r.route?.geometry : null);
+      const bounds = routeBounds(geometry);
+      if (!bounds) return { cameras: [], available: false };
+      const [west, south, east, north] = bounds;
+      const result = await routeCameras(geometry);
+      const reported = required(await admin.from("road_alerts").select("*").eq("kind", "radar")
+        .gte("lng", west).lte("lng", east).gte("lat", south).lte("lat", north));
+      return { ...result, cameras: radarsOnRoute(mergeCameraAlerts(reported, result.cameras), geometry) };
+    }
     if (action === "route") {
       if (!participant) throw new Error("Accès refusé");
       return { route: await liveRoute(admin, r) };

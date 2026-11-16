@@ -44,6 +44,7 @@ import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFo
 import { playSound, startRinging } from "@/lib/sounds";
 import { NAV_APPS, getNavApp, setNavApp, getNavAuto, setNavAuto, openNavigation } from "@/lib/navigation";
 import { useLiveRoute } from "@/hooks/useLiveRoute";
+import useRouteRadars from "@/hooks/useRouteRadars";
 import { routeQualityLabel } from "@/lib/vtc-routing";
 import { drawableRoute, arrivalClock } from "@/lib/utils/route-display";
 
@@ -294,6 +295,7 @@ function DriverDashboard() {
     drawableRoute(liveRoute?.status === ride?.status ? liveRoute?.geometry : null, liveRoute?.source) ||
     (ride?.status === "in_progress" ? drawableRoute(ride.route?.geometry, ride.route?.source) : undefined),
   [liveRoute, ride?.status, ride?.route]);
+  const routeRadars = useRouteRadars(ride?.id, ride?.status, driverRoute, position);
   const liveLeg = useMemo(() => {
     if (!ride || (ride.status !== "accepted" && ride.status !== "in_progress")) return null;
     const label = ride.status === "in_progress" ? "jusqu’à destination" : "jusqu’au point de prise en charge";
@@ -505,6 +507,13 @@ function DriverDashboard() {
               </p>
             )}
             <div className="mb-3">
+              {navigating && (
+                <p className="text-sm text-gold mb-2" role="status">
+                  {routeRadars.count == null
+                    ? routeRadars.loading ? "Comptage des radars…" : "Nombre de radars indisponible"
+                    : `${routeRadars.count} radar${routeRadars.count > 1 ? "s" : ""} connu${routeRadars.count > 1 ? "s" : ""} ${ride.status === "in_progress" ? "jusqu’à l’arrivée" : "jusqu’au passager"}`}
+                </p>
+              )}
               <div className="flex gap-2 items-center text-sm">
                 <Circle size={10} className="text-gold flex-shrink-0" />
                 <span className="truncate">
