@@ -888,8 +888,8 @@ export async function handleVtc(input, context) {
         throw new Error("Annulation impossible");
 
       // ── A. Le CHAUFFEUR annule (remise en recherche + mémorisation du motif) ──
+          // ── A. Le CHAUFFEUR annule (remise en recherche de chauffeur) ──
       if (r.driver_id === uid) {
-        const cancelReason = typeof body?.reason === "string" ? body.reason.slice(0, 200) : null;
         required(
           await admin
             .from("rides")
@@ -901,7 +901,6 @@ export async function handleVtc(input, context) {
               dispatch_phase: null,
               accepted_at: null,
               declined: [...r.declined, uid],
-              cancel_reason: cancelReason,
             })
             .eq("id", id)
             .eq("status", r.status),
@@ -911,7 +910,6 @@ export async function handleVtc(input, context) {
         const patch = {
           status: "cancelled",
           offer_driver_id: null,
-          cancel_reason: typeof body?.reason === "string" ? body.reason.slice(0, 200) : null,
         };
 
         // Vérification anti-fraude : le chauffeur était-il immobile ou en mauvaise direction ?
@@ -925,6 +923,18 @@ export async function handleVtc(input, context) {
           r.status === "arrived" &&
           !r.is_test &&
           paymentMethodOf(r.payment?.method) !== "cash" &&
+          !progress.canCancelFree
+        ) {
+          required(await admin.rpc("wallet_entry", { _user: uid, _amount: -3, _type: "cancellation_fee", _ride: id }));
+          if (r.driver_id)
+            required(
+              await admin.rpc("wallet_entry", { _user: r.driver_id, _amount: 2.76, _type: "ride_earning", _ride: id }),
+            );
+          patch.fare = { ...r.fare, cancellationFee: 3 };
+        }
+        required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
+      }
+
           !progress.canCancelFree
         ) {
           required(await admin.rpc("wallet_entry", { _user: uid, _amount: -3, _type: "cancellation_fee", _ride: id }));
