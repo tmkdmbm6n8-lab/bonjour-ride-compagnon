@@ -6571,3 +6571,19 @@ a.activity-pill:hover {
 .rider-locate-btn .spin {
   animation: spin 0.9s linear infinite;
 }
+
+/* ── Signalements police / radar sur l'accueil chauffeur (sans course) ── */
+.drv-alert-stack.is-home {
+  position: absolute;
+  right: 16px;
+  bottom: 96px;
+  z-index: 22;
+}
+.drv-alert-confirm.is-home {
+  top: 150px;
+  bottom: auto;
+}
+.marker-road-alert {
+  width: 38px;
+  height: 38px;
+}
