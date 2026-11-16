@@ -4,6 +4,7 @@ import { parisDay, validDay } from "./vtc-dates";
 import { inboxForDriver, sendSupportMessage } from "./vtc-support.server";
 import { buildWaybill, sanitizeOperator } from "./vtc-waybill";
 import { geoSearch } from "./vtc-geocoding.server";
+import { passengerDisplayName } from "./passenger-name";
 import { speedCameras, requireCameraReader } from "./vtc-driver-cameras.server";
 import { mergeCameraAlerts } from "./vtc-speed-cameras";
 import { requireRadarReporter } from "./vtc-road-alerts.server";
@@ -137,9 +138,10 @@ async function serialize(db, r, actor, raw = false) {
   // Attacher les coordonnées du passager (nom, téléphone, note) au chauffeur
   if (r.rider_id && (actor === r.driver_id || raw)) {
     try {
-      const rp = required(await db.from("profiles").select("name,phone,rating").eq("id", r.rider_id).single());
+      const rp = required(await db.from("profiles").select("name,phone,rating,avatar").eq("id", r.rider_id).single());
       out.rider = {
-        name: rp.name || "Passager",
+        name: raw ? (rp.name || "Passager") : passengerDisplayName(rp.name),
+        avatar: rp.avatar || "",
         phone: rp.phone || "",
         rating: rp.rating?.average || 5.0,
       };
@@ -776,7 +778,7 @@ export async function handleVtc(input, context) {
         rideId: r.id,
         pickup: r.pickup,
         dropoff: r.dropoff,
-        rider,
+        rider: { ...rider, name: passengerDisplayName(rider.name) },
         earnings: r.fare.driverEarnings,
         distanceMeters: r.route.distanceMeters,
         durationSeconds: r.route.durationSeconds,

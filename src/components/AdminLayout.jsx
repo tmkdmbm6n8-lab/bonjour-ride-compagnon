@@ -17,7 +17,7 @@ const NAV = [
 export default function AdminLayout({ children }) {
   return (
     <>
-      <AppShell nav={NAV}>{children}</AppShell>
+      <AppShell nav={NAV} variant="admin">{children}</AppShell>
     </>
   );
 }

@@ -18,7 +18,6 @@ import {
   Flag,
   PawPrint,
   Star,
-  User,
   Phone,
   FileText,
   Hand,
@@ -35,6 +34,7 @@ import MessageAlert from "@/components/ride/MessageAlert";
 import DispatchWheel from "@/components/ride/DispatchWheel";
 import Waybill from "@/components/driver/Waybill";
 import DriverHome from "@/components/driver/DriverHome";
+import PassengerInfo from "@/components/driver/PassengerInfo";
 import { pickupZoneProblem } from "@/lib/vtc-dispatch";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
@@ -417,15 +417,7 @@ function DriverDashboard() {
 
           {/* 2. Tout en haut : Fiche passager opaque */}
           <div className="drv-top-passenger-bar">
-            <div className="drv-client-meta">
-              <div className="drv-client-avatar">
-                <User size={22} />
-              </div>
-              <div>
-                <h3 className="drv-client-name">{ride.rider?.name || "Passager"}</h3>
-                <span className="drv-client-rating">★ {ride.rider?.rating ? ride.rider.rating.toFixed(1) : "5.0"}</span>
-              </div>
-            </div>
+            <PassengerInfo key={ride.id} ride={ride} />
 
             <div className="drv-client-actions">
               {ride.rider?.phone && (

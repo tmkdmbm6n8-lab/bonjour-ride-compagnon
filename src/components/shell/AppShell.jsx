@@ -20,7 +20,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
     user?.role === "driver" ? "/driver/dashboard" : user?.role === "admin" ? "/admin/dashboard" : "/dashboard";
 
   return (
-    <div className={`shell ${variant === "rider" ? "shell-rider" : ""} shell-dark`}>
+    <div className={`shell ${variant === "rider" ? "shell-rider" : variant === "admin" ? "shell-admin" : ""} shell-dark`}>
       <aside className="sidebar">
         <div className="sidebar-brand">
           <Link href={homeHref} aria-label="Accueil StrasDrive">
