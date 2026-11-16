@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { policeCapSvg, frenchRadarSvg } from "@/components/icons/road-alert-icons";
 import useMapSpeedCameras from "@/hooks/useMapSpeedCameras";
 import { mergeCameraAlerts } from "@/lib/vtc-speed-cameras";
+import { interpolateFix } from "@/lib/map-motion";
 import { remainingRoute } from "@/lib/utils/route-display";
 import { loadGoogleMaps, createHtmlMarker, cameraViewport } from "@/lib/google-maps-browser";
 
@@ -27,37 +28,12 @@ const POLICE_SVG = policeCapSvg(20);
 
 const RADAR_SVG = frenchRadarSvg(20);
 
-// Flèche 3D profilée style Waze en or métallique avec ombre portée
-function make3DNavigationArrow() {
-  const container = document.createElement("div");
-  container.className = "waze-nav-arrow-container";
-  container.innerHTML = `
-    <div class="waze-nav-pulse"></div>
-    <div class="waze-nav-arrow-shadow"></div>
-    <div class="waze-nav-arrow-body">
-      <svg width="44" height="48" viewBox="0 0 44 48" fill="none">
-        <defs>
-          <linearGradient id="wazeGradGold" x1="22" y1="2" x2="22" y2="44" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#FEF08A"/>
-            <stop offset="0.4" stop-color="#EAB308"/>
-            <stop offset="1" stop-color="#854D0E"/>
-          </linearGradient>
-          <filter id="wazeDepth" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.6"/>
-          </filter>
-        </defs>
-        <!-- Socle 3D profond -->
-        <path d="M22 4L40 42L22 34L4 42L22 4Z" fill="#3B2506" />
-        <!-- Corps de la flèche -->
-        <path d="M22 2L39 39L22 32L5 39L22 2Z" fill="url(#wazeGradGold)" stroke="#FEF9C3" stroke-width="1.8" stroke-linejoin="round" filter="url(#wazeDepth)"/>
-        <!-- Biseau lumière 3D gauche -->
-        <path d="M22 2L5 39L22 32Z" fill="rgba(255, 255, 255, 0.28)"/>
-        <!-- Cœur luminescent -->
-        <circle cx="22" cy="24" r="3" fill="#FFFFFF"/>
-      </svg>
-    </div>
-  `;
-  return container;
+// Navigation marker: a simple blue direction arrow, with no legacy gold styling.
+function makeNavigationArrow() {
+  return el(
+    "google-navigation-marker",
+    `<svg class="google-navigation-arrow" width="46" height="46" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5L41 41L24 33L7 41Z" fill="#1a73e8" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>`,
+  );
 }
 
 // Calcul de l'angle entre deux coordonnées quand le téléphone ne donne pas de boussole
@@ -98,9 +74,12 @@ export default function MapView({
   const onClickRef = useRef(onClick);
   const initialRef = useRef({ center, zoom });
   const lastMoveRef = useRef(0);
-  const previousRef = useRef(null);
+  const motionRef = useRef(null);
+  const animationRef = useRef(null);
+  const userMarkerRef = useRef(null);
+  const userNodeRef = useRef(null);
+  const routeLinesRef = useRef([]);
   const headingRef = useRef(0);
-  const followPreviousRef = useRef(null);
   const progressRef = useRef({ original: null, progress: 0 });
   const centeredRef = useRef(false);
   const [ready, setReady] = useState(false);
@@ -193,23 +172,6 @@ export default function MapView({
     add(dropoff, el("marker-pin dropoff", SQUARE_SVG));
     add(driverPosition, el("marker-driver", CAR_SVG));
     for (const driver of drivers) add(driver.location, el("marker-driver", CAR_SVG));
-    if (userPosition) {
-      let heading = userPosition.heading;
-      if (!Number.isFinite(heading)) {
-        const previous = previousRef.current;
-        heading =
-          previous &&
-          Math.hypot(previous.lat - userPosition.lat, previous.lng - userPosition.lng) > 0.00005
-            ? computeBearing(previous, userPosition)
-            : headingRef.current;
-      }
-      headingRef.current = heading;
-      previousRef.current = userPosition;
-      const node = navigationMode ? make3DNavigationArrow() : el("marker-dot-simple", "");
-      const arrow = node.querySelector(".waze-nav-arrow-body");
-      if (arrow) arrow.style.transform = `rotate(${heading - (map.getHeading() || 0)}deg)`;
-      add(userPosition, node);
-    }
     if (showRoadAlerts)
       for (const alert of mergeCameraAlerts(alerts, cameras)) {
         const node = el(
@@ -227,29 +189,31 @@ export default function MapView({
         if (alert.maxspeed) node.title += ` · ${alert.maxspeed} km/h`;
         add(alert, node);
       }
-    const rotateArrow = () => {
-      const arrow = containerRef.current?.querySelector(".waze-nav-arrow-body");
-      if (arrow)
-        arrow.style.transform = `rotate(${headingRef.current - (map.getHeading() || 0)}deg)`;
-    };
-    const headingListener = map.addListener("heading_changed", rotateArrow);
-    rotateArrow();
+    return () => markers.forEach((marker) => marker.remove());
+  }, [ready, pickup, dropoff, driverPosition, drivers, showRoadAlerts, alerts, cameras]);
+
+  useEffect(() => {
+    if (!ready) return;
+    routeLinesRef.current = [
+      { strokeColor: "#ffffff", strokeWeight: 11 },
+      { strokeColor: "#1967d2", strokeWeight: 8 },
+      { strokeColor: "#4285f4", strokeWeight: 5 },
+    ].map(
+      (options) =>
+        new mapsRef.current.Polyline({
+          ...options,
+          path: [],
+          map: mapRef.current,
+          clickable: false,
+          geodesic: false,
+          zIndex: 2,
+        }),
+    );
     return () => {
-      headingListener.remove();
-      markers.forEach((marker) => marker.remove());
+      routeLinesRef.current.forEach((line) => line.setMap(null));
+      routeLinesRef.current = [];
     };
-  }, [
-    ready,
-    pickup,
-    dropoff,
-    driverPosition,
-    drivers,
-    userPosition,
-    navigationMode,
-    showRoadAlerts,
-    alerts,
-    cameras,
-  ]);
+  }, [ready]);
 
   useEffect(() => {
     if (!ready) return;
@@ -263,22 +227,7 @@ export default function MapView({
       : { geometry: routeGeometry, progress: 0 };
     tracking.progress = remaining.progress;
     const path = (remaining.geometry || []).map(([lng, lat]) => ({ lat, lng }));
-    const lines = [
-      { strokeColor: "#111923", strokeWeight: 13 },
-      { strokeColor: "#e9b95c", strokeWeight: 8 },
-      { strokeColor: "#ffe4a0", strokeWeight: 2 },
-    ].map(
-      (options) =>
-        new mapsRef.current.Polyline({
-          ...options,
-          path,
-          map: mapRef.current,
-          clickable: false,
-          geodesic: false,
-          zIndex: 2,
-        }),
-    );
-    return () => lines.forEach((line) => line.setMap(null));
+    routeLinesRef.current.forEach((line) => line.setPath(path));
   }, [ready, routeGeometry, navigationMode, userPosition?.lat, userPosition?.lng]);
 
   useEffect(() => {
@@ -329,31 +278,81 @@ export default function MapView({
       mapRef.current.panTo({ lat: userPosition.lat, lng: userPosition.lng });
   }, [ready, userPosition?.lat, userPosition?.lng, fit, Boolean(followPosition), navigationMode]);
 
+  // Keep the user's marker mounted; GPS fixes update its position instead of rebuilding it.
   useEffect(() => {
-    if (!ready || !followPosition || Date.now() - lastMoveRef.current < 8000) return;
-    const map = mapRef.current;
-    const previous = followPreviousRef.current;
-    let heading = followPosition.heading;
+    if (!ready || !userPosition) return;
+    const node = navigationMode ? makeNavigationArrow() : el("marker-dot-simple", "");
+    userNodeRef.current = node;
+    userMarkerRef.current = createHtmlMarker(
+      mapsRef.current,
+      mapRef.current,
+      motionRef.current || { lat: userPosition.lat, lng: userPosition.lng },
+      node,
+    );
+    const rotate = () => {
+      const arrow = node.querySelector(".google-navigation-arrow");
+      if (arrow)
+        arrow.style.transform = `rotate(${headingRef.current - (mapRef.current.getHeading() || 0)}deg)`;
+    };
+    const listener = mapRef.current.addListener("heading_changed", rotate);
+    rotate();
+    return () => {
+      listener.remove();
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
+      userNodeRef.current = null;
+    };
+  }, [ready, navigationMode, Boolean(userPosition)]);
+
+  // Camera and cursor share the same interpolated position on each animation frame.
+  useEffect(() => {
+    cancelAnimationFrame(animationRef.current);
+    if (!ready) return;
+    const position = followPosition || userPosition;
+    if (!Number.isFinite(position?.lat) || !Number.isFinite(position?.lng)) return;
+    const from = motionRef.current;
+    let heading = position.heading;
     if (!Number.isFinite(heading)) {
       heading =
-        previous &&
-        Math.hypot(previous.lat - followPosition.lat, previous.lng - followPosition.lng) > 0.00005
-          ? computeBearing(previous, followPosition)
+        from && Math.hypot(from.lat - position.lat, from.lng - position.lng) > 0.00005
+          ? computeBearing(from, position)
           : headingRef.current;
     }
-    followPreviousRef.current = followPosition;
-    headingRef.current = heading;
-    map.moveCamera({
-      center: { lat: followPosition.lat, lng: followPosition.lng },
-      zoom: navigationMode ? 18 : Math.max(map.getZoom(), 15.5),
-      tilt: navigationMode && !flatOnly ? 60 : 0,
-      heading: navigationMode && !flatOnly ? heading : 0,
-    });
+    const target = { lat: position.lat, lng: position.lng, heading };
+    const distance = from ? Math.hypot(from.lat - target.lat, from.lng - target.lng) : Infinity;
+    // First fix or GPS relocation: no animation across an implausibly long distance.
+    const duration = !from || distance > 0.003 ? 0 : 850;
+    const start = performance.now();
+    const frame = (now) => {
+      const progress = duration ? Math.min(1, (now - start) / duration) : 1;
+      const fix = from ? interpolateFix(from, target, progress) : target;
+      motionRef.current = fix;
+      headingRef.current = fix.heading;
+      userMarkerRef.current?.setPosition({ lat: fix.lat, lng: fix.lng });
+      const map = mapRef.current;
+      if (!map) return;
+      if (followPosition && Date.now() - lastMoveRef.current >= 8000) {
+        map.moveCamera({
+          center: { lat: fix.lat, lng: fix.lng },
+          zoom: navigationMode ? 18 : Math.max(map.getZoom(), 15.5),
+          tilt: navigationMode && !flatOnly ? 60 : 0,
+          heading: navigationMode && !flatOnly ? fix.heading : 0,
+        });
+      }
+      const arrow = userNodeRef.current?.querySelector(".google-navigation-arrow");
+      if (arrow) arrow.style.transform = `rotate(${fix.heading - (map.getHeading() || 0)}deg)`;
+      if (progress < 1) animationRef.current = requestAnimationFrame(frame);
+    };
+    frame(start);
+    return () => cancelAnimationFrame(animationRef.current);
   }, [
     ready,
     followPosition?.lat,
     followPosition?.lng,
     followPosition?.heading,
+    userPosition?.lat,
+    userPosition?.lng,
+    userPosition?.heading,
     navigationMode,
     flatOnly,
   ]);

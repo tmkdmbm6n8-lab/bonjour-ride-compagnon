@@ -7064,3 +7064,15 @@ a.activity-pill:hover {
   font-size: 12px;
   pointer-events: none;
 }
+
+.google-navigation-marker {
+  width: 46px;
+  height: 46px;
+  z-index: 10;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px #0006);
+}
+.google-navigation-arrow {
+  display: block;
+  transform-origin: center;
+}

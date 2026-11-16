@@ -58,7 +58,13 @@ export function createHtmlMarker(maps, map, position, node) {
   }
   const overlay = new HtmlMarker();
   overlay.setMap(map);
-  return { remove: () => overlay.setMap(null) };
+  return {
+    setPosition(next) {
+      position = next;
+      if (overlay.getProjection()) overlay.draw();
+    },
+    remove: () => overlay.setMap(null),
+  };
 }
 
 /** Adapter used only by the existing viewport-based radar hook. */

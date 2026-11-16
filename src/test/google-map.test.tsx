@@ -9,6 +9,8 @@ const fakes = vi.hoisted(() => ({
   panTo: vi.fn(),
   remove: vi.fn(),
   line: vi.fn(),
+  path: vi.fn(),
+  markerPosition: vi.fn(),
   mapOptions: vi.fn(),
   moveCamera: vi.fn(),
   rendering: "VECTOR",
@@ -34,7 +36,10 @@ beforeEach(() => {
       disconnect() {}
     },
   );
-  fakes.marker.mockImplementation(() => ({ remove: fakes.remove }));
+  fakes.marker.mockImplementation(() => ({
+    remove: fakes.remove,
+    setPosition: fakes.markerPosition,
+  }));
   fakes.load.mockResolvedValue({
     RenderingType: { VECTOR: "VECTOR", RASTER: "RASTER" },
     ColorScheme: { DARK: "DARK" },
@@ -65,6 +70,7 @@ beforeEach(() => {
         fakes.line(options);
       }
       setMap() {}
+      setPath = fakes.path;
     },
     event: { trigger() {}, clearInstanceListeners() {} },
   });
@@ -116,14 +122,10 @@ describe("carte Google et radars", () => {
       />,
     );
     await waitFor(() =>
-      expect(fakes.line).toHaveBeenCalledWith(
-        expect.objectContaining({
-          path: [
-            { lat: 48.57, lng: 7.75 },
-            { lat: 48.58, lng: 7.76 },
-          ],
-        }),
-      ),
+      expect(fakes.path).toHaveBeenCalledWith([
+        { lat: 48.57, lng: 7.75 },
+        { lat: 48.58, lng: 7.76 },
+      ]),
     );
   });
   it("active le rendu vectoriel et suit le cap en vue inclinée", async () => {
@@ -153,5 +155,22 @@ describe("carte Google et radars", () => {
         expect.objectContaining({ tilt: 0, heading: 0 }),
       ),
     );
+  });
+  it("conserve le curseur bleu entre deux positions GPS", async () => {
+    const view = render(
+      <MapView navigationMode userPosition={{ lat: 48.57, lng: 7.75, heading: 0 }} />,
+    );
+    await waitFor(() =>
+      expect(
+        fakes.marker.mock.calls.some((call) => call[3].className === "google-navigation-marker"),
+      ).toBe(true),
+    );
+    view.rerender(
+      <MapView navigationMode userPosition={{ lat: 48.5701, lng: 7.7501, heading: 10 }} />,
+    );
+    expect(
+      fakes.marker.mock.calls.filter((call) => call[3].className === "google-navigation-marker"),
+    ).toHaveLength(1);
+    expect(fakes.markerPosition).toHaveBeenCalled();
   });
 });
