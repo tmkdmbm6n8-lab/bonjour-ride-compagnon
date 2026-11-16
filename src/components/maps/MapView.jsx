@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Map as MLMap, Marker, LngLatBounds, AttributionControl, setWorkerUrl } from "maplibre-gl";
+import { Map as MLMap, Marker, LngLatBounds, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { policeCapSvg, frenchRadarSvg } from "@/components/icons/road-alert-icons";
@@ -127,8 +127,7 @@ export default function MapView({
       cooperativeGestures: false, // un seul doigt suffit pour parcourir la carte
     });
 
-    // Offer previews sit over the main map, which already displays the credits.
-    if (!compact) map.addControl(new AttributionControl({ compact: false }), "bottom-right");
+    // Credits are rendered in a separate footer outside the map canvas.
 
     const markUserMove = (e) => {
       if (e?.originalEvent) lastUserMoveRef.current = Date.now();
@@ -361,12 +360,19 @@ export default function MapView({
   }, [followPosition?.lat, followPosition?.lng, followPosition?.heading, navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div
-      ref={containerRef}
-      className={`modern-map ${className}`}
-      style={{ width: "100%", height: "100%", ...style }}
-      aria-label="Carte GPS"
-    />
+    <div className={`modern-map-frame ${className}`} style={{ width: "100%", height: "100%", ...style }}>
+      <div ref={containerRef} className="modern-map" style={{ width: "100%", flex: 1, minHeight: 0 }} aria-label="Carte GPS" />
+      {!compact && (
+        <details className="map-source-footer">
+          <summary>Sources</summary>
+          <span>
+          © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>
+          {" · "}<a href="https://openfreemap.org/" target="_blank" rel="noreferrer">OpenFreeMap</a>
+          {" · "}<a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a>
+          </span>
+        </details>
+      )}
+    </div>
   );
 }
 
