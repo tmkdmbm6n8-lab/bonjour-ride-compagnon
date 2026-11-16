@@ -103,10 +103,12 @@ export default function DriverHome({
           userPosition={position || localPosition || undefined}
           followPosition={online && position ? position : undefined}
           alerts={roadAlerts?.alerts}
+          showRoadAlerts
         />
       </div>
 
       {/* ── Bandeau supérieur ultra-fin ── */}
+      <div className="drv-cockpit-hud">
       <header className="drv-cockpit-island">
         <div className="drv-island-left">
           <KovaIcon size={24} />
@@ -186,6 +188,8 @@ export default function DriverHome({
                 : "0,00 €"}
           </strong>
         </div>
+      </div>
+
       </div>
 
       {/* ── Signalements police / radar (aussi sans course) ── */}

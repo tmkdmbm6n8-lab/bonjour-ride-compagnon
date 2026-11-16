@@ -4,11 +4,33 @@ import { cameraBounds, camerasFromOverpass, mergeCameraAlerts } from '@/lib/vtc-
 import { createCameraService } from '@/lib/vtc-speed-cameras.server';
 import { requireRadarReporter } from '@/lib/vtc-road-alerts.server';
 import { RoadAlertButtons } from '@/components/driver/RoadAlertControls';
+import { officialCameras, speedCameras as driverCameras, requireCameraReader } from '@/lib/vtc-driver-cameras.server';
 
 const bbox = [7.71, 48.51, 7.79, 48.59];
 const node = { type: 'node', id: 42, lat: 48.55, lon: 7.75, tags: { highway: 'speed_camera', maxspeed: '50' } };
 const answer = () => new Response(JSON.stringify({ elements: [node] }));
 afterEach(cleanup);
+
+describe('source officielle disponible sans Overpass et accès chauffeur', () => {
+  it('refuse les clients et autorise les chauffeurs côté serveur', () => {
+    expect(() => requireCameraReader('rider')).toThrow('chauffeur');
+    expect(() => requireCameraReader(undefined)).toThrow();
+    expect(() => requireCameraReader('driver')).not.toThrow();
+  });
+  it('contient des radars officiels près de Strasbourg sans appel réseau', async () => {
+    const network = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+    try {
+      const cameras = await driverCameras([7.5, 48.4, 8, 48.8]);
+      expect(cameras.source).toBe('official-fr');
+      expect(cameras.cameras.length).toBeGreaterThan(0);
+      expect(cameras.cameras.some(c => c.id === 'fr:12112')).toBe(true);
+      expect(network).not.toHaveBeenCalled();
+      const empty = officialCameras([7.731, 48.581, 7.732, 48.582]);
+      expect(empty.available).toBe(true);
+      expect(empty.cameras.every(c => c.lat >= 48.5 && c.lat <= 48.6 && c.lng >= 7.7 && c.lng <= 7.8)).toBe(true);
+    } finally { network.mockRestore(); }
+  });
+});
 
 describe('radars Overpass', () => {
   it('borne les requêtes et refuse les zones trop larges ou injectées', () => {

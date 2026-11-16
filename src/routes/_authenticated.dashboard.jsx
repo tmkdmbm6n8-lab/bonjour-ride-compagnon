@@ -515,10 +515,32 @@ function RiderDashboard() {
         {/* ── IDLE: booking form ── */}
         {phase === "idle" && !loadingActive && (
           <div className="card card-pad animate-in rider-booking-card">
-            <h2 style={{ fontSize: "1.25rem", marginBottom: 14 }}>
+            <div className="rider-booking-heading">
+            <h2 style={{ fontSize: "1.25rem", marginBottom: 0 }}>
               <span className="rider-mobile-heading">Où allez-vous ?</span>
               <span className="rider-desktop-heading">Commander une course</span>
             </h2>
+            {estimate && (
+              <button
+                type="button"
+                className="rider-close-estimate"
+                aria-label="Fermer les tarifs"
+                title="Fermer les tarifs"
+                disabled={booking}
+                onClick={() => {
+                  clearTimeout(blurTimerRef.current);
+                  document.activeElement?.blur?.();
+                  setSearchFocused(false);
+                  setDropoff(null);
+                  setDropoffText("");
+                  setEstimate(null);
+                  setEstimating(false);
+                }}
+              >
+                <X size={21} />
+              </button>
+            )}
+            </div>
 
 
             <div className="flex-col gap-3">

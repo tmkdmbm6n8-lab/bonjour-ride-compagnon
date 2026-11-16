@@ -4,7 +4,7 @@ import { Route } from '@/routes/_authenticated.dashboard';
 
 const state = vi.hoisted(() => ({
   ride: null as any, phase: 'idle', vv: null as any,
-  cancel: vi.fn(async () => {}), toast: vi.fn(),
+  cancel: vi.fn(async () => {}), book: vi.fn(async () => {}), toast: vi.fn(),
 }));
 vi.mock('@/components/RiderLayout', () => ({ default: ({ children }: any) => children }));
 vi.mock('@/components/ArchiveMap', () => ({ default: () => <div>Carte</div> }));
@@ -17,7 +17,7 @@ vi.mock('@/hooks/useVisualViewport', () => ({ default: () => state.vv }));
 vi.mock('@/lib/sounds', () => ({ playSound: vi.fn() }));
 vi.mock('@/lib/archive-navigation', () => ({ default: ({ href, children }: any) => <a href={href}>{children}</a> }));
 vi.mock('@/hooks/useRiderRide', () => ({ default: () => ({
-  phase: state.phase, ride: state.ride, loadingActive: false, cancel: state.cancel,
+  phase: state.phase, ride: state.ride, loadingActive: false, cancel: state.cancel, book: state.book,
 }) }));
 vi.mock('@/lib/archive-fetch', () => ({ apiFetch: vi.fn(async (url: string) => {
   const data = url.includes('/geo/search') ? { results: [{ name: 'Gare', address: 'Gare Strasbourg', lat: 48.58, lng: 7.73 }] }
@@ -28,7 +28,7 @@ vi.mock('@/lib/archive-fetch', () => ({ apiFetch: vi.fn(async (url: string) => {
 }) }));
 
 const Dashboard = Route.options.component as any;
-beforeEach(() => { state.phase = 'idle'; state.ride = null; state.vv = null; state.cancel.mockClear(); });
+beforeEach(() => { state.phase = 'idle'; state.ride = null; state.vv = null; state.cancel.mockClear(); state.book.mockClear(); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('réservation client', () => {
@@ -66,7 +66,7 @@ describe('réservation client', () => {
     await act(async () => {});
   });
 
-  it('propose les trois paiements après sélection des adresses', async () => {
+  it('propose les paiements et permet de quitter les tarifs sans réserver', async () => {
     render(<Dashboard />);
     for (const placeholder of ['Lieu de prise en charge', 'Quelle est votre destination ?']) {
       const input = screen.getByPlaceholderText(placeholder);
@@ -80,6 +80,13 @@ describe('réservation client', () => {
     expect(radios[0]).toHaveClass('rider-payment-option');
     fireEvent.click(screen.getByRole('radio', { name: /Carte/ }));
     expect(screen.getByRole('radio', { name: /Carte/ })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Fermer les tarifs' }));
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Fermer les tarifs' })).toBeNull();
+    expect(screen.getByPlaceholderText('Lieu de prise en charge')).toHaveValue('Gare Strasbourg');
+    expect(screen.getByPlaceholderText('Quelle est votre destination ?')).toHaveValue('');
+    expect(state.book).not.toHaveBeenCalled();
+    expect(state.cancel).not.toHaveBeenCalled();
   });
 
   it('rend l’annulation accessible avant la prise en charge et demande confirmation', async () => {

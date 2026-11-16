@@ -6801,3 +6801,58 @@ a.activity-pill:hover {
   line-height: 16px;
   background: rgba(21, 28, 36, 0.78);
 }
+
+.rider-booking-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.rider-close-estimate {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #fb718566;
+  border-radius: 12px;
+  background: #371d29;
+  color: #ff7388;
+  cursor: pointer;
+}
+.rider-close-estimate:hover { background: #522233; }
+.rider-close-estimate:focus-visible { outline: 3px solid #ff7388; outline-offset: 3px; }
+.rider-close-estimate:disabled { opacity: 0.5; cursor: wait; }
+
+/* Stack the revenue below the real header height, keeping both fixed. */
+.drv-cockpit-hud {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: calc(var(--sidebar-w) + 16px);
+  right: 16px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: none;
+}
+.drv-cockpit-hud .drv-cockpit-island {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  pointer-events: auto;
+}
+.drv-cockpit-hud .drv-floating-earnings {
+  position: relative;
+  inset: auto;
+  flex-shrink: 0;
+  pointer-events: auto;
+}
+@media (max-width: 900px) {
+  .drv-cockpit-hud {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+  }
+}

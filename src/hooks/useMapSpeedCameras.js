@@ -20,7 +20,7 @@ export default function useMapSpeedCameras(mapRef, enabled = true) {
         const requestId = ++generation;
         lastKey = key; lastAt = Date.now();
         try {
-          const res = await apiFetch(`/api/maps/speed-cameras?bbox=${encodeURIComponent(key)}`);
+          const res = await apiFetch(`/api/maps/speed-cameras?bbox=${encodeURIComponent(bbox.join(','))}`);
           const data = await res.json();
           if (!stopped && requestId === generation && res.ok && Array.isArray(data.cameras)) {
             setCameras(data.cameras);

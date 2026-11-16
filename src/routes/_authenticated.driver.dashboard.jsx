@@ -411,6 +411,7 @@ function DriverDashboard() {
               followPosition={position || undefined}
               navigationMode={true}
               alerts={roadAlerts.alerts}
+              showRoadAlerts
             />
           </div>
 

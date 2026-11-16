@@ -4,7 +4,7 @@ import { parisDay, validDay } from "./vtc-dates";
 import { inboxForDriver, sendSupportMessage } from "./vtc-support.server";
 import { buildWaybill, sanitizeOperator } from "./vtc-waybill";
 import { geoSearch } from "./vtc-geocoding.server";
-import { speedCameras } from "./vtc-speed-cameras.server";
+import { speedCameras, requireCameraReader } from "./vtc-driver-cameras.server";
 import { mergeCameraAlerts } from "./vtc-speed-cameras";
 import { requireRadarReporter } from "./vtc-road-alerts.server";
 import {
@@ -401,7 +401,10 @@ export async function handleVtc(input, context) {
     return { user: { ...profileShape(fresh, context.claims.email), role } };
   }
   if (p === "/api/geo/search") return geoSearch(q);
-  if (p === "/api/maps/speed-cameras" && method === "GET") return speedCameras(q.get("bbox"));
+  if (p === "/api/maps/speed-cameras" && method === "GET") {
+    requireCameraReader(role);
+    return speedCameras(q.get("bbox"));
+  }
   if (p === "/api/rides/estimate") return estimates(admin, body.pickup, body.dropoff);
   if (p === "/api/drivers/me/discover" && method === "GET") return discoverBoard(q.get("day") || parisDay());
   if (p === "/api/drivers/me/inbox" && method === "GET")

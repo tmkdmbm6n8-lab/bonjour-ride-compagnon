@@ -58,3 +58,5 @@ use the editor.
 - The basemap uses OpenFreeMap vector tiles with a local style in public/map-dark.json. The modern-map class disables legacy canvas inversion; route colors in MapView.jsx are direct gold colors. Keep map attribution visible.
 
 - Manual radar reports require drivers.is_priority, verified by requireRadarReporter before any insert or merge. OSM highway=speed_camera nodes are read through vtc-speed-cameras.server.js (bounded Overpass queries, six-hour cache); they are rendered without database writes and merged into nearby driver alerts for beeps.
+
+- Camera visibility is driver-only: showRoadAlerts is opt-in on driver maps and /api/maps/speed-cameras verifies the authenticated driver role. The bundled official French fixed-camera snapshot (src/data/speed-cameras-fr.json, Licence Ouverte 2.0, published 2025-12-30) is server-only and primary in France; Overpass is the fallback elsewhere. Refresh with scripts/refresh-speed-cameras.mjs.

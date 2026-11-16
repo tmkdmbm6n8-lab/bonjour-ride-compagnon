@@ -87,6 +87,7 @@ export default function MapView({
   fitTo,
   fitKey,
   compact = false,
+  showRoadAlerts = false,
   followPosition,
   navigationMode = false,
   alerts = [],
@@ -259,7 +260,7 @@ export default function MapView({
     }
   }, [drivers]);
 
-  const osmCameras = useMapSpeedCameras(mapRef, !compact);
+  const osmCameras = useMapSpeedCameras(mapRef, showRoadAlerts && !compact);
 
   // Signalements communautaires et radars OpenStreetMap.
   useEffect(() => {
@@ -267,7 +268,7 @@ export default function MapView({
     if (!map) return;
     const dots = alertDotsRef.current;
     const seen = new Set();
-    for (const a of mergeCameraAlerts(alerts || [], osmCameras)) {
+    for (const a of showRoadAlerts ? mergeCameraAlerts(alerts || [], osmCameras) : []) {
       if (!Number.isFinite(a?.lat) || !Number.isFinite(a?.lng)) continue;
       const key = `${a.id}:${a.kind}:${a.permanent ? 1 : 0}`;
       seen.add(key);
@@ -279,7 +280,7 @@ export default function MapView({
         `marker-road-alert is-${a.kind}${a.permanent ? " is-permanent" : ""}`,
         a.kind === "police" ? POLICE_SVG : RADAR_SVG,
       );
-      node.title = a.source === "osm" ? `Radar OpenStreetMap${a.maxspeed ? ` · ${a.maxspeed}` : ''}` : a.kind === "police" ? "Contrôle de police signalé" : "Radar fixe";
+      node.title = a.source === "official-fr" ? `Radar · Sécurité routière${a.maxspeed ? ` · ${a.maxspeed} km/h` : ''}` : a.source === "osm" ? `Radar OpenStreetMap${a.maxspeed ? ` · ${a.maxspeed}` : ''}` : a.kind === "police" ? "Contrôle de police signalé" : "Radar fixe";
       dots.set(key, new Marker({ element: node }).setLngLat([a.lng, a.lat]).addTo(map));
     }
     for (const [key, marker] of dots) {
@@ -288,7 +289,7 @@ export default function MapView({
         dots.delete(key);
       }
     }
-  }, [alerts, osmCameras]);
+  }, [alerts, osmCameras, showRoadAlerts]);
 
   // Tracé d'itinéraire
   useEffect(() => {
