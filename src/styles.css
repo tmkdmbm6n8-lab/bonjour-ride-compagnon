@@ -6386,3 +6386,7 @@ a.activity-pill:hover {
   z-index: 2;
   transition: transform 0.25s cubic-bezier(0.2, 0, 0.38, 0.9);
 }
+/* Rendu sombre automatique de la carte OpenStreetMap sans clé API */
+.shell-dark .maplibregl-canvas {
+  filter: invert(92%) hue-rotate(180deg) brightness(85%) contrast(90%);
+}
