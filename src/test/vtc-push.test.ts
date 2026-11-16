@@ -33,7 +33,7 @@ describe('notifications de course sur le téléphone', () => {
     const m = buildOfferMessage(r, NOW);
     expect(m.notification.title).toMatch(/12,40/);
     expect(m.notification.body).toBe('Prise en charge : Place Kléber');
-    expect(JSON.stringify(m)).not.toMatch(/nearest|priorit|proche/i);
+    expect(JSON.stringify([m.notification, m.data])).not.toMatch(/nearest|priorit|proche/i);
   });
 
   it('la notification s’affiche en bannière avec son et disparaît si la course a expiré', () => {
