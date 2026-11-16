@@ -36,6 +36,7 @@ export function buildOfferMessage(ride, now = Date.now()) {
       collapse_key: "ride_offer",
       notification: {
         channel_id: OFFER_CHANNEL_ID,
+        icon: "ic_stat_strasdrive",
         tag: `ride_${ride?.id || "offer"}`,
         default_sound: true,
         default_vibrate_timings: true,
