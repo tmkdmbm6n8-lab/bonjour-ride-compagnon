@@ -138,7 +138,6 @@ export default function MapView({
     map.on("dragstart", markUserMove);
     map.on("zoomstart", markUserMove);
 
-    map.addControl(new NavigationControl({ showCompass: true }), "bottom-right");
 
     const applyRoute = () => {
       readyRef.current = drawRoute(map, routeGeomRef.current);
