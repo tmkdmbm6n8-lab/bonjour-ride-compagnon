@@ -760,29 +760,64 @@ function DriverDashboard() {
         </button>
       </Modal>
 
-      {/* ── Cancel trip ── */}
-      <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Annuler cette course ?">
-        <p className="small muted mb-4">
-          {" "}
-          Un autre chauffeur sera attribué au passager. Des annulations fréquentes réduisent votre priorité
-          d’attribution.{" "}
+      {/* ── Modale d'annulation avec motifs et notification passager ── */}
+      <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Motif de l'annulation">
+        <p className="small muted mb-3">
+          Sélectionnez la raison de l'annulation. Le passager recevra cette information directement.
         </p>
-        <div className="flex-col gap-2">
+
+        {[
+          "Passager introuvable au point de rendez-vous",
+          "Problème ou panne mécanique du véhicule",
+          "Raison de sécurité",
+          "Adresse inaccessible ou erronée",
+          "Autre",
+        ].map((m) => (
+          <button
+            key={m}
+            type="button"
+            className={`drv-cancel-choice ${cancelReason === m ? "is-selected" : ""}`}
+            onClick={() => setCancelReason(m)}
+          >
+            {m}
+          </button>
+        ))}
+
+        {cancelReason === "Autre" && (
+          <textarea
+            className="input mb-3"
+            rows={2}
+            placeholder="Précisez la raison pour le passager..."
+            value={customReason}
+            onChange={(e) => setCustomReason(e.target.value)}
+          />
+        )}
+
+        <div className="flex-col gap-2 mt-2">
           <button
             className="btn btn-danger btn-full"
-            disabled={actionBusy}
+            disabled={actionBusy || !cancelReason || (cancelReason === "Autre" && !customReason.trim())}
             onClick={() =>
               run(async () => {
-                await cancelTrip("Le chauffeur a annulé");
+                const finalReason = cancelReason === "Autre" ? customReason.trim() : cancelReason;
+                await cancelTrip(finalReason);
                 setCancelOpen(false);
+                setCancelReason("");
+                setCustomReason("");
               }, "Course annulée")
             }
           >
-            {actionBusy ? <span className="spinner" /> : "Oui, annuler la course"}
+            {actionBusy ? <span className="spinner" /> : "Confirmer l'annulation"}
           </button>
-          <button className="btn btn-ghost btn-full" onClick={() => setCancelOpen(false)}>
-            {" "}
-            Conserver la course{" "}
+          <button
+            className="btn btn-ghost btn-full"
+            onClick={() => {
+              setCancelOpen(false);
+              setCancelReason("");
+              setCustomReason("");
+            }}
+          >
+            Conserver la course
           </button>
         </div>
       </Modal>
