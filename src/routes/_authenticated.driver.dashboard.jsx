@@ -290,6 +290,10 @@ function DriverDashboard() {
   // Live navigation readout — traffic-aware time from the server (Google Routes),
   // with a rough on-device estimate until the first answer arrives.
   const liveRoute = useLiveRoute(ride?.id, ride?.status);
+  const driverRoute = useMemo(() =>
+    drawableRoute(liveRoute?.status === ride?.status ? liveRoute?.geometry : null, liveRoute?.source) ||
+    (ride?.status === "in_progress" ? drawableRoute(ride.route?.geometry, ride.route?.source) : undefined),
+  [liveRoute, ride?.status, ride?.route]);
   const liveLeg = useMemo(() => {
     if (!ride || (ride.status !== "accepted" && ride.status !== "in_progress")) return null;
     const label = ride.status === "in_progress" ? "jusqu’à destination" : "jusqu’au point de prise en charge";
@@ -403,10 +407,7 @@ function DriverDashboard() {
               dropoff={
                 ride && ride.status === "in_progress" ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng } : undefined
               }
-              routeGeometry={
-                drawableRoute(liveRoute?.geometry) ||
-                (ride?.status === "in_progress" ? drawableRoute(ride.route?.geometry) : undefined)
-              }
+              routeGeometry={driverRoute}
               fit={false}
               followPosition={position || undefined}
               navigationMode={true}
@@ -496,6 +497,13 @@ function DriverDashboard() {
             </div>
 
             {/* Adresses principales */}
+            {navigating && (
+              <p className="text-sm text-muted mb-3" role="status">
+                {!position ? "En attente de votre position GPS…" :
+                  !driverRoute ? (liveRoute?.approximate ? "Itinéraire indisponible, nouvelle tentative en cours…" : "Chargement du tracé…") :
+                  liveLeg ? `${formatDistance(liveLeg.meters)} · ${formatDuration(liveLeg.seconds)} ${liveLeg.label}` : "Itinéraire chargé"}
+              </p>
+            )}
             <div className="mb-3">
               <div className="flex gap-2 items-center text-sm">
                 <Circle size={10} className="text-gold flex-shrink-0" />

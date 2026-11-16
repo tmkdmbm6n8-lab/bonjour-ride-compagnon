@@ -8,6 +8,7 @@ import { policeCapSvg, frenchRadarSvg } from "@/components/icons/road-alert-icon
 import useMapSpeedCameras from "@/hooks/useMapSpeedCameras";
 import { mergeCameraAlerts } from "@/lib/vtc-speed-cameras";
 import { remainingRoute } from "@/lib/utils/route-display";
+import { drawRoute } from "@/lib/map-route";
 
 setWorkerUrl(maplibreWorkerUrl);
 
@@ -143,7 +144,8 @@ export default function MapView({
     };
 
     map.on("load", applyRoute);
-    map.on("styledata", applyRoute);
+    map.on("style.load", applyRoute);
+    map.on("idle", applyRoute);
     map.on("click", (e) => onClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
 
     const ro = new ResizeObserver(() => map.resize());
@@ -397,53 +399,3 @@ function fitPadding(map) {
   return pad;
 }
 
-function drawRoute(map, geometry) {
-  const data = {
-    type: "FeatureCollection",
-    features: geometry?.length >= 2 ? [{
-      type: "Feature",
-      properties: {},
-      geometry: { type: "LineString", coordinates: geometry },
-    }] : [],
-  };
-
-  try {
-    const existing = map.getSource("route");
-    if (existing) {
-      existing.setData(data);
-      return true;
-    }
-  } catch {}
-
-  let styleReady = false;
-  try {
-    styleReady = map.isStyleLoaded();
-  } catch {
-    styleReady = false;
-  }
-  if (!styleReady) return false;
-
-  try {
-    map.addSource("route", { type: "geojson", data });
-    // Route colors are rendered directly; no canvas inversion.
-    const layers = [
-      { id: "route-halo", paint: { "line-color": "#f4c96b", "line-width": 20, "line-opacity": 0.35, "line-blur": 6 } },
-      { id: "route-casing", paint: { "line-color": "#111923", "line-width": 13, "line-opacity": 1 } },
-      { id: "route-line", paint: { "line-color": "#e9b95c", "line-width": 7 } },
-      { id: "route-core", paint: { "line-color": "#ffe4a0", "line-width": 2 } },
-    ];
-    for (const l of layers) {
-      if (map.getLayer(l.id)) continue;
-      map.addLayer({
-        id: l.id,
-        type: "line",
-        source: "route",
-        layout: { "line-join": "round", "line-cap": "round" },
-        paint: l.paint,
-      });
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}

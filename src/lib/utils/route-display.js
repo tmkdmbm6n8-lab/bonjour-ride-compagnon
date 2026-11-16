@@ -1,8 +1,11 @@
 // Display helpers shared by rider and driver ride screens.
 
-/** Only real road geometry is drawn: an approximate route (null) or a bare 2-point segment is never shown as a line. */
-export function drawableRoute(geometry) {
-  return Array.isArray(geometry) && geometry.length > 2 ? geometry : undefined;
+/** Two-point geometry is allowed only when it comes from a real road routing service. */
+export function drawableRoute(geometry, source) {
+  const road = source === 'google' || source === 'osrm';
+  return Array.isArray(geometry) && geometry.length >= (road ? 2 : 3) &&
+    geometry.every((point) => Array.isArray(point) && point.length >= 2 && Number.isFinite(point[0]) && Number.isFinite(point[1]))
+    ? geometry : undefined;
 }
 
 /** Project GPS onto the road and keep only the remaining portion. Ignore off-road fixes. */
