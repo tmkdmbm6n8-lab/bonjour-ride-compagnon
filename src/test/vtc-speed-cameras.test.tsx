@@ -23,7 +23,7 @@ describe('source officielle disponible sans Overpass et accès chauffeur', () =>
       const cameras = await driverCameras([7.5, 48.4, 8, 48.8]);
       expect(cameras.source).toBe('official-fr');
       expect(cameras.cameras.length).toBeGreaterThan(0);
-      expect(cameras.cameras.some(c => c.id === 'fr:12112')).toBe(true);
+      expect(cameras.cameras.some((c: any) => c.id === 'fr:12112')).toBe(true);
       expect(network).not.toHaveBeenCalled();
       const empty = officialCameras([7.731, 48.581, 7.732, 48.582]);
       expect(empty.available).toBe(true);
