@@ -888,7 +888,6 @@ export async function handleVtc(input, context) {
         throw new Error("Annulation impossible");
 
       // ── A. Le CHAUFFEUR annule (remise en recherche + mémorisation du motif) ──
-          // ── A. Le CHAUFFEUR annule (remise en recherche de chauffeur) ──
       if (r.driver_id === uid) {
         required(
           await admin
@@ -935,18 +934,9 @@ export async function handleVtc(input, context) {
         required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
       }
 
-          !progress.canCancelFree
-        ) {
-          required(await admin.rpc("wallet_entry", { _user: uid, _amount: -3, _type: "cancellation_fee", _ride: id }));
-          if (r.driver_id)
-            required(
-              await admin.rpc("wallet_entry", { _user: r.driver_id, _amount: 2.76, _type: "ride_earning", _ride: id }),
-            );
-          patch.fare = { ...r.fare, cancellationFee: 3 };
-        }
-        required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
-      }
-
+    } else if (action === "messages") {
+      if (!participant) throw new Error("Accès refusé");
+      if (method === "GET") return { messages: r.messages };
       if (
         !["accepted", "arrived", "in_progress"].includes(r.status) ||
         typeof body.text !== "string" ||
