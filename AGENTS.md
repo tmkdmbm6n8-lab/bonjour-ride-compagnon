@@ -32,7 +32,7 @@ use the editor.
 - Preserve imported UI modules and their CSS while adapting framework boundaries to TanStack file routes; this avoids replacing the source experience.
 - Keep a non-executed source archive under `original-source/` for capabilities requiring incompatible runtimes; track every remaining port in the migration ledger.
 
-- Map tiles (OpenStreetMap via MapLibre) and address search (Photon) stay keyless; routing and trip times use Google Routes (traffic-aware) through the managed Google Maps connector on the server, OSRM only as fallback, then an approximate estimate with no drawn line — all in `src/lib/vtc-routing.js`; the user never supplies a key.
+- Map tiles (OpenStreetMap via MapLibre) and address search (Photon, falling back to the French Géoplateforme in `vtc-geocoding.server.js`, always via the public server function so it never depends on the session) stay keyless; routing and trip times use Google Routes (traffic-aware) through the managed Google Maps connector on the server, OSRM only as fallback, then an approximate estimate with no drawn line — all in `src/lib/vtc-routing.js`; the user never supplies a key.
 - The live leg (driver → pickup/destination) is computed server-side from `drivers.location` and cached in `rides.live_route` for 45 s, shared by rider and driver; keeps billed routing calls to about one per minute per active ride.
 
 - Any fare discount is a single rate constant in `src/lib/vtc-pricing.js` applied inside `calculateFare`; quotes and server-side booking charges share it, so setting it to 0 removes the discount everywhere.
