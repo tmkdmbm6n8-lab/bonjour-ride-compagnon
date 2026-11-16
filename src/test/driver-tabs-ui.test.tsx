@@ -121,7 +121,7 @@ describe("onglets chauffeur", () => {
     render(<Component />);
     fireEvent.click(screen.getByRole("button", { name: /Mon versement/ }));
     expect(screen.getByRole("dialog", { name: "Mon versement" })).toBeTruthy();
-    expect(screen.getByText("Administration StrasDrive")).toBeTruthy();
+    expect(screen.getByText("StrasDrive Régulation")).toBeTruthy();
   });
   it("présente toutes les sections du menu dans la même page", () => {
     fixtures.data["/api/users/me"] = {
