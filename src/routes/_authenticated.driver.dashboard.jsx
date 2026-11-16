@@ -24,10 +24,6 @@ import {
   Hand,
   ChevronUp,
   ChevronDown,
-  Siren,
-  Radar,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import useRoadAlerts from "@/hooks/useRoadAlerts";
 import useGeolocation from "@/hooks/useGeolocation";
