@@ -5,10 +5,14 @@ import PlaceSearch from "@/components/maps/PlaceSearch";
 import { VEHICLE_LABELS, money } from "@/components/ui/bits";
 import { homeEstimate } from "@/lib/vtc.functions";
 import { formatDuration } from "@/lib/utils/geo";
+import { readRideDraft, saveRideDraft } from "@/lib/ride-draft";
+import { useSession } from "@/lib/archive-auth";
 
 const ICONS = { economy: Car, comfort: Car, pet: PawPrint, xl: Users };
 
 export default function HomeRideEstimator() {
+  const { data: session } = useSession();
+  const [draftReady, setDraftReady] = useState(false);
   const [pickup, setPickup] = useState(null);
   const [dropoff, setDropoff] = useState(null);
   const [pickupText, setPickupText] = useState("");
@@ -16,6 +20,21 @@ export default function HomeRideEstimator() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const draft = readRideDraft();
+    if (draft) {
+      setPickup(draft.pickup);
+      setDropoff(draft.dropoff);
+      setPickupText(draft.pickupText);
+      setDropoffText(draft.dropoffText);
+    }
+    setDraftReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (draftReady) saveRideDraft({ pickup, dropoff, pickupText, dropoffText });
+  }, [draftReady, pickup, dropoff, pickupText, dropoffText]);
 
   useEffect(() => {
     if (!pickup || !dropoff) {
@@ -136,7 +155,7 @@ export default function HomeRideEstimator() {
               </div>
             ))}
           </div>
-          <Link href="/signup" className="btn btn-primary btn-lg mt-4" style={{ width: "100%" }}>
+          <Link href={session?.user?.role === 'rider' ? '/dashboard' : '/signup'} className="btn btn-primary btn-lg mt-4" style={{ width: "100%" }}>
             Réserver cette course <ArrowRight size={18} />
           </Link>
         </>

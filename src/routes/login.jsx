@@ -4,13 +4,15 @@ import {createFileRoute} from '@tanstack/react-router';
 
 import { useState, Suspense } from 'react';
 import Link from '@/lib/archive-navigation';
-import { useSearchParams } from '@/lib/archive-navigation';
-import { signIn } from '@/lib/archive-auth';
+import { useSearchParams, useRouter } from '@/lib/archive-navigation';
+import { signIn, useSession } from '@/lib/archive-auth';
 import { User, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { KovaLogo } from '@/components/brand/KovaLogo';
 import LegalFooter from '@/components/shell/LegalFooter';
 
 function LoginForm() {
+  const router = useRouter();
+  const { update } = useSession();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -40,14 +42,15 @@ function LoginForm() {
       return;
     }
 
-    // Full navigation so the proxy routes by role (rider/driver/admin)
+    // Keep the temporary ride in memory while navigating to the user's space.
     const callbackUrl = searchParams.get('callbackUrl');
     const me = await fetch('/api/users/me'); const account = await me.json();
-    window.location.href = callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : account.user?.role === 'driver' ? '/driver/dashboard' : account.user?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    await update();
+    await router.push(callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : account.user?.role === 'driver' ? '/driver/dashboard' : account.user?.role === 'admin' ? '/admin/dashboard' : '/dashboard');
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page brand-theme">
       <div className="auth-card animate-in">
         <div className="flex justify-center mb-6">
           <Link href="/" aria-label="Accueil StrasDrive">

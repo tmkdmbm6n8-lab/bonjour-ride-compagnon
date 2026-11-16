@@ -58,7 +58,7 @@ const STEPS = [
 
 function LandingPage() {
   return (
-    <div style={{ background: 'var(--bg)' }}>
+    <div className="landing-page brand-theme">
       <SiteHeader />
 
       {/* ── Hero ── */}
@@ -135,7 +135,7 @@ function LandingPage() {
         <h2 style={{ fontSize: '2rem', marginTop: 10 }}>Trois gestes pour aller partout</h2>
         <div className="grid-3 mt-8">
           {STEPS.map((s) => ( <div key={s.n}>
-              <span style={{ fontSize: '2.4rem', fontWeight: 800, color: 'var(--ink-200)', letterSpacing: '-0.03em' }}>
+              <span style={{ fontSize: '2.4rem', fontWeight: 800, color: 'var(--gold-500)', letterSpacing: '-0.03em' }}>
                 {s.n}
               </span>
               <h3 style={{ fontSize: '1.05rem', marginTop: 8 }}>{s.title}</h3>

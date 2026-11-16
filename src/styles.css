@@ -6871,6 +6871,64 @@ a.activity-pill:hover {
 .rider-close-estimate:focus-visible { outline: 3px solid #ff7388; outline-offset: 3px; }
 .rider-close-estimate:disabled { opacity: 0.5; cursor: wait; }
 
+/* Public pages share the application's dark surfaces and gold actions. */
+.brand-theme {
+  --bg: #08090c;
+  --surface: #0f1118;
+  --surface-2: #141722;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #f1f5f9;
+  --text-2: #94a3b8;
+  --text-3: #94a3b8;
+  --gold-600: #eab308;
+  --gold-700: #facc15;
+  --gold-50: rgba(234, 179, 8, 0.08);
+  --gold-100: rgba(234, 179, 8, 0.15);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+}
+.brand-theme .btn-primary,
+.brand-theme .btn-gold {
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+  color: #0b0c10;
+  border-radius: 9999px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(212, 160, 23, 0.22);
+}
+.brand-theme .btn-primary:hover:not(:disabled),
+.brand-theme .btn-gold:hover:not(:disabled) { background: #facc15; }
+.brand-theme .btn-secondary:hover:not(:disabled),
+.brand-theme .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.brand-theme .input,
+.brand-theme .vehicle-row { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+.brand-theme .input:focus { border-color: var(--gold-500); }
+.brand-theme [role="option"] { border-bottom-color: var(--border) !important; }
+.brand-theme [role="option"][aria-selected="true"] { background: var(--surface-2) !important; }
+.brand-theme .sd-brand-text { color: var(--text); }
+.brand-theme.auth-page { background: radial-gradient(ellipse at top, var(--gold-50), transparent 55%), var(--bg); }
+.brand-theme .auth-card { background: var(--surface); border-color: var(--border); }
+.brand-theme .auth-card button[aria-pressed="true"] { background: var(--gold-50) !important; border-color: var(--gold-500) !important; }
+.brand-theme input[type="checkbox"] { accent-color: var(--gold-500) !important; }
+.signup-confirmation { text-align: center; }
+.signup-confirmation h1 { font-size: 1.5rem; }
+.signup-confirmation p { line-height: 1.7; }
+.confirmation-email { color: var(--text); overflow-wrap: anywhere; }
+.confirmation-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 28px auto 20px;
+  border-radius: 50%;
+  background: var(--gold-100);
+  color: var(--gold-500);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
 /* Stack the revenue below the real header height, keeping both fixed. */
 .drv-cockpit-hud {
   position: fixed;

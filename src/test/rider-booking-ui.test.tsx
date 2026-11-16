@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Route } from '@/routes/_authenticated.dashboard';
+import { readRideDraft, saveRideDraft, clearRideDraft } from '@/lib/ride-draft';
 
 const state = vi.hoisted(() => ({
   ride: null as any, phase: 'idle', vv: null as any,
@@ -29,9 +30,24 @@ vi.mock('@/lib/archive-fetch', () => ({ apiFetch: vi.fn(async (url: string) => {
 
 const Dashboard = Route.options.component as any;
 beforeEach(() => { state.phase = 'idle'; state.ride = null; state.vv = null; state.cancel.mockClear(); state.book.mockClear(); });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); clearRideDraft(); vi.restoreAllMocks(); });
 
 describe('réservation client', () => {
+  it('reprend le trajet de l’accueil et calcule les tarifs sans commander automatiquement', async () => {
+    saveRideDraft({
+      pickup: { address: 'Gare Strasbourg', lat: 48.58, lng: 7.73 },
+      dropoff: { address: 'Place Kléber', lat: 48.583, lng: 7.746 },
+      pickupText: 'Gare Strasbourg', dropoffText: 'Place Kléber',
+    });
+    render(<Dashboard />);
+    expect(screen.getByPlaceholderText('Lieu de prise en charge')).toHaveValue('Gare Strasbourg');
+    expect(screen.getByPlaceholderText('Quelle est votre destination ?')).toHaveValue('Place Kléber');
+    expect(await screen.findByRole('button', { name: 'Fermer les tarifs' })).toBeInTheDocument();
+    expect(screen.getAllByText(/12,00/).length).toBeGreaterThan(0);
+    expect(state.book).not.toHaveBeenCalled();
+    expect(readRideDraft()).toBeNull();
+  });
+
   it('affiche la position GPS au chargement sans remplacer le départ saisi', async () => {
     let success: any;
     const locate = vi.fn(callback => { success = callback; });

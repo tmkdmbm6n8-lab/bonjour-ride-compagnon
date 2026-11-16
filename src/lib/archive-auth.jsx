@@ -1,6 +1,7 @@
 import {createContext,useContext,useEffect,useState,useCallback} from 'react';
 import {supabase} from '@/integrations/supabase/client';
 import {apiFetch} from './archive-fetch';
+import {clearRideDraft} from './ride-draft';
 const AuthContext=createContext({data:null,status:'loading',update:async()=>{}});
 export function SessionProvider({children}) {
  const [data,setData]=useState(null),[status,setStatus]=useState('loading');
@@ -10,4 +11,4 @@ export function SessionProvider({children}) {
 }
 export function useSession(){return useContext(AuthContext);}
 export async function signIn(_,options){const {error}=await supabase.auth.signInWithPassword({email:options.username,password:options.password});return error?{error:'Adresse e-mail ou mot de passe incorrect',status:400}:{ok:true};}
-export async function signOut({callbackUrl='/'}){await import('./native-push').then(m=>m.unregisterDriverPush()).catch(()=>{});await supabase.auth.signOut({scope:'local'});window.location.href=callbackUrl;}
+export async function signOut({callbackUrl='/'}){clearRideDraft();await import('./native-push').then(m=>m.unregisterDriverPush()).catch(()=>{});await supabase.auth.signOut({scope:'local'});window.location.href=callbackUrl;}

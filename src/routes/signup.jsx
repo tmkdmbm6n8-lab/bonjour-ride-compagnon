@@ -2,16 +2,18 @@ import {createFileRoute} from '@tanstack/react-router';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import Link from '@/lib/archive-navigation';
-import { useSearchParams } from '@/lib/archive-navigation';
-import { signIn } from '@/lib/archive-auth';
-import { User, AtSign, Lock, ArrowRight, Car, Navigation } from 'lucide-react';
+import { useSearchParams, useRouter } from '@/lib/archive-navigation';
+import { signIn, useSession } from '@/lib/archive-auth';
+import { User, AtSign, Lock, ArrowRight, Car, Navigation, MailCheck, ExternalLink } from 'lucide-react';
 import { KovaLogo } from '@/components/brand/KovaLogo';
 import LegalFooter from '@/components/shell/LegalFooter';
 import { REQUIRED_DOCUMENTS } from '@/lib/vtc-documents';
 
 function SignupForm() {
+  const router = useRouter();
+  const { update } = useSession();
   const searchParams = useSearchParams();
   const [form, setForm] = useState({
     name: '',
@@ -22,6 +24,11 @@ function SignupForm() {
     role: searchParams.get('role') === 'driver' ? 'driver' : 'rider',
     acceptTerms: false,
   });
+  const [confirmationEmail, setConfirmationEmail] = useState('');
+  const confirmationTitle = useRef(null);
+  useEffect(() => {
+    if (confirmationEmail) confirmationTitle.current?.focus();
+  }, [confirmationEmail]);
   const [error, setError] = useState('');
   const [fieldError, setFieldError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -67,7 +74,12 @@ function SignupForm() {
         return;
       }
 
-      if (data.needsConfirmation) { setError('Consultez votre e-mail pour confirmer votre compte, puis connectez-vous.'); setLoading(false); return; }
+      if (data.needsConfirmation) {
+        setConfirmationEmail(form.email.trim());
+        setForm((current) => ({ ...current, password: '', confirmPassword: '' }));
+        setLoading(false);
+        return;
+      }
       // Sign in once confirmed
       const login = await signIn('credentials', {
         username: form.email.trim(),
@@ -76,14 +88,51 @@ function SignupForm() {
       });
 
       if (login?.error) {
-        window.location.href = '/login';
+        await router.push('/login');
         return;
       }
-      window.location.href = form.role === 'driver' ? '/driver/dashboard' : '/dashboard';
+      await update();
+      await router.push(form.role === 'driver' ? '/driver/dashboard' : '/dashboard');
     } catch {
       setError('Une erreur est survenue — veuillez réessayer');
       setLoading(false);
     }
+  }
+
+  if (confirmationEmail) {
+    const domain = confirmationEmail.split('@')[1]?.toLowerCase();
+    const mailbox = {
+      'gmail.com': 'https://mail.google.com/',
+      'googlemail.com': 'https://mail.google.com/',
+      'outlook.com': 'https://outlook.live.com/mail/',
+      'outlook.fr': 'https://outlook.live.com/mail/',
+      'hotmail.com': 'https://outlook.live.com/mail/',
+      'hotmail.fr': 'https://outlook.live.com/mail/',
+      'live.com': 'https://outlook.live.com/mail/',
+      'live.fr': 'https://outlook.live.com/mail/',
+      'yahoo.com': 'https://mail.yahoo.com/',
+      'yahoo.fr': 'https://mail.yahoo.com/',
+      'icloud.com': 'https://www.icloud.com/mail',
+      'me.com': 'https://www.icloud.com/mail',
+      'orange.fr': 'https://mail.orange.fr/',
+      'wanadoo.fr': 'https://mail.orange.fr/',
+    }[domain];
+    return (
+      <div className="auth-page brand-theme">
+        <div className="auth-card animate-in signup-confirmation">
+          <Link href="/" aria-label="Accueil StrasDrive"><KovaLogo size={38} /></Link>
+          <div className="confirmation-icon"><MailCheck size={32} aria-hidden="true" /></div>
+          <p className="eyebrow" role="status">Inscription réussie</p>
+          <h1 ref={confirmationTitle} tabIndex={-1} className="mt-3">Vérifiez votre adresse email</h1>
+          <p className="muted small mt-4">Un lien de confirmation a été envoyé à <strong className="confirmation-email">{confirmationEmail}</strong>.</p>
+          <p className="muted small mt-3">Ouvrez cet email et cliquez sur le lien pour activer votre compte. Vous pourrez ensuite vous connecter et commencer à utiliser StrasDrive.</p>
+          {mailbox && <a href={mailbox} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-lg btn-full mt-6">Ouvrir ma messagerie <ExternalLink size={18} /></a>}
+          <Link href="/login" className={`btn ${mailbox ? 'btn-secondary' : 'btn-primary'} btn-lg btn-full mt-3`}>Se connecter après confirmation <ArrowRight size={18} /></Link>
+          <p className="tiny muted mt-6">Vous ne trouvez pas l’email ? Vérifiez les courriers indésirables et assurez-vous de consulter la boîte correspondant à l’adresse ci-dessus.</p>
+          <LegalFooter className="mt-6" />
+        </div>
+      </div>
+    );
   }
 
   const roleCard = (role, Icon, title, sub) => ( <button
@@ -109,7 +158,7 @@ function SignupForm() {
   );
 
   return (
-    <div className="auth-page">
+    <div className="auth-page brand-theme">
       <div className="auth-card animate-in">
         <div className="flex justify-center mb-6">
           <Link href="/" aria-label="Accueil StrasDrive">

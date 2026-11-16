@@ -14,7 +14,7 @@ export default function SiteHeader() {
         position: "sticky",
         top: 0,
         zIndex: 30,
-        background: "rgba(250, 250, 249, 0.85)",
+        background: "color-mix(in srgb, var(--bg) 90%, transparent)",
         backdropFilter: "blur(12px)",
         borderBottom: "1px solid var(--border)",
       }}

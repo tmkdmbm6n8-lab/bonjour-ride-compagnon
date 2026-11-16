@@ -42,6 +42,7 @@ import useVisualViewport from "@/hooks/useVisualViewport";
 import useGeolocation from "@/hooks/useGeolocation";
 import { useLiveRoute } from "@/hooks/useLiveRoute";
 import { routeQualityLabel } from "@/lib/vtc-routing";
+import { readRideDraft, clearRideDraft } from "@/lib/ride-draft";
 import { drawableRoute, arrivalClock } from "@/lib/utils/route-display";
 import {
   formatDistance,
@@ -165,6 +166,20 @@ function RiderDashboard() {
     cancel,
     rate,
   } = useRiderRide({ onEvent: onRideEvent });
+
+  const draftRestored = useRef(false);
+  useEffect(() => {
+    if (loadingActive || draftRestored.current) return;
+    draftRestored.current = true;
+    if (phase !== 'idle') return;
+    const draft = readRideDraft();
+    if (!draft) return;
+    setPickup(draft.pickup);
+    setDropoff(draft.dropoff);
+    setPickupText(draft.pickupText);
+    setDropoffText(draft.dropoffText);
+    clearRideDraft();
+  }, [loadingActive, phase]);
 
   // ── Wallet balance ──
   const refreshWallet = useCallback(async () => {
