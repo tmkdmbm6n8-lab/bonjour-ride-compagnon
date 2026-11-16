@@ -47,6 +47,6 @@
 - [ ] Virement réel vers la banque des chauffeurs — en attente de la connexion d'un compte Stripe (clé secrète)
 
 # Notifications push Android (demande du 16/11)
-- [ ] Notification push d'offre de course quand l'app Android est en arrière-plan (bannière visible, son)
+- [x] Notification push d’offre de course quand l’app Android est en arrière-plan (bannière visible, son)
 - [ ] Nouvel APK avec les notifications — en attente du fichier google-services.json de Firebase
 - [ ] App iPhone (IPA) — reportée à la demande de l'utilisateur
