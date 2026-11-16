@@ -1,3 +1,4 @@
+import { wazeRoute } from "./vtc-waze.server";
 import { discoverBoard, returnHintForRide } from "./vtc-transport.server";
 import { driverWeekSummary } from "./vtc-driver-stats";
 import { parisDay, validDay } from "./vtc-dates";
@@ -200,6 +201,7 @@ async function routeBetween(a, b) {
   if (!validPoint(a) || !validPoint(b)) throw new Error("Adresses invalides");
   // Google (trafic en temps réel) → OSRM (sans trafic) → estimation signalée, jamais de ligne droite.
   return (
+    (await wazeRoute(a, b)) ||
     (await googleRoute(a, b)) ||
     (await osrmRoute(a, b)) ||
     approximateRoute(haversineDistance(a.lat, a.lng, b.lat, b.lng))

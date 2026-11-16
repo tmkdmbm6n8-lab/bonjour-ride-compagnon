@@ -410,7 +410,7 @@ function DriverDashboard() {
               fit={false}
               followPosition={position || undefined}
               navigationMode={true}
-              alerts={roadAlerts.alerts}
+              alerts={[...(roadAlerts.alerts || []), ...(liveRoute?.alerts || [])]}
             />
           </div>
 

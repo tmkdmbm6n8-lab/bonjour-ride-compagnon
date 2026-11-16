@@ -1,3 +1,4 @@
+import { wazeSearch } from "./vtc-waze.server";
 // Photon stays keyless. Search Strasbourg and its surroundings before widening.
 const PHOTON_BASE = "https://photon.komoot.io";
 export const STRASBOURG_SEARCH_CENTER = { lat: 48.5734, lng: 7.7521 };
@@ -74,6 +75,8 @@ export async function geoSearch(q, fetcher = fetch) {
 
   if (text.length < 2) return { results: [] };
   const center = localPoint(lat, lng) ? { lat, lng } : STRASBOURG_SEARCH_CENTER;
+  const waze = await wazeSearch(text, center, fetcher);
+  if (waze.length) return { results: waze };
   const params = new URLSearchParams({
     q: text,
     limit: "6",

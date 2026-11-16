@@ -472,6 +472,7 @@ function RiderDashboard() {
           drawableRoute(liveRoute?.geometry) ||
           (ride.status === "in_progress" ? drawableRoute(ride.route?.geometry) : undefined),
         driverPosition,
+        alerts: liveRoute?.alerts || [],
         fit: true,
         // Before pickup, zoom on the driver coming to the rider
         fitTo: beforePickup && driverPosition ? [p, driverPosition] : undefined,
