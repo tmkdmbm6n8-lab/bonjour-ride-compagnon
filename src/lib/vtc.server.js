@@ -23,6 +23,30 @@ import { inboxForDriver, sendSupportMessage, personalSupportRequests } from "./v
 import { buildWaybill, sanitizeOperator } from "./vtc-waybill";
 import { geoSearch } from "./vtc-geocoding.server";
 import { passengerDisplayName } from "./passenger-name";
+export function cityFromAddress(addr) {
+  if (!addr || typeof addr !== "string") return "Ville";
+  const parts = addr
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  for (const p of parts) {
+    const m = p.match(/\b\d{5}\s+([A-Za-zÀ-ÿ\s'-]+)/);
+    if (m && m[1]) {
+      const clean = m[1].replace(/\(.*?\)/g, "").trim();
+      if (clean) return clean;
+    }
+  }
+  if (parts.length >= 2) {
+    const cand = parts.length > 2 ? parts[parts.length - 2] : parts[1];
+    const clean = cand
+      .replace(/\b\d{5}\b/g, "")
+      .replace(/\(.*?\)/g, "")
+      .trim();
+    if (clean) return clean;
+  }
+  return parts[0]?.replace(/\(.*?\)/g, "").trim() || "Ville";
+}
+
 import { speedCameras, requireCameraReader, routeCameras } from "./vtc-driver-cameras.server";
 import { routeBounds, radarsOnRoute } from "./route-radars";
 import { mergeCameraAlerts } from "./vtc-speed-cameras";
