@@ -114,7 +114,8 @@ describe("onglets chauffeur", () => {
     };
     const Component = EarningsRoute.options.component as any;
     render(<Component />);
-    fireEvent.change(screen.getByLabelText("Jour des courses"), { target: { value: "2026-11-17" } });
+    fireEvent.click(screen.getByRole("button", { name: /17 nov.*10,01/ }));
+    expect(screen.queryByLabelText("Jour des courses")).toBeNull();
     expect(screen.getByText("Prise en charge à Strasbourg")).toBeTruthy();
     expect(screen.getByText("Dépose à Schiltigheim")).toBeTruthy();
     expect(screen.getByText("Vous avez gagné")).toBeTruthy();

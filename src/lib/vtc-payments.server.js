@@ -1,3 +1,4 @@
+import { withdrawalState, requestWithdrawal, adminWithdrawalAction } from './withdrawals.server';
 import Stripe from 'stripe';
 import {earlyPayoutQuote,weeklyPayoutAmount,nextPayoutAt,payoutWeekKey,EARLY_PAYOUT_FEE,MIN_EARLY_PAYOUT} from './vtc-payouts';
 
@@ -5,7 +6,7 @@ import {earlyPayoutQuote,weeklyPayoutAmount,nextPayoutAt,payoutWeekKey,EARLY_PAY
 async function payoutSummary(admin,uid,profile){
  const {data:rows}=await admin.from('payouts').select('id,kind,amount,fee,status,created_at,paid_at,failure').eq('driver_id',uid).order('created_at',{ascending:false}).limit(10);
  const balance=Number(profile.balance);
- return {balance,nextPayoutAt:nextPayoutAt().toISOString(),nextPayoutAmount:weeklyPayoutAmount(balance),earlyFee:EARLY_PAYOUT_FEE,minPayout:MIN_EARLY_PAYOUT+EARLY_PAYOUT_FEE,earlyQuote:earlyPayoutQuote(balance),payouts:(rows||[]).map(r=>({...r,amount:Number(r.amount),fee:Number(r.fee)})),lastPayoutAt:(rows||[]).find(r=>r.status==='paid')?.paid_at||null};
+ return {withdrawals: await withdrawalState(admin,uid),balance,nextPayoutAt:nextPayoutAt().toISOString(),nextPayoutAmount:weeklyPayoutAmount(balance),earlyFee:EARLY_PAYOUT_FEE,minPayout:MIN_EARLY_PAYOUT+EARLY_PAYOUT_FEE,earlyQuote:earlyPayoutQuote(balance),payouts:(rows||[]).map(r=>({...r,amount:Number(r.amount),fee:Number(r.fee)})),lastPayoutAt:(rows||[]).find(r=>r.status==='paid')?.paid_at||null};
 }
 
 /** Sends one recorded payout to the driver's Stripe account; a refusal puts the money back in the wallet. */
@@ -26,6 +27,8 @@ export async function runWeeklyPayouts(admin,now=new Date()){
  const {data:ds,error}=await admin.from('drivers').select('user_id,payout');if(error)throw error;
  let paid=0,failed=0,waiting=0;
  for(const d of ds||[]){
+  const requests=await withdrawalState(admin,d.user_id);
+  if(requests.requests.some(r=>['pending','processing'].includes(r.status))){waiting++;continue;}
   const acct=d.payout?.stripeAccountId;
   const {data:prof}=await admin.from('profiles').select('balance').eq('id',d.user_id).single();
   const amount=weeklyPayoutAmount(prof?.balance);if(!amount)continue;
@@ -39,6 +42,15 @@ export async function runWeeklyPayouts(admin,now=new Date()){
  return {week,paid,failed,waiting};
 }
 export async function handlePayments({admin,profile,uid,role,p,q,method,body}) {
+ if(p==='/api/admin/withdrawals') {
+  if(role!=='admin')throw new Error('Accès refusé');
+  if(method==='GET')return withdrawalState(admin,null);
+  if(method!=='POST')throw new Error('Méthode non autorisée');
+  const key=process.env.STRIPE_SECRET_KEY;
+  const stripe=key?new Stripe(key,{httpClient:Stripe.createFetchHttpClient()}):null;
+  return adminWithdrawalAction(admin,{uid,body,stripe,sendTransfer:sendApprovedTransfer});
+ }
+ if(p!=='/api/drivers/me/payouts' || !['GET','POST'].includes(method))throw new Error('Méthode non autorisée');
  const key=process.env.STRIPE_SECRET_KEY;
  if(p==='/api/drivers/me/payouts'&&method==='GET'&&!key)return {...(await payoutSummary(admin,uid,profile)),configured:false,canCashOut:false};
  if(!key)throw new Error('Stripe n’est pas encore connecté : aucun paiement n’a été effectué.');
@@ -51,12 +63,20 @@ export async function handlePayments({admin,profile,uid,role,p,q,method,body}) {
   if(!account){account=await stripe.accounts.create({type:'express',country:'FR',capabilities:{transfers:{requested:true}},metadata:{userId:uid}});const saved=await admin.from('drivers').update({payout:{...d.payout,stripeAccountId:account.id}}).eq('user_id',uid);if(saved.error)throw new Error('La configuration n’a pas pu être enregistrée');}
   const link=await stripe.accountLinks.create({account:account.id,type:'account_onboarding',return_url:`${base}/driver/earnings?payout=done`,refresh_url:`${base}/driver/earnings?payout=refresh`});return {url:link.url};
  }
- if(body.action==='cashout'){
+ if(body.action==='request' || body.action==='cashout'){
   if(!account?.payouts_enabled)throw new Error('Configurez d’abord vos coordonnées bancaires');
-  const quote=earlyPayoutQuote(profile.balance);if(!quote.ok)throw new Error(quote.reason);
-  const {data:pid,error:e}=await admin.rpc('create_payout',{_driver:uid,_kind:'early',_amount:quote.amount,_fee:quote.fee,_week:null});if(e||!pid)throw new Error(e?.message||'Le retrait n’a pas pu être créé');
-  await sendTransfer(admin,stripe,{id:pid,amount:quote.amount},account.id);
-  return {amount:quote.amount,fee:quote.fee};
+  return requestWithdrawal(admin,{uid,profile,value:body.amount});
  }
  throw new Error('Action de versement inconnue');
+}
+
+async function sendApprovedTransfer(admin,stripe,payout,accountId) {
+ let transfer;
+ try {
+  transfer=await stripe.transfers.create({amount:Math.round(payout.amount*100),currency:'eur',destination:accountId,metadata:{payoutId:payout.id}},{idempotencyKey:`payout-${payout.id}`});
+ } catch {
+  throw new Error('Virement non confirmé. La demande reste en traitement ; reprenez-la pour vérifier le résultat sans nouveau débit.');
+ }
+ const result=await admin.rpc('finish_payout',{_id:payout.id,_ok:true,_provider:transfer.id,_failure:null});
+ if(result.error)throw new Error('Virement transmis, confirmation en attente. Reprenez la demande sans créer un nouveau retrait.');
 }

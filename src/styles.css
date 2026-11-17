@@ -8445,3 +8445,20 @@ a.activity-pill:hover {
 .drv-sos-service small { display: block; margin-top: 3px; color: #cbd5e1; font-size: 12px; line-height: 1.4; }
 .drv-sos-number { flex-shrink: 0; color: #fda4af; font-size: 22px; font-weight: 800; text-align: right; }
 .drv-sos-number small { display: block; font-size: 10px; }
+
+/* Driver withdrawals: readable dark panels and a full-screen submission receipt. */
+.payout-card { color: #f1f5f9; background: #10131b; min-width: 0; }
+.payout-card .payout-info { padding: 14px; border-radius: 14px; background: rgba(201,162,39,.10); border: 1px solid rgba(201,162,39,.28); color: #f1e5bb; }
+.payout-card .payout-info .muted { color: #c5bfae; }
+.payout-card .payout-info svg { color: #e8bb3c !important; }
+.payout-card .payout-warning { background: rgba(201,162,39,.07); }
+.payout-card .payout-request-form { display: grid; gap: 10px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 16px; }
+.payout-card .input { background: #191c25; color: #f1f5f9; font-size: 16px; }
+.payout-card .btn { white-space: normal; overflow-wrap: anywhere; height: auto; min-height: 44px; }
+.payout-card .muted { color: #aebaca; }
+.payout-form-message { color: #e8bb3c; }
+.payout-request-row { padding: 16px 0; border-top: 1px solid rgba(255,255,255,.14); overflow-wrap: anywhere; }
+.modal-portal-overlay:has(.payout-success-content) { padding: 0 !important; }
+.modal-portal-overlay:has(.payout-success-content) .modal { width: 100%; max-width: 100% !important; height: 100%; max-height: 100% !important; border-radius: 0; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); }
+.payout-success-content { min-height: 65dvh; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px; text-align: center; max-width: 440px; margin: auto; color: #f1f5f9; }
+@media (max-width: 400px) { .payout-request-form > .flex { flex-wrap: wrap; } .payout-request-form > .flex .input { flex-basis: 100% !important; } }

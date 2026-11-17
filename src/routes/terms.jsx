@@ -50,8 +50,8 @@ function TermsPage() {
         <li>Le chauffeur choisit librement ses horaires : il se connecte et se déconnecte quand il le souhaite. Avant d’accepter une course, il voit le lieu de prise en charge, la destination, la distance, la durée et sa rémunération. Il peut refuser une course sans pénalité (article L7342-8 du Code du travail).</li>
         <li>Commission de la plateforme : {DEFAULT_PRICING.economy.platformCommission} % du prix de la course ({DEFAULT_PRICING.premium.platformCommission} % pour la gamme Premium). Le reste revient au chauffeur.</li>
         <li>Les gains du chauffeur sont conservés sur son solde StrasDrive et virés automatiquement sur son compte bancaire chaque semaine, dans la nuit de dimanche à lundi à minuit (heure de Paris), sans frais. Le virement bancaire passe par Stripe, une fois les coordonnées bancaires du chauffeur vérifiées.</li>
-        <li>Le chauffeur peut retirer son solde avant cette date : des frais de retrait anticipé de {formatEuro(EARLY_PAYOUT_FEE)} sont alors déduits.</li>
-        <li>Pour une course payée en espèces, la commission due à StrasDrive est inscrite au débit du solde du chauffeur et reprise automatiquement sur ses courses suivantes payées par portefeuille, avant tout virement.</li>
+        <li>Le chauffeur peut demander un retrait anticipé d’au moins 10 € (montant total débité, frais inclus). Les frais existants de {formatEuro(EARLY_PAYOUT_FEE)} sont déduits du montant demandé. La demande ne débite pas le solde : le débit et le lancement du virement interviennent uniquement après validation de l’administration. Une demande refusée avant validation ne débite rien. Une seule demande peut être en attente ou en traitement à la fois.</li>
+        <li>Pour une course payée en espèces, la commission due à StrasDrive est inscrite au débit du solde du chauffeur et reprise automatiquement sur ses courses suivantes payées par carte bancaire (CB), avant tout virement.</li>
       </ul>
 
       <h2>6. Rémunération minimale des chauffeurs</h2>

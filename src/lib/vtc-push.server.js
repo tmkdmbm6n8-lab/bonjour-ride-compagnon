@@ -49,3 +49,17 @@ export async function pushRideOffer(admin, ride, userIds) {
     console.error("pushRideOffer:", e?.message || e);
   }
 }
+
+/** Admin and driver notifications share the existing managed Firebase connector. */
+export async function pushUsers(admin, userIds, message) {
+  const ids = [...new Set(userIds || [])];
+  const key = process.env.LOVABLE_API_KEY, connection = process.env.FIREBASE_MESSAGING_API_KEY;
+  if (!ids.length || !key || !connection) return false;
+  const { data: tokens, error } = await admin.from('push_tokens').select('token').in('user_id', ids);
+  if (error || !tokens?.length) return false;
+  const headers = { Authorization: `Bearer ${key}`, 'X-Connection-Api-Key': connection, 'Content-Type': 'application/json' };
+  const results = await Promise.all(tokens.map(async (row) => ({ token: row.token, ...await sendOne(row.token, message, headers) })));
+  const stale = results.filter((row) => row.stale).map((row) => row.token);
+  if (stale.length) await admin.from('push_tokens').delete().in('token', stale);
+  return results.some((row) => row.ok);
+}

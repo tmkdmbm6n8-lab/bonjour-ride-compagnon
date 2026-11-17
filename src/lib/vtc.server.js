@@ -691,7 +691,9 @@ export async function handleVtc(input, context) {
     );
     return { driver: driverShape(required(await db.from("drivers").select("*").eq("user_id", uid).single())) };
   }
-  if (p === "/api/drivers/me/push-token") {
+  if (p === "/api/drivers/me/push-token" || p === "/api/notifications/push-token") {
+    if (!canDrive && role !== "admin") throw new Error("Accès refusé");
+    if (!["POST", "DELETE"].includes(method)) throw new Error("Méthode non autorisée");
     // Phone notification address: written only by the server, one owner per phone.
     const token = validPushToken(body.token);
     if (!token) throw new Error("Notification invalide");
@@ -846,7 +848,7 @@ export async function handleVtc(input, context) {
       stripeEnabled: Boolean(process.env.STRIPE_SANDBOX_API_KEY || process.env.STRIPE_LIVE_API_KEY),
     };
   }
-  if (p === "/api/drivers/me/payouts") {
+  if (p === "/api/drivers/me/payouts" || p === "/api/admin/withdrawals") {
     const { handlePayments } = await import("./vtc-payments.server");
     return handlePayments({ admin, profile, uid, role, p, q, method, body });
   }

@@ -2,6 +2,8 @@
 
 import { LayoutDashboard, Route, Car, Users, DollarSign, Inbox, Radar, MessagesSquare, Activity } from 'lucide-react';
 
+import { useEffect } from 'react';
+import { registerDriverPush } from '@/lib/native-push';
 import AppShell from '@/components/shell/AppShell';
 
 const NAV = [
@@ -17,6 +19,7 @@ const NAV = [
 ];
 
 export default function AdminLayout({ children }) {
+  useEffect(() => { registerDriverPush({ audience: 'admin' }); }, []);
   return (
     <>
       <AppShell nav={NAV} variant="admin">{children}</AppShell>

@@ -1,3 +1,4 @@
+import WithdrawalRequests from '@/components/admin/WithdrawalRequests';
 import {createFileRoute} from '@tanstack/react-router';
 import AdminLayout from '@/components/AdminLayout';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
@@ -163,6 +164,8 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      <WithdrawalRequests />
 
       {/* 7-day money flow: revenue split between drivers and platform */}
       <div className="card card-pad mt-4">

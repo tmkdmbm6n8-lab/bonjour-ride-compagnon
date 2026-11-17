@@ -106,13 +106,6 @@ function EarningsPage() {
         </div>
       </div>
       <section className="earnings-daily-rides" aria-label="Courses du jour">
-        <h2 className="mb-3" style={{ fontSize: '1.05rem' }}>Courses du {date(day)}</h2>
-        <label className="field mb-3" style={{ display: 'block' }}>
-          <span style={{ display: 'block', marginBottom: 8 }}>Jour des courses</span>
-          <input className="input" type="date" aria-label="Jour des courses" value={day} max={parisDay()}
-            onChange={(event) => { if (event.target.value) { setDay(event.target.value); setSelectedDay(event.target.value); } }}
-            style={{ width: '100%', minWidth: 0, colorScheme: 'dark' }} />
-        </label>
         {rides.length === 0 && <p className="muted">Aucune course terminée le {date(day)}.</p>}
         <div className="flex-col gap-3">
           {rides.map((ride) => (

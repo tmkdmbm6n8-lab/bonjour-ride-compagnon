@@ -10,14 +10,14 @@ function isNativeApp() {
 }
 
 /** Registers this phone for ride offers; call from driver pages only. */
-export async function registerDriverPush() {
+export async function registerDriverPush({ audience = "driver" } = {}) {
   if (started || !isNativeApp()) return;
   started = true;
   try {
     const { PushNotifications } = await import("@capacitor/push-notifications");
     await PushNotifications.createChannel({
       id: OFFER_CHANNEL_ID,
-      name: "Nouvelles courses",
+      name: audience === "admin" ? "Alertes StrasDrive" : "Nouvelles courses",
       description: "Alerte quand une course vous est proposée",
       importance: 5,
       visibility: 1,
@@ -29,7 +29,7 @@ export async function registerDriverPush() {
       try {
         localStorage.setItem(TOKEN_KEY, value);
       } catch {}
-      await apiFetch("/api/drivers/me/push-token", {
+      await apiFetch("/api/notifications/push-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: value, platform: "android" }),
@@ -61,7 +61,7 @@ export async function unregisterDriverPush() {
     localStorage.removeItem(TOKEN_KEY);
   } catch {}
   if (!token) return;
-  await apiFetch("/api/drivers/me/push-token", {
+  await apiFetch("/api/notifications/push-token", {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),

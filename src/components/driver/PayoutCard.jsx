@@ -3,12 +3,13 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 
 import { useCallback, useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from '@/lib/archive-navigation';
-import { Banknote, ArrowUpRight, ShieldCheck, Clock, CalendarClock, AlertTriangle } from 'lucide-react';
+import { Banknote, ShieldCheck, Clock, CalendarClock, AlertTriangle } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
+import { withdrawalQuote } from '@/lib/withdrawals';
 import { money } from '@/components/ui/bits';
 
-const STATUS_LABEL = { pending: 'En cours', paid: 'Versé', failed: 'Refusé — recrédité' };
+const STATUS_LABEL = { pending: 'À valider', paid: 'Versé', failed: 'Refusé — recrédité' };
 const KIND_LABEL = { weekly: 'Virement automatique', early: 'Retrait anticipé' };
 
 function formatNextPayout(iso) {
@@ -25,15 +26,17 @@ function PayoutCardInner() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [sentOpen, setSentOpen] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/drivers/me/payouts');
-      if (res.ok) setStatus(await res.json());
-    } catch {
-      /* leave the card hidden if this fails */
-    }
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Chargement impossible');
+      setStatus(result); setLoadError('');
+    } catch { setLoadError('Impossible de charger les versements. Réessayez.'); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -55,7 +58,7 @@ function PayoutCardInner() {
       const res = await fetch('/api/drivers/me/payouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, amount }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -64,8 +67,7 @@ function PayoutCardInner() {
         window.location.href = data.url; // hand off to Stripe
         return;
       } else {
-        toast(`${money(data.amount)} est en cours de virement vers votre banque (frais ${money(data.fee)})`, 'success', 6000);
-        setConfirmOpen(false);
+        setSentOpen(true); setAmount('');
       }
       load();
     } catch {
@@ -75,33 +77,26 @@ function PayoutCardInner() {
     }
   }
 
-  if (!status) return null;
+  if (!status) return <div className="payout-card card card-pad"><p>{loadError || 'Chargement des versements…'}</p>{loadError && <button className="btn btn-secondary" onClick={load}>Réessayer</button>}</div>;
 
   const bankReady = status.configured && status.connected && status.detailsSubmitted && status.payoutsEnabled;
   const owed = status.balance < 0 ? -status.balance : 0;
-  const quote = status.earlyQuote || { ok: false };
+  const pendingRequest = status.withdrawals?.requests?.find((row) => ['pending', 'processing'].includes(row.status));
+  let quote = null, validation = '';
+  try { quote = withdrawalQuote(amount, status.balance, status.earlyFee); } catch (error) { validation = amount ? error.message : ''; }
 
   return (
-    <div className="card card-pad mb-4">
+    <div className="card card-pad mb-4 payout-card">
       {/* Balance + next automatic transfer */}
       <div className="flex items-center justify-between wrap gap-3">
         <div>
           <div className="tiny muted">Solde de vos gains</div>
           <div className="stat-value mono-nums" style={{ fontSize: '1.9rem' }}>{money(status.balance)}</div>
         </div>
-        {bankReady && (
-          <button
-            className="btn btn-secondary"
-            onClick={() => setConfirmOpen(true)}
-            disabled={busy || !quote.ok}
-            title={!quote.ok ? quote.reason : undefined}
-          >
-            <ArrowUpRight size={17} /> Retirer maintenant
-          </button>
-        )}
+
       </div>
 
-      <div className="flex gap-3 mt-3" style={{ padding: 12, borderRadius: 'var(--radius-md)', background: 'var(--gold-50)', border: '1px solid var(--gold-100)' }}>
+      <div className="flex gap-3 mt-3 payout-info">
         <CalendarClock size={20} style={{ color: 'var(--gold-700)', flexShrink: 0, marginTop: 2 }} />
         <div className="small">
           <div style={{ fontWeight: 700 }}>
@@ -116,11 +111,11 @@ function PayoutCardInner() {
       </div>
 
       {owed > 0 && (
-        <div className="flex gap-3 mt-3" style={{ padding: 12, borderRadius: 'var(--radius-md)', background: 'var(--warning-bg)' }}>
+        <div className="flex gap-3 mt-3 payout-info payout-warning">
           <AlertTriangle size={18} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
           <div className="tiny">
             <strong>{money(owed)} de commissions sur vos courses en espèces.</strong> Ce montant est repris automatiquement
-            sur vos prochaines courses payées par portefeuille, avant tout virement.
+            sur vos prochaines courses payées par carte bancaire (CB), avant tout virement.
           </div>
         </div>
       )}
@@ -147,6 +142,22 @@ function PayoutCardInner() {
         </div>
       )}
 
+      <section className="payout-request-form mt-4" aria-label="Demander un retrait">
+        <h3>Demander un retrait</h3>
+        <p className="tiny muted">Minimum 10 €. Votre solde reste inchangé jusqu’à la validation de l’administration.</p>
+        <label htmlFor="withdrawal-amount" className="small">Montant à retirer, frais inclus (€)</label>
+        <div className="flex gap-2 mt-2" style={{ alignItems: 'stretch' }}>
+          <input id="withdrawal-amount" className="input" type="text" inputMode="decimal" value={amount} placeholder="10,00" disabled={busy || Boolean(pendingRequest)} onChange={(event) => setAmount(event.target.value)} style={{ minWidth: 0, flex: 1 }} />
+          <button type="button" className="btn btn-secondary" disabled={busy || Boolean(pendingRequest) || status.balance < 10} onClick={() => setAmount(Number(status.balance).toFixed(2))}>Tout le solde</button>
+        </div>
+        {validation && <p className="tiny payout-form-message" role="status">{validation}</p>}
+        {quote && <p className="tiny muted">Frais : {money(quote.fee)} · Vous recevrez {money(quote.amount)}.</p>}
+        {pendingRequest && <p className="payout-info tiny">Demande de {money(pendingRequest.debit)} {pendingRequest.status === 'pending' ? 'en attente de validation' : 'validée, virement en cours'}. Aucun nouveau retrait ne peut être demandé pendant son traitement.</p>}
+        {!status.withdrawals?.available && <p className="tiny muted">Les demandes de retrait sont en cours d’activation.</p>}
+        {status.withdrawals?.available && !bankReady && <p className="tiny muted">Configurez et faites vérifier vos coordonnées bancaires avant d’envoyer une demande.</p>}
+        <button type="button" className="btn btn-primary btn-full mt-3" disabled={busy || !quote || Boolean(pendingRequest) || !status.withdrawals?.available || !bankReady} onClick={() => act('request')}>{busy ? 'Envoi…' : 'Envoyer la demande'}</button>
+      </section>
+
       {/* History */}
       {status.payouts?.length > 0 && (
         <div className="mt-4" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
@@ -165,18 +176,13 @@ function PayoutCardInner() {
         </div>
       )}
 
-      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Retirer avant lundi ?">
-        <div className="flex-col gap-2 small">
-          <div className="flex justify-between"><span className="muted">Solde</span><span className="mono-nums">{money(status.balance)}</span></div>
-          <div className="flex justify-between"><span className="muted">Frais de retrait anticipé</span><span className="mono-nums">− {money(quote.fee ?? status.earlyFee)}</span></div>
-          <div className="flex justify-between" style={{ fontWeight: 700 }}><span>Vous recevez</span><span className="mono-nums">{money(quote.amount || 0)}</span></div>
-          <p className="tiny muted mt-2"> Sans frais si vous attendez le virement automatique de {formatNextPayout(status.nextPayoutAt)} à 00:00. </p>
-          <div className="flex gap-2 mt-3">
-            <button className="btn btn-secondary flex-1" onClick={() => setConfirmOpen(false)}>Attendre lundi</button>
-            <button className="btn btn-primary flex-1" onClick={() => act('cashout')} disabled={busy}>
-              {busy ? <span className="spinner" /> : 'Retirer maintenant'}
-            </button>
-          </div>
+      <Modal open={sentOpen} onClose={() => setSentOpen(false)} title="Demande envoyée" portal sheetOnMobile={false}>
+        <div className="payout-success-content">
+          <ShieldCheck size={64} style={{ color: 'var(--gold-500)' }} />
+          <h2>Votre demande a bien été envoyée</h2>
+          <p>Elle sera traitée dans un délai de 5 minutes.</p>
+          <p className="small muted">Votre solde sera débité uniquement après validation de l’administration.</p>
+          <button className="btn btn-primary btn-full" onClick={() => setSentOpen(false)}>Compris</button>
         </div>
       </Modal>
     </div>
