@@ -23,7 +23,6 @@ export default function DriverHome({
   loading,
   online,
   busy,
-  connectionStage,
   isConnected,
   needsVehicle,
   position,
@@ -200,7 +199,7 @@ export default function DriverHome({
             aria-label={online ? "Passer hors ligne" : "Passer en ligne"}
           >
             <span className="drv-go-pulse" />
-            <span className="drv-go-text">{busy ? connectionStage || "Connexion…" : online ? "HORS LIGNE" : "GO"}</span>
+            <span className="drv-go-text">{busy ? "…" : online ? "HORS LIGNE" : "GO"}</span>
           </button>
         )}
       </div>
