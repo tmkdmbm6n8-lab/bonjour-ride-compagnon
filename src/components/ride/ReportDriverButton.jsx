@@ -31,7 +31,7 @@ export default function ReportDriverButton({ ride }) {
     } finally { pending.current = false; setBusy(false); }
   }
   return <>
-    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(true)}><Flag size={16} />Signaler le chauffeur</button>
+    <button type="button" className="btn ride-report-button" aria-label="Signaler le chauffeur" title="Signaler le chauffeur" onClick={() => setOpen(true)}><Flag size={22} strokeWidth={2.3} aria-hidden="true" /></button>
     <Modal portal keyboardSafe sheetOnMobile={false} open={open} onClose={() => { if (!pending.current) setOpen(false); }} closable={!busy} title="Signaler le chauffeur">
       {sent ? <div role="status"><p>Votre signalement a été envoyé à l’assistance StrasDrive.</p><button className="btn btn-secondary btn-full mt-4" onClick={() => setOpen(false)}>Fermer</button></div> : <form onSubmit={submit} className="driver-report-form">
         <p className="small">Choisissez le motif qui correspond à la situation.</p>

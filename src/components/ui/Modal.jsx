@@ -56,10 +56,11 @@ export default function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         {(title || closable) && (
-          <div className="flex items-center justify-between mb-4">
+          <div className="modal-header flex items-center justify-between mb-4">
             {title ? <h3 style={{ fontSize: '1.15rem' }}>{title}</h3> : <span />}
             {closable && (
               <button
+                type="button"
                 className="btn btn-ghost btn-icon"
                 onClick={onClose}
                 aria-label="Fermer la boîte de dialogue"

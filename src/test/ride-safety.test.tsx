@@ -31,6 +31,18 @@ describe("assistance volontaire", () => {
     await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
     expect(share.mock.calls[0][0].text).not.toContain("9999");
   });
+  it("ouvre hors du panneau et permet de fermer par la croix ou le fond", () => {
+    const { container } = render(<RideSafety ride={ride} />);
+    const trigger = screen.getByRole("button", { name: "Sécurité et assistance" });
+    expect(trigger.textContent).toBe("");
+    fireEvent.click(trigger);
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Fermer la boîte de dialogue" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("dialog"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
   it("propose un texte à copier lorsque le partage et le presse-papiers ne sont pas disponibles", () => {
     vi.stubGlobal("navigator", {});
     render(<RideSafety ride={ride} />);

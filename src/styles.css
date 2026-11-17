@@ -7146,18 +7146,35 @@ a.activity-pill:hover {
 .driver-suspension-screen p { max-width: 440px; color: #b8c2d1; line-height: 1.6; }
 .driver-suspension-screen .btn { max-width: 440px; }
 
-.btn.ride-safety-button {
-  width: 46px;
-  min-width: 46px;
-  height: 46px;
-  min-height: 46px;
+/* Small standalone safety/report icons; the full touch target remains 44px. */
+.btn.ride-safety-button,
+.btn.ride-report-button {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
   flex-shrink: 0;
   padding: 10px;
-  color: #60a5fa;
-  background: #132c4b;
-  border: 1px solid #3b82f6;
-  border-radius: 14px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
-.btn.ride-safety-button:hover,
-.btn.ride-safety-button:active { color: #bfdbfe; background: #1e4070; border-color: #60a5fa; }
-.btn.ride-safety-button:focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; }
+.btn.ride-safety-button { color: #60a5fa; }
+.btn.ride-report-button { color: #f87171; }
+.btn.ride-safety-button:hover, .btn.ride-safety-button:active { color: #bfdbfe; background: transparent; }
+.btn.ride-report-button:hover, .btn.ride-report-button:active { color: #fca5a5; background: transparent; }
+.btn.ride-safety-button:focus-visible, .btn.ride-report-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.rider-safety-actions { align-items: center; justify-content: space-between; }
+/* Keep the title and close control visible while a long dialog scrolls. */
+.modal-portal-root .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: -28px -28px 16px;
+  padding: 16px 20px;
+  background: #101319;
+  border-bottom: 1px solid #ffffff18;
+  gap: 12px;
+}
+.modal-portal-root .modal-header h3 { min-width: 0; overflow-wrap: anywhere; }
+.modal-portal-root .modal-header button { flex-shrink: 0; color: #e2e8f0; }

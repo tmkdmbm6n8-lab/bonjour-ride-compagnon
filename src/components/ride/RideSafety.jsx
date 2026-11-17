@@ -37,9 +37,9 @@ export default function RideSafety({ ride }) {
           setOpen(true);
         }}
       >
-        <ShieldCheck size={24} strokeWidth={2.3} aria-hidden="true" />
+        <ShieldCheck size={22} strokeWidth={2.3} aria-hidden="true" />
       </button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Sécurité et assistance">
+      <Modal portal keyboardSafe sheetOnMobile={false} open={open} onClose={() => setOpen(false)} title="Sécurité et assistance">
         <p className="small mb-4">
           En cas de danger immédiat, appelez les secours. StrasDrive ne contacte pas les secours à
           votre place.
