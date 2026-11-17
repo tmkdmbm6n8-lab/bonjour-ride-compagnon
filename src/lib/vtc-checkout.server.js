@@ -53,7 +53,7 @@ function embeddedSession(stripe, { uid, customer, amount, name, returnUrl, metad
  * Card payments: wallet top-up (free amount) and ride paid by card at booking.
  * A card ride credits the exact fare to the wallet, then the ride is booked with that fare and settled from the wallet.
  */
-export async function handleCheckout({ admin, uid, role, email, p, q, method, body, createRide, quoteRide, serializeRide, cardBookingProblem }) {
+export async function handleCheckout({ admin, uid, role, email, p, q, method, body, createRide, quoteRide, serializeRide, cardBookingProblem, preparePassenger }) {
   const env = method === "GET" ? q.get("env") : body.environment;
   if (!isStripeEnv(env)) throw new Error("Paiement par carte indisponible pour le moment");
   let stripe;
@@ -73,7 +73,7 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
       const session = await embeddedSession(stripe, {
         uid, customer, amount: Number(body.amount), metadata,
         name: "Recharge du portefeuille StrasDrive",
-        returnUrl: `${origin}${role === "driver" ? "/driver" : ""}/wallet?session_id={CHECKOUT_SESSION_ID}`,
+        returnUrl: `${origin}${body.view === "rider" ? "" : role === "driver" ? "/driver" : ""}/wallet?session_id={CHECKOUT_SESSION_ID}`,
       });
       return { clientSecret: session.client_secret, sessionId: session.id };
     }
@@ -85,7 +85,7 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
       return { paid: true, credited: true, amount: session.amount_total / 100 };
     }
     if (p === "/api/rides/card-checkout") {
-      if (role !== "rider") return { error: "Seuls les clients peuvent réserver" };
+      await preparePassenger();
       const origin = safeOrigin(body.origin);
       if (!origin) return { error: "Adresse de retour invalide" };
       const { fare, route } = await quoteRide(body);

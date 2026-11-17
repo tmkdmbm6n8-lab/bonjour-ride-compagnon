@@ -1,3 +1,4 @@
+import { accountView } from '@/lib/account-mode';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
@@ -110,7 +111,7 @@ export default function WalletPanel() {
     const res = await fetch('/api/wallet/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: Number(amount), environment: getStripeEnvironment(), origin: window.location.origin }),
+      body: JSON.stringify({ amount: Number(amount), environment: getStripeEnvironment(), origin: window.location.origin, view: accountView(window.location.pathname) }),
     });
     const data = await res.json();
     if (!res.ok || data.error) {

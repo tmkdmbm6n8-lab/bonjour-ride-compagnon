@@ -38,7 +38,7 @@ export function isThrottled(driver, pool) {
 export function availableFor(ride, drivers) {
   const declined = ride.declined || [];
   const pool = drivers.filter(
-    (d) => canServe(d, ride.vehicle_type) && !declined.includes(d.user_id) && tripPrefsAllow(d, ride),
+    (d) => d.user_id !== ride.rider_id && canServe(d, ride.vehicle_type) && !declined.includes(d.user_id) && tripPrefsAllow(d, ride),
   );
   const fair = pool.filter((d) => !isThrottled(d, pool));
   return fair.length ? fair : pool;

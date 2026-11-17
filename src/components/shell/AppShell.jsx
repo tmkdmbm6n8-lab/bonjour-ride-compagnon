@@ -17,7 +17,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
   const { data: session } = useSession();
   const user = session?.user;
   const homeHref =
-    user?.role === "driver" ? "/driver/dashboard" : user?.role === "admin" ? "/admin/dashboard" : "/dashboard";
+    variant === "rider" ? "/dashboard" : user?.role === "driver" ? "/driver/dashboard" : user?.role === "admin" ? "/admin/dashboard" : "/dashboard";
 
   return (
     <div className={`shell ${variant === "rider" ? "shell-rider" : variant === "admin" ? "shell-admin" : ""} shell-dark`}>

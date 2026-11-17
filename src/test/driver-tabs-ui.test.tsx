@@ -21,6 +21,7 @@ vi.mock("@/components/shell/AppShell", () => ({
   ),
 }));
 vi.mock("@/lib/archive-navigation", () => ({
+  useRouter:()=>({push:vi.fn()}),
   default: ({ href, children, ...props }: any) => (
     <a href={href} {...props}>
       {children}

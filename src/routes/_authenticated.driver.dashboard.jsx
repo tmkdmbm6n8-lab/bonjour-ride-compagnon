@@ -1,3 +1,5 @@
+import RidePauseButton from '@/components/driver/RidePauseButton';
+import FinishRideButton from '@/components/driver/FinishRideButton';
 import RideSafety from '@/components/ride/RideSafety';
 import { clock as transportClock } from "@/lib/vtc-dates";
 import { createFileRoute } from "@tanstack/react-router";
@@ -64,16 +66,8 @@ function DriverDashboard() {
   const [pinOpen, setPinOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [pauseSeconds, setPauseSeconds] = useState(0);
   const [cancelReason, setCancelReason] = useState("");
   const [customReason, setCustomReason] = useState("");
-
-  // Décompte de pause 2 min
-  useEffect(() => {
-    if (pauseSeconds <= 0) return;
-    const timer = setInterval(() => setPauseSeconds((s) => s - 1), 1000);
-    return () => clearInterval(timer);
-  }, [pauseSeconds]);
 
   const [receipt, setReceipt] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
@@ -259,8 +253,10 @@ function DriverDashboard() {
     try {
       const finished = await complete();
       setReceipt(finished);
+      return true;
     } catch (err) {
       toast(err.message, "error", 4000);
+      return false;
     } finally {
       setActionBusy(false);
     }
@@ -425,27 +421,10 @@ function DriverDashboard() {
           </div>
 
           {/* 3. Au-dessus du volet bas : Pause 2 min à gauche / Annuler à droite */}
+          <div className="drv-ride-dock">
           <div className="drv-mid-actions-bar">
             <RoadAlertButtons roadAlerts={roadAlerts} reporting={reporting} onReport={handleReport} canReportRadar={profile?.isPriority === true} />
-            <button
-              className={`drv-action-pill drv-pause-pill ${pauseSeconds > 0 ? "is-active" : ""}`}
-              onClick={() => {
-                if (pauseSeconds > 0) {
-                  setPauseSeconds(0);
-                  toast("Pause terminée", "info");
-                } else {
-                  setPauseSeconds(120);
-                  toast("Pause autorisée de 2 minutes activée", "info");
-                }
-              }}
-            >
-              <Hand size={16} />
-              <span>
-                {pauseSeconds > 0
-                  ? `Pause (${Math.floor(pauseSeconds / 60)}:${String(pauseSeconds % 60).padStart(2, "0")})`
-                  : "Pause 2 min"}
-              </span>
-            </button>
+            <RidePauseButton key={ride.id} rideId={ride.id}/>
 
             {ride.status !== "in_progress" && (
               <button className="drv-action-pill drv-cancel-pill" onClick={() => setCancelOpen(true)}>
@@ -455,7 +434,6 @@ function DriverDashboard() {
             )}
           </div>
 
-          <RoadAlertPrompt roadAlerts={roadAlerts} />
 
           {/* 4. Tout en bas : Volet rétractable d'informations */}
           <div className="drv-bottom-sheet is-minimal">
@@ -533,12 +511,12 @@ function DriverDashboard() {
               </button>
             )}
             {ride.status === "in_progress" && (
-              <button className="btn btn-success btn-lg btn-full" onClick={handleComplete} disabled={actionBusy}>
-                <CheckCircle2 size={18} /> Terminer la course
-              </button>
+              <FinishRideButton key={ride.id} onConfirm={handleComplete} disabled={actionBusy}/>
             )}
             </div>
           </div>
+          </div>
+          <RoadAlertPrompt roadAlerts={roadAlerts} />
         </div>
       ) : (
         <DriverHome

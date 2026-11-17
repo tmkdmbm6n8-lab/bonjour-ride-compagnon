@@ -36,7 +36,7 @@ export default function useRiderRide({ onEvent } = {}) {
     let ignore = false;
     (async () => {
       try {
-        const res = await fetch('/api/rides/active');
+        const res = await fetch('/api/rides/active?view=rider');
         if (res.ok) {
           const { ride: active } = await res.json();
           if (!ignore && active) {

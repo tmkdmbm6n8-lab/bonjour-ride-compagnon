@@ -1,3 +1,5 @@
+import { rideOwnerColumn } from "./account-mode";
+import { preparePassengerBooking, hasPassengerRide, switchAccountMode } from "./vtc-account-mode.server";
 import { supportOwnedBy } from "./vtc-support";
 import { exportPageOptions, PERSONAL_DATA_PAGE_SIZE } from "./personal-data-export";
 import { assertRideActionMethod, privateDocumentPath, validLocation, invoiceRequestMessage } from "./vtc-access";
@@ -331,8 +333,9 @@ export async function handleVtc(input, context) {
     : roles.some((r) => r.role === "driver")
       ? "driver"
       : "rider";
+  const canDrive = roles.some(r=>r.role === "driver");
   if (p.startsWith("/api/admin/") && role !== "admin") throw new Error("Accès administrateur requis");
-  if (p.startsWith("/api/drivers/me") && role !== "driver") throw new Error("Accès chauffeur requis");
+  if (p.startsWith("/api/drivers/me") && !canDrive) throw new Error("Accès chauffeur requis");
   // RLS has verified the role; privileged operations below use only the verified caller identity.
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
   const profile = required(await db.from("profiles").select("*").eq("id", uid).single());
@@ -369,6 +372,10 @@ export async function handleVtc(input, context) {
       pagination:{page,hasMore:[rows,walletRows,supportByEmail,supportByUser].some(items=>items.length > PERSONAL_DATA_PAGE_SIZE)},
     };
   }
+  if (p === "/api/users/me/mode") {
+    if (method !== "POST") throw new Error("Méthode non autorisée");
+    return switchAccountMode(admin,{uid,canDrive,mode:body.mode});
+  }
   if (p === "/api/users/me/support") {
     if (method === "GET") return personalSupportRequests(admin,uid,context.claims.email,Number(q.get("page") || 0));
     if (method === "POST") return sendSupportMessage(admin,{uid,email:context.claims.email,name:profile.name,role,body});
@@ -395,7 +402,7 @@ export async function handleVtc(input, context) {
       required(await db.from("profiles").update(payload).eq("id", uid));
     }
     const fresh = required(await db.from("profiles").select("*").eq("id", uid).single());
-    return { user: { ...profileShape(fresh, context.claims.email), role } };
+    return { user: { ...profileShape(fresh, context.claims.email), role, canDrive } };
   }
   if (p === "/api/geo/search") return geoSearch(q);
   if (p === "/api/maps/speed-cameras" && method === "GET") {
@@ -580,6 +587,7 @@ export async function handleVtc(input, context) {
     const current = required(await db.from("rides").select("id").eq("driver_id", uid).in("status", active));
     if (!body.online && current.length) throw new Error("Terminez votre course avant de passer hors ligne");
     if (body.online) {
+      if (await hasPassengerRide(admin,uid)) throw new Error("Vous avez une course passager en cours");
       if (!d.is_approved) throw new Error("Votre inscription doit être approuvée");
       if (!d.vehicle.plate) throw new Error("Ajoutez votre véhicule");
       if (!d.documents_override) {
@@ -605,7 +613,7 @@ export async function handleVtc(input, context) {
     return { ok: true };
   }
   if (p === "/api/drivers/location") {
-    if (role !== "driver") throw new Error("Accès refusé");
+    if (!canDrive) throw new Error("Accès refusé");
     if (method !== "POST") throw new Error("Méthode non autorisée");
     if (!validLocation(body)) throw new Error("Position invalide");
     const driver = required(await db.from("drivers").select("is_online").eq("user_id", uid).single());
@@ -669,6 +677,7 @@ export async function handleVtc(input, context) {
     return { fare, route: quote.route };
   };
   const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment }) => {
+    await preparePassengerBooking(admin,uid,canDrive);
     const pin = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000).padStart(4, "0");
     // Note moyenne laissée par les chauffeurs, figée à la commande (filtre « note minimale » des chauffeurs).
     const past = required(
@@ -715,13 +724,14 @@ export async function handleVtc(input, context) {
       body,
       quoteRide,
       createRide,
+      preparePassenger:()=>preparePassengerBooking(admin,uid,canDrive),
       cardBookingProblem: (fare) => bookingPaymentProblem("card", profile.balance, fare.total),
       serializeRide: async (id) =>
         serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid),
     });
   }
   if (p === "/api/rides" && method === "POST") {
-    if (role !== "rider") throw new Error("Seuls les clients peuvent réserver");
+    await preparePassengerBooking(admin,uid,canDrive);
     const paymentMethod = paymentMethodOf(body.paymentMethod);
     if (paymentMethod === "card") throw new Error("Le paiement par carte se fait depuis l’écran de paiement sécurisé");
     const { fare, route } = await quoteRide(body);
@@ -742,7 +752,7 @@ export async function handleVtc(input, context) {
       await db
         .from("rides")
         .select("*")
-        .eq(role === "driver" ? "driver_id" : "rider_id", uid)
+        .eq(rideOwnerColumn(role,q.get("view"),canDrive), uid)
         .in("status", active)
         .limit(1),
     );
@@ -754,7 +764,8 @@ export async function handleVtc(input, context) {
     return { ride: await serialize(admin, r, uid) };
   }
   if (p === "/api/drivers/offers") {
-    if (role !== "driver") throw new Error("Accès refusé");
+    if (!canDrive) throw new Error("Accès refusé");
+    if (await hasPassengerRide(admin,uid)) return {offer:null};
     const pool = await dispatchPool(admin);
     let me = pool.find((d) => d.user_id === uid);
     const test = await pendingTestOffer(admin, uid);
@@ -826,7 +837,7 @@ export async function handleVtc(input, context) {
       .from("rides")
       .select("*", { count: "exact" })
       .order("created_at", { ascending: false });
-    if (role !== "admin") query = query.eq(role === "driver" ? "driver_id" : "rider_id", uid);
+    if (p !== "/api/admin/rides") query = query.eq(rideOwnerColumn(role,q.get("view"),canDrive), uid);
     if (q.get("status")) query = query.eq("status", q.get("status"));
     const res = await query.range((page - 1) * limit, page * limit - 1);
     const rows = required(res);
@@ -842,9 +853,10 @@ export async function handleVtc(input, context) {
     const r = required(await admin.from("rides").select("*").eq("id", id).single());
     const participant = r.rider_id === uid || r.driver_id === uid;
     if (action === "accept") {
+      if (!canDrive || r.rider_id === uid || await hasPassengerRide(admin,uid)) throw new Error("Vous ne pouvez pas accepter cette course");
       if (r.is_test) {
         if (
-          role !== "driver" ||
+          !canDrive ||
           r.status !== "searching" ||
           r.offer_driver_id !== uid ||
           !r.offer_expires_at ||
@@ -852,7 +864,7 @@ export async function handleVtc(input, context) {
         )
           throw new Error("Cette demande n’est plus disponible");
       } else {
-        const pool = role === "driver" ? await dispatchPool(admin) : [];
+        const pool = canDrive ? await dispatchPool(admin) : [];
         const me = pool.find((d) => d.user_id === uid) || null;
         if (!canSeeOffer(r, me, Date.now(), pool)) throw new Error("Cette demande n’est plus disponible");
       }
@@ -876,7 +888,7 @@ export async function handleVtc(input, context) {
       return { ride: await serialize(admin, claimed, uid) };
     }
     if (action === "decline") {
-      if (role !== "driver") throw new Error("Accès refusé");
+      if (!canDrive) throw new Error("Accès refusé");
       required(await admin.rpc("decline_ride_offer", { _ride: id, _driver: uid }));
       return { ok: true };
     }
@@ -1357,8 +1369,8 @@ async function pendingTestOffer(db, uid) {
 async function dispatchPool(db) {
   const ds = required(await db.from("drivers").select("*").eq("is_online", true).eq("is_approved", true));
   const busy = new Set(
-    required(await db.from("rides").select("driver_id").in("status", ["accepted", "arrived", "in_progress"])).map(
-      (b) => b.driver_id,
+    required(await db.from("rides").select("driver_id,rider_id").in("status", active)).flatMap(
+      (b) => [b.driver_id,b.rider_id].filter(Boolean),
     ),
   );
   const free = ds.filter((d) => !busy.has(d.user_id));

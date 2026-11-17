@@ -104,7 +104,7 @@ function RidesPage() {
     let ignore = false;
     setActiveLoading(true);
     setActiveError(false);
-    apiFetch("/api/rides/active")
+    apiFetch("/api/rides/active?view=rider")
       .then(async (res) => {
         if (!res.ok) throw new Error();
         const data = await res.json();
@@ -127,7 +127,7 @@ function RidesPage() {
     setError(false);
     (async () => {
       try {
-        const params = new URLSearchParams({ page: String(page), limit: "15" });
+        const params = new URLSearchParams({ page: String(page), limit: "15", view: "rider" });
         if (filter) params.set("status", filter);
         const res = await apiFetch(`/api/rides?${params}`);
         if (!res.ok) throw new Error();

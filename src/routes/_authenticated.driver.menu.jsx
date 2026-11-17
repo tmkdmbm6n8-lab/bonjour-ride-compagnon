@@ -1,3 +1,4 @@
+import AccountModeSwitch from '@/components/shell/AccountModeSwitch';
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
@@ -49,6 +50,8 @@ function DriverMenuPage() {
           <span>{Number(user.rating?.average ?? driver?.stats?.averageRating ?? 5).toFixed(2)}</span>
         </div>
       </div>
+
+      <AccountModeSwitch mode="rider"/>
 
       {/* ── Grille 2x2 des outils essentiels ── */}
       <h2 className="drv-grid-title">Espace de conduite</h2>

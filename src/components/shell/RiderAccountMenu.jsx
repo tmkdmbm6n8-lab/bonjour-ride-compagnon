@@ -1,3 +1,4 @@
+import AccountModeSwitch from '@/components/shell/AccountModeSwitch';
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -106,6 +107,8 @@ export default function RiderAccountMenu({ user }) {
             <span>StrasDrive Cash</span>
             <strong>{balance === null ? "—" : money(balance)}</strong>
           </Link>
+          {(user?.role === "driver" || user?.canDrive) && <AccountModeSwitch mode="driver"/>}
+          {user?.role === "admin" && <Link href="/admin/dashboard" className="btn btn-secondary btn-full">Administration</Link>}
           <div className="rider-account-links">
             <Link href="/profile">
               <UserRound size={17} />

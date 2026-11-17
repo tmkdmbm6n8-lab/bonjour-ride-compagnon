@@ -6,6 +6,7 @@ const fake = vi.hoisted(() => ({
   writes: [] as unknown[],
   reads: [] as string[],
   messages: [] as unknown[],
+  filters: [] as { table: string; key: string; value: unknown }[],
 }));
 function query(table: string, admin = false) {
   const data = () =>
@@ -26,7 +27,8 @@ function query(table: string, admin = false) {
     select() {
       return q;
     },
-    eq() {
+    eq(key: string, value: unknown) {
+      fake.filters.push({ table, key, value });
       return q;
     },
     in() {
@@ -84,6 +86,7 @@ beforeEach(() => {
   fake.writes = [];
   fake.reads = [];
   fake.messages = [];
+  fake.filters = [];
 });
 describe("autorisations réelles du gestionnaire serveur", () => {
   it("refuse un client dans les fonctions administrateur avant toute écriture", async () => {
@@ -160,5 +163,18 @@ describe("autorisations réelles du gestionnaire serveur", () => {
       },
     ]);
     expect(fake.ride.fare).toEqual({ total: 42 });
+  });
+  it("suit la course passager d’un chauffeur sur l’écran passager", async () => {
+    fake.role = "driver";
+    fake.ride = null;
+    await handleVtc({ path: "/api/rides/active?view=rider" }, context());
+    expect(fake.filters).toContainEqual({ table: "rides", key: "rider_id", value: "self" });
+    expect(fake.filters).not.toContainEqual({ table: "rides", key: "driver_id", value: "self" });
+  });
+  it("permet le suivi passager à un administrateur sans ouvrir les courses d’autres clients", async () => {
+    fake.role = "admin";
+    fake.ride = null;
+    await handleVtc({ path: "/api/rides/active?view=rider" }, context());
+    expect(fake.filters).toContainEqual({ table: "rides", key: "rider_id", value: "self" });
   });
 });

@@ -40,7 +40,7 @@ export default function useDriverState({ onEvent } = {}) {
       try {
         const [profileRes, activeRes] = await Promise.all([
           fetch('/api/drivers/me'),
-          fetch('/api/rides/active'),
+          fetch('/api/rides/active?view=driver'),
         ]);
         if (profileRes.ok) {
           const { driver } = await profileRes.json();
