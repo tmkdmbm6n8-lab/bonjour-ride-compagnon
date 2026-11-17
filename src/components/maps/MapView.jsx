@@ -1,124 +1,251 @@
-'use client';
-import { useEffect, useRef, useState } from 'react';
-import { loadGoogleMaps } from '@/lib/google-maps-loader';
-const CAR = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 2-5h14l2 5v8h-3v-2H6v2H3zM3 10h18"/><circle cx="7" cy="13" r="1"/><circle cx="17" cy="13" r="1"/></svg>';
-const DOT = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>';
-const SQUARE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
-const DARK_STYLE = [
- { elementType: 'geometry', stylers: [{ color: '#18222c' }] },
- { elementType: 'labels.text.stroke', stylers: [{ color: '#18222c' }] },
- { elementType: 'labels.text.fill', stylers: [{ color: '#a9b8c8' }] },
- { featureType: 'poi', stylers: [{ visibility: 'off' }] },
- { featureType: 'transit', stylers: [{ visibility: 'off' }] },
- { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#344352' }] },
- { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#4b5b6c' }] },
- { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0d1a26' }] },
- { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#1e2d2a' }] },
-];
-const valid = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng);
-function makeMarker(maps, map, position, className, html = '') {
-  class Marker extends maps.OverlayView {
-    constructor() { super(); this.position = position; this.element = document.createElement('div'); this.element.style.cssText = 'position:absolute;transform:translate(-50%,-50%);pointer-events:none'; this.element.innerHTML = `<div class="${className}">${html}</div>`; this.setMap(map); }
-    onAdd() { this.getPanes().overlayMouseTarget.appendChild(this.element); }
-    draw() { const pixel = this.getProjection()?.fromLatLngToDivPixel(new maps.LatLng(this.position)); if (pixel) { this.element.style.left = `${pixel.x}px`; this.element.style.top = `${pixel.y}px`; } }
-    setPosition(pos) { this.position = pos; this.draw(); }
-    onRemove() { this.element.remove(); }
-    remove() { this.setMap(null); }
-  }
-  return new Marker();
+"use client";
+
+import { useEffect, useRef } from "react";
+import { Map as MLMap, Marker, LngLatBounds, setWorkerUrl } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { drawRoute } from "@/lib/map-route";
+
+setWorkerUrl(maplibreWorkerUrl);
+
+
+function el(className, html) {
+  const div = document.createElement("div");
+  div.className = className;
+  if (html) div.innerHTML = html;
+  return div;
 }
-function mapPadding(container, compact) {
-  if (compact) return 30;
-  const box = container.getBoundingClientRect();
-  const padding = { top: 60, bottom: 55, left: 30, right: 30 };
-  const panels = ['.ride-panel', '.drv-ride-dock', '.drv-top-passenger-bar'].map(selector => document.querySelector(selector)?.getBoundingClientRect()).filter(p => p?.height);
-  for (const panel of panels) {
-    if (panel.right <= box.left || panel.left >= box.right) continue;
-    if (box.width > 900 && panel.left < box.left + box.width / 2) padding.left = Math.min(box.width - 160, Math.max(padding.left, panel.right - box.left + 24));
-    else if (panel.top >= box.top + box.height / 2) padding.bottom = Math.min(box.height / 2, Math.max(padding.bottom, box.bottom - panel.top + 24));
-    else if (panel.bottom <= box.top + box.height / 2) padding.top = Math.min(box.height / 2, Math.max(padding.top, panel.bottom - box.top + 24));
-  }
-  return padding;
-}
-export default function MapView({ center = {lat:48.5734,lng:7.7521}, zoom = 13, pickup, dropoff, routeGeometry, drivers = [], driverPosition, userPosition, fit = false, fitTo, fitKey, compact = false, followPosition, onClick, className = '', style }) {
-  const frame = useRef(null), container = useRef(null), map = useRef(null), maps = useRef(null), markers = useRef(new Map()), routes = useRef([]), lastTouch = useRef(0), initialCenter = useRef(false), latest = useRef({});
-  latest.current = {center,zoom,onClick};
-  const [ready,setReady] = useState(false), [error,setError] = useState(''), [attempt,setAttempt] = useState(0), [bottomInset,setBottomInset] = useState(0);
-  // Keep Google's built-in logo/terms inside the uncovered map rectangle.
+
+const CAR_SVG =
+  '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>';
+
+const PIN_SVG =
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>';
+
+const SQUARE_SVG =
+  '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+
+export default function MapView({
+  center = { lat: 40.7128, lng: -74.006 },
+  zoom = 13,
+  pickup,
+  dropoff,
+  routeGeometry,
+  drivers = [],
+  driverPosition,
+  userPosition,
+  fit = false,
+  fitTo,
+  fitKey,
+  compact = false,
+  followPosition,
+  navigationMode = false,
+  onClick,
+  className = "",
+  style,
+}) {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const readyRef = useRef(false);
+  const markersRef = useRef({ pickup: null, dropoff: null, driver: null, user: null });
+  const driverDotsRef = useRef(new Map());
+  const animRef = useRef(null);
+  const routeGeomRef = useRef(null);
+  const lastUserMoveRef = useRef(0);
+  const initialUserCenterRef = useRef(false);
+  const onClickRef = useRef(onClick);
+
   useEffect(() => {
-    const update = () => {
-      if (!frame.current) return;
-      const box = frame.current.getBoundingClientRect();
-      let bottom = box.bottom;
-      const overlays = [...document.querySelectorAll('.sidebar, .drv-ride-dock, .ride-panel')].map(el => el.getBoundingClientRect());
-      for (let pass = 0; pass < 3; pass++) for (const overlay of overlays) {
-        if (overlay.height && overlay.right > box.left && overlay.left < box.right && overlay.top > box.top + 60 && overlay.top < bottom && overlay.bottom >= bottom - 4) bottom = overlay.top - 4;
-      }
-      setBottomInset(Math.max(0, Math.round(box.bottom - bottom)));
+    onClickRef.current = onClick;
+  }, [onClick]);
+
+  // Initialisation de la carte
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return undefined;
+
+    const map = new MLMap({
+      container: containerRef.current,
+      style: "/map-dark.json",
+      center: [center.lng, center.lat],
+      zoom,
+      pitch: 0,
+      attributionControl: false,
+      cooperativeGestures: false, // un seul doigt suffit pour parcourir la carte
+    });
+
+    // Credits are rendered in a separate footer outside the map canvas.
+
+    const markUserMove = (e) => {
+      if (e?.originalEvent) lastUserMoveRef.current = Date.now();
     };
-    update();
-    const observer = new ResizeObserver(update); if (frame.current) observer.observe(frame.current);
-    document.querySelectorAll('.sidebar, .drv-ride-dock, .ride-panel').forEach(el => observer.observe(el));
-    window.addEventListener('resize',update);
-    return () => { observer.disconnect(); window.removeEventListener('resize',update); };
-  }, [ready,compact]);
-  useEffect(() => {
-    let stopped = false, observer, listeners = [];
-    setError(''); setReady(false);
-    loadGoogleMaps().then(api => {
-      if (stopped || !container.current) return;
-      maps.current = api;
-      const instance = new api.Map(container.current, { center: latest.current.center, zoom: latest.current.zoom, styles: DARK_STYLE, mapTypeId:'roadmap', disableDefaultUI:true, zoomControl:!compact, gestureHandling:'greedy', clickableIcons:false, tilt:0, heading:0 });
-      map.current = instance;
-      listeners = [instance.addListener('click', e => { if (e.latLng) latest.current.onClick?.({lat:e.latLng.lat(),lng:e.latLng.lng()}); }), instance.addListener('dragstart', () => { lastTouch.current = Date.now(); })];
-      observer = new ResizeObserver(() => api.event.trigger(instance, 'resize')); observer.observe(container.current);
-      setReady(true);
-    }).catch(err => { if (!stopped) setError(err.message); });
-    const authError = () => { if (!stopped) setError('Google Maps est indisponible. Vérifiez l’activation et les restrictions de la clé navigateur.'); };
-    const oldAuthFailure = window.gm_authFailure;
-    window.gm_authFailure = authError;
-    return () => { stopped = true; observer?.disconnect(); listeners.forEach(l => l.remove()); markers.current.forEach(marker => marker.remove()); markers.current.clear(); routes.current.forEach(line => line.setMap(null)); routes.current = []; if (map.current) maps.current?.event.clearInstanceListeners(map.current); map.current = null; if (window.gm_authFailure === authError) window.gm_authFailure = oldAuthFailure; };
-  }, [attempt]);
-  useEffect(() => {
-    if (!ready || !map.current) return;
-    const wanted = new Map();
-    if (valid(pickup)) wanted.set('pickup', [pickup,'marker-pin pickup',DOT]);
-    if (valid(dropoff)) wanted.set('dropoff', [dropoff,'marker-pin dropoff',SQUARE]);
-    if (valid(userPosition)) wanted.set('user', [userPosition,'marker-dot-simple','']);
-    if (valid(driverPosition)) wanted.set('driver', [driverPosition,'marker-driver',CAR]);
-    for (const driver of drivers) if (valid(driver.location)) wanted.set(`nearby:${driver.id}`, [driver.location,'marker-driver',CAR]);
-    wanted.forEach(([pos,cls,html],key) => { if (markers.current.has(key)) markers.current.get(key).setPosition(pos); else markers.current.set(key, makeMarker(maps.current,map.current,pos,cls,html)); });
-    markers.current.forEach((marker,key) => { if (!wanted.has(key)) { marker.remove(); markers.current.delete(key); } });
-  }, [ready,pickup?.lat,pickup?.lng,dropoff?.lat,dropoff?.lng,userPosition?.lat,userPosition?.lng,driverPosition?.lat,driverPosition?.lng,drivers]);
-  useEffect(() => {
-    if (!ready || !map.current) return;
-    routes.current.forEach(line => line.setMap(null)); routes.current = [];
-    const path = (routeGeometry || []).filter(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])).map(([lng,lat]) => ({lat,lng}));
-    if (path.length < 2) return;
-    routes.current = [{color:'#111923',weight:10},{color:'#e9b95c',weight:7},{color:'#ffe4a0',weight:2}].map((line,i) => new maps.current.Polyline({map:map.current,path,strokeColor:line.color,strokeWeight:line.weight,strokeOpacity:1,zIndex:i+1,clickable:false}));
-  }, [ready,routeGeometry]);
-  useEffect(() => {
-    if (!ready || !map.current || !fit || followPosition) return;
-    const points = fitTo ? fitTo.filter(valid) : [pickup,dropoff,driverPosition,...(routeGeometry || []).map(([lng,lat]) => ({lat,lng}))].filter(valid);
-    if (!points.length) return;
-    if (points.length === 1) { map.current.panTo(points[0]); map.current.setZoom(15); return; }
-    const bounds = new maps.current.LatLngBounds(); points.forEach(p => bounds.extend(p));
-    map.current.fitBounds(bounds,mapPadding(container.current,compact));
-    const listener = maps.current.event.addListenerOnce(map.current,'idle',()=>{ if (map.current?.getZoom() > 16) map.current.setZoom(16); });
-    return () => listener.remove();
-  }, [ready,fit,fitKey,fitTo,pickup?.lat,pickup?.lng,dropoff?.lat,dropoff?.lng,routeGeometry,Boolean(followPosition),compact]);
-  useEffect(() => {
-    if (!ready || !map.current) return;
-    if (valid(followPosition)) {
-      if (Date.now() - lastTouch.current < 8000) return;
-      map.current.panTo(followPosition); if (map.current.getZoom() < 15.5) map.current.setZoom(15.5);
-    } else if (valid(userPosition) && !initialCenter.current && !fit) {
-      initialCenter.current = true; if (!lastTouch.current) map.current.panTo(userPosition);
+    map.on("dragstart", markUserMove);
+    map.on("zoomstart", markUserMove);
+
+
+    const applyRoute = () => {
+      readyRef.current = drawRoute(map, routeGeomRef.current);
+    };
+
+    map.on("load", applyRoute);
+    map.on("style.load", applyRoute);
+    map.on("idle", applyRoute);
+    map.on("click", (e) => onClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
+
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(containerRef.current);
+    requestAnimationFrame(() => map.resize());
+
+    mapRef.current = map;
+
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(animRef.current);
+      markersRef.current = { pickup: null, dropoff: null, driver: null, user: null };
+      driverDotsRef.current.clear();
+      try {
+        map.remove();
+      } catch (err) {
+        console.warn("[MapView] map.remove() failed:", err?.message);
+      }
+      if (mapRef.current === map) mapRef.current = null;
+      readyRef.current = false;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Synchronisation des marqueurs
+  function syncMarker(key, pos, make) {
+    const map = mapRef.current;
+    if (!map) return;
+    const markers = markersRef.current;
+    if (!pos) {
+      markers[key]?.remove();
+      markers[key] = null;
+      return;
     }
-  }, [ready,followPosition?.lat,followPosition?.lng,userPosition?.lat,userPosition?.lng,fit]);
-  return <div ref={frame} className={`modern-map-frame google-map-frame ${className}`} style={{width:'100%',height:'100%',position:'relative',...style}}>
-    <div ref={container} className="modern-map google-map-canvas" aria-label="Carte Google Maps" style={{width:'100%',position:'absolute',top:0,left:0,right:0,bottom:bottomInset,minHeight:0}} />
-    {!ready && !error && <div className="google-map-status" role="status">Chargement de la carte…</div>}
-    {error && <div className="google-map-status" role="alert"><p>{error}</p><button className="btn btn-secondary btn-sm" onClick={()=>setAttempt(value=>value+1)}>Réessayer</button></div>}
-  </div>;
+    if (!markers[key]) {
+      markers[key] = new Marker({ element: make() }).setLngLat([pos.lng, pos.lat]).addTo(map);
+    } else {
+      markers[key].setLngLat([pos.lng, pos.lat]);
+    }
+  }
+
+  useEffect(() => {
+    syncMarker("pickup", pickup, () => el("marker-pin pickup", PIN_SVG));
+  }, [pickup?.lat, pickup?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    syncMarker("dropoff", dropoff, () => el("marker-pin dropoff", SQUARE_SVG));
+  }, [dropoff?.lat, dropoff?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Position only: turn-by-turn guidance belongs to the selected external GPS app.
+  useEffect(() => {
+    syncMarker("user", userPosition, () => el("marker-dot-simple", ""));
+  }, [userPosition?.lat, userPosition?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The first GPS fix must be visible, including while the driver is offline.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !userPosition || initialUserCenterRef.current || fit || followPosition || navigationMode) return;
+    initialUserCenterRef.current = true;
+    if (lastUserMoveRef.current) return;
+    map.easeTo({ center: [userPosition.lng, userPosition.lat], duration: 600 });
+  }, [userPosition?.lat, userPosition?.lng, fit, Boolean(followPosition), navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Véhicules à proximité
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const dots = driverDotsRef.current;
+    const seen = new Set();
+
+    for (const d of drivers) {
+      if (!d?.location) continue;
+      seen.add(d.id);
+      const lngLat = [d.location.lng, d.location.lat];
+      if (dots.has(d.id)) {
+        dots.get(d.id).setLngLat(lngLat);
+      } else {
+        const m = new Marker({ element: el("marker-driver", CAR_SVG) }).setLngLat(lngLat).addTo(map);
+        m.getElement().style.opacity = "0.85";
+        dots.set(d.id, m);
+      }
+    }
+
+    for (const [id, marker] of dots) {
+      if (!seen.has(id)) {
+        marker.remove();
+        dots.delete(id);
+      }
+    }
+  }, [drivers]);
+
+  // Tracé d'itinéraire
+  useEffect(() => {
+    routeGeomRef.current = routeGeometry || null;
+    const map = mapRef.current;
+    if (!map) return;
+    readyRef.current = drawRoute(map, routeGeomRef.current);
+  }, [routeGeometry, navigationMode, userPosition?.lat, userPosition?.lng]);
+
+  // Cadrage d'itinéraire (hors navigation active)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !fit || followPosition || navigationMode) return;
+
+    const points = [];
+    if (fitTo) {
+      for (const p of fitTo) if (p && Number.isFinite(p.lat) && Number.isFinite(p.lng)) points.push([p.lng, p.lat]);
+    } else {
+      if (pickup) points.push([pickup.lng, pickup.lat]);
+      if (dropoff) points.push([dropoff.lng, dropoff.lat]);
+      if (driverPosition) points.push([driverPosition.lng, driverPosition.lat]);
+      if (routeGeometry?.length) points.push(...routeGeometry);
+    }
+    if (points.length < 2) {
+      if (points.length === 1) map.easeTo({ center: points[0], zoom: 15, duration: 600 });
+      return;
+    }
+
+    const bounds = points.reduce((b, p) => b.extend(p), new LngLatBounds(points[0], points[0]));
+    map.fitBounds(bounds, { padding: compact ? 38 : fitPadding(map), duration: 700, maxZoom: 16 });
+  }, [fit, pickup?.lat, dropoff?.lat, routeGeometry, fitKey, Boolean(followPosition), navigationMode, compact]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Suivi GPS temps réel 3D (type Waze)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !followPosition) return;
+    // Si l'utilisateur touche la carte, pause de 8 secondes avant de reprendre le suivi
+    if (Date.now() - lastUserMoveRef.current < 8000) return;
+
+    map.easeTo({ center: [followPosition.lng, followPosition.lat],
+      zoom: Math.max(map.getZoom(), 15.5), pitch: 0, bearing: 0,
+      padding: fitPadding(map), duration: 800 });
+  }, [followPosition?.lat, followPosition?.lng, followPosition?.heading, navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className={`modern-map-frame ${className}`} style={{ width: "100%", height: "100%", ...style }}>
+      <div ref={containerRef} className="modern-map" style={{ width: "100%", flex: 1, minHeight: 0 }} aria-label="Carte GPS" />
+      {!compact && (
+        <details className="map-source-footer">
+          <summary>Sources</summary>
+          <span>
+          © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>
+          {" · "}<a href="https://openfreemap.org/" target="_blank" rel="noreferrer">OpenFreeMap</a>
+          {" · "}<a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a>
+          </span>
+        </details>
+      )}
+    </div>
+  );
 }
+
+function fitPadding(map) {
+  const box = map.getContainer().getBoundingClientRect();
+  const panel = document.querySelector(".ride-panel")?.getBoundingClientRect();
+  const pad = { top: 60, bottom: 60, left: 50, right: 50 };
+  if (!panel || panel.height === 0) return pad;
+  if (box.width <= 900) pad.bottom = Math.min(box.height - 140, Math.max(60, box.bottom - panel.top + 24));
+  else pad.left = Math.min(box.width - 200, Math.max(50, panel.right - box.left + 30));
+  return pad;
+}
+

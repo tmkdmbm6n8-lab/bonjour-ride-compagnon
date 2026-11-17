@@ -1,10 +1,8 @@
 # Cartes et GPS externe
 
-La carte utilise désormais le SDK Google Maps JavaScript, en thème sombre, avec les marqueurs de prise en charge, destination, position et véhicules. MapLibre/OpenFreeMap n’est plus chargé par MapView. Les mentions Google restent visibles dans la partie de carte non couverte par les panneaux.
+La carte d’origine utilise MapLibre, OpenFreeMap/OpenStreetMap, les marqueurs de prise en charge, destination et véhicules. La navigation interne Google (vue de guidage, animation, trafic et bandeau vert) est retirée.
 
-La carte est chargée avec `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY`, déjà présente dans le projet. Cette clé publique doit être restreinte aux domaines du site et à Maps JavaScript API dans Google Cloud. La clé serveur `GOOGLE_MAPS_API_KEY` n’est jamais envoyée au navigateur. La variable navigateur doit être disponible pendant le build ; le SDK et la facturation Google Maps JavaScript doivent être actifs sur le projet de la clé.
-
-Google Routes et Geocoding restent côté serveur pour le temps avec trafic, la distance, le tracé et les suggestions d’adresse. Aucune nouvelle requête Directions/Routes n’est lancée par le SDK d’affichage. Aucun calcul de prix ni lien fournisseur n’est modifié. Il n’y a pas de guidage interne : la navigation reste dans le GPS externe choisi.
+Google reste utilisé côté serveur pour Routes API (durée avec trafic, distance et itinéraire) et Geocoding API (suggestions d’adresse et recherche inverse), via le connecteur Lovable existant. Les secrets restent gérés par Lovable ; aucune clé serveur n’est exposée au navigateur. Aucun changement de facturation ou de configuration du connecteur n’est effectué.
 
 Accepter une course ou valider le PIN n’ouvre aucune application GPS. Le bouton « Démarrer le trajet » ouvre le GPS uniquement sur action explicite :
 

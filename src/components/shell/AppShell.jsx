@@ -25,18 +25,6 @@ export default function AppShell({ nav, children, variant = "default" }) {
     observer.observe(sidebar);
     return () => observer.disconnect();
   }, []);
-  useEffect(() => {
-    if (variant !== 'driver') return undefined;
-    const viewport = window.visualViewport;
-    const update = () => {
-      const shell = shellRef.current;
-      if (!shell) return;
-      shell.style.setProperty('--shell-visible-top', `${viewport?.offsetTop || 0}px`);
-      shell.style.setProperty('--shell-visible-height', `${viewport?.height || window.innerHeight}px`);
-    };
-    update(); viewport?.addEventListener('resize', update); viewport?.addEventListener('scroll', update); window.addEventListener('resize', update);
-    return () => { viewport?.removeEventListener('resize', update); viewport?.removeEventListener('scroll', update); window.removeEventListener('resize', update); };
-  }, [variant]);
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user;
@@ -44,7 +32,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
     variant === "rider" ? "/dashboard" : user?.role === "driver" ? "/driver/dashboard" : user?.role === "admin" ? "/admin/dashboard" : "/dashboard";
 
   return (
-    <div ref={shellRef} className={`shell ${variant === "rider" ? "shell-rider" : variant === "admin" ? "shell-admin" : variant === "driver" ? "shell-driver" : ""} shell-dark`}>
+    <div ref={shellRef} className={`shell ${variant === "rider" ? "shell-rider" : variant === "admin" ? "shell-admin" : ""} shell-dark`}>
       <aside ref={sidebarRef} className="sidebar">
         <div className="sidebar-brand">
           <Link href={homeHref} aria-label="Accueil StrasDrive">
