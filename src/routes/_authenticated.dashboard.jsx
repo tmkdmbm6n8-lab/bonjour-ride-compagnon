@@ -894,7 +894,7 @@ function RiderDashboard() {
             </div>
             {liveTrip && (
               <div className="flex items-center justify-between mb-2 tiny" style={{ gap: 8 }}>
-                <span style={{ color: liveTrip.approximate ? "var(--warning)" : "var(--text-2)" }}>
+                <span style={{ color: liveTrip.approximate ? "#fcd34d" : "#e2e8f0" }}>
                   {liveTrip.quality}
                 </span>
                 <span className="mono-nums" style={{ fontWeight: 700 }}>

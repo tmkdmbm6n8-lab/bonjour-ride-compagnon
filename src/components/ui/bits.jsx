@@ -26,7 +26,7 @@ export function Stars({ value = 5, size = 14 }) {
   return (
     <span className="flex items-center gap-1" style={{ color: "var(--gold-600)" }}>
       <Star size={size} fill="currentColor" strokeWidth={0} />
-      <span className="small mono-nums" style={{ color: "var(--text)", fontWeight: 600 }}>
+      <span className="stars-value small mono-nums" style={{ color: "var(--text)", fontWeight: 600 }}>
         {Number(value).toFixed(1)}
       </span>
     </span>
