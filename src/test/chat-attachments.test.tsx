@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({ fetch:vi.fn(),toast:vi.fn() }));
 vi.mock('@/lib/archive-fetch',()=>({apiFetch:mocks.fetch}));
 vi.mock('@/components/ui/Toast',()=>({useToast:()=>mocks.toast}));
 import ChatAttachments from '@/components/ride/ChatAttachments';
+// jsdom has no PointerEvent: without this, clientX is lost and slide distances are not tested.
+if (typeof window.PointerEvent === 'undefined') (window as any).PointerEvent = class extends MouseEvent { pointerId:number; constructor(type:string, init:any = {}) { super(type, init); this.pointerId = init.pointerId ?? 1; } };
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals();mocks.fetch.mockReset();mocks.toast.mockReset()});
 describe('pièces jointes de discussion',()=>{
  it('partage la position uniquement au clic explicite',async()=>{
@@ -61,7 +63,6 @@ describe('pièces jointes de discussion',()=>{
   await screen.findByRole('status');
   const now=Date.now();vi.spyOn(Date,'now').mockReturnValue(now+3000);
   fireEvent.pointerMove(mic,{clientX:160});fireEvent.pointerUp(mic,{clientX:160});
-  await new Promise(r=>setTimeout(r,50));console.log('DBG',JSON.stringify(mocks.toast.mock.calls),document.body.textContent);
   await waitFor(()=>expect(mocks.fetch).toHaveBeenCalled());
   expect(mocks.fetch.mock.calls[0][0]).toBe('/api/rides/ride/attachment');
  });
