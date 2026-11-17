@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({ fetch:vi.fn(),toast:vi.fn() }));
 vi.mock('@/lib/archive-fetch',()=>({apiFetch:mocks.fetch}));
 vi.mock('@/components/ui/Toast',()=>({useToast:()=>mocks.toast}));
 import ChatAttachments from '@/components/ride/ChatAttachments';
+import VoiceNote from '@/components/ride/VoiceNote';
 // jsdom has no PointerEvent: without this, clientX is lost and slide distances are not tested.
 if (typeof window.PointerEvent === 'undefined') (window as any).PointerEvent = class extends MouseEvent { pointerId:number; constructor(type:string, init:any = {}) { super(type, init); this.pointerId = init.pointerId ?? 1; } };
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals();mocks.fetch.mockReset();mocks.toast.mockReset()});
@@ -65,6 +66,37 @@ describe('pièces jointes de discussion',()=>{
   fireEvent.pointerMove(mic,{clientX:160});fireEvent.pointerUp(mic,{clientX:160});
   await waitFor(()=>expect(mocks.fetch).toHaveBeenCalled());
   expect(mocks.fetch.mock.calls[0][0]).toBe('/api/rides/ride/attachment');
+ });
+ it('deuxième vocal : le micro répond tout de suite, même pendant l’envoi du premier',async()=>{
+  const getUserMedia=vi.fn(async()=>({getTracks:()=>[{stop:vi.fn()}]}));
+  vi.stubGlobal('navigator',{mediaDevices:{getUserMedia}});
+  class Recorder { static isTypeSupported(){return true} state='inactive';mimeType='audio/webm';onstop:any;ondataavailable:any;start(){this.state='recording'}stop(){this.state='inactive';this.ondataavailable?.({data:new Blob(['x'])});this.onstop?.()} }
+  vi.stubGlobal('MediaRecorder',Recorder);
+  mocks.fetch.mockReturnValue(new Promise(()=>{})); // le premier envoi ne se termine jamais
+  render(<ChatAttachments rideId="ride"/>);
+  const mic=screen.getByRole('button',{name:'Enregistrer un vocal'});
+  const now=Date.now();
+  fireEvent.pointerDown(mic,{clientX:300,pointerId:1});
+  await screen.findByText('Glisser jusqu’au bout pour supprimer');
+  vi.spyOn(Date,'now').mockReturnValue(now+3000);
+  fireEvent.pointerUp(mic,{clientX:300});
+  await waitFor(()=>expect(mocks.fetch).toHaveBeenCalledTimes(1));
+  expect(mic).not.toBeDisabled();
+  fireEvent.pointerDown(mic,{clientX:300,pointerId:2});
+  await screen.findByText('Glisser jusqu’au bout pour supprimer');
+  expect(getUserMedia).toHaveBeenCalledTimes(1);
+  vi.spyOn(Date,'now').mockReturnValue(now+6000);
+  fireEvent.pointerUp(mic,{clientX:300});
+  await waitFor(()=>expect(mocks.fetch).toHaveBeenCalledTimes(2));
+ });
+ it('un vocal reçu est téléchargé d’avance et joué depuis le téléphone',async()=>{
+  const fetchAudio=vi.fn(async()=>({ok:true,blob:async()=>new Blob(['son'],{type:'audio/webm'})}));
+  vi.stubGlobal('fetch',fetchAudio);
+  const created=vi.fn(()=>'blob:local-vocal');URL.createObjectURL=created;URL.revokeObjectURL=vi.fn();
+  const {container}=render(<VoiceNote url="https://stockage/vocal.webm?token=1" duration={4} seed="m1"/>);
+  expect(fetchAudio).toHaveBeenCalledWith('https://stockage/vocal.webm?token=1');
+  await waitFor(()=>expect(container.querySelector('audio')!.getAttribute('src')).toBe('blob:local-vocal'));
+  expect(container.querySelector('audio')!.getAttribute('preload')).toBe('auto');
  });
  it('refuse une image trop grande avant l’envoi',()=>{
   const {container}=render(<ChatAttachments rideId="ride"/>);
