@@ -7074,3 +7074,8 @@ a.activity-pill:hover {
 .drv-ride-dock .drv-sheet-summary { margin-bottom: 8px; font-size: 12px; }
 .drv-ride-dock .drv-sheet-actions { grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 6px; }
 .drv-ride-dock .drv-sheet-actions > .btn { min-height: 44px; padding: 8px; font-size: 12px; }
+
+/* Return is visible on every passenger page, independently of the desktop menu. */
+.driver-return-bar { position: relative; z-index: 25; display: flex; justify-content: flex-end; padding: 10px 16px 0; flex: 0 0 auto; }
+.driver-return-bar > div { margin: 0; max-width: 100%; }
+.driver-return-bar .btn { min-height: 44px; }

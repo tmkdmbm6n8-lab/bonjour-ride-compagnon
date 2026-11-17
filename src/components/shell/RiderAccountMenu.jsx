@@ -13,6 +13,7 @@ export default function RiderAccountMenu({ user }) {
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState(null);
   const [balance, setBalance] = useState(null);
+  const [verifiedDriver,setVerifiedDriver] = useState(null);
   const root = useRef(null);
   const trigger = useRef(null);
   const pathname = usePathname();
@@ -28,6 +29,7 @@ export default function RiderAccountMenu({ user }) {
       .then(async (res) => {
         if (!res.ok) throw new Error();
         const data = await res.json();
+        if (!cancelled) setVerifiedDriver({userId:user?.id,allowed:data.user?.canDrive===true || data.user?.role==='driver'});
         if (!cancelled) setBalance(data.user?.wallet?.balance ?? null);
       })
       .catch(() => {
@@ -107,7 +109,7 @@ export default function RiderAccountMenu({ user }) {
             <span>StrasDrive Cash</span>
             <strong>{balance === null ? "—" : money(balance)}</strong>
           </Link>
-          {(user?.role === "driver" || user?.canDrive) && <AccountModeSwitch mode="driver"/>}
+          {(verifiedDriver && verifiedDriver.userId===user?.id ? verifiedDriver.allowed : user?.role === "driver" || user?.canDrive===true) && <AccountModeSwitch mode="driver"/>}
           {user?.role === "admin" && <Link href="/admin/dashboard" className="btn btn-secondary btn-full">Administration</Link>}
           <div className="rider-account-links">
             <Link href="/profile">

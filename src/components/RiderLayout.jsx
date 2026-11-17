@@ -1,3 +1,4 @@
+import DriverReturnBar from '@/components/shell/DriverReturnBar';
 "use client";
 
 import { Navigation, Clock, Wallet, UserRound } from "lucide-react";
@@ -15,6 +16,7 @@ export default function RiderLayout({ children }) {
   return (
     <>
       <AppShell nav={NAV} variant="rider">
+        <DriverReturnBar/>
         {children}
       </AppShell>
     </>
