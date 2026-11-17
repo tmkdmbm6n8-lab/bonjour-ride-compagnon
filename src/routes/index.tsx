@@ -61,7 +61,7 @@ const STEPS = [
 ];
 
 function LandingPage() {
-  const {data: session, status} = useSession();
+  const {data: session, status} = useSession() as {data: {user?: {role?: string}} | null; status: string};
   const [nativeApp, setNativeApp] = useState<boolean | null>(null);
   useEffect(() => { setNativeApp(Capacitor.isNativePlatform()); }, []);
 

@@ -16,7 +16,7 @@ describe('demandes de retrait', () => {
     const rpc = vi.fn().mockResolvedValueOnce({data:{version:1,requests:[]}}).mockResolvedValueOnce({data:{id:'request'}});
     await requestWithdrawal({rpc}, {uid:'driver',profile:{balance:30},value:'10'});
     expect(rpc.mock.calls.map(([name]) => name)).toEqual(['withdrawal_request_state','request_withdrawal']);
-    expect(rpc.mock.calls[1][1]).toEqual({_driver:'driver',_debit:10,_fee:.5});
+    expect(rpc.mock.calls[1]?.[1]).toEqual({_driver:'driver',_debit:10,_fee:.5});
   });
   it('ne prend pas de demande si les transactions ne sont pas activées', async () => {
     const rpc=vi.fn().mockResolvedValue({error:{code:'PGRST202'}});
@@ -31,7 +31,7 @@ describe('demandes de retrait', () => {
   it('refuse une demande sans démarrer de transfert', async () => {
     const rpc=vi.fn().mockResolvedValue({data:{}}), sendTransfer=vi.fn();
     await adminWithdrawalAction({rpc},{uid:'admin',body:{id:'11111111-1111-1111-1111-111111111111',action:'reject'},stripe:null,sendTransfer});
-    expect(rpc.mock.calls[0][0]).toBe('reject_withdrawal');
+    expect(rpc.mock.calls[0]?.[0]).toBe('reject_withdrawal');
     expect(sendTransfer).not.toHaveBeenCalled();
   });
 });
