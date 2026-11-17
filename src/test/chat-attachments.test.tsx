@@ -22,16 +22,26 @@ describe('pièces jointes de discussion',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Enregistrer un vocal'}));
   expect(mocks.toast).toHaveBeenCalledWith(expect.stringContaining('navigateur'),'error');expect(mocks.fetch).not.toHaveBeenCalled();
  });
- it('arrête le microphone en fermant le panneau et n’envoie pas automatiquement le vocal',async()=>{
+ it('maintenir pour parler : fermer le panneau coupe le micro sans envoyer',async()=>{
   const stopTrack=vi.fn();
   vi.stubGlobal('navigator',{mediaDevices:{getUserMedia:vi.fn(async()=>({getTracks:()=>[{stop:stopTrack}]}))}});
   let rec:any;
   class Recorder { static isTypeSupported(){return true} state='inactive';mimeType='audio/webm';onstop:any;ondataavailable:any;constructor(){rec=this}start(){this.state='recording'}stop(){this.state='inactive';this.onstop?.()} }
   vi.stubGlobal('MediaRecorder',Recorder);
   const view=render(<ChatAttachments rideId="ride"/>);
-  fireEvent.click(screen.getByRole('button',{name:'Enregistrer un vocal'}));
-  await screen.findByRole('button',{name:'Arrêter l’enregistrement'});
+  fireEvent.pointerDown(screen.getByRole('button',{name:'Enregistrer un vocal'}),{clientX:200,pointerId:1});
+  await screen.findByText('Glisser pour annuler');
   view.unmount();expect(stopTrack).toHaveBeenCalled();expect(rec.state).toBe('inactive');expect(mocks.fetch).not.toHaveBeenCalled();
+ });
+ it('glisser à gauche puis relâcher annule le vocal sans envoi',async()=>{
+  vi.stubGlobal('navigator',{mediaDevices:{getUserMedia:vi.fn(async()=>({getTracks:()=>[{stop:vi.fn()}]}))}});
+  class Recorder { static isTypeSupported(){return true} state='inactive';mimeType='audio/webm';onstop:any;ondataavailable:any;start(){this.state='recording'}stop(){this.state='inactive';this.ondataavailable?.({data:new Blob(['x'])});this.onstop?.()} }
+  vi.stubGlobal('MediaRecorder',Recorder);
+  render(<ChatAttachments rideId="ride"/>);
+  fireEvent.pointerDown(screen.getByRole('button',{name:'Enregistrer un vocal'}),{clientX:200,pointerId:1});
+  const bar=await screen.findByRole('status');
+  fireEvent.pointerMove(bar,{clientX:100});fireEvent.pointerUp(bar,{clientX:100});
+  expect(mocks.fetch).not.toHaveBeenCalled();
  });
  it('refuse une image trop grande avant l’envoi',()=>{
   const {container}=render(<ChatAttachments rideId="ride"/>);
