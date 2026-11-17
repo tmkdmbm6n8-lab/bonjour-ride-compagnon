@@ -7165,12 +7165,17 @@ a.activity-pill:hover {
 .btn.ride-report-button:hover, .btn.ride-report-button:active { color: #fca5a5; background: transparent; }
 .btn.ride-safety-button:focus-visible, .btn.ride-report-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .rider-safety-actions { align-items: center; justify-content: space-between; }
-/* Keep the title and close control visible while a long dialog scrolls. */
+/* The fixed header and scrollable body never overlap, including short screens. */
+.modal-portal-root .modal {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
 .modal-portal-root .modal-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  margin: -28px -28px 16px;
+  position: relative;
+  flex: 0 0 auto;
+  margin: 0;
   padding: 16px 20px;
   background: #101319;
   border-bottom: 1px solid #ffffff18;
@@ -7178,3 +7183,10 @@ a.activity-pill:hover {
 }
 .modal-portal-root .modal-header h3 { min-width: 0; overflow-wrap: anywhere; }
 .modal-portal-root .modal-header button { flex-shrink: 0; color: #e2e8f0; }
+.modal-portal-root .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 28px max(28px, env(safe-area-inset-bottom, 0px));
+}

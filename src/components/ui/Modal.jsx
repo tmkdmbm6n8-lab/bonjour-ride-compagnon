@@ -71,7 +71,7 @@ export default function Modal({
             )}
           </div>
         )}
-        {children}
+        {portal ? <div className="modal-body">{children}</div> : children}
       </div>
     </div>
   );
