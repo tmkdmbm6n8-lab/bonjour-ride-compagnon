@@ -120,41 +120,26 @@ function EarningsPage() {
       <button className="earnings-details-button" onClick={() => setDetails(!details)} aria-expanded={details}>
         {details ? "Masquer les détails" : "Voir les détails"}
       </button>
-      {details && (
-        <section className="earnings-daily">
-          <h2>Chaque jour</h2>
-          {week.byDay.map((row) => (
-            <div key={row._id}>
-              <span>
-                {date(row._id)}
-                <small>
-                  {row.trips} courses · {workDuration(row.activitySeconds)}
-                </small>
-              </span>
-              <strong>{money(row.earnings)}</strong>
-            </div>
-          ))}
-          <h2>Courses récentes de cette semaine</h2>
-          {data.recentRides.length === 0 && <p className="driver-muted">Aucune course terminée.</p>}
-          {data.recentRides.map((ride) => (
-            <Link className="driver-menu-row" key={ride.id} href="/driver/trips">
-              <span>
-                {ride.dropoff?.address}
-                <small>
-                  {new Intl.DateTimeFormat("fr-FR", {
-                    timeZone: "Europe/Paris",
-                    day: "numeric",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  }).format(new Date(ride.completedAt))}
-                </small>
-              </span>
-              <strong>{money(ride.fare?.driverEarnings)}</strong>
-            </Link>
-          ))}
-        </section>
-      )}
+      {data.recentRides.map((ride) => (
+        <Link className="driver-menu-row" key={ride.id} href="/driver/trips">
+          <span>
+            {ride.pickup?.city && ride.dropoff?.city
+              ? `De ${ride.pickup.city} à ${ride.dropoff.city}`
+              : ride.dropoff?.address || "Course"}
+            <small>
+              {new Intl.DateTimeFormat("fr-FR", {
+                timeZone: "Europe/Paris",
+                day: "numeric",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              }).format(new Date(ride.completedAt))}
+            </small>
+          </span>
+          <strong>{money(ride.fare?.driverEarnings)}</strong>
+        </Link>
+      ))}
+
       <Link href="/driver/wallet" className="driver-menu-row earnings-balance">
         <span>Solde</span>
         <strong>{money(data.wallet.balance)}</strong>
