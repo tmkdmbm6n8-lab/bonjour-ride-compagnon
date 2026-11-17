@@ -52,9 +52,9 @@
 - [ ] App iPhone (IPA) — reportée à la demande de l'utilisateur
 
 # Vocaux façon Snapchat (17/11)
-- [ ] Bouton micro à droite, bulle qui suit le doigt, glisser à gauche = corbeille
-- [ ] Lecture : bouton play rouge, onde, vitesse 1x/1,5x/2x, durée
+- [x] Bouton micro à droite, bulle qui suit le doigt, glisser à gauche = corbeille
+- [x] Lecture : bouton play rouge, onde, vitesse 1x/1,5x/2x, durée
 
 # Page course chauffeur (17/11)
-- [ ] Contenu centré, rien ne déborde à droite
-- [ ] Textes des onglets du bas visibles sans défiler
+- [x] Contenu centré, rien ne déborde à droite
+- [x] Textes des onglets du bas visibles sans défiler
