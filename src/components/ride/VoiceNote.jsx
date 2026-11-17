@@ -38,7 +38,7 @@ export default function VoiceNote({ url, duration, seed, onError }) {
       onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
       onEnded={() => { setPlaying(false); setTime(0); }} />
     <button type="button" className="voice-note-play" onClick={toggle} aria-label={playing ? 'Mettre en pause le vocal' : 'Écouter le vocal'}>
-      {playing ? <Pause size={26} fill="currentColor" strokeWidth={0} /> : <Play size={28} fill="currentColor" strokeWidth={0} />}
+      {playing ? <Pause size={18} fill="currentColor" strokeWidth={0} /> : <Play size={18} style={{ marginLeft: 2 }} fill="currentColor" strokeWidth={0} />}
     </button>
     <div className="voice-note-wave" onClick={seek} role="slider" aria-label="Position dans le vocal" aria-valuemin={0} aria-valuemax={Math.round(total)} aria-valuenow={Math.round(time)} tabIndex={-1}>
       {bars.map((v, i) => <i key={i} className={(i + 0.5) / bars.length <= progress ? 'is-played' : ''} style={v ? { height: `${Math.round(v * 100)}%` } : undefined} data-dot={v ? undefined : ''} />)}
