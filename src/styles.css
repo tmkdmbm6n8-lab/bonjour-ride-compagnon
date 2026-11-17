@@ -8270,3 +8270,61 @@ a.activity-pill:hover {
 .drv-chat-bubble:has(.voice-note) .drv-chat-meta {
   padding: 0 6px;
 }
+/* Écran de bannissement total du chauffeur */
+.driver-banned-lockout-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: var(--ink-950, #0a0e14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.driver-banned-card {
+  max-width: 440px;
+  width: 100%;
+  background: var(--ink-900, #111923);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  border-radius: 20px;
+  padding: 36px 24px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+}
+
+.driver-banned-icon-wrap {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.driver-banned-icon {
+  color: #ef4444;
+}
+
+.driver-banned-card h1 {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 14px;
+}
+
+.driver-banned-message {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--ink-200, #cbd5e1);
+  margin: 0 0 28px;
+}
+
+.driver-banned-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
