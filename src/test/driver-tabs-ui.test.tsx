@@ -75,8 +75,9 @@ describe("onglets chauffeur", () => {
     };
     const Component = DiscoverRoute.options.component as any;
     render(<Component />);
-    expect(screen.getByText("Horaires non publiés")).toBeTruthy();
-    expect(screen.getByText("Aucun horaire disponible pour cette sélection.")).toBeTruthy();
+    expect(screen.queryByText("Horaires non publiés")).toBeNull();
+    expect(screen.queryByText("Aucun horaire disponible pour cette sélection.")).toBeNull();
+    expect(screen.getByText("Aucun flux d'arrivée répertorié pour le moment.")).toBeTruthy();
   });
   it("affiche les vrais totaux et permet de choisir un jour", () => {
     fixtures.data["/api/drivers/me/earnings"] = {
@@ -85,10 +86,11 @@ describe("onglets chauffeur", () => {
         end: "2026-11-16",
         total: 42,
         trips: 2,
+        onlineSeconds: 5400,
         activitySeconds: 3600,
         byDay: [
-          { _id: "2026-11-09", earnings: 12, trips: 1, activitySeconds: 1200 },
-          { _id: "2026-11-10", earnings: 30, trips: 1, activitySeconds: 2400 },
+          { _id: "2026-11-09", earnings: 12, trips: 1, onlineSeconds: 2400, activitySeconds: 1200 },
+          { _id: "2026-11-10", earnings: 30, trips: 1, onlineSeconds: 3000, activitySeconds: 2400 },
         ],
       },
       stats: { averageRating: 4.9 },
@@ -100,7 +102,7 @@ describe("onglets chauffeur", () => {
     expect(screen.getByText(/42,00/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /9 nov.*12,00/ }));
     expect(screen.getByText(/12,00/)).toBeTruthy();
-    expect(screen.getByText("0 h 20")).toBeTruthy();
+    expect(screen.getByText("0 h 40")).toBeTruthy();
   });
   it("ouvre une conversation administrateur réelle depuis Inbox", () => {
     fixtures.data["/api/drivers/me/inbox"] = {

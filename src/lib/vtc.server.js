@@ -1,3 +1,4 @@
+import { recordOnlineTime } from "./driver-online-time.server";
 import { driverReportMessage } from "./driver-reports";
 import { visibleChatMessages, CHAT_ACTIVE_STATUSES } from "./ride-chat";
 import {
@@ -591,7 +592,10 @@ export async function handleVtc(input, context) {
       if (batch.length < 500) break;
     }
     const driver = required(await db.from("drivers").select("stats").eq("user_id", uid).single());
+    const onlineTime = await recordOnlineTime(admin, uid);
     const week = driverWeekSummary(rows, day);
+    for (const row of week.byDay) row.onlineSeconds = onlineTime.days[row._id] || 0;
+    week.onlineSeconds = week.byDay.reduce((sum, row) => sum + row.onlineSeconds, 0);
     const finishedThisWeek = rows.filter((ride) => {
       const completedDay = parisDay(ride.completed_at);
       return completedDay >= week.start && completedDay < week.end;
@@ -601,7 +605,7 @@ export async function handleVtc(input, context) {
       stats: driver.stats,
       today: week.today,
       week,
-      recentRides: await Promise.all(finishedThisWeek.slice(0, 30).map((ride) => serialize(admin, ride, uid, true))),
+      recentRides: await Promise.all(finishedThisWeek.filter((ride) => parisDay(ride.completed_at) === parisDay()).map((ride) => serialize(admin, ride, uid, true))),
     };
   }
   if (p === "/api/drivers/me/operator" && method === "PATCH") {
@@ -751,6 +755,11 @@ export async function handleVtc(input, context) {
     const c = driverCompliance(docs);
     return { documents: docs.map(docShape), compliance: { ...c, problem: complianceProblem(c) } };
   }
+  if (p === "/api/drivers/me/online-time") {
+    if (!canDrive || method !== "POST") throw new Error("Accès refusé");
+    await recordOnlineTime(admin, uid);
+    return { ok: true };
+  }
   if (p === "/api/drivers/me/status") {
     if (method !== "POST") throw new Error("Méthode non autorisée");
     if (typeof body.online !== "boolean") throw new Error("Statut invalide");
@@ -776,16 +785,10 @@ export async function handleVtc(input, context) {
       if (Number(profile.balance) < -25) throw new Error("Régularisez votre solde avant de passer en ligne");
       if (!validLocation(body.location)) throw new Error("Position invalide");
     }
-    required(
-      await db
-        .from("drivers")
-        .update({
-          is_online: Boolean(body.online),
-          location: body.online ? body.location : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", uid),
-    );
+    await recordOnlineTime(admin, uid, {
+      online: body.online,
+      patch: { is_online: body.online, location: body.online ? body.location : null, updated_at: new Date().toISOString() },
+    });
     return { ok: true };
   }
   if (p === "/api/drivers/location") {
@@ -795,6 +798,7 @@ export async function handleVtc(input, context) {
     const driver = required(await db.from("drivers").select("is_online").eq("user_id", uid).single());
     const ongoing = required(await db.from("rides").select("id").eq("driver_id", uid).in("status", active));
     if (!driver.is_online && !ongoing.length) return { ok: true, ignored: true };
+    await recordOnlineTime(admin, uid);
     required(
       await db
         .from("drivers")

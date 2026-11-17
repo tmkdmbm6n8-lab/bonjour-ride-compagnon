@@ -66,7 +66,6 @@ function DiscoverPage() {
       {/* ── En-tête épuré Trafic ── */}
       <div className="driver-tab-title">
         <div>
-          <p className="drv-eyebrow">Flux en direct · Strasbourg</p>
           <h1>Trafic</h1>
         </div>
         <button className="driver-icon-button" onClick={reload} aria-label="Actualiser les flux">
@@ -133,15 +132,6 @@ function DiscoverPage() {
           ))}
         </div>
       )}
-      {data?.feeds?.map((feed) =>
-        feed.warning ? (
-          <div key={feed.kind} className="driver-notice mb-3" role="status">
-            <strong>{feed.warning}</strong>
-            <p>Aucun horaire disponible pour cette sélection.</p>
-          </div>
-        ) : null,
-      )}
-
       {error && (
         <div role="alert" className="driver-notice">
           {error}

@@ -48,6 +48,23 @@ export default function DriverLayout({ children }) {
     };
   }, []);
 
+  // Keep online time observed while using any driver tab, including when stationary.
+  useEffect(() => {
+    let stopped = false;
+    let pending = false;
+    const heartbeat = async () => {
+      if (stopped || pending) return;
+      pending = true;
+      try { await fetch('/api/drivers/me/online-time', { method: 'POST' }); }
+      catch { /* A network gap is not counted as confirmed connection time. */ }
+      finally { pending = false; }
+    };
+    heartbeat();
+    const timer = setInterval(heartbeat, 30000);
+    window.addEventListener('focus', heartbeat);
+    return () => { stopped = true; clearInterval(timer); window.removeEventListener('focus', heartbeat); };
+  }, []);
+
   // Écran de bannissement total : bloque l'accès à toute l'application
   if (isSuspended) {
     return (

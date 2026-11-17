@@ -1,22 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Circle, MapPin } from "lucide-react";
 import DriverLayout from "@/components/DriverLayout";
 import Link from "@/lib/archive-navigation";
 import PayoutCard from "@/components/driver/PayoutCard";
-import { Loading, money } from "@/components/ui/bits";
+import { Loading, money, RideStatusBadge } from "@/components/ui/bits";
 import useDriverData from "@/hooks/useDriverData";
 import { parisDay, shiftDay, workDuration } from "@/lib/vtc-dates";
-import MapView from "@/components/ArchiveMap";
-import Modal from "@/components/ui/Modal";
-import { drawableRoute } from "@/lib/utils/route-display";
-
 function EarningsPage() {
   const [day, setDay] = useState(parisDay()),
-    [details, setDetails] = useState(false),
-    [selectedDay, setSelectedDay] = useState(null),
-    [mapOpen, setMapOpen] = useState(false),
-    [rideIndex, setRideIndex] = useState(0);
+    [selectedDay, setSelectedDay] = useState(null);
   const { data, error, reload } = useDriverData(`/api/drivers/me/earnings?day=${day}`);
   const date = (value) =>
     new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "numeric", month: "short" }).format(
@@ -41,12 +34,11 @@ function EarningsPage() {
   const week = data.week;
   const max = Math.max(1, ...week.byDay.map((row) => row.earnings));
   const selected = week.byDay.find((row) => row._id === selectedDay);
-  const ride = data.recentRides[rideIndex];
+  const rides = data.recentRides.filter((ride) => parisDay(ride.completedAt) === parisDay());
   return (
     <div className="driver-tab-page earnings-page">
       <div className="driver-tab-title">
         <div>
-          <p className="drv-eyebrow">Courses terminées</p>
           <h1>Revenus</h1>
         </div>
       </div>
@@ -90,7 +82,7 @@ function EarningsPage() {
               key={row._id}
               className={selectedDay === row._id ? "selected" : ""}
               onClick={() => setSelectedDay(selectedDay === row._id ? null : row._id)}
-              aria-label={`${date(row._id)} : ${money(row.earnings)}, ${row.trips} courses, ${workDuration(row.activitySeconds)}`}
+              aria-label={`${date(row._id)} : ${money(row.earnings)}, ${row.trips} courses, ${workDuration(row.onlineSeconds)}`}
               aria-pressed={selectedDay === row._id}
             >
               <span style={{ height: row.earnings > 0 ? `${Math.max(3, (row.earnings / max) * 100)}%` : 0 }} />
@@ -101,8 +93,8 @@ function EarningsPage() {
       </div>
       <div className="earnings-stats">
         <div>
-          <span>Temps en course</span>
-          <strong>{workDuration(selected ? selected.activitySeconds : week.activitySeconds)}</strong>
+          <span>Temps de connexion</span>
+          <strong>{workDuration(selected ? selected.onlineSeconds : week.onlineSeconds)}</strong>
         </div>
         <div>
           <span>Courses</span>
@@ -113,32 +105,28 @@ function EarningsPage() {
           <strong>{Number(data.stats?.averageRating ?? 5).toFixed(2)}</strong>
         </div>
       </div>
-      <p className="driver-feed-note">
-        Temps réellement enregistré pendant les courses terminées, approche comprise. Le temps d’attente hors course
-        n’est pas comptabilisé.
-      </p>
-      <button className="earnings-details-button" onClick={() => setDetails(!details)} aria-expanded={details}>
-        {details ? "Masquer les détails" : "Voir les détails"}
-      </button>
-      {data.recentRides.map((ride) => (
-        <Link className="driver-menu-row" key={ride.id} href="/driver/trips">
-          <span>
-            {ride.pickup?.city && ride.dropoff?.city
-              ? `De ${ride.pickup.city} à ${ride.dropoff.city}`
-              : ride.dropoff?.address || "Course"}
-            <small>
-              {new Intl.DateTimeFormat("fr-FR", {
-                timeZone: "Europe/Paris",
-                day: "numeric",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(new Date(ride.completedAt))}
-            </small>
-          </span>
-          <strong>{money(ride.fare?.driverEarnings)}</strong>
-        </Link>
-      ))}
+      <section className="earnings-daily-rides" aria-label="Courses du jour">
+        <h2 className="mb-3" style={{ fontSize: '1.05rem' }}>Courses du jour</h2>
+        {rides.length === 0 && <p className="muted">Aucune course terminée aujourd’hui.</p>}
+        <div className="flex-col gap-3">
+          {rides.map((ride) => (
+            <article key={ride.id || ride._id} className="card card-pad">
+              <div className="flex items-center justify-between mb-3" style={{ gap: 8 }}>
+                <span className="tiny muted">{new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(ride.completedAt))}</span>
+                <RideStatusBadge status="completed" />
+              </div>
+              <div className="flex-col gap-1 small">
+                <div className="flex gap-2 items-center"><Circle size={12} style={{ flexShrink: 0, color: 'var(--gold-600)' }} /><span>Prise en charge à {ride.pickup?.city || ride.pickup?.address || 'Départ'}</span></div>
+                <div className="flex gap-2 items-center"><MapPin size={12} style={{ flexShrink: 0, color: 'var(--gold-600)' }} /><span>Dépose à {ride.dropoff?.city || ride.dropoff?.address || 'Destination'}</span></div>
+              </div>
+              <div className="flex items-center justify-between mt-3" style={{ borderTop: '1px solid var(--ink-100)', paddingTop: 10, gap: 8 }}>
+                <span className="tiny muted">Vous avez gagné</span>
+                <strong className="small mono-nums" style={{ color: 'var(--success)' }}>+{money(ride.fare?.driverEarnings)}</strong>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <Link href="/driver/wallet" className="driver-menu-row earnings-balance">
         <span>Solde</span>
@@ -149,26 +137,6 @@ function EarningsPage() {
         <summary>Versements et retraits</summary>
         <PayoutCard />
       </details>
-      <button className="earnings-map-banner" onClick={() => setMapOpen(true)}>
-        <BarChart3 size={25} />
-        <span>Voir la carte de mes courses de la semaine</span>
-        <ChevronRight size={22} />
-      </button>
-      <select
-        className="input"
-        aria-label="Choisir une course"
-        value={rideIndex}
-        onChange={(e) => setRideIndex(Number(e.target.value))}
-      >
-        {data.recentRides.map((item, index) => (
-          <option key={item.id} value={index}>
-            {item.pickup?.city && item.dropoff?.city
-              ? `De ${item.pickup.city} à ${item.dropoff.city}`
-              : item.dropoff?.address || "Course"}{" "}
-            · {money(item.fare?.driverEarnings)}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }
