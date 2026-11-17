@@ -6,10 +6,14 @@ import { useEffect, useRef, useState, Suspense } from 'react';
 import Link from '@/lib/archive-navigation';
 import { useSearchParams, useRouter } from '@/lib/archive-navigation';
 import { signIn, useSession } from '@/lib/archive-auth';
-import { User, AtSign, Lock, ArrowRight, Car, Navigation, MailCheck, ExternalLink } from 'lucide-react';
+import { User, AtSign, Lock, ArrowRight, Car, Navigation, MailCheck, ExternalLink, X } from 'lucide-react';
 import { KovaLogo } from '@/components/brand/KovaLogo';
 import LegalFooter from '@/components/shell/LegalFooter';
 import { REQUIRED_DOCUMENTS } from '@/lib/vtc-documents';
+
+function SignupCloseLink() {
+  return <Link href="/" className="signup-close" aria-label="Fermer l’inscription" title="Retour à l’accueil"><X size={20} aria-hidden="true" /></Link>;
+}
 
 function SignupForm() {
   const router = useRouter();
@@ -119,7 +123,8 @@ function SignupForm() {
     }[domain];
     return (
       <div className="auth-page brand-theme">
-        <div className="auth-card animate-in signup-confirmation">
+        <div className="auth-card animate-in signup-confirmation signup-dismissible">
+          <SignupCloseLink />
           <Link href="/" aria-label="Accueil StrasDrive"><KovaLogo size={38} /></Link>
           <div className="confirmation-icon"><MailCheck size={32} aria-hidden="true" /></div>
           <p className="eyebrow" role="status">Inscription réussie</p>
@@ -159,7 +164,8 @@ function SignupForm() {
 
   return (
     <div className="auth-page brand-theme">
-      <div className="auth-card animate-in">
+      <div className="auth-card animate-in signup-dismissible">
+        <SignupCloseLink />
         <div className="flex justify-center mb-6">
           <Link href="/" aria-label="Accueil StrasDrive">
             <KovaLogo size={38} />

@@ -430,6 +430,11 @@ export async function handleVtc(input, context) {
     throw new Error("Méthode non autorisée");
   }
 
+  if (p === "/api/admin/monitoring") {
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    const { readSiteActivity } = await import("./site-monitoring.server");
+    return readSiteActivity(admin);
+  }
   if (p === "/api/users/me/export") {
     if (method !== "GET") throw new Error("Méthode non autorisée");
     const { page, until, from, to } = exportPageOptions(q);

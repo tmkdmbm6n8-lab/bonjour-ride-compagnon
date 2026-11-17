@@ -10,14 +10,15 @@ import {
 import SiteHeader from '@/components/shell/SiteHeader';
 import SiteFooter from '@/components/shell/SiteFooter';
 import HomeRideEstimator from '@/components/home/HomeRideEstimator';
+import StrasbourgSkyline from '@/components/home/StrasbourgSkyline';
 
 
 
 const FEATURES = [
   {
     icon: Wallet,
-    title: 'Les chauffeurs conservent 90 % ou plus',
-    text: 'Nous prélevons une faible commission inférieure à 10 % — juste de quoi faire fonctionner la plateforme. Le prix de la course revient à la personne au volant.',
+    title: 'Les chauffeurs conservent 95 %',
+    text: 'StrasDrive prélève une commission fixe de 5 %. Le chauffeur conserve 95 % du prix de la course.',
   },
   {
     icon: Zap,
@@ -31,8 +32,8 @@ const FEATURES = [
   },
   {
     icon: RouteIcon,
-    title: 'Des tarifs qui restent bas',
-    text: 'Un fonctionnement optimisé pour des courses moins chères que sur les grandes applications — prix annoncés à l’avance, sans mauvaises surprises.',
+    title: 'Des tarifs 20 % plus bas',
+    text: 'Nos tarifs sont 20 % plus bas que ceux de notre plus grand concurrent multinational. Le prix de votre course est annoncé avant la réservation.',
   },
   {
     icon: ShieldCheck,
@@ -78,19 +79,10 @@ function LandingPage() {
       <SiteHeader />
 
       {/* ── Hero ── */}
-      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '88px 24px 72px' }}>
-        <div style={{ maxWidth: 640 }}>
-          <span className="eyebrow">Service VTC haut de gamme</span>
-          <h1 className="display" style={{ marginTop: 14 }}> Voyagez en toute <span style={{ color: 'var(--gold-600)' }}> confiance</span>. </h1>
-          <p className="muted" style={{ fontSize: '1.15rem', marginTop: 18, maxWidth: 480, lineHeight: 1.6 }}> Des tarifs annoncés à l’avance, un suivi en direct, des prises en charge vérifiées par code PIN et des chauffeurs au rendez-vous. Vos déplacements en ville, tout simplement bien faits. </p>
-          <div className="flex gap-3 mt-8 wrap">
-            <Link href="/signup" className="btn btn-primary btn-lg"> Réserver votre première course <ArrowRight size={18} />
-            </Link>
-            <Link href="/signup?role=driver" className="btn btn-secondary btn-lg"> Conduisez et gagnez </Link>
-          </div>
-        </div>
-
-        <HomeRideEstimator />
+      <section className="landing-hero">
+        <StrasbourgSkyline />
+        <div className="landing-estimator-wrap"><HomeRideEstimator /></div>
+        <h1 className="display landing-confidence">Voyagez en toute <span>confiance</span>.</h1>
 
         {/* Mock trip card */}
         <div
@@ -185,7 +177,7 @@ function LandingPage() {
           >
             <div>
               <h3 style={{ fontSize: '1.3rem' }}>Transformez votre voiture en source de revenus</h3>
-              <p className="small mt-1" style={{ color: 'rgba(250,250,249,0.7)' }}> Conservez 90 % ou plus du prix de chaque course — nous ne prélevons que le coût de fonctionnement de la plateforme. Passez en ligne quand cela vous convient. </p>
+              <p className="small mt-1" style={{ color: 'rgba(250,250,249,0.7)' }}> Conservez 95 % du prix de chaque course : StrasDrive prélève une commission fixe de 5 %. Passez en ligne quand cela vous convient. </p>
             </div>
             <Link href="/signup?role=driver" className="btn btn-gold btn-lg"> Commencer à conduire <ArrowRight size={18} />
             </Link>

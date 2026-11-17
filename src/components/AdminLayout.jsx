@@ -1,11 +1,12 @@
 'use client';
 
-import { LayoutDashboard, Route, Car, Users, DollarSign, Inbox, Radar, MessagesSquare } from 'lucide-react';
+import { LayoutDashboard, Route, Car, Users, DollarSign, Inbox, Radar, MessagesSquare, Activity } from 'lucide-react';
 
 import AppShell from '@/components/shell/AppShell';
 
 const NAV = [
   { href: '/admin/dashboard', label: 'Vue d’ensemble', icon: LayoutDashboard },
+  { href: '/admin/monitoring', label: 'Charge du site', icon: Activity },
   { href: '/admin/rides', label: 'Courses', icon: Route },
   { href: '/admin/drivers', label: 'Chauffeurs', icon: Car },
   { href: '/admin/users', label: 'Utilisateurs', icon: Users },
