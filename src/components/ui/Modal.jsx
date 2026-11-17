@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import useVisualViewport from '@/hooks/useVisualViewport';
 
@@ -12,6 +13,7 @@ export default function Modal({
   sheetOnMobile = true,
   closable = true,
   maxWidth = 440,
+  portal = false, // escape map/sheet stacking contexts for critical confirmations
   keyboardSafe = false, // keep the dialog inside the area above the phone keyboard
 }) {
   const vv = useVisualViewport(open && keyboardSafe);
@@ -21,19 +23,28 @@ export default function Modal({
       if (e.key === 'Escape' && closable) onClose?.();
     };
     document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
+    const body = document.body;
+    const previous = { overflow: body.style.overflow, position: body.style.position, top: body.style.top, width: body.style.width };
+    const scrollY = window.scrollY;
+    body.style.overflow = 'hidden';
+    if (portal) {
+      body.style.position = 'fixed';
+      body.style.top = `-${scrollY}px`;
+      body.style.width = '100%';
+    }
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      Object.assign(body.style, previous);
+      if (portal) window.scrollTo(0, scrollY);
     };
-  }, [open, onClose, closable]);
+  }, [open, onClose, closable, portal]);
 
   if (!open) return null;
 
-  return (
+  const dialog = (
     <div
-      className={`overlay ${sheetOnMobile && !keyboardSafe ? 'sheet-on-mobile' : ''}`}
-      style={vv ? { top: vv.top, height: vv.height, bottom: 'auto', alignItems: 'flex-start', paddingTop: 16 } : undefined}
+      className={`overlay ${portal ? 'modal-portal-overlay' : ''} ${sheetOnMobile && !keyboardSafe ? 'sheet-on-mobile' : ''}`}
+      style={vv ? { top: vv.top, height: vv.height, bottom: 'auto', alignItems: portal ? 'center' : 'flex-start', paddingTop: 16 } : undefined}
       onClick={closable ? onClose : undefined}
       role="dialog"
       aria-modal="true"
@@ -63,4 +74,7 @@ export default function Modal({
       </div>
     </div>
   );
+  return portal && typeof document !== 'undefined'
+    ? createPortal(<div className="shell-dark modal-portal-root">{dialog}</div>, document.body)
+    : dialog;
 }

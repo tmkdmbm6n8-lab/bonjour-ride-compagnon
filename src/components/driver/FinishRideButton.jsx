@@ -33,6 +33,9 @@ export default function FinishRideButton({ onConfirm, disabled = false }) {
         Terminer la course
       </button>
       <Modal
+        portal
+        keyboardSafe
+        sheetOnMobile={false}
         open={open}
         onClose={() => {
           if (!busy) setOpen(false);
@@ -41,15 +44,15 @@ export default function FinishRideButton({ onConfirm, disabled = false }) {
         title="Terminer cette course ?"
       >
         <p className="small mb-4">
-          Êtes-vous sûr de vouloir terminer cette course ? Confirmez que le passager est arrivé à
-          destination.
+          Le passager est-il descendu du véhicule ? Vous pouvez terminer la course maintenant,
+          même avant la destination prévue.
         </p>
         {error && (
           <p role="alert" className="input-error-msg mb-3">
             {error}
           </p>
         )}
-        <div className="flex-col gap-3">
+        <div className="finish-ride-confirm-actions">
           <button
             type="button"
             className="btn btn-secondary btn-full"

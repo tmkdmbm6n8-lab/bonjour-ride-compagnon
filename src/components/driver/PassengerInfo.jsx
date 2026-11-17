@@ -13,7 +13,7 @@ export default function PassengerInfo({ ride }) {
       <span className="drv-client-avatar"><Avatar name={name} src={rider.avatar} /></span>
       <span><span className="drv-client-name">{name}</span><span className="drv-client-rating">★ {rating}</span></span>
     </button>
-    <Modal open={open} onClose={() => setOpen(false)} title="Informations du passager">
+    <Modal portal keyboardSafe sheetOnMobile={false} open={open} onClose={() => setOpen(false)} title="Informations du passager">
       <div className="passenger-info-profile"><Avatar name={name} src={rider.avatar} size="lg" /><strong>{name}</strong><span>★ {rating}</span></div>
       <dl className="passenger-info-details">
         {rider.phone?.trim() && <><dt>Téléphone</dt><dd><a href={`tel:${rider.phone}`}>{rider.phone}</a></dd></>}

@@ -7099,3 +7099,28 @@ a.activity-pill:hover {
 .rider-book-button > svg { flex-shrink: 0; }
 .booking-button-amount { white-space: nowrap; }
 .brand-theme .rider-book-button:disabled { opacity: 1; background: #252b35; color: #bac4d2; border-color: #ffffff1a; box-shadow: none; }
+
+/* Critical ride confirmations sit outside the dock, above navigation on iOS. */
+.modal-portal-root .modal-portal-overlay {
+  z-index: 1000;
+  overscroll-behavior: none;
+  padding: 16px;
+}
+.modal-portal-root .modal {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: max(28px, env(safe-area-inset-bottom, 0px));
+}
+
+.finish-ride-confirm-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.finish-ride-confirm-actions > .btn {
+  min-height: 48px;
+  white-space: normal;
+  height: auto;
+  padding: 12px;
+  line-height: 1.4;
+}

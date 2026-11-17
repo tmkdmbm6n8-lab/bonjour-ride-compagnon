@@ -21,6 +21,18 @@ describe('fiche passager et accès admin', () => {
     expect(screen.getByText('Aéroport')).toBeTruthy();
     expect(screen.queryByText(/Dupont/)).toBeNull();
   });
+  it('affiche la fiche hors du bandeau et la ferme au clic extérieur uniquement', () => {
+    const { container } = render(<div className="drv-top-passenger-bar"><PassengerInfo ride={{ rider: { name: 'Léa Martin' }, pickup: { address: 'Gare' } }} /></div>);
+    fireEvent.click(screen.getByRole('button', { name: 'Informations du passager Léa M.' }));
+    const dialog = screen.getByRole('dialog', { name: 'Informations du passager' });
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(dialog).toBeVisible();
+    fireEvent.click(screen.getByText('Gare'));
+    expect(screen.getByRole('dialog')).toBeVisible();
+    fireEvent.click(dialog);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.body.style.position).toBe('');
+  });
   it('expose Assistance et Signalements dans la navigation admin dédiée', () => {
     render(<AdminLayout><span>Admin</span></AdminLayout>);
     expect(screen.getByTestId('shell')).toHaveAttribute('data-variant', 'admin');

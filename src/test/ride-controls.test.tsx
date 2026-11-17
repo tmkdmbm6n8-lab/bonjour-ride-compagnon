@@ -48,12 +48,17 @@ describe("pause unique par course", () => {
 describe("confirmation de fin de course", () => {
   it("ne termine rien avant confirmation et permet d’annuler", () => {
     const finish = vi.fn();
-    render(<FinishRideButton onConfirm={finish} />);
+    const { container } = render(<FinishRideButton onConfirm={finish} />);
     fireEvent.click(screen.getByRole("button", { name: "Terminer la course" }));
     expect(screen.getByRole("dialog", { name: "Terminer cette course ?" })).toBeTruthy();
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.style.position).toBe("fixed");
+    expect(screen.getByRole("button", { name: "Oui, terminer la course" })).toBeVisible();
+    expect(screen.getByText(/même avant la destination prévue/)).toBeVisible();
     expect(finish).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Non, continuer la course" }));
     expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.body.style.position).toBe("");
     expect(finish).not.toHaveBeenCalled();
   });
   it("envoie une seule confirmation même en cas de clics rapides", async () => {
