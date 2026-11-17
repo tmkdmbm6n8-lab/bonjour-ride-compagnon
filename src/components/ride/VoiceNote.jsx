@@ -5,7 +5,7 @@ const SPEEDS = [1, 1.5, 2];
 const fmt = s => { const n = Math.max(0, Math.round(s || 0)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`; };
 
 /** Deterministic waveform (bars and dots) so each voice note keeps its own shape. */
-function waveform(seed, count = 30) {
+function waveform(seed, count = 24) {
   let h = 2166136261;
   for (const ch of String(seed || 'vocal')) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
   return Array.from({ length: count }, () => {

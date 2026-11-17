@@ -7311,8 +7311,8 @@ a.activity-pill:hover {
 .voice-note { display: flex; align-items: center; gap: 10px; width: min(280px, 72vw); padding: 10px 12px; border-radius: 14px; background: #ffffff; color: #0f172a; box-shadow: 0 0 0 1px #0000000d; }
 .voice-note audio { display: none; }
 .voice-note-play { flex-shrink: 0; width: 34px; height: 34px; display: grid; place-items: center; border: 0; padding: 0; background: transparent; color: #ef4444; cursor: pointer; }
-.voice-note-wave { flex: 1; min-width: 0; height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 2px; cursor: pointer; }
-.voice-note-wave i { flex: 0 0 3px; width: 3px; min-height: 3px; border-radius: 3px; background: #ef4444; opacity: .4; transition: opacity .15s; }
+.voice-note-wave { flex: 1; min-width: 0; height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 2px; overflow: hidden; cursor: pointer; }
+.voice-note-wave i { flex: 0 1 3px; width: 3px; min-height: 3px; border-radius: 3px; background: #ef4444; opacity: .4; transition: opacity .15s; }
 .voice-note-wave i[data-dot] { height: 3px; border-radius: 50%; }
 .voice-note-wave i.is-played { opacity: 1; }
 .voice-note-speed { flex-shrink: 0; min-width: 36px; height: 26px; padding: 0 6px; border: 0; border-radius: 6px; background: #eef0f3; color: #475569; font-size: 13px; font-weight: 600; cursor: pointer; }
