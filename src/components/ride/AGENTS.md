@@ -1,0 +1,1 @@
+- Voice notes: the mic button stays mounted while recording (pointer capture keeps slide-to-cancel alive); playback uses `VoiceNote.jsx`. `html, body` clip sideways overflow in `src/styles.css` because a few extra pixels zoom the iPhone screen out.
