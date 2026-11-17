@@ -605,7 +605,7 @@ export async function handleVtc(input, context) {
       stats: driver.stats,
       today: week.today,
       week,
-      recentRides: await Promise.all(finishedThisWeek.filter((ride) => parisDay(ride.completed_at) === parisDay()).map((ride) => serialize(admin, ride, uid, true))),
+      recentRides: await Promise.all(finishedThisWeek.filter((ride) => parisDay(ride.completed_at) === day).map((ride) => serialize(admin, ride, uid, true))),
     };
   }
   if (p === "/api/drivers/me/operator" && method === "PATCH") {

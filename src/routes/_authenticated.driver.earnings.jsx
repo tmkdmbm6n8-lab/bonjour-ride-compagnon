@@ -34,7 +34,7 @@ function EarningsPage() {
   const week = data.week;
   const max = Math.max(1, ...week.byDay.map((row) => row.earnings));
   const selected = week.byDay.find((row) => row._id === selectedDay);
-  const rides = data.recentRides.filter((ride) => parisDay(ride.completedAt) === parisDay());
+  const rides = data.recentRides || [];
   return (
     <div className="driver-tab-page earnings-page">
       <div className="driver-tab-title">
@@ -81,7 +81,7 @@ function EarningsPage() {
             <button
               key={row._id}
               className={selectedDay === row._id ? "selected" : ""}
-              onClick={() => setSelectedDay(selectedDay === row._id ? null : row._id)}
+              onClick={() => { setDay(row._id); setSelectedDay(row._id); }}
               aria-label={`${date(row._id)} : ${money(row.earnings)}, ${row.trips} courses, ${workDuration(row.onlineSeconds)}`}
               aria-pressed={selectedDay === row._id}
             >
@@ -106,8 +106,14 @@ function EarningsPage() {
         </div>
       </div>
       <section className="earnings-daily-rides" aria-label="Courses du jour">
-        <h2 className="mb-3" style={{ fontSize: '1.05rem' }}>Courses du jour</h2>
-        {rides.length === 0 && <p className="muted">Aucune course terminée aujourd’hui.</p>}
+        <h2 className="mb-3" style={{ fontSize: '1.05rem' }}>Courses du {date(day)}</h2>
+        <label className="field mb-3" style={{ display: 'block' }}>
+          <span style={{ display: 'block', marginBottom: 8 }}>Jour des courses</span>
+          <input className="input" type="date" aria-label="Jour des courses" value={day} max={parisDay()}
+            onChange={(event) => { if (event.target.value) { setDay(event.target.value); setSelectedDay(event.target.value); } }}
+            style={{ width: '100%', minWidth: 0, colorScheme: 'dark' }} />
+        </label>
+        {rides.length === 0 && <p className="muted">Aucune course terminée le {date(day)}.</p>}
         <div className="flex-col gap-3">
           {rides.map((ride) => (
             <article key={ride.id || ride._id} className="card card-pad">

@@ -104,6 +104,22 @@ describe("onglets chauffeur", () => {
     expect(screen.getByText(/12,00/)).toBeTruthy();
     expect(screen.getByText("0 h 40")).toBeTruthy();
   });
+  it("affiche les fiches du jour demandé même après minuit", () => {
+    fixtures.data["/api/drivers/me/earnings"] = {
+      week: { start: "2026-11-16", end: "2026-11-23", total: 10.01, trips: 1, onlineSeconds: 60,
+        byDay: [{ _id: "2026-11-17", earnings: 10.01, trips: 1, onlineSeconds: 60 }] },
+      stats: {}, wallet: { balance: 0 },
+      recentRides: [{ id: "yesterday", status: "completed", completedAt: "2026-11-17T21:26:00Z",
+        pickup: { city: "Strasbourg" }, dropoff: { city: "Schiltigheim" }, fare: { driverEarnings: 10.01 } }],
+    };
+    const Component = EarningsRoute.options.component as any;
+    render(<Component />);
+    fireEvent.change(screen.getByLabelText("Jour des courses"), { target: { value: "2026-11-17" } });
+    expect(screen.getByText("Prise en charge à Strasbourg")).toBeTruthy();
+    expect(screen.getByText("Dépose à Schiltigheim")).toBeTruthy();
+    expect(screen.getByText("Vous avez gagné")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /De Strasbourg/ })).toBeNull();
+  });
   it("ouvre une conversation administrateur réelle depuis Inbox", () => {
     fixtures.data["/api/drivers/me/inbox"] = {
       threads: [
