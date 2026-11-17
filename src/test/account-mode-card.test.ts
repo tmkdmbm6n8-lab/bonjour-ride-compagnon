@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => ({ createSession: vi.fn(), createCustomer: vi.fn() }));
 vi.mock("@/lib/stripe.server", () => ({

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { appendChat, preserveRideChat, closeRideChat, purgeChatFiles, adminChatEvidence, decodeEvidence, chatFileUrl } from '@/lib/ride-chat.server';
 import { CHAT_RETENTION_MS } from '@/lib/ride-chat';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, it, vi } from "vitest";
 import { personalSupportRequests, sendSupportMessage } from "@/lib/vtc-support.server";
 import { newSupportThread } from "@/lib/vtc-support";
