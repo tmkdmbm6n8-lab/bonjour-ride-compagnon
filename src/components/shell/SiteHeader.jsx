@@ -13,6 +13,10 @@ export default function SiteHeader() {
       style={{
         position: "sticky",
         top: 0,
+        // Keep navigation below the iPhone status bar in the native WebView.
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        paddingLeft: "env(safe-area-inset-left, 0px)",
+        paddingRight: "env(safe-area-inset-right, 0px)",
         zIndex: 30,
         background: "color-mix(in srgb, var(--bg) 90%, transparent)",
         backdropFilter: "blur(12px)",
