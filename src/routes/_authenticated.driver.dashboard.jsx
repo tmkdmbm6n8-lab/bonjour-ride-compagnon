@@ -1,7 +1,7 @@
 import { ShieldAlert } from "lucide-react";
-import RidePauseButton from '@/components/driver/RidePauseButton';
-import FinishRideButton from '@/components/driver/FinishRideButton';
-import RideSafety from '@/components/ride/RideSafety';
+import RidePauseButton from "@/components/driver/RidePauseButton";
+import FinishRideButton from "@/components/driver/FinishRideButton";
+import RideSafety from "@/components/ride/RideSafety";
 import { clock as transportClock } from "@/lib/vtc-dates";
 import { createFileRoute } from "@tanstack/react-router";
 import DriverLayout from "@/components/DriverLayout";
@@ -136,7 +136,6 @@ function DriverDashboard() {
   // A single local fix keeps the idle map centered, without road-alert polling or sounds.
   const { position: idlePosition } = useGeolocation({ watch: false });
 
-
   // Keep incoming ride notifications independent from removed radar sounds.
   useEffect(() => {
     if (!offer?.rideId) return undefined;
@@ -245,10 +244,12 @@ function DriverDashboard() {
   // Live navigation readout — traffic-aware time from the server (Google Routes),
   // with a rough on-device estimate until the first answer arrives.
   const liveRoute = useLiveRoute(ride?.id, ride?.status);
-  const driverRoute = useMemo(() =>
-    drawableRoute(liveRoute?.status === ride?.status ? liveRoute?.geometry : null, liveRoute?.source) ||
-    (ride?.status === "in_progress" ? drawableRoute(ride.route?.geometry, ride.route?.source) : undefined),
-  [liveRoute, ride?.status, ride?.route]);
+  const driverRoute = useMemo(
+    () =>
+      drawableRoute(liveRoute?.status === ride?.status ? liveRoute?.geometry : null, liveRoute?.source) ||
+      (ride?.status === "in_progress" ? drawableRoute(ride.route?.geometry, ride.route?.source) : undefined),
+    [liveRoute, ride?.status, ride?.route],
+  );
   const routeRadars = useRouteRadars(ride?.id, ride?.status, driverRoute, position);
   const liveLeg = useMemo(() => {
     if (!ride || (ride.status !== "accepted" && ride.status !== "in_progress")) return null;
@@ -356,9 +357,17 @@ function DriverDashboard() {
           <ShieldAlert size={48} aria-hidden="true" />
           <h1>Compte chauffeur suspendu</h1>
           <p>Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.</p>
-          <Link href="/contact?topic=driver_support" className="btn btn-primary btn-full">Contacter l’assistance</Link>
-          <Link href="/dashboard" className="btn btn-secondary btn-full">Passer en mode passager</Link>
-          {ride && ["accepted", "arrived"].includes(ride.status) && <button className="btn btn-secondary btn-full" onClick={() => setCancelOpen(true)}>Annuler la course en attente</button>}
+          <Link href="/contact?topic=driver_support" className="btn btn-primary btn-full">
+            Contacter l’assistance
+          </Link>
+          <Link href="/dashboard" className="btn btn-secondary btn-full">
+            Passer en mode passager
+          </Link>
+          {ride && ["accepted", "arrived"].includes(ride.status) && (
+            <button className="btn btn-secondary btn-full" onClick={() => setCancelOpen(true)}>
+              Annuler la course en attente
+            </button>
+          )}
           {ride?.status === "in_progress" && <FinishRideButton onConfirm={handleComplete} disabled={actionBusy} />}
         </section>
       ) : ride ? (
@@ -410,98 +419,119 @@ function DriverDashboard() {
 
           {/* 3. Au-dessus du volet bas : Pause 2 min à gauche / Annuler à droite */}
           <div className="drv-ride-dock">
-          <div className="drv-mid-actions-bar">
-            <RidePauseButton key={ride.id} rideId={ride.id}/>
+            <div className="drv-mid-actions-bar">
+              <RidePauseButton key={ride.id} rideId={ride.id} />
 
-            {ride.status !== "in_progress" && (
-              <button className="drv-action-pill drv-cancel-pill" onClick={() => setCancelOpen(true)}>
-                <X size={16} />
-                <span>Annuler</span>
-              </button>
-            )}
-          </div>
-
-
-          {/* 4. Tout en bas : Volet rétractable d'informations */}
-          <div className="drv-bottom-sheet is-minimal">
-            <div className="drv-sheet-header">
-              <div>
-                <span className="drv-sheet-stage">
-                  {ride.status === "accepted" ? "Vers le passager" : ride.status === "arrived" ? "Passager prévenu" : "Course en cours"}
-                </span>
-                <strong className="drv-sheet-earnings mono-nums">{money(ride.fare?.driverEarnings)}</strong>
-              </div>
-              <button className="drv-sheet-toggle" aria-expanded={detailsOpen} aria-controls="active-ride-details" onClick={() => setDetailsOpen(!detailsOpen)}>
-                Détails {detailsOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-              </button>
+              {ride.status !== "in_progress" && (
+                <button className="drv-action-pill drv-cancel-pill" onClick={() => setCancelOpen(true)}>
+                  <X size={16} />
+                  <span>Annuler</span>
+                </button>
+              )}
             </div>
-            <p className="drv-sheet-address">
-              {ride.status === "in_progress" ? ride.dropoff.address : ride.pickup.address}
-            </p>
-            {navigating && (
-              <div className="drv-sheet-summary">
-                {liveLeg && <span>{formatDuration(liveLeg.seconds)} · {formatDistance(liveLeg.meters)}{liveLeg.approximate ? " · estimé" : ""}</span>}
-                <span className={`drv-sheet-radar-pill ${routeRadars.count > 0 ? "has-radars" : ""}`} role="status">
-                  <Radar size={15} aria-hidden="true" />
-                  {routeRadars.count == null ? routeRadars.loading ? "Radars…" : "Radars indisponibles" : `${routeRadars.count} radar${routeRadars.count > 1 ? "s" : ""}`}
-                </span>
+
+            {/* 4. Tout en bas : Volet rétractable d'informations centré */}
+            <div className="drv-bottom-sheet is-minimal">
+              <div className="drv-sheet-header">
+                <div>
+                  <span className="drv-sheet-stage">
+                    {ride.status === "accepted"
+                      ? "Vers le passager"
+                      : ride.status === "arrived"
+                        ? "Passager prévenu"
+                        : "Course en cours"}
+                  </span>
+                  <strong className="drv-sheet-earnings mono-nums">{money(ride.fare?.driverEarnings)}</strong>
+                </div>
+                <button
+                  className="drv-sheet-toggle"
+                  aria-expanded={detailsOpen}
+                  aria-controls="active-ride-details"
+                  onClick={() => setDetailsOpen(!detailsOpen)}
+                >
+                  Détails {detailsOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                </button>
               </div>
-            )}
-            {navigating && (!position || !driverRoute) && (
-              <p className="drv-sheet-route-status" role="status">
-                {!position ? "En attente du GPS…" : liveRoute?.approximate ? "Itinéraire indisponible · nouvelle tentative…" : "Calcul du trajet…"}
+              <p className="drv-sheet-address">
+                {ride.status === "in_progress" ? ride.dropoff.address : ride.pickup.address}
               </p>
-            )}
 
-            {/* Volet dépliable avec tous les détails */}
-            {detailsOpen && (
-              <div className="drv-sheet-details" id="active-ride-details">
-                <RideSafety ride={ride}/>
-                <div className="flex justify-between items-center mb-2 text-sm text-muted">
-                  <span>Prise en charge :</span>
-                  <span className="text-white truncate max-w-[220px]">{ride.pickup.address}</span>
+              {navigating && (
+                <div className="drv-sheet-summary">
+                  {liveLeg && (
+                    <span>
+                      {formatDuration(liveLeg.seconds)} · {formatDistance(liveLeg.meters)}
+                      {liveLeg.approximate ? " · estimé" : ""}
+                    </span>
+                  )}
+                  <span className={`drv-sheet-radar-pill ${routeRadars.count > 0 ? "has-radars" : ""}`} role="status">
+                    <Radar size={15} aria-hidden="true" />
+                    {routeRadars.count == null
+                      ? routeRadars.loading
+                        ? "Radars…"
+                        : "Radars indisponibles"
+                      : `${routeRadars.count} radar${routeRadars.count > 1 ? "s" : ""}`}
+                  </span>
                 </div>
-                <div className="flex justify-between items-center mb-2 text-sm text-muted">
-                  <span>Destination :</span>
-                  <span className="text-white truncate max-w-[220px]">{ride.dropoff.address}</span>
-                </div>
-                {ride.payment?.method === "cash" && (
-                  <div className="drv-cash-alert mb-3">
-                    <span>Espèces à encaisser :</span>
-                    <strong>{money(ride.fare?.total)}</strong>
+              )}
+              {navigating && (!position || !driverRoute) && (
+                <p className="drv-sheet-route-status" role="status">
+                  {!position
+                    ? "En attente du GPS…"
+                    : liveRoute?.approximate
+                      ? "Itinéraire indisponible · nouvelle tentative…"
+                      : "Calcul du trajet…"}
+                </p>
+              )}
+
+              {/* Volet dépliable avec tous les détails */}
+              {detailsOpen && (
+                <div className="drv-sheet-details" id="active-ride-details">
+                  <RideSafety ride={ride} />
+                  <div className="flex justify-between items-center mb-2 text-sm text-muted">
+                    <span>Prise en charge :</span>
+                    <span className="text-white truncate max-w-[220px]">{ride.pickup.address}</span>
                   </div>
+                  <div className="flex justify-between items-center mb-2 text-sm text-muted">
+                    <span>Destination :</span>
+                    <span className="text-white truncate max-w-[220px]">{ride.dropoff.address}</span>
+                  </div>
+                  {ride.payment?.method === "cash" && (
+                    <div className="drv-cash-alert mb-3">
+                      <span>Espèces à encaisser :</span>
+                      <strong>{money(ride.fare?.total)}</strong>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="drv-sheet-actions">
+                {legTarget && <ExternalNavigationButton key={`${ride.id}:${ride.status}`} destination={legTarget} />}
+
+                {/* Gros bouton d'action principal */}
+                {ride.status === "accepted" && (
+                  <button
+                    className="btn btn-primary btn-lg btn-full"
+                    onClick={() => run(arrive, "Le passager a été informé de votre arrivée")}
+                    disabled={actionBusy || Boolean(zoneProblem)}
+                  >
+                    <Flag size={18} /> Je suis arrivé
+                  </button>
                 )}
-
+                {ride.status === "arrived" && (
+                  <button
+                    className="btn btn-primary btn-lg btn-full"
+                    onClick={() => setPinOpen(true)}
+                    disabled={actionBusy || Boolean(zoneProblem)}
+                  >
+                    <KeyRound size={18} /> Saisir le PIN pour démarrer
+                  </button>
+                )}
+                {ride.status === "in_progress" && (
+                  <FinishRideButton key={ride.id} onConfirm={handleComplete} disabled={actionBusy} />
+                )}
               </div>
-            )}
-
-            <div className="drv-sheet-actions">
-            {legTarget && <ExternalNavigationButton key={`${ride.id}:${ride.status}`} destination={legTarget} />}
-
-            {/* Gros bouton d'action principal */}
-            {ride.status === "accepted" && (
-              <button
-                className="btn btn-primary btn-lg btn-full"
-                onClick={() => run(arrive, "Le passager a été informé de votre arrivée")}
-                disabled={actionBusy || Boolean(zoneProblem)}
-              >
-                <Flag size={18} /> Je suis arrivé
-              </button>
-            )}
-            {ride.status === "arrived" && (
-              <button
-                className="btn btn-primary btn-lg btn-full"
-                onClick={() => setPinOpen(true)}
-                disabled={actionBusy || Boolean(zoneProblem)}
-              >
-                <KeyRound size={18} /> Saisir le PIN pour démarrer
-              </button>
-            )}
-            {ride.status === "in_progress" && (
-              <FinishRideButton key={ride.id} onConfirm={handleComplete} disabled={actionBusy}/>
-            )}
             </div>
-          </div>
           </div>
         </div>
       ) : (
@@ -555,8 +585,12 @@ function DriverDashboard() {
                 />
               </div>
               <div className="driver-offer-legend">
-                <span><i className="offer-pickup-dot" /> Prise en charge</span>
-                <span><i className="offer-dropoff-dot" /> Dépôt</span>
+                <span>
+                  <i className="offer-pickup-dot" /> Prise en charge
+                </span>
+                <span>
+                  <i className="offer-dropoff-dot" /> Dépôt
+                </span>
               </div>
             </div>
             {/* 1. En-tête : Badge StrasDrive Or + Bouton Ignorer */}
