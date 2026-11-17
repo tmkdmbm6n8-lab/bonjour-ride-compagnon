@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Mic, Plus, Image, MapPin, Send, X, Trash2, ChevronLeft } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { AudioLines, Plus, Image, MapPin, Send, X, Trash2, ChevronsLeft } from 'lucide-react';
 import { apiFetch } from '@/lib/archive-fetch';
 import { useToast } from '@/components/ui/Toast';
 const toBase64 = blob => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(',')[1]); reader.onerror = reject; reader.readAsDataURL(blob); });
@@ -22,7 +23,7 @@ export default function ChatAttachments({ rideId }) {
     finally { pending.current = false; if (mounted.current) setBusy(false); }
   }
   const mode = useRef('discard'), held = useRef(false), startX = useRef(0), startedAt = useRef(0);
-  const [slide, setSlide] = useState(0);
+  const [slide, setSlide] = useState(0), [finger, setFinger] = useState(null);
   const CANCEL_PX = 80;
   async function startRecording() {
     if (pending.current || recorder.current?.state === 'recording') return;
@@ -59,19 +60,22 @@ export default function ChatAttachments({ rideId }) {
     held.current = false;
     const rec = recorder.current;
     if (rec?.state === 'recording') { mode.current = send ? 'send' : 'discard'; rec.stop(); }
-    setSlide(0);
+    setSlide(0); setFinger(null);
   }
   function onMicDown(e) {
     if (busy) return;
     e.preventDefault();
     try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch {}
     held.current = true; startX.current = e.clientX ?? 0; setSlide(0);
+    const box = e.currentTarget.closest('.chat-attachments')?.getBoundingClientRect();
+    setFinger({ x: e.clientX ?? 0, y: box ? box.top : (e.clientY ?? 0) });
     startRecording();
   }
   function onMicMove(e) {
     if (!held.current) return;
     const dx = Math.max(0, startX.current - (e.clientX ?? 0));
     setSlide(Math.min(dx, 160));
+    setFinger(f => f && { ...f, x: e.clientX ?? f.x });
   }
   function onMicUp(e) {
     if (!held.current) return;
@@ -89,16 +93,20 @@ export default function ChatAttachments({ rideId }) {
     } catch { toast('La position n’a pas pu être partagée. Vérifiez l’autorisation de localisation.', 'error'); }
     finally { pending.current = false; if (mounted.current) setBusy(false); }
   }
-  return <div className="chat-attachments">
+  const cancelling = slide >= CANCEL_PX;
+  return <div className={`chat-attachments${recording ? ' is-recording' : ''}`}>
     {draft ? <div className="chat-voice-preview"><audio controls src={draft.url} aria-label="Écouter le vocal avant envoi" /><button type="button" className="btn btn-ghost btn-icon" aria-label="Supprimer le vocal" disabled={busy} onClick={clearDraft}><X size={18} /></button><button type="button" className="btn btn-primary btn-icon" aria-label="Envoyer le vocal" disabled={busy} onClick={() => upload(draft.file, draft.duration)}><Send size={18} /></button></div> : <>
-      <button type="button" className="btn btn-ghost btn-icon" aria-label={menu ? 'Fermer les pièces jointes' : 'Ajouter une pièce jointe'} aria-expanded={menu} disabled={busy || recording} onClick={() => setMenu(!menu)} hidden={recording}><Plus size={20} /></button>
-      {!recording && <button type="button" className="btn btn-ghost btn-icon chat-mic" aria-label="Enregistrer un vocal" title="Maintenir pour parler" disabled={busy} onPointerDown={onMicDown} onPointerMove={onMicMove} onPointerUp={onMicUp} onPointerCancel={() => finish(false)} onContextMenu={e => e.preventDefault()}><Mic size={20} /></button>}
-      {recording && <div className={`chat-rec-bar${slide >= CANCEL_PX ? ' is-cancel' : ''}`} role="status" onPointerMove={onMicMove} onPointerUp={onMicUp} onPointerCancel={() => finish(false)}>
-        <span className="chat-rec-dot" aria-hidden="true" />
-        <span className="chat-rec-time">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</span>
-        <span className="chat-rec-hint" style={{ transform: `translateX(${-slide}px)`, opacity: Math.max(0.35, 1 - slide / 200) }}>{slide >= CANCEL_PX ? <><Trash2 size={16} /> Relâcher pour annuler</> : <><ChevronLeft size={16} /> Glisser pour annuler</>}</span>
-        <span className="chat-rec-mic" aria-hidden="true"><Mic size={20} /></span>
+      {!recording && <button type="button" className="btn btn-ghost btn-icon" aria-label={menu ? 'Fermer les pièces jointes' : 'Ajouter une pièce jointe'} aria-expanded={menu} disabled={busy} onClick={() => setMenu(!menu)}><Plus size={20} /></button>}
+      {!recording && <span className="chat-att-spacer" />}
+      {recording && <div className={`chat-rec-bar${cancelling ? ' is-cancel' : ''}`} role="status" onPointerMove={onMicMove} onPointerUp={onMicUp} onPointerCancel={() => finish(false)}>
+        <span className="chat-rec-x" aria-hidden="true"><X size={16} strokeWidth={3} /></span>
+        <span className="chat-rec-hint" style={{ transform: `translateX(${-slide * 0.6}px)`, opacity: cancelling ? 0 : Math.max(0.2, 1 - slide / 120) }}><ChevronsLeft size={18} /> Glisser pour annuler</span>
       </div>}
+      <button type="button" className={`chat-mic${recording ? ' is-recording' : ''}${cancelling ? ' is-cancel' : ''}`} aria-label="Enregistrer un vocal" title="Maintenir pour parler" disabled={busy} onPointerDown={onMicDown} onPointerMove={onMicMove} onPointerUp={onMicUp} onPointerCancel={() => finish(false)} onContextMenu={e => e.preventDefault()}><AudioLines size={24} /></button>
+      {recording && finger && typeof document !== 'undefined' && createPortal(<div className={`chat-rec-bubble${cancelling ? ' is-cancel' : ''}`} aria-hidden="true" style={{ left: Math.max(56, Math.min(finger.x, (window.innerWidth || 400) - 56)), top: finger.y - 64 }}>
+        <svg viewBox="0 0 100 100" className="chat-rec-ring"><circle cx="50" cy="50" r="47" pathLength="60" style={{ strokeDasharray: `${seconds} 60` }} /></svg>
+        {cancelling ? <Trash2 size={30} /> : <><span className="chat-rec-dots"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></span><span className="chat-rec-time">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</span></>}
+      </div>, document.body)}
       {busy && <span role="status" className="tiny">Envoi…</span>}
       {menu && <div className="chat-attachment-menu"><button type="button" className="btn btn-ghost" disabled={busy} onClick={() => input.current?.click()}><Image size={18} /> Envoyer une image</button><button type="button" className="btn btn-ghost" disabled={busy} onClick={shareLocation}><MapPin size={18} /> Partager ma position</button></div>}
     </>}

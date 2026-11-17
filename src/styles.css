@@ -98,6 +98,12 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Nothing may widen the page: on iPhone a few pixels of sideways overflow
+   zoom the whole screen out, pushing the ride screen off-centre and the
+   bottom tab labels below the browser bar. */
+html, body { max-width: 100%; overflow-x: hidden; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } }
+
 body {
   font-family: var(--font-sans, "DM Sans", -apple-system, "Segoe UI", sans-serif);
   background: var(--bg);
@@ -7094,6 +7100,13 @@ a.activity-pill:hover {
   .drv-ride-dock .drv-bottom-sheet.is-minimal { padding-bottom: 8px; }
 }
 .drv-ride-dock { max-height: calc(100% - 110px); }
+.drv-active-ride-page { max-width: 100vw; }
+.drv-active-ride-page .drv-top-passenger-bar { left: 12px; right: 12px; min-width: 0; gap: 10px; }
+.drv-active-ride-page .drv-client-meta { min-width: 0; }
+.drv-active-ride-page .drv-client-actions { flex-shrink: 0; }
+.drv-ride-dock, .drv-ride-dock .drv-bottom-sheet, .drv-ride-dock .drv-mid-actions-bar { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; }
+.drv-ride-dock .drv-sheet-header, .drv-ride-dock .drv-sheet-summary, .drv-ride-dock .drv-sheet-actions { min-width: 0; }
+.drv-ride-dock .drv-sheet-address { min-width: 0; max-width: 100%; }
 .drv-ride-dock .drv-bottom-sheet.is-minimal { display: flex; flex-direction: column; overflow: hidden; }
 .drv-ride-dock .drv-bottom-sheet > * { flex-shrink: 0; }
 .drv-ride-dock .drv-sheet-details { flex: 0 1 auto; min-height: 0; overflow-y: auto; max-height: 24dvh; }
@@ -7270,11 +7283,37 @@ a.activity-pill:hover {
 .chat-evidence-message { padding: 12px; margin-top: 10px; border: 1px solid #ffffff1f; border-radius: 12px; overflow-wrap: anywhere; }
 
 /* Vocal façon « maintenir pour parler, glisser pour annuler » */
-.chat-mic { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.chat-rec-bar { flex: 1; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 6px; touch-action: none; user-select: none; overflow: hidden; }
-.chat-rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; animation: chatRecPulse 1s ease-in-out infinite; flex-shrink: 0; }
-.chat-rec-time { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 36px; }
-.chat-rec-hint { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; opacity: .8; transition: color .15s; white-space: nowrap; }
-.chat-rec-bar.is-cancel .chat-rec-hint, .chat-rec-bar.is-cancel .chat-rec-time { color: #ef4444; }
-.chat-rec-mic { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: #ef4444; color: #fff; transform: scale(1.15); box-shadow: 0 0 0 6px #ef444433; flex-shrink: 0; }
+.chat-attachments { flex-wrap: wrap; }
+.chat-att-spacer { flex: 1; }
+.chat-attachments.is-recording { padding: 6px 10px; }
+.chat-mic { flex-shrink: 0; width: 52px; height: 48px; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: inherit; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; transition: color .15s, transform .15s; }
+.chat-mic:disabled { opacity: .45; }
+.chat-mic.is-recording { color: #22c55e; transform: scale(1.12); }
+.chat-mic.is-recording svg { animation: chatMicWave .9s ease-in-out infinite; }
+.chat-rec-bar { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 10px 0 6px; margin-right: 4px; border-radius: 999px; background: #ffffff10; border: 1px solid #ffffff1a; touch-action: none; user-select: none; -webkit-user-select: none; overflow: hidden; }
+.chat-rec-x { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 2px solid #94a3b8; color: #94a3b8; transition: background .15s, border-color .15s, color .15s; }
+.chat-rec-bar.is-cancel .chat-rec-x { background: #ef4444; border-color: #ef4444; color: #fff; }
+.chat-rec-hint { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: #94a3b8; white-space: nowrap; transition: opacity .12s; }
+.chat-rec-bubble { position: fixed; z-index: 10000; width: 92px; height: 92px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: #fff; color: #ef4444; box-shadow: 0 8px 28px #0000004d, 0 0 0 1px #0000000f; transform: translate(-50%, -50%); pointer-events: none; animation: chatBubbleIn .16s ease-out; }
+.chat-rec-ring { position: absolute; inset: -7px; width: calc(100% + 14px); height: calc(100% + 14px); transform: rotate(-90deg); overflow: visible; }
+.chat-rec-ring circle { fill: none; stroke: #ef4444; stroke-width: 3; stroke-linecap: round; transition: stroke-dasharray .25s linear; }
+.chat-rec-bubble.is-cancel .chat-rec-ring { display: none; }
+.chat-rec-dots { display: flex; gap: 3px; align-items: center; height: 10px; }
+.chat-rec-dots i { width: 3px; height: 3px; border-radius: 50%; background: #ef4444; animation: chatDot 1s ease-in-out infinite; }
+.chat-rec-dots i:nth-child(2n) { animation-delay: .15s } .chat-rec-dots i:nth-child(3n) { animation-delay: .3s } .chat-rec-dots i:nth-child(5n) { animation-delay: .45s }
+.chat-rec-bubble .chat-rec-time { font-size: 11px; font-weight: 600; color: #64748b; font-variant-numeric: tabular-nums; }
+@keyframes chatDot { 0%,100% { transform: scaleY(1) } 50% { transform: scaleY(3.2); border-radius: 2px } }
+@keyframes chatMicWave { 0%,100% { transform: scaleY(1) } 50% { transform: scaleY(.75) } }
+@keyframes chatBubbleIn { from { transform: translate(-50%, -50%) scale(.6); opacity: 0 } }
 @keyframes chatRecPulse { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
+
+/* Lecture d'un vocal envoyé */
+.voice-note { display: flex; align-items: center; gap: 10px; width: min(280px, 72vw); padding: 10px 12px; border-radius: 14px; background: #ffffff; color: #0f172a; box-shadow: 0 0 0 1px #0000000d; }
+.voice-note audio { display: none; }
+.voice-note-play { flex-shrink: 0; width: 34px; height: 34px; display: grid; place-items: center; border: 0; padding: 0; background: transparent; color: #ef4444; cursor: pointer; }
+.voice-note-wave { flex: 1; min-width: 0; height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 2px; overflow: hidden; cursor: pointer; }
+.voice-note-wave i { flex: 0 1 3px; width: 3px; min-height: 3px; border-radius: 3px; background: #ef4444; opacity: .4; transition: opacity .15s; }
+.voice-note-wave i[data-dot] { height: 3px; border-radius: 50%; }
+.voice-note-wave i.is-played { opacity: 1; }
+.voice-note-speed { flex-shrink: 0; min-width: 36px; height: 26px; padding: 0 6px; border: 0; border-radius: 6px; background: #eef0f3; color: #475569; font-size: 13px; font-weight: 600; cursor: pointer; }
+.voice-note-time { flex-shrink: 0; min-width: 34px; text-align: right; font-size: 14px; font-weight: 500; color: #94a3b8; font-variant-numeric: tabular-nums; }

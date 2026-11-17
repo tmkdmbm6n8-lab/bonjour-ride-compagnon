@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/archive-fetch';
+import VoiceNote from './VoiceNote';
 export default function ChatMedia({ message, rideId, url: provided }) {
   const [url, setUrl] = useState(provided || '');
   const [error, setError] = useState(false);
@@ -16,6 +17,6 @@ export default function ChatMedia({ message, rideId, url: provided }) {
   if (error) return <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setError(false); setUrl(''); setAttempt(a => a + 1); }}>Recharger le fichier</button>;
   if (!url) return <span className="tiny">Chargement…</span>;
   return message.type === 'audio'
-    ? <audio controls preload="none" src={url} onError={() => setError(true)} aria-label="Message vocal" style={{ width: '100%', maxWidth: 280 }} />
+    ? <VoiceNote url={url} duration={message.duration} seed={message.id || message.at} onError={() => setError(true)} />
     : <a href={url} target="_blank" rel="noreferrer"><img src={url} alt="Image partagée dans la discussion" onError={() => setError(true)} style={{ display: 'block', width: '100%', maxWidth: 280, maxHeight: 240, objectFit: 'contain', borderRadius: 10 }} /></a>;
 }

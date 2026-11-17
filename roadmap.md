@@ -50,3 +50,11 @@
 - [x] Notification push d’offre de course quand l’app Android est en arrière-plan (bannière visible, son)
 - [ ] Nouvel APK avec les notifications — en attente du fichier google-services.json de Firebase
 - [ ] App iPhone (IPA) — reportée à la demande de l'utilisateur
+
+# Vocaux façon Snapchat (17/11)
+- [x] Bouton micro à droite, bulle qui suit le doigt, glisser à gauche = corbeille
+- [x] Lecture : bouton play rouge, onde, vitesse 1x/1,5x/2x, durée
+
+# Page course chauffeur (17/11)
+- [x] Contenu centré, rien ne déborde à droite
+- [x] Textes des onglets du bas visibles sans défiler
