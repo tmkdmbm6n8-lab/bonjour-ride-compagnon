@@ -5,7 +5,6 @@ import Link from "@/lib/archive-navigation";
 import {
   PawPrint,
   Banknote,
-  Wrench,
   HelpCircle,
   Phone,
   Power,
@@ -69,6 +68,7 @@ export default function DriverHome({
   };
 
   const [helpOpen, setHelpOpen] = useState(false);
+  const [sosOpen, setSosOpen] = useState(false);
   const { position: localPosition } = useGeolocation({ watch: false });
   const mapCenter = position || localPosition || center;
 
@@ -137,15 +137,15 @@ export default function DriverHome({
             <Banknote size={18} />
           </button>
 
-          {/* 3. Bouton Outil (Ouvre Préférences & Réglages) */}
-          <Link
-            href="/driver/preferences"
-            className="drv-island-btn"
-            title="Options & Outils de conduite"
-            aria-label="Outils"
+          <button
+            type="button"
+            className="drv-island-btn drv-sos-btn"
+            onClick={() => setSosOpen(true)}
+            title="SOS — numéros d’urgence"
+            aria-label="SOS — numéros d’urgence"
           >
-            <Wrench size={18} />
-          </Link>
+            SOS
+          </button>
 
           {/* 4. Bouton Point d'interrogation (FAQ & Questions/Réponses) */}
           <button
@@ -203,6 +203,28 @@ export default function DriverHome({
           </button>
         )}
       </div>
+
+      <Modal open={sosOpen} onClose={() => setSosOpen(false)} title="SOS — Urgences en France" portal keyboardSafe sheetOnMobile={false}>
+        <p className="drv-sos-intro">En cas de danger immédiat, appelez le 112. Choisissez un service pour ouvrir l’appel sur votre téléphone.</p>
+        <div className="drv-sos-list">
+          {[
+            ["Police / Gendarmerie", "Danger, agression, accident", "17"],
+            ["SAMU", "Urgence médicale", "15"],
+            ["Sapeurs-pompiers", "Incendie, accident, secours", "18"],
+            ["Urgences européennes", "Tous types d’urgence", "112"],
+            ["Urgence par SMS", "Personnes sourdes, malentendantes ou ne pouvant pas parler", "114", "sms"],
+            ["SAMU social", "Hébergement d’urgence", "115"],
+            ["Enfance en danger", "Enfant en danger ou en risque de l’être", "119"],
+            ["Prévention du suicide", "Détresse psychologique", "3114"],
+          ].map(([name, description, number, scheme = "tel"]) => (
+            <a key={number} className="drv-sos-row" href={`${scheme}:${number}`} aria-label={`${name} : ${number}${scheme === "sms" ? " par SMS" : ""}`}>
+              <span className="drv-sos-service"><strong>{name}</strong><small>{description}</small></span>
+              <span className="drv-sos-number">{number}{scheme === "sms" && <small>SMS</small>}</span>
+            </a>
+          ))}
+        </div>
+        <p className="drv-sos-intro">StrasDrive ne contacte pas les secours à votre place. Pour votre sécurité, arrêtez-vous dès que possible dans un endroit sûr.</p>
+      </Modal>
 
       {/* ── Modal Aide & Questions/Réponses ── */}
       <Modal open={helpOpen} onClose={() => setHelpOpen(false)} title="Assistance Chauffeur & FAQ">

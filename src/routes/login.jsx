@@ -50,8 +50,8 @@ function LoginForm() {
   }
 
   return (
-    <div className="auth-page brand-theme">
-      <div className="auth-card animate-in">
+    <div className="auth-page login-page brand-theme">
+      <div className="auth-card login-card animate-in">
         <div className="flex justify-center mb-6">
           <Link href="/" aria-label="Accueil StrasDrive">
             <KovaLogo size={38} />
@@ -79,7 +79,6 @@ function LoginForm() {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="vous@exemple.fr"
                 autoComplete="username"
-                autoFocus
                 required
               />
             </div>
@@ -134,7 +133,7 @@ function LoginForm() {
           <Link href="/signup" style={{ fontWeight: 600, color: 'var(--text)' }}> Créer un compte </Link>
         </p>
 
-        <LegalFooter className="mt-6" />
+        <LegalFooter className="login-legal mt-6" />
       </div>
     </div>
   );
