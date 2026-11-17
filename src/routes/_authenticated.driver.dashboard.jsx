@@ -1,3 +1,4 @@
+import { ShieldAlert } from "lucide-react";
 import RidePauseButton from '@/components/driver/RidePauseButton';
 import FinishRideButton from '@/components/driver/FinishRideButton';
 import RideSafety from '@/components/ride/RideSafety';
@@ -347,7 +348,17 @@ function DriverDashboard() {
 
   return (
     <>
-      {ride ? (
+      {profile?.isReportSuspended ? (
+        <section className="driver-suspension-screen" role="status">
+          <ShieldAlert size={48} aria-hidden="true" />
+          <h1>Compte chauffeur suspendu</h1>
+          <p>Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.</p>
+          <Link href="/contact?topic=driver_support" className="btn btn-primary btn-full">Contacter l’assistance</Link>
+          <Link href="/dashboard" className="btn btn-secondary btn-full">Passer en mode passager</Link>
+          {ride && ["accepted", "arrived"].includes(ride.status) && <button className="btn btn-secondary btn-full" onClick={() => setCancelOpen(true)}>Annuler la course en attente</button>}
+          {ride?.status === "in_progress" && <FinishRideButton onConfirm={handleComplete} disabled={actionBusy} />}
+        </section>
+      ) : ride ? (
         <div className="drv-active-ride-page">
           {/* 1. Carte de course OpenStreetMap en plein écran */}
           <div className="map-fill" style={{ position: "absolute", inset: 0 }}>
@@ -514,7 +525,7 @@ function DriverDashboard() {
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
 
       {/* ── Notification de course : Cockpit StrasDrive (Design Original) ── */}
-      <Modal open={Boolean(offer)} onClose={decline} closable={false}>
+      <Modal open={Boolean(offer) && !profile?.isReportSuspended} onClose={decline} closable={false}>
         {offer && (
           <div
             style={{

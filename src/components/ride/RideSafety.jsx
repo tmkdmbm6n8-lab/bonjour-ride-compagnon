@@ -28,15 +28,16 @@ export default function RideSafety({ ride }) {
     <>
       <button
         type="button"
-        className="btn btn-ghost btn-sm"
+        className="btn ride-safety-button"
+        aria-label="Sécurité et assistance"
+        title="Sécurité et assistance"
         onClick={() => {
           setMessage("");
           setCopyText("");
           setOpen(true);
         }}
       >
-        <ShieldCheck size={16} />
-        Sécurité et assistance
+        <ShieldCheck size={24} strokeWidth={2.3} aria-hidden="true" />
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="Sécurité et assistance">
         <p className="small mb-4">

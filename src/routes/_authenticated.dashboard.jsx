@@ -1,3 +1,4 @@
+import ReportDriverButton from "@/components/ride/ReportDriverButton";
 import RideSafety from '@/components/ride/RideSafety';
 import { createFileRoute } from "@tanstack/react-router";
 import RiderLayout from "@/components/RiderLayout";
@@ -862,7 +863,7 @@ function RiderDashboard() {
         {/* ── ACTIVE ── */}
         {phase === "active" && ride && (
           <div className="card card-pad animate-in">
-            <RideSafety ride={ride}/>
+            <div className="rider-safety-actions"><RideSafety ride={ride}/><ReportDriverButton key={ride.id} ride={ride}/></div>
             {ride.status !== "in_progress" && (
               <div className="rider-trip-toolbar">
                 <strong>Votre course</strong>
@@ -985,7 +986,7 @@ function RiderDashboard() {
 
             <div className="flex-col gap-2 small" style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
               <div className="flex gap-2">
-                <Circle size={14} style={{ marginTop: 4, color: "var(--ink-950)", flexShrink: 0 }} />
+                <Circle size={14} style={{ marginTop: 4, color: "var(--gold-600)", flexShrink: 0 }} />
                 <span className="truncate muted">{ride.pickup.address}</span>
               </div>
               <div className="flex gap-2">

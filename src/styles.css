@@ -7083,7 +7083,15 @@ a.activity-pill:hover {
 
 /* The active ride fits above the mobile navigation; only expanded details scroll. */
 @media (max-width: 900px) {
-  .drv-active-ride-page { height: calc(100dvh - 84px - env(safe-area-inset-bottom, 0px)); min-height: 0; }
+  .shell:has(.drv-active-ride-page) { height: 100dvh; min-height: 0; overflow: hidden; }
+  .shell .content:has(.drv-active-ride-page) { padding-bottom: 0; height: 100dvh; min-height: 0; overflow: hidden; }
+  .drv-active-ride-page {
+    position: fixed;
+    inset: 0 0 var(--shell-nav-height, calc(84px + env(safe-area-inset-bottom, 0px)));
+    height: auto;
+    min-height: 0;
+  }
+  .drv-ride-dock .drv-bottom-sheet.is-minimal { padding-bottom: 8px; }
 }
 .drv-ride-dock { max-height: calc(100% - 110px); }
 .drv-ride-dock .drv-bottom-sheet.is-minimal { display: flex; flex-direction: column; overflow: hidden; }
@@ -7124,3 +7132,32 @@ a.activity-pill:hover {
   padding: 12px;
   line-height: 1.4;
 }
+
+.rider-safety-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+.driver-report-form { display: flex; flex-direction: column; gap: 12px; }
+.driver-report-reasons { border: 0; padding: 0; margin: 0; min-width: 0; }
+.driver-report-reasons legend { font-weight: 600; margin-bottom: 8px; }
+.driver-report-reason { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0; border-bottom: 1px solid #ffffff18; font-size: 14px; line-height: 1.45; cursor: pointer; }
+.driver-report-reason input { flex: 0 0 auto; margin-top: 4px; accent-color: #eab308; }
+.driver-report-reason span { min-width: 0; overflow-wrap: anywhere; }
+
+.driver-suspension-screen { min-height: calc(100dvh - var(--shell-nav-height, 84px)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 32px 24px; background: #101319; text-align: center; }
+.driver-suspension-screen h1 { font-size: 24px; }
+.driver-suspension-screen p { max-width: 440px; color: #b8c2d1; line-height: 1.6; }
+.driver-suspension-screen .btn { max-width: 440px; }
+
+.btn.ride-safety-button {
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  min-height: 46px;
+  flex-shrink: 0;
+  padding: 10px;
+  color: #60a5fa;
+  background: #132c4b;
+  border: 1px solid #3b82f6;
+  border-radius: 14px;
+}
+.btn.ride-safety-button:hover,
+.btn.ride-safety-button:active { color: #bfdbfe; background: #1e4070; border-color: #60a5fa; }
+.btn.ride-safety-button:focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; }

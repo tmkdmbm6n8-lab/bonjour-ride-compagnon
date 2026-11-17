@@ -61,6 +61,25 @@ export default function useDriverState({ onEvent } = {}) {
     return () => { ignore = true; };
   }, []);
 
+  useEffect(() => {
+    let stopped = false;
+    const refresh = async () => {
+      try {
+        const res = await fetch('/api/drivers/me');
+        if (!res.ok) return;
+        const { driver } = await res.json();
+        if (!stopped) {
+          setProfile(driver);
+          setOnline(Boolean(driver.isOnline));
+          if (driver.isReportSuspended) setOffer(null);
+        }
+      } catch { /* retain last known status while offline */ }
+    };
+    const timer = setInterval(refresh, 15000);
+    window.addEventListener('focus', refresh);
+    return () => { stopped = true; clearInterval(timer); window.removeEventListener('focus', refresh); };
+  }, []);
+
   // ── GPS watch + socket ping while online (or on a trip) ──
   useEffect(() => {
     const shouldTrack = online || Boolean(ride);

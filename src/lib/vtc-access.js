@@ -10,6 +10,7 @@ export function assertRideActionMethod(action, method) {
     "cancel",
     "rate",
     "invoice",
+    "report",
   ];
   if (
     (readOnly.includes(action) && method !== "GET") ||

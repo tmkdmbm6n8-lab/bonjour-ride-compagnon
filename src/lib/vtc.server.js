@@ -1,3 +1,4 @@
+import { reportedRideCount, sendDriverReport } from "./driver-reports.server";
 import { rideOwnerColumn } from "./account-mode";
 import { preparePassengerBooking, hasPassengerRide, switchAccountMode } from "./vtc-account-mode.server";
 import { supportOwnedBy } from "./vtc-support";
@@ -500,7 +501,9 @@ export async function handleVtc(input, context) {
         throw new Error("Vérifiez les informations du véhicule");
       required(await db.from("drivers").update({ vehicle: v }).eq("user_id", uid));
     }
-    return { driver: driverShape(required(await db.from("drivers").select("*").eq("user_id", uid).single())) };
+    const driver = driverShape(required(await db.from("drivers").select("*").eq("user_id", uid).single()));
+    driver.isReportSuspended = !driver.isApproved && await reportedRideCount(admin, uid) >= 3;
+    return { driver };
   }
   if (p === "/api/drivers/me/classes" && method === "PATCH") {
     const cur = required(await db.from("drivers").select("vehicle_class").eq("user_id", uid).single());
@@ -588,7 +591,10 @@ export async function handleVtc(input, context) {
     if (!body.online && current.length) throw new Error("Terminez votre course avant de passer hors ligne");
     if (body.online) {
       if (await hasPassengerRide(admin,uid)) throw new Error("Vous avez une course passager en cours");
-      if (!d.is_approved) throw new Error("Votre inscription doit être approuvée");
+      if (!d.is_approved) {
+        if (await reportedRideCount(admin, uid) >= 3) throw new Error("Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.");
+        throw new Error("Votre inscription doit être approuvée");
+      }
       if (!d.vehicle.plate) throw new Error("Ajoutez votre véhicule");
       if (!d.documents_override) {
         const dc = driverCompliance(
@@ -853,6 +859,8 @@ export async function handleVtc(input, context) {
     const r = required(await admin.from("rides").select("*").eq("id", id).single());
     const participant = r.rider_id === uid || r.driver_id === uid;
     if (action === "accept") {
+      const approval = required(await admin.from("drivers").select("is_approved").eq("user_id", uid).single());
+      if (!approval.is_approved && await reportedRideCount(admin, uid) >= 3) throw new Error("Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.");
       if (!canDrive || r.rider_id === uid || await hasPassengerRide(admin,uid)) throw new Error("Vous ne pouvez pas accepter cette course");
       if (r.is_test) {
         if (
@@ -894,6 +902,9 @@ export async function handleVtc(input, context) {
     }
     if (!participant && role !== "admin") throw new Error("Course inaccessible");
     if (!action) return { ride: await serialize(admin, r, uid) };
+    if (action === "report") {
+      return sendDriverReport(admin, { ride: r, uid, email: context.claims.email, name: profile.name, body });
+    }
     if (action === "invoice") {
       const message = invoiceRequestMessage(r, uid, role);
       const email = context.claims.email;

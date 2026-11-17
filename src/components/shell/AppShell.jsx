@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "@/lib/archive-navigation";
 import { usePathname } from "@/lib/archive-navigation";
 import { useSession, signOut } from "@/lib/archive-auth";
@@ -13,6 +14,17 @@ import { Avatar } from "@/components/ui/bits";
  * @param {{nav: Array<{href:string,label:string,icon:any}>, children:any}} props
  */
 export default function AppShell({ nav, children, variant = "default" }) {
+  const shellRef = useRef(null);
+  const sidebarRef = useRef(null);
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    const update = () => shellRef.current?.style.setProperty("--shell-nav-height", `${sidebar.getBoundingClientRect().height}px`);
+    update();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(update);
+    observer.observe(sidebar);
+    return () => observer.disconnect();
+  }, []);
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user;
@@ -20,8 +32,8 @@ export default function AppShell({ nav, children, variant = "default" }) {
     variant === "rider" ? "/dashboard" : user?.role === "driver" ? "/driver/dashboard" : user?.role === "admin" ? "/admin/dashboard" : "/dashboard";
 
   return (
-    <div className={`shell ${variant === "rider" ? "shell-rider" : variant === "admin" ? "shell-admin" : ""} shell-dark`}>
-      <aside className="sidebar">
+    <div ref={shellRef} className={`shell ${variant === "rider" ? "shell-rider" : variant === "admin" ? "shell-admin" : ""} shell-dark`}>
+      <aside ref={sidebarRef} className="sidebar">
         <div className="sidebar-brand">
           <Link href={homeHref} aria-label="Accueil StrasDrive">
             <KovaLogo size={30} light={true} />

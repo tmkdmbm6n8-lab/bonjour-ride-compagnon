@@ -63,3 +63,5 @@ use the editor.
 
 - User instruction (2026-11-17): never alter the pricing calculations, amounts, remuneration parameters, or the external link supplying prices. Preserve the quote/estimate integrations. Security and compliance work must not recalculate or adjust fares.
 - Run `npm run check:pricing` after any future change. Do not refresh the protected pricing baseline to conceal a change; obtain an explicit new user instruction before any alteration of the protected calculation/link.
+
+- Rider driver reports use authenticated `/api/rides/:id/report` and existing `contact_messages` safety storage. Server-signed messages prevent public contact messages counting toward suspension. Three distinct reported rides set only `drivers.is_approved/is_online/documents_override` false. The driver dashboard shows the suspension and support/passenger access; an active ride can still be completed. Reapproval remains an admin action. Never restrict the passenger profile or recalculate fares.
