@@ -19,7 +19,7 @@ describe('pièces jointes de discussion',()=>{
  });
  it('explique un microphone indisponible sans envoyer de message',async()=>{
   vi.stubGlobal('navigator',{});render(<ChatAttachments rideId="ride"/>);
-  fireEvent.click(screen.getByRole('button',{name:'Enregistrer un vocal'}));
+  fireEvent.pointerDown(screen.getByRole('button',{name:'Enregistrer un vocal'}),{clientX:0,pointerId:1});
   expect(mocks.toast).toHaveBeenCalledWith(expect.stringContaining('navigateur'),'error');expect(mocks.fetch).not.toHaveBeenCalled();
  });
  it('maintenir pour parler : fermer le panneau coupe le micro sans envoyer',async()=>{
