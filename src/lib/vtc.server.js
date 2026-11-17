@@ -151,6 +151,76 @@ function profileShape(p, email) {
   };
 }
 async function serialize(db, r, actor, raw = false) {
+  let driver;
+  let isPriorityDriver = false;
+  if (r.driver_id) {
+    const p = required(await db.from("profiles").select("*").eq("id", r.driver_id).single());
+    const d = required(await db.from("drivers").select("*").eq("user_id", r.driver_id).single());
+    isPriorityDriver = Boolean(d.is_priority);
+    driver = {
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar,
+      rating: p.rating.average,
+      totalTrips: d.stats.totalTrips,
+      vehicle: { ...d.vehicle, type: driverClass(d) },
+      location: d.location,
+      isPriority: isPriorityDriver,
+    };
+  }
+
+  // Règle d'anonymat : pour les chauffeurs normaux (non prioritaires et non admins),
+  // dès que la course est terminée, masquer les adresses exactes et différer la note de 12 h.
+  const isDriverViewingOwnCompletedRide = actor === r.driver_id && r.status === "completed";
+  const mustAnonymize = isDriverViewingOwnCompletedRide && !isPriorityDriver;
+
+  const completedAgeMs = r.completed_at ? Date.now() - new Date(r.completed_at).getTime() : 0;
+  const ratingDelayed = mustAnonymize && completedAgeMs < 12 * 3600 * 1000;
+
+  const pickupClean = mustAnonymize
+    ? {
+        ...r.pickup,
+        address: cityFromAddress(r.pickup?.address),
+        city: cityFromAddress(r.pickup?.address),
+        lat: null,
+        lng: null,
+      }
+    : r.pickup;
+
+  const dropoffClean = mustAnonymize
+    ? {
+        ...r.dropoff,
+        address: cityFromAddress(r.dropoff?.address),
+        city: cityFromAddress(r.dropoff?.address),
+        lat: null,
+        lng: null,
+      }
+    : r.dropoff;
+
+  const cleanRating = ratingDelayed
+    ? r.rating
+      ? { ...r.rating, byRider: undefined, riderComment: undefined }
+      : undefined
+    : r.rating;
+
+  const out = {
+    ...r,
+    pickup: pickupClean,
+    dropoff: dropoffClean,
+    rating: cleanRating,
+    route: mustAnonymize ? undefined : r.route,
+    messages: CHAT_ACTIVE_STATUSES.includes(r.status) ? visibleChatMessages(r.messages) : [],
+    id: r.id,
+    _id: r.id,
+    createdAt: r.created_at,
+    completedAt: r.completed_at,
+    vehicleType: r.vehicle_type,
+    driver,
+    pin: r.rider_id === actor || r.is_test ? r.pin : undefined,
+    isTest: Boolean(r.is_test),
+    live_route: undefined,
+  };
+
   if (!r) return null;
   if (!CHAT_ACTIVE_STATUSES.includes(r.status) && r.status !== "searching" && (r.messages || []).length) {
     try {
