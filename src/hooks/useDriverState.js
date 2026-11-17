@@ -1,4 +1,5 @@
 import {apiFetch as fetch} from '@/lib/archive-fetch';
+import {getDriverLocation, withDeadline} from '@/lib/driver-connection';
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -18,6 +19,7 @@ export default function useDriverState({ onEvent } = {}) {
   const [ride, setRide] = useState(null); // active serialized ride
   const [position, setPosition] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [connectionStage, setConnectionStage] = useState('');
   const [loading, setLoading] = useState(true);
 
   const watchIdRef = useRef(null);
@@ -170,41 +172,17 @@ export default function useDriverState({ onEvent } = {}) {
   }, [socket, isConnected, notify]);
 
   // ── Actions ──
-  const getFix = () =>
-    new Promise((resolve, reject) => {
-      // Browsers only allow geolocation on https:// or localhost. Opening the
-      // app via an IP like 0.0.0.0 silently blocks it with no prompt.
-      if (typeof window !== 'undefined' && !window.isSecureContext) {
-        return reject(
-          new Error(
-            `La géolocalisation est bloquée sur ${window.location.hostname} — ouvrez l’application sur http://localhost:${window.location.port || 3000} (ou via https) pour passer en ligne`
-          )
-        );
-      }
-      if (!navigator.geolocation) return reject(new Error('Géolocalisation non prise en charge'));
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) =>
-          reject(
-            new Error(
-              err.code === 1
-                ? 'Autorisation de géolocalisation refusée — autorisez la localisation pour ce site dans les paramètres de votre navigateur, puis réessayez'
-                : 'Impossible d’obtenir votre position — réessayez'
-            )
-          ),
-        { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
-      );
-    });
-
   const goOnline = useCallback(async () => {
     setBusy(true);
     try {
-      const location = await getFix();
-      const res = await fetch('/api/drivers/me/status', {
+      setConnectionStage('Localisation…');
+      const location = await getDriverLocation();
+      setConnectionStage('Connexion…');
+      const res = await withDeadline(fetch('/api/drivers/me/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ online: true, location }),
-      });
+      }), 20000, 'Le serveur ne répond pas. Votre statut sera revérifié automatiquement ; vérifiez votre connexion.');
       const data = await res.json();
       if (!res.ok) {
         const err = new Error(data.error || 'Impossible de passer en ligne');
@@ -217,23 +195,25 @@ export default function useDriverState({ onEvent } = {}) {
       socketRef.current?.emit('driver:location', { ...location });
     } finally {
       setBusy(false);
+      setConnectionStage('');
     }
   }, []);
 
   const goOffline = useCallback(async () => {
     setBusy(true);
     try {
-      const res = await fetch('/api/drivers/me/status', {
+      const res = await withDeadline(fetch('/api/drivers/me/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ online: false }),
-      });
+      }), 20000, 'Le serveur ne répond pas. Votre statut sera revérifié automatiquement ; vérifiez votre connexion.');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Impossible de passer hors ligne');
       socketRef.current?.emit('driver:offline');
       setOnline(false);
     } finally {
       setBusy(false);
+      setConnectionStage('');
     }
   }, []);
 
@@ -302,6 +282,7 @@ export default function useDriverState({ onEvent } = {}) {
     offer,
     ride,
     busy,
+    connectionStage,
     isConnected,
     goOnline,
     goOffline,

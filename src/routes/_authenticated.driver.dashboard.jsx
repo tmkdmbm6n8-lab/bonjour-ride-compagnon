@@ -122,6 +122,7 @@ function DriverDashboard() {
     offer,
     ride,
     busy,
+    connectionStage,
     isConnected,
     goOnline,
     goOffline,
@@ -540,6 +541,7 @@ function DriverDashboard() {
           loading={loading}
           online={online}
           busy={busy}
+          connectionStage={connectionStage}
           isConnected={isConnected}
           needsVehicle={needsVehicle}
           position={position || idlePosition}
