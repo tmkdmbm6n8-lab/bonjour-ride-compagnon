@@ -1,3 +1,6 @@
+import ChatAttachments from "./ChatAttachments";
+import ChatMedia from "./ChatMedia";
+import { CHAT_NOTICE } from "@/lib/ride-chat";
 import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
@@ -83,9 +86,10 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
         </button>
       </div>
 
+      <p className="chat-retention-notice">{CHAT_NOTICE}</p>
       <div ref={listRef} className="flex-1" style={{ overflowY: 'auto', padding: 14 }}>
         {messages.length === 0 && (
-          <p className="tiny muted text-center" style={{ paddingTop: 40 }}> Dites bonjour — les messages restent dans cette course. </p>
+          <p className="tiny muted text-center" style={{ paddingTop: 40 }}> Dites bonjour à votre interlocuteur. </p>
         )}
         <div className="flex-col gap-2">
           {messages.map((m, i) => {
@@ -109,7 +113,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
                   wordBreak: 'break-word',
                 }}
               >
-                {m.text}
+                {['audio', 'image'].includes(m.type) ? <ChatMedia message={m} rideId={rideId} /> : m.type === 'location' ? <a href={`https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}`} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>📍 Position partagée · ouvrir la carte</a> : m.text}
                 {m.at && (
                   <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 500, opacity: 0.7, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
                     {mine ? 'Vous · ' : ''}{new Date(m.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -121,6 +125,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
         </div>
       </div>
 
+      <ChatAttachments key={rideId} rideId={rideId} />
       <form
         onSubmit={send}
         className="flex gap-2"
@@ -128,7 +133,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
       >
         <input
           className="input flex-1"
-          style={{ minHeight: 46, fontSize: '1rem' }}
+          style={{ minWidth: 0, minHeight: 46, fontSize: '1rem' }}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Saisissez un message…"

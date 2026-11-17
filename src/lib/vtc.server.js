@@ -1,3 +1,6 @@
+import { driverReportMessage } from "./driver-reports";
+import { visibleChatMessages, CHAT_ACTIVE_STATUSES } from "./ride-chat";
+import { closeRideChat, preserveRideChat, sendChatMessage, sendChatAttachment, chatFileUrl, adminChatEvidence } from "./ride-chat.server";
 import { reportedRideCount, sendDriverReport } from "./driver-reports.server";
 import { rideOwnerColumn } from "./account-mode";
 import { preparePassengerBooking, hasPassengerRide, switchAccountMode } from "./vtc-account-mode.server";
@@ -116,6 +119,12 @@ function profileShape(p, email) {
 }
 async function serialize(db, r, actor, raw = false) {
   if (!r) return null;
+  if (!CHAT_ACTIVE_STATUSES.includes(r.status) && r.status !== 'searching' && (r.messages || []).length) {
+    try { await closeRideChat(db, r.id); } catch { console.warn("Chat cleanup pending: scheduled retry required"); }
+    r = { ...r, messages: [] };
+  }
+
+  if (!r) return null;
   let driver;
   if (r.driver_id) {
     const p = required(await db.from("profiles").select("*").eq("id", r.driver_id).single());
@@ -132,6 +141,7 @@ async function serialize(db, r, actor, raw = false) {
   }
   const out = {
     ...r,
+    messages: CHAT_ACTIVE_STATUSES.includes(r.status) ? visibleChatMessages(r.messages) : [],
     id: r.id,
     _id: r.id,
     createdAt: r.created_at,
@@ -340,6 +350,10 @@ export async function handleVtc(input, context) {
   // RLS has verified the role; privileged operations below use only the verified caller identity.
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
   const profile = required(await db.from("profiles").select("*").eq("id", uid).single());
+  if (p === "/api/admin/chat-evidence") {
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    return adminChatEvidence(admin, q);
+  }
   if (p === "/api/users/me/export") {
     if (method !== "GET") throw new Error("Méthode non autorisée");
     const {page, until, from, to} = exportPageOptions(q);
@@ -859,6 +873,7 @@ export async function handleVtc(input, context) {
     const r = required(await admin.from("rides").select("*").eq("id", id).single());
     const participant = r.rider_id === uid || r.driver_id === uid;
     if (action === "accept") {
+      if (r.status === "searching" && (r.messages || []).length) await closeRideChat(admin, id, { allowSearching: true });
       const approval = required(await admin.from("drivers").select("is_approved").eq("user_id", uid).single());
       if (!approval.is_approved && await reportedRideCount(admin, uid) >= 3) throw new Error("Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.");
       if (!canDrive || r.rider_id === uid || await hasPassengerRide(admin,uid)) throw new Error("Vous ne pouvez pas accepter cette course");
@@ -903,6 +918,9 @@ export async function handleVtc(input, context) {
     if (!participant && role !== "admin") throw new Error("Course inaccessible");
     if (!action) return { ride: await serialize(admin, r, uid) };
     if (action === "report") {
+      driverReportMessage(r, uid, body);
+      if (!context.claims.email) throw new Error("Une adresse e-mail de compte est nécessaire");
+      await preserveRideChat(admin, id, uid);
       return sendDriverReport(admin, { ride: r, uid, email: context.claims.email, name: profile.name, body });
     }
     if (action === "invoice") {
@@ -1019,27 +1037,15 @@ export async function handleVtc(input, context) {
         }
         required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
       }
-    } else if (action === "messages") {
+    } else if (action === "attachment") {
       if (!participant) throw new Error("Accès refusé");
-      if (method === "GET") return { messages: r.messages };
-      if (
-        !["accepted", "arrived", "in_progress"].includes(r.status) ||
-        typeof body.text !== "string" ||
-        !body.text.trim() ||
-        body.text.length > 500
-      )
-        throw new Error("Message invalide");
-      required(
-        await admin
-          .from("rides")
-          .update({
-            messages: [
-              ...r.messages,
-              { from: r.rider_id === uid ? "rider" : "driver", text: body.text.trim(), at: new Date().toISOString() },
-            ],
-          })
-          .eq("id", id),
-      );
+      await sendChatAttachment(admin, r, uid, body);
+    } else if (action === "media") {
+      return chatFileUrl(admin, r, uid, q.get("messageId"));
+    } else if (action === "messages") {
+      if (!participant || !CHAT_ACTIVE_STATUSES.includes(r.status)) throw new Error("Discussion fermée");
+      if (method === "GET") return { messages: visibleChatMessages(r.messages) };
+      await sendChatMessage(admin, r, uid, body);
     } else if (action === "rate") {
       if (r.is_test && participant && r.status === "completed") return { ride: await serialize(admin, r, uid) };
       if (
@@ -1065,6 +1071,7 @@ export async function handleVtc(input, context) {
           .eq("id", id),
       );
     } else throw new Error("Action inconnue");
+    if (action === "cancel") await closeRideChat(admin, id, { allowSearching: true });
     return { ride: await serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid) };
   }
   if (p === "/api/admin/test-ride" && method === "POST") {
@@ -1302,7 +1309,8 @@ export async function handleVtc(input, context) {
         await admin
           .from("contact_messages")
           .select("*")
-          .eq("status", q.get("status") || "open"),
+          .eq("status", q.get("status") || "open")
+          .not("topic", "in", "(ride_chat_archive,ride_chat_cleanup)"),
       ).map((m) => ({ ...m, _id: m.id, createdAt: m.created_at, resolvedAt: m.resolved_at })),
     };
   }
@@ -1347,7 +1355,7 @@ export async function handleVtc(input, context) {
       pendingDrivers: ds.filter((d) => !d.is_approved).length,
       totalUsers: ps.count,
       totalDrivers: ds.length,
-      openSupport: (await admin.from("contact_messages").select("id", { count: "exact" }).eq("status", "open")).count,
+      openSupport: (await admin.from("contact_messages").select("id", { count: "exact" }).eq("status", "open").not("topic", "in", "(ride_chat_archive,ride_chat_cleanup)")).count,
       recentRides: await Promise.all(rs.slice(0, 10).map((r) => serialize(admin, r, uid, true))),
       revenue7d: [],
       statusBreakdown: { completed: completed.length },

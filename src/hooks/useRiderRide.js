@@ -98,6 +98,7 @@ export default function useRiderRide({ onEvent } = {}) {
             setCompletedRide({
               ...r,
               status: 'completed',
+              messages: [],
               fare: data.fare,
               payment: data.payment,
               shortfall: Boolean(data.shortfall),
@@ -111,7 +112,7 @@ export default function useRiderRide({ onEvent } = {}) {
       },
       'ride:driver-cancelled': (data) => {
         // Ride went back to searching with a new dispatch
-        setRide((r) => (r ? { ...r, status: 'searching', driver: undefined } : r));
+        setRide((r) => (r ? { ...r, status: 'searching', driver: undefined, messages: [] } : r));
         setDriverPosition(null);
         notify('driver-cancelled', data);
       },
@@ -121,7 +122,7 @@ export default function useRiderRide({ onEvent } = {}) {
       'ride:message': (data) => {
         setRide((r) => {
           if (!r || r.id !== data.rideId) return r;
-          return { ...r, messages: [...(r.messages || []), { from: data.from, text: data.text, at: data.at }] };
+          return { ...r, messages: [...(r.messages || []), { ...data, rideId: undefined }] };
         });
         notify('message', data);
       },

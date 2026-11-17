@@ -1,3 +1,4 @@
+import { visibleChatMessages, CHAT_ACTIVE_STATUSES } from "./ride-chat";
 import { newSupportThread, parseSupportThread, supportOwnedBy, supportShape } from "./vtc-support";
 function required(result) {
   if (result.error) throw new Error(result.error.message);
@@ -36,7 +37,7 @@ export async function inboxForDriver(admin, uid, email, page = 1) {
   ].filter((row) => supportOwnedBy(row, uid, email));
   return {
     threads: rows.map(supportShape),
-    rides: required(rides),
+    rides: required(rides).filter(r => CHAT_ACTIVE_STATUSES.includes(r.status)).map(r => ({ ...r, messages: visibleChatMessages(r.messages) })),
     hasMore:
       (support.data?.length || 0) === 50 ||
       (owned.data?.length || 0) === 50 ||

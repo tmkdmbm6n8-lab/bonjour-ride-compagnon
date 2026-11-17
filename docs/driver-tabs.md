@@ -26,7 +26,7 @@ Les montants viennent des courses réellement terminées, hors tests. La semaine
 
 ## Inbox et administration
 
-Les discussions clients viennent de l'historique des courses. La discussion reste en lecture seule après la fin d'une course. Les échanges d'assistance utilisent la table existante `contact_messages` et son champ texte pour une conversation structurée. L'identité propriétaire provient de la session vérifiée. Les réponses simultanées sont protégées par une comparaison de la version précédente.
+Les discussions clients ne sont accessibles que pendant une course active. Après clôture elles sont supprimées ; en cas de signalement préalable, l’administration seule dispose d’une archive pendant 14 jours à compter du premier signalement (voir docs/conformite/chat-retention.md).  Les échanges d'assistance utilisent la table existante `contact_messages` et son champ texte pour une conversation structurée. L'identité propriétaire provient de la session vérifiée. Les réponses simultanées sont protégées par une comparaison de la version précédente.
 
 L'écran d'assistance administrateur permet de répondre. Les messages de contact publics restent lisibles et ne peuvent pas usurper le format d'une réponse administrateur. Les règles de conservation existantes restent appliquées : messages de course un an, assistance trois ans. Aucun nouveau stockage SQL ni nouvelle durée de conservation n'est ajouté.
 

@@ -1,6 +1,6 @@
 /** Security checks independent from pricing, dispatch and fare calculations. */
 export function assertRideActionMethod(action, method) {
-  const readOnly = ["route", "radars"];
+  const readOnly = ["route", "radars", "media"];
   const mutations = [
     "accept",
     "decline",
@@ -11,6 +11,7 @@ export function assertRideActionMethod(action, method) {
     "rate",
     "invoice",
     "report",
+    "attachment",
   ];
   if (
     (readOnly.includes(action) && method !== "GET") ||

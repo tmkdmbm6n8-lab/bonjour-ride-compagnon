@@ -7200,7 +7200,8 @@ a.activity-pill:hover {
   .shell-rider .content:has(.rider-active-trip) { height: 100dvh; min-height: 0; overflow: hidden; padding-bottom: 0; }
   .shell-rider .rider-active-trip { position: fixed; inset: 0; height: auto; overflow: hidden; }
   .shell-rider .rider-active-trip > .rider-trip-panel {
-    top: 8px;
+    top: calc(var(--rider-visible-top, 0px) + (var(--rider-visible-height, 100dvh) - var(--shell-nav-height, 84px)) / 2);
+    transform: translateY(-50%);
     bottom: auto;
     max-height: calc(var(--rider-visible-height, 100dvh) - var(--shell-nav-height, 84px) - 16px);
     overflow: visible;
@@ -7259,3 +7260,11 @@ a.activity-pill:hover {
   .rider-active-card .rider-trip-toolbar strong { display: none; }
   .rider-active-card .rider-cancel-button { font-size: 11px; padding: 6px; white-space: nowrap; }
 }
+
+.chat-retention-notice { flex-shrink: 0; padding: 8px 14px; margin: 0; font-size: 11px; line-height: 1.4; color: #cbd5e1; border-bottom: 1px solid #ffffff15; }
+.chat-attachments { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 12px; border-top: 1px solid #ffffff15; color: #e2e8f0; }
+.chat-attachments .btn { color: inherit; min-height: 44px; }
+.chat-attachment-menu { display: flex; flex-direction: column; width: 100%; }
+.chat-voice-preview { width: 100%; display: flex; align-items: center; gap: 4px; }
+.chat-voice-preview audio { min-width: 0; flex: 1; width: 120px; }
+.chat-evidence-message { padding: 12px; margin-top: 10px; border: 1px solid #ffffff1f; border-radius: 12px; overflow-wrap: anywhere; }

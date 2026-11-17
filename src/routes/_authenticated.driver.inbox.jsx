@@ -1,3 +1,5 @@
+import ChatMedia from "@/components/ride/ChatMedia";
+import ChatAttachments from "@/components/ride/ChatAttachments";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { MessagesSquare, Plus, Send, ShieldCheck, Car, ChevronRight } from "lucide-react";
@@ -64,7 +66,7 @@ function InboxPage() {
       })),
     ];
     setEntries((previous) =>
-      [...new Map([...previous, ...next].map((item) => [item.id, item])).values()].sort(
+      [...new Map([...previous.filter(item => item.kind !== "ride"), ...next].map((item) => [item.id, item])).values()].sort(
         (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt),
       ),
     );
@@ -258,6 +260,7 @@ function InboxPage() {
         maxWidth={620}
         keyboardSafe
       >
+        {selected?.kind === 'ride' && ["accepted", "arrived", "in_progress"].includes(selected.status) && <ChatAttachments key={selected.targetId} rideId={selected.targetId} />}
         <div
           className="inbox-conversation"
           style={viewport ? { maxHeight: Math.max(160, viewport.height - 160) } : undefined}
@@ -295,7 +298,7 @@ function InboxPage() {
                     </time>
                   )}
                 </div>
-                <p>{message.text}</p>
+                {selected.kind === 'ride' && ['audio', 'image'].includes(message.type) ? <ChatMedia message={message} rideId={selected.targetId} /> : message.type === 'location' ? <a href={`https://www.google.com/maps/search/?api=1&query=${message.lat},${message.lng}`} target="_blank" rel="noreferrer">Position partagée · ouvrir la carte</a> : <p>{message.text}</p>}
               </div>
             ))}
           </div>

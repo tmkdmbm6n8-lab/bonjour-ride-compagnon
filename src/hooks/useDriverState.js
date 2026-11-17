@@ -156,7 +156,7 @@ export default function useDriverState({ onEvent } = {}) {
       'ride:message': (data) => {
         setRide((r) => {
           if (!r || r.id !== data.rideId) return r;
-          return { ...r, messages: [...(r.messages || []), { from: data.from, text: data.text, at: data.at }] };
+          return { ...r, messages: [...(r.messages || []), { ...data, rideId: undefined }] };
         });
         notify('message', data);
       },

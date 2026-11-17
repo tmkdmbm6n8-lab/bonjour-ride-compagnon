@@ -23,6 +23,7 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedRidesRouteImport } from './routes/_authenticated.rides'
 import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated.wallet'
 import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenticated.admin.alerts'
+import { Route as AuthenticatedAdminChatEvidenceRouteImport } from './routes/_authenticated.admin.chat-evidence'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated.admin.dashboard'
 import { Route as AuthenticatedAdminDriversRouteImport } from './routes/_authenticated.admin.drivers'
 import { Route as AuthenticatedAdminPricingRouteImport } from './routes/_authenticated.admin.pricing'
@@ -39,6 +40,7 @@ import { Route as AuthenticatedDriverProfileRouteImport } from './routes/_authen
 import { Route as AuthenticatedDriverTripsRouteImport } from './routes/_authenticated.driver.trips'
 import { Route as AuthenticatedDriverWalletRouteImport } from './routes/_authenticated.driver.wallet'
 import { Route as AuthenticatedRidesIdRouteImport } from './routes/_authenticated.rides.$id'
+import { Route as ApiPublicJobsChatRetentionRouteImport } from './routes/api/public/jobs/chat-retention'
 import { Route as ApiPublicJobsWeeklyPayoutsRouteImport } from './routes/api/public/jobs/weekly-payouts'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
@@ -110,6 +112,12 @@ const AuthenticatedAdminAlertsRoute =
   AuthenticatedAdminAlertsRouteImport.update({
     id: '/admin/alerts',
     path: '/admin/alerts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminChatEvidenceRoute =
+  AuthenticatedAdminChatEvidenceRouteImport.update({
+    id: '/admin/chat-evidence',
+    path: '/admin/chat-evidence',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminDashboardRoute =
@@ -204,6 +212,12 @@ const AuthenticatedRidesIdRoute = AuthenticatedRidesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedRidesRoute,
 } as any)
+const ApiPublicJobsChatRetentionRoute =
+  ApiPublicJobsChatRetentionRouteImport.update({
+    id: '/api/public/jobs/chat-retention',
+    path: '/api/public/jobs/chat-retention',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicJobsWeeklyPayoutsRoute =
   ApiPublicJobsWeeklyPayoutsRouteImport.update({
     id: '/api/public/jobs/weekly-payouts',
@@ -231,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/rides': typeof AuthenticatedRidesRouteWithChildren
   '/wallet': typeof AuthenticatedWalletRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
+  '/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/admin/pricing': typeof AuthenticatedAdminPricingRoute
@@ -247,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
+  '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -264,6 +280,7 @@ export interface FileRoutesByTo {
   '/rides': typeof AuthenticatedRidesRouteWithChildren
   '/wallet': typeof AuthenticatedWalletRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
+  '/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/admin/pricing': typeof AuthenticatedAdminPricingRoute
@@ -280,6 +297,7 @@ export interface FileRoutesByTo {
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
+  '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -299,6 +317,7 @@ export interface FileRoutesById {
   '/_authenticated/rides': typeof AuthenticatedRidesRouteWithChildren
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
   '/_authenticated/admin/alerts': typeof AuthenticatedAdminAlertsRoute
+  '/_authenticated/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/_authenticated/admin/pricing': typeof AuthenticatedAdminPricingRoute
@@ -315,6 +334,7 @@ export interface FileRoutesById {
   '/_authenticated/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/_authenticated/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/_authenticated/rides/$id': typeof AuthenticatedRidesIdRoute
+  '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -334,6 +354,7 @@ export interface FileRouteTypes {
     | '/rides'
     | '/wallet'
     | '/admin/alerts'
+    | '/admin/chat-evidence'
     | '/admin/dashboard'
     | '/admin/drivers'
     | '/admin/pricing'
@@ -350,6 +371,7 @@ export interface FileRouteTypes {
     | '/driver/trips'
     | '/driver/wallet'
     | '/rides/$id'
+    | '/api/public/jobs/chat-retention'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -367,6 +389,7 @@ export interface FileRouteTypes {
     | '/rides'
     | '/wallet'
     | '/admin/alerts'
+    | '/admin/chat-evidence'
     | '/admin/dashboard'
     | '/admin/drivers'
     | '/admin/pricing'
@@ -383,6 +406,7 @@ export interface FileRouteTypes {
     | '/driver/trips'
     | '/driver/wallet'
     | '/rides/$id'
+    | '/api/public/jobs/chat-retention'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/payments/webhook'
   id:
@@ -401,6 +425,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rides'
     | '/_authenticated/wallet'
     | '/_authenticated/admin/alerts'
+    | '/_authenticated/admin/chat-evidence'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/drivers'
     | '/_authenticated/admin/pricing'
@@ -417,6 +442,7 @@ export interface FileRouteTypes {
     | '/_authenticated/driver/trips'
     | '/_authenticated/driver/wallet'
     | '/_authenticated/rides/$id'
+    | '/api/public/jobs/chat-retention'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -431,6 +457,7 @@ export interface RootRouteChildren {
   RecoverAccountRoute: typeof RecoverAccountRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  ApiPublicJobsChatRetentionRoute: typeof ApiPublicJobsChatRetentionRoute
   ApiPublicJobsWeeklyPayoutsRoute: typeof ApiPublicJobsWeeklyPayoutsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -533,6 +560,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/alerts'
       fullPath: '/admin/alerts'
       preLoaderRoute: typeof AuthenticatedAdminAlertsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/chat-evidence': {
+      id: '/_authenticated/admin/chat-evidence'
+      path: '/admin/chat-evidence'
+      fullPath: '/admin/chat-evidence'
+      preLoaderRoute: typeof AuthenticatedAdminChatEvidenceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/dashboard': {
@@ -647,6 +681,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRidesIdRouteImport
       parentRoute: typeof AuthenticatedRidesRoute
     }
+    '/api/public/jobs/chat-retention': {
+      id: '/api/public/jobs/chat-retention'
+      path: '/api/public/jobs/chat-retention'
+      fullPath: '/api/public/jobs/chat-retention'
+      preLoaderRoute: typeof ApiPublicJobsChatRetentionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/weekly-payouts': {
       id: '/api/public/jobs/weekly-payouts'
       path: '/api/public/jobs/weekly-payouts'
@@ -681,6 +722,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRidesRoute: typeof AuthenticatedRidesRouteWithChildren
   AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
   AuthenticatedAdminAlertsRoute: typeof AuthenticatedAdminAlertsRoute
+  AuthenticatedAdminChatEvidenceRoute: typeof AuthenticatedAdminChatEvidenceRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminDriversRoute: typeof AuthenticatedAdminDriversRoute
   AuthenticatedAdminPricingRoute: typeof AuthenticatedAdminPricingRoute
@@ -704,6 +746,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRidesRoute: AuthenticatedRidesRouteWithChildren,
   AuthenticatedWalletRoute: AuthenticatedWalletRoute,
   AuthenticatedAdminAlertsRoute: AuthenticatedAdminAlertsRoute,
+  AuthenticatedAdminChatEvidenceRoute: AuthenticatedAdminChatEvidenceRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
   AuthenticatedAdminDriversRoute: AuthenticatedAdminDriversRoute,
   AuthenticatedAdminPricingRoute: AuthenticatedAdminPricingRoute,
@@ -734,6 +777,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecoverAccountRoute: RecoverAccountRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  ApiPublicJobsChatRetentionRoute: ApiPublicJobsChatRetentionRoute,
   ApiPublicJobsWeeklyPayoutsRoute: ApiPublicJobsWeeklyPayoutsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }

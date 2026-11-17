@@ -525,7 +525,7 @@ function RiderDashboard() {
         style={
           phase === "active" && vv ? {
             "--rider-visible-height": `${vv.height}px`,
-            top: vv.top + 8,
+            "--rider-visible-top": `${vv.top}px`,
           } : vv ? {
             position: "fixed",
             top: "auto",
