@@ -1,6 +1,13 @@
 import { driverReportMessage } from "./driver-reports";
 import { visibleChatMessages, CHAT_ACTIVE_STATUSES } from "./ride-chat";
-import { closeRideChat, preserveRideChat, sendChatMessage, sendChatAttachment, chatFileUrl, adminChatEvidence } from "./ride-chat.server";
+import {
+  closeRideChat,
+  preserveRideChat,
+  sendChatMessage,
+  sendChatAttachment,
+  chatFileUrl,
+  adminChatEvidence,
+} from "./ride-chat.server";
 import { reportedRideCount, sendDriverReport } from "./driver-reports.server";
 import { rideOwnerColumn } from "./account-mode";
 import { preparePassengerBooking, hasPassengerRide, switchAccountMode } from "./vtc-account-mode.server";
@@ -119,8 +126,12 @@ function profileShape(p, email) {
 }
 async function serialize(db, r, actor, raw = false) {
   if (!r) return null;
-  if (!CHAT_ACTIVE_STATUSES.includes(r.status) && r.status !== 'searching' && (r.messages || []).length) {
-    try { await closeRideChat(db, r.id); } catch { console.warn("Chat cleanup pending: scheduled retry required"); }
+  if (!CHAT_ACTIVE_STATUSES.includes(r.status) && r.status !== "searching" && (r.messages || []).length) {
+    try {
+      await closeRideChat(db, r.id);
+    } catch {
+      console.warn("Chat cleanup pending: scheduled retry required");
+    }
     r = { ...r, messages: [] };
   }
 
@@ -158,7 +169,7 @@ async function serialize(db, r, actor, raw = false) {
     try {
       const rp = required(await db.from("profiles").select("name,phone,rating,avatar").eq("id", r.rider_id).single());
       out.rider = {
-        name: raw ? (rp.name || "Passager") : passengerDisplayName(rp.name),
+        name: raw ? rp.name || "Passager" : passengerDisplayName(rp.name),
         avatar: rp.avatar || "",
         phone: rp.phone || "",
         rating: rp.rating?.average || 5.0,
@@ -209,10 +220,7 @@ async function googleRoute(a, b) {
 async function routeBetween(a, b) {
   if (!validPoint(a) || !validPoint(b)) throw new Error("Adresses invalides");
   // Google only; an outage yields an explicitly approximate estimate without a road line.
-  return (
-    (await googleRoute(a, b)) ||
-    approximateRoute(haversineDistance(a.lat, a.lng, b.lat, b.lng))
-  );
+  return (await googleRoute(a, b)) || approximateRoute(haversineDistance(a.lat, a.lng, b.lat, b.lng));
 }
 /** Live leg driver → pickup/destination, shared by rider and driver through rides.live_route. */
 async function liveRoute(admin, r) {
@@ -344,56 +352,112 @@ export async function handleVtc(input, context) {
     : roles.some((r) => r.role === "driver")
       ? "driver"
       : "rider";
-  const canDrive = roles.some(r=>r.role === "driver");
+  const canDrive = roles.some((r) => r.role === "driver");
   if (p.startsWith("/api/admin/") && role !== "admin") throw new Error("Accès administrateur requis");
   if (p.startsWith("/api/drivers/me") && !canDrive) throw new Error("Accès chauffeur requis");
   // RLS has verified the role; privileged operations below use only the verified caller identity.
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
   const profile = required(await db.from("profiles").select("*").eq("id", uid).single());
   if (p === "/api/admin/chat-evidence") {
-    if (method !== "GET") throw new Error("Méthode non autorisée");
-    return adminChatEvidence(admin, q);
+    if (method === "GET") return adminChatEvidence(admin, q);
+    if (method === "POST") return handleAdminReportAction(admin, body);
+    throw new Error("Méthode non autorisée");
   }
+
   if (p === "/api/users/me/export") {
     if (method !== "GET") throw new Error("Méthode non autorisée");
-    const {page, until, from, to} = exportPageOptions(q);
-    const driver = page === 0 && role === "driver"
-      ? required(await db.from("drivers").select("*").eq("user_id", uid).maybeSingle()) : undefined;
-    const rows = required(await db.from("rides").select("*")
-      .or(`rider_id.eq.${uid},driver_id.eq.${uid}`).lte("created_at",until)
-      .order("created_at",{ascending:true}).order("id",{ascending:true}).range(from,to));
-    const walletRows = required(await db.from("wallet_transactions").select("*").eq("user_id",uid)
-      .lte("created_at",until).order("created_at",{ascending:true}).order("id",{ascending:true}).range(from,to));
-    const documents = page === 0 && role === "driver"
-      ? required(await db.from("driver_documents").select("*").eq("user_id",uid)).map(docShape) : undefined;
+    const { page, until, from, to } = exportPageOptions(q);
+    const driver =
+      page === 0 && role === "driver"
+        ? required(await db.from("drivers").select("*").eq("user_id", uid).maybeSingle())
+        : undefined;
+    const rows = required(
+      await db
+        .from("rides")
+        .select("*")
+        .or(`rider_id.eq.${uid},driver_id.eq.${uid}`)
+        .lte("created_at", until)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+    const walletRows = required(
+      await db
+        .from("wallet_transactions")
+        .select("*")
+        .eq("user_id", uid)
+        .lte("created_at", until)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+    const documents =
+      page === 0 && role === "driver"
+        ? required(await db.from("driver_documents").select("*").eq("user_id", uid)).map(docShape)
+        : undefined;
     const email = context.claims.email;
     const escapedEmail = String(email || "").replace(/[\\%_]/g, "\\$&");
-    const supportByEmail = email ? required(await admin.from("contact_messages")
-      .select("id,email,topic,message,status,created_at,resolved_at").ilike("email",escapedEmail)
-      .lte("created_at",until).order("created_at",{ascending:true}).order("id",{ascending:true}).range(from,to)) : [];
-    const supportByUser = required(await admin.from("contact_messages")
-      .select("id,email,topic,message,status,created_at,resolved_at").eq("topic","driver_conversation")
-      .like("message",'%"userId":"'+uid+'"%').lte("created_at",until)
-      .order("created_at",{ascending:true}).order("id",{ascending:true}).range(from,to));
-    const supportRows = [...new Map([
-      ...supportByEmail.slice(0,PERSONAL_DATA_PAGE_SIZE),...supportByUser.slice(0,PERSONAL_DATA_PAGE_SIZE),
-    ].map(row=>[row.id,row])).values()].filter(row=>supportOwnedBy(row,uid,email));
+    const supportByEmail = email
+      ? required(
+          await admin
+            .from("contact_messages")
+            .select("id,email,topic,message,status,created_at,resolved_at")
+            .ilike("email", escapedEmail)
+            .lte("created_at", until)
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        )
+      : [];
+    const supportByUser = required(
+      await admin
+        .from("contact_messages")
+        .select("id,email,topic,message,status,created_at,resolved_at")
+        .eq("topic", "driver_conversation")
+        .like("message", '%"userId":"' + uid + '"%')
+        .lte("created_at", until)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+    const supportRows = [
+      ...new Map(
+        [...supportByEmail.slice(0, PERSONAL_DATA_PAGE_SIZE), ...supportByUser.slice(0, PERSONAL_DATA_PAGE_SIZE)].map(
+          (row) => [row.id, row],
+        ),
+      ).values(),
+    ].filter((row) => supportOwnedBy(row, uid, email));
     return {
-      exportedAt:until,
-      ...(page === 0 ? {account:{email:email || "",role,consent:context.claims.user_metadata?.consent || null},profile,driver,documents} : {}),
-      rides:rows.slice(0,PERSONAL_DATA_PAGE_SIZE).map(({pin,offer_driver_id,offer_expires_at,declined,...rest})=>rest),
-      walletTransactions:walletRows.slice(0,PERSONAL_DATA_PAGE_SIZE),
-      supportRequests:supportRows,
-      pagination:{page,hasMore:[rows,walletRows,supportByEmail,supportByUser].some(items=>items.length > PERSONAL_DATA_PAGE_SIZE)},
+      exportedAt: until,
+      ...(page === 0
+        ? {
+            account: { email: email || "", role, consent: context.claims.user_metadata?.consent || null },
+            profile,
+            driver,
+            documents,
+          }
+        : {}),
+      rides: rows
+        .slice(0, PERSONAL_DATA_PAGE_SIZE)
+        .map(({ pin, offer_driver_id, offer_expires_at, declined, ...rest }) => rest),
+      walletTransactions: walletRows.slice(0, PERSONAL_DATA_PAGE_SIZE),
+      supportRequests: supportRows,
+      pagination: {
+        page,
+        hasMore: [rows, walletRows, supportByEmail, supportByUser].some(
+          (items) => items.length > PERSONAL_DATA_PAGE_SIZE,
+        ),
+      },
     };
   }
   if (p === "/api/users/me/mode") {
     if (method !== "POST") throw new Error("Méthode non autorisée");
-    return switchAccountMode(admin,{uid,canDrive,mode:body.mode});
+    return switchAccountMode(admin, { uid, canDrive, mode: body.mode });
   }
   if (p === "/api/users/me/support") {
-    if (method === "GET") return personalSupportRequests(admin,uid,context.claims.email,Number(q.get("page") || 0));
-    if (method === "POST") return sendSupportMessage(admin,{uid,email:context.claims.email,name:profile.name,role,body});
+    if (method === "GET") return personalSupportRequests(admin, uid, context.claims.email, Number(q.get("page") || 0));
+    if (method === "POST")
+      return sendSupportMessage(admin, { uid, email: context.claims.email, name: profile.name, role, body });
     throw new Error("Méthode non autorisée");
   }
   if (p === "/api/users/me/deletion-request" && method === "POST") {
@@ -516,7 +580,7 @@ export async function handleVtc(input, context) {
       required(await db.from("drivers").update({ vehicle: v }).eq("user_id", uid));
     }
     const driver = driverShape(required(await db.from("drivers").select("*").eq("user_id", uid).single()));
-    driver.isReportSuspended = !driver.isApproved && await reportedRideCount(admin, uid) >= 3;
+    driver.isReportSuspended = !driver.isApproved && (await reportedRideCount(admin, uid)) >= 3;
     return { driver };
   }
   if (p === "/api/drivers/me/classes" && method === "PATCH") {
@@ -604,9 +668,12 @@ export async function handleVtc(input, context) {
     const current = required(await db.from("rides").select("id").eq("driver_id", uid).in("status", active));
     if (!body.online && current.length) throw new Error("Terminez votre course avant de passer hors ligne");
     if (body.online) {
-      if (await hasPassengerRide(admin,uid)) throw new Error("Vous avez une course passager en cours");
+      if (await hasPassengerRide(admin, uid)) throw new Error("Vous avez une course passager en cours");
       if (!d.is_approved) {
-        if (await reportedRideCount(admin, uid) >= 3) throw new Error("Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.");
+        if ((await reportedRideCount(admin, uid)) >= 3)
+          throw new Error(
+            "Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.",
+          );
         throw new Error("Votre inscription doit être approuvée");
       }
       if (!d.vehicle.plate) throw new Error("Ajoutez votre véhicule");
@@ -617,8 +684,7 @@ export async function handleVtc(input, context) {
         if (!dc.canDrive) throw new Error(`${complianceProblem(dc)} — mettez à jour vos documents dans votre profil`);
       }
       if (Number(profile.balance) < -25) throw new Error("Régularisez votre solde avant de passer en ligne");
-      if (!validLocation(body.location))
-        throw new Error("Position invalide");
+      if (!validLocation(body.location)) throw new Error("Position invalide");
     }
     required(
       await db
@@ -638,12 +704,16 @@ export async function handleVtc(input, context) {
     if (!validLocation(body)) throw new Error("Position invalide");
     const driver = required(await db.from("drivers").select("is_online").eq("user_id", uid).single());
     const ongoing = required(await db.from("rides").select("id").eq("driver_id", uid).in("status", active));
-    if (!driver.is_online && !ongoing.length) return {ok:true, ignored:true};
+    if (!driver.is_online && !ongoing.length) return { ok: true, ignored: true };
     required(
       await db
         .from("drivers")
         .update({
-          location: { lat: body.lat, lng: body.lng, heading: Number.isFinite(body.heading) ? ((body.heading % 360) + 360) % 360 : null },
+          location: {
+            lat: body.lat,
+            lng: body.lng,
+            heading: Number.isFinite(body.heading) ? ((body.heading % 360) + 360) % 360 : null,
+          },
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", uid),
@@ -692,12 +762,11 @@ export async function handleVtc(input, context) {
     const quote = await estimates(admin, b.pickup, b.dropoff);
     const fare = quote.estimates[b.vehicleType];
     if (!fare) throw new Error("Tarif indisponible pour cette gamme, réessayez");
-    if (quote.route.distanceMeters < 100)
-      throw new Error("Le trajet doit faire au moins 100 m");
+    if (quote.route.distanceMeters < 100) throw new Error("Le trajet doit faire au moins 100 m");
     return { fare, route: quote.route };
   };
   const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment }) => {
-    await preparePassengerBooking(admin,uid,canDrive);
+    await preparePassengerBooking(admin, uid, canDrive);
     const pin = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000).padStart(4, "0");
     // Note moyenne laissée par les chauffeurs, figée à la commande (filtre « note minimale » des chauffeurs).
     const past = required(
@@ -744,14 +813,14 @@ export async function handleVtc(input, context) {
       body,
       quoteRide,
       createRide,
-      preparePassenger:()=>preparePassengerBooking(admin,uid,canDrive),
+      preparePassenger: () => preparePassengerBooking(admin, uid, canDrive),
       cardBookingProblem: (fare) => bookingPaymentProblem("card", profile.balance, fare.total),
       serializeRide: async (id) =>
         serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid),
     });
   }
   if (p === "/api/rides" && method === "POST") {
-    await preparePassengerBooking(admin,uid,canDrive);
+    await preparePassengerBooking(admin, uid, canDrive);
     const paymentMethod = paymentMethodOf(body.paymentMethod);
     if (paymentMethod === "card") throw new Error("Le paiement par carte se fait depuis l’écran de paiement sécurisé");
     const { fare, route } = await quoteRide(body);
@@ -772,7 +841,7 @@ export async function handleVtc(input, context) {
       await db
         .from("rides")
         .select("*")
-        .eq(rideOwnerColumn(role,q.get("view"),canDrive), uid)
+        .eq(rideOwnerColumn(role, q.get("view"), canDrive), uid)
         .in("status", active)
         .limit(1),
     );
@@ -785,7 +854,7 @@ export async function handleVtc(input, context) {
   }
   if (p === "/api/drivers/offers") {
     if (!canDrive) throw new Error("Accès refusé");
-    if (await hasPassengerRide(admin,uid)) return {offer:null};
+    if (await hasPassengerRide(admin, uid)) return { offer: null };
     const pool = await dispatchPool(admin);
     let me = pool.find((d) => d.user_id === uid);
     const test = await pendingTestOffer(admin, uid);
@@ -857,7 +926,7 @@ export async function handleVtc(input, context) {
       .from("rides")
       .select("*", { count: "exact" })
       .order("created_at", { ascending: false });
-    if (p !== "/api/admin/rides") query = query.eq(rideOwnerColumn(role,q.get("view"),canDrive), uid);
+    if (p !== "/api/admin/rides") query = query.eq(rideOwnerColumn(role, q.get("view"), canDrive), uid);
     if (q.get("status")) query = query.eq("status", q.get("status"));
     const res = await query.range((page - 1) * limit, page * limit - 1);
     const rows = required(res);
@@ -873,10 +942,15 @@ export async function handleVtc(input, context) {
     const r = required(await admin.from("rides").select("*").eq("id", id).single());
     const participant = r.rider_id === uid || r.driver_id === uid;
     if (action === "accept") {
-      if (r.status === "searching" && (r.messages || []).length) await closeRideChat(admin, id, { allowSearching: true });
+      if (r.status === "searching" && (r.messages || []).length)
+        await closeRideChat(admin, id, { allowSearching: true });
       const approval = required(await admin.from("drivers").select("is_approved").eq("user_id", uid).single());
-      if (!approval.is_approved && await reportedRideCount(admin, uid) >= 3) throw new Error("Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.");
-      if (!canDrive || r.rider_id === uid || await hasPassengerRide(admin,uid)) throw new Error("Vous ne pouvez pas accepter cette course");
+      if (!approval.is_approved && (await reportedRideCount(admin, uid)) >= 3)
+        throw new Error(
+          "Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.",
+        );
+      if (!canDrive || r.rider_id === uid || (await hasPassengerRide(admin, uid)))
+        throw new Error("Vous ne pouvez pas accepter cette course");
       if (r.is_test) {
         if (
           !canDrive ||
@@ -928,12 +1002,28 @@ export async function handleVtc(input, context) {
       const email = context.claims.email;
       if (!email) throw new Error("Une adresse e-mail de compte est nécessaire");
       // Existing support storage provides an authenticated, persistent request without issuing a fiscal document.
-      const previous = required(await admin.from("contact_messages").select("id")
-        .eq("email", email).eq("topic", "payments").eq("message", message).limit(1));
-      if (!previous.length) required(await admin.from("contact_messages").insert({
-        name: profile.name || "Utilisateur", email, topic: "payments", message,
-      }));
-      return {ok:true, message:"Votre demande de facture a été transmise à l’assistance. Aucune facture n’a encore été émise."};
+      const previous = required(
+        await admin
+          .from("contact_messages")
+          .select("id")
+          .eq("email", email)
+          .eq("topic", "payments")
+          .eq("message", message)
+          .limit(1),
+      );
+      if (!previous.length)
+        required(
+          await admin.from("contact_messages").insert({
+            name: profile.name || "Utilisateur",
+            email,
+            topic: "payments",
+            message,
+          }),
+        );
+      return {
+        ok: true,
+        message: "Votre demande de facture a été transmise à l’assistance. Aucune facture n’a encore été émise.",
+      };
     }
     if (action === "radars" && method === "GET") {
       requireCameraReader(role);
@@ -945,8 +1035,16 @@ export async function handleVtc(input, context) {
       if (!bounds) return { cameras: [], available: false };
       const [west, south, east, north] = bounds;
       const result = await routeCameras(geometry);
-      const reported = required(await admin.from("road_alerts").select("*").eq("kind", "radar")
-        .gte("lng", west).lte("lng", east).gte("lat", south).lte("lat", north));
+      const reported = required(
+        await admin
+          .from("road_alerts")
+          .select("*")
+          .eq("kind", "radar")
+          .gte("lng", west)
+          .lte("lng", east)
+          .gte("lat", south)
+          .lte("lat", north),
+      );
       return { ...result, cameras: radarsOnRoute(mergeCameraAlerts(reported, result.cameras), geometry) };
     }
     if (action === "route") {
@@ -1355,7 +1453,13 @@ export async function handleVtc(input, context) {
       pendingDrivers: ds.filter((d) => !d.is_approved).length,
       totalUsers: ps.count,
       totalDrivers: ds.length,
-      openSupport: (await admin.from("contact_messages").select("id", { count: "exact" }).eq("status", "open").not("topic", "in", "(ride_chat_archive,ride_chat_cleanup)")).count,
+      openSupport: (
+        await admin
+          .from("contact_messages")
+          .select("id", { count: "exact" })
+          .eq("status", "open")
+          .not("topic", "in", "(ride_chat_archive,ride_chat_cleanup)")
+      ).count,
       recentRides: await Promise.all(rs.slice(0, 10).map((r) => serialize(admin, r, uid, true))),
       revenue7d: [],
       statusBreakdown: { completed: completed.length },
@@ -1388,8 +1492,8 @@ async function pendingTestOffer(db, uid) {
 async function dispatchPool(db) {
   const ds = required(await db.from("drivers").select("*").eq("is_online", true).eq("is_approved", true));
   const busy = new Set(
-    required(await db.from("rides").select("driver_id,rider_id").in("status", active)).flatMap(
-      (b) => [b.driver_id,b.rider_id].filter(Boolean),
+    required(await db.from("rides").select("driver_id,rider_id").in("status", active)).flatMap((b) =>
+      [b.driver_id, b.rider_id].filter(Boolean),
     ),
   );
   const free = ds.filter((d) => !busy.has(d.user_id));
@@ -1531,8 +1635,13 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
       const alerts = await withVotes(await load(center));
       if (!center) return { alerts };
       const dLat = NEARBY_RADIUS_KM / 111;
-      const dLng = Math.min(0.49, dLat / Math.max(0.2, Math.cos(center.lat * Math.PI / 180)));
-      const osm = await speedCameras([Math.max(-180, center.lng - dLng), Math.max(-90, center.lat - dLat), Math.min(180, center.lng + dLng), Math.min(90, center.lat + dLat)]);
+      const dLng = Math.min(0.49, dLat / Math.max(0.2, Math.cos((center.lat * Math.PI) / 180)));
+      const osm = await speedCameras([
+        Math.max(-180, center.lng - dLng),
+        Math.max(-90, center.lat - dLat),
+        Math.min(180, center.lng + dLng),
+        Math.min(90, center.lat + dLat),
+      ]);
       return { alerts: mergeCameraAlerts(alerts, osm.cameras), osmAvailable: osm.available };
     }
     if (method === "POST") {
