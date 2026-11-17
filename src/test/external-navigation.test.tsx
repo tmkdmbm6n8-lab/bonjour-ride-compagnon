@@ -52,6 +52,7 @@ describe("GPS uniquement au clic sur Démarrer le trajet", () => {
   });
   it("utilise la destination de la nouvelle étape sans ouvrir le GPS au changement", () => {
     setNavAuto(true);
+    setNavApp("google");
     const view = render(<ExternalNavigationButton destination={destination} />);
     const dropoff = { lat: 48.6, lng: 7.8 };
     view.rerender(<ExternalNavigationButton destination={dropoff} />);
@@ -66,6 +67,7 @@ describe("GPS uniquement au clic sur Démarrer le trajet", () => {
   });
   it("ne signale pas de faux échec lorsque Safari ne fournit pas de fenêtre", () => {
     setNavAuto(true);
+    setNavApp("google");
     render(<ExternalNavigationButton destination={destination} />);
     fireEvent.click(screen.getByRole("button", { name: "Démarrer le trajet" }));
     expect(openedUrls).toHaveLength(1);
@@ -74,9 +76,29 @@ describe("GPS uniquement au clic sur Démarrer le trajet", () => {
   });
   it("signale une destination invalide sans lancer de lien", () => {
     setNavAuto(true);
+    setNavApp("google");
     render(<ExternalNavigationButton destination={{ lat: 91, lng: 7 }} />);
     fireEvent.click(screen.getByRole("button", { name: "Démarrer le trajet" }));
     expect(screen.getByRole("alert")).toBeTruthy();
     expect(openedUrls).toHaveLength(0);
+  });
+  it("ouvre le GPS enregistré même si l’ancien réglage automatique était désactivé", () => {
+    setNavAuto(false);
+    setNavApp("waze");
+    render(<ExternalNavigationButton destination={destination} />);
+    fireEvent.click(screen.getByRole("button", { name: "Démarrer le trajet" }));
+    expect(openedUrls).toEqual([navigationUrl("waze", destination)]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+  it("mémorise le premier choix et ne redemande pas lors du trajet suivant", () => {
+    render(<ExternalNavigationButton destination={destination} />);
+    fireEvent.click(screen.getByRole("button", { name: "Démarrer le trajet" }));
+    fireEvent.click(screen.getByRole("button", { name: "Plans (Apple)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Démarrer le trajet" }));
+    expect(openedUrls).toEqual([
+      navigationUrl("apple", destination),
+      navigationUrl("apple", destination),
+    ]);
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

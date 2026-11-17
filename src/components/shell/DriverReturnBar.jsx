@@ -3,7 +3,7 @@ import { useSession } from "@/lib/archive-auth";
 import { apiFetch } from "@/lib/archive-fetch";
 import AccountModeSwitch from "./AccountModeSwitch";
 
-/** Outside the desktop-only account popover so drivers can return on mobile too. */
+/** Driver-only switch in the passenger Menu, matching the driver Menu placement. */
 export default function DriverReturnBar() {
   const { data: session } = useSession();
   const user = session?.user;
@@ -32,8 +32,8 @@ export default function DriverReturnBar() {
       : user?.canDrive === true || user?.role === "driver";
   if (!canReturn) return null;
   return (
-    <div className="driver-return-bar" aria-label="Retour à votre espace chauffeur">
-      <AccountModeSwitch mode="driver" className="btn btn-secondary btn-sm" />
+    <div className="account-mode-menu-switch" aria-label="Retour à votre espace chauffeur">
+      <AccountModeSwitch mode="driver" className="btn btn-secondary btn-full" />
     </div>
   );
 }

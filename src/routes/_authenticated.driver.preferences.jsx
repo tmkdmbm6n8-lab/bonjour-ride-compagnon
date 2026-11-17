@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { VEHICLE_LABELS } from "@/components/ui/bits";
-import { NAV_APPS, getNavApp, setNavApp, getNavAuto, setNavAuto } from "@/lib/navigation";
+import { NAV_APPS, getNavApp, setNavApp } from "@/lib/navigation";
 import {
   DEFAULT_TRIP_PREFS,
   MIN_RIDER_RATING_OPTIONS,
@@ -45,12 +45,10 @@ function PreferencesPage() {
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(null);
   const [open, setOpen] = useState(null); // "rating" | "pay" | null
-  const [navApp, setNavAppState] = useState("google");
-  const [navAuto, setNavAutoState] = useState(true);
+  const [navApp, setNavAppState] = useState(null);
 
   useEffect(() => {
     setNavAppState(getNavApp());
-    setNavAutoState(getNavAuto());
     let alive = true;
     fetch("/api/drivers/me")
       .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -103,10 +101,7 @@ function PreferencesPage() {
     setNavApp(app);
     setNavAppState(app);
   };
-  const toggleNavAuto = () => {
-    setNavAuto(!navAuto);
-    setNavAutoState(!navAuto);
-  };
+
 
   return (
     <div className="drv-home">
@@ -313,20 +308,8 @@ function PreferencesPage() {
                   <span className="drv-radio" aria-hidden="true" />
                 </button>
               ))}
-              <button
-                type="button"
-                className="drv-row"
-                role="switch"
-                aria-checked={navAuto}
-                onClick={toggleNavAuto}
-              >
-                <Zap size={24} />
-                <span className="drv-row-label">
-                  Ouvrir le GPS automatiquement
-                  <span className="drv-row-sub">Au clic sur « Démarrer le trajet », ouvrir votre GPS préféré sans demander.</span>
-                </span>
-                <Switch on={navAuto} />
-              </button>
+              <p className="small muted" style={{padding:'12px 16px'}}>Votre GPS choisi s’ouvre directement au clic sur « Démarrer le trajet ». Sans choix enregistré, les trois applications vous seront proposées.</p>
+              {navApp && <button type="button" className="btn btn-ghost btn-sm" onClick={()=>chooseNavApp(null)}>Effacer le choix du GPS</button>}
             </div>
           </>
         )}

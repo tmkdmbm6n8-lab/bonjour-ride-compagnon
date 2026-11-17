@@ -672,8 +672,8 @@ export async function handleVtc(input, context) {
     const quote = await estimates(admin, b.pickup, b.dropoff);
     const fare = quote.estimates[b.vehicleType];
     if (!fare) throw new Error("Tarif indisponible pour cette gamme, réessayez");
-    if (quote.route.distanceMeters < 100 || quote.route.distanceMeters > 200000)
-      throw new Error("Le trajet doit être compris entre 100 m et 200 km");
+    if (quote.route.distanceMeters < 100)
+      throw new Error("Le trajet doit faire au moins 100 m");
     return { fare, route: quote.route };
   };
   const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment }) => {

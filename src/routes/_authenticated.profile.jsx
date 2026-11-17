@@ -1,3 +1,4 @@
+import DriverReturnBar from '@/components/shell/DriverReturnBar';
 import {createFileRoute} from '@tanstack/react-router';
 import RiderLayout from '@/components/RiderLayout';
 'use client';
@@ -7,8 +8,9 @@ import ProfileCard from '@/components/profile/ProfileCard';
 function RiderProfilePage() {
   return (
     <div className="content-pad" style={{ maxWidth: 640 }}>
-      <h1 className="page-title">Profil</h1>
+      <h1 className="page-title">Menu</h1>
       <p className="page-sub mb-6">Les informations de votre compte</p>
+      <DriverReturnBar/>
       <ProfileCard />
     </div>
   );

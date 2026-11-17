@@ -697,11 +697,11 @@ function RiderDashboard() {
                           </span>
                           {avail && (
                             <span
-                              className="tiny truncate"
+                              className="tiny vehicle-availability"
                               style={{
                                 display: "block",
                                 fontWeight: 600,
-                                color: avail.count ? "var(--success)" : "var(--danger)",
+                                color: avail.count ? "var(--success)" : "var(--text-2)",
                               }}
                             >
                               {avail.count
@@ -782,7 +782,7 @@ function RiderDashboard() {
                 )}
 
                 {insufficientWallet && paymentMethod === "card" && (
-                  <p className="tiny mt-2" style={{ color: "var(--danger)" }}>
+                  <p className="booking-notice tiny mt-2" role="status">
                     {payProblem} —{" "}
                     <Link href="/wallet" style={{ fontWeight: 700, textDecoration: "underline" }}>
                       ouvrir le portefeuille
@@ -791,7 +791,7 @@ function RiderDashboard() {
                 )}
 
                 {insufficientWallet && paymentMethod !== "card" && (
-                  <p className="tiny mt-2" style={{ color: "var(--danger)" }}>
+                  <p className="booking-notice tiny mt-2" role="status">
                     Solde du portefeuille insuffisant —{" "}
                     <Link href="/wallet" style={{ fontWeight: 700, textDecoration: "underline" }}>
                       {" "}
@@ -802,21 +802,23 @@ function RiderDashboard() {
                 )}
 
                 <button
-                  className="btn btn-primary btn-lg btn-full mt-4"
+                  className="btn btn-primary btn-lg btn-full mt-4 rider-book-button"
                   onClick={handleBook}
                   disabled={booking || insufficientWallet || noDriverForSelected}
                 >
                   {booking ? (
                     <span className="spinner" />
                   ) : noDriverForSelected ? (
-                    <>Aucun chauffeur {VEHICLE_LABELS[vehicleType]} disponible</>
+                    <>Aucun chauffeur disponible</>
+                  ) : insufficientWallet ? (
+                    <>Solde à compléter</>
                   ) : paymentMethod === "card" ? (
                     <>
-                      <CreditCard size={18} /> Payer {money(selectedFare?.total || 0)} et réserver
+                      <CreditCard size={18} /><span>Payer et réserver</span><span className="booking-button-amount">{money(selectedFare?.total || 0)}</span>
                     </>
                   ) : (
                     <>
-                      Commander avec obligation de paiement · {money(selectedFare?.total || 0)}
+                      <span>Commander et payer</span><span className="booking-button-amount">{money(selectedFare?.total || 0)}</span>
                     </>
                   )}
                 </button>

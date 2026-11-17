@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigation } from "lucide-react";
 import Modal from "@/components/ui/Modal";
-import { NAV_APPS, getNavApp, getNavAuto, setNavApp, openNavigation } from "@/lib/navigation";
+import { NAV_APPS, getNavApp, setNavApp, openNavigation } from "@/lib/navigation";
 
 /** Only a deliberate click may open a GPS app, never accepting a ride or starting its PIN. */
 export default function ExternalNavigationButton({ destination }) {
@@ -9,13 +9,14 @@ export default function ExternalNavigationButton({ destination }) {
   const [error, setError] = useState("");
   function launch(app) {
     setError("");
+    setNavApp(app); // Save before the browser hands control to the GPS application.
     if (openNavigation(app, destination)) {
-      setNavApp(app);
       setChoosing(false);
     } else setError("Le GPS n’a pas pu s’ouvrir. Réessayez ou choisissez une autre application.");
   }
   function startJourney() {
-    if (getNavAuto()) launch(getNavApp());
+    const preferred = getNavApp();
+    if (preferred) launch(preferred);
     else {
       setError("");
       setChoosing(true);

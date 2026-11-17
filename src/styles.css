@@ -7075,7 +7075,27 @@ a.activity-pill:hover {
 .drv-ride-dock .drv-sheet-actions { grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 6px; }
 .drv-ride-dock .drv-sheet-actions > .btn { min-height: 44px; padding: 8px; font-size: 12px; }
 
-/* Return is visible on every passenger page, independently of the desktop menu. */
-.driver-return-bar { position: relative; z-index: 25; display: flex; justify-content: flex-end; padding: 10px 16px 0; flex: 0 0 auto; }
-.driver-return-bar > div { margin: 0; max-width: 100%; }
-.driver-return-bar .btn { min-height: 44px; }
+
+/* Mode switch occupies the same full-width row in each mode’s Menu. */
+.account-mode-menu-switch { margin-bottom: 16px; }
+.account-mode-menu-switch > div { margin: 0; }
+.account-mode-menu-switch .btn { min-height: 44px; }
+
+/* The active ride fits above the mobile navigation; only expanded details scroll. */
+@media (max-width: 900px) {
+  .drv-active-ride-page { height: calc(100dvh - 84px - env(safe-area-inset-bottom, 0px)); min-height: 0; }
+}
+.drv-ride-dock { max-height: calc(100% - 110px); }
+.drv-ride-dock .drv-bottom-sheet.is-minimal { display: flex; flex-direction: column; overflow: hidden; }
+.drv-ride-dock .drv-bottom-sheet > * { flex-shrink: 0; }
+.drv-ride-dock .drv-sheet-details { flex: 0 1 auto; min-height: 0; overflow-y: auto; max-height: 24dvh; }
+.drv-ride-dock .drv-sheet-actions { flex: 0 0 auto; position: relative; }
+
+/* Availability and funding are ordinary booking states, not error banners. */
+.vehicle-availability { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; margin-top: 3px; }
+.booking-notice { color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; line-height: 1.5; }
+.booking-notice a { color: var(--text); }
+.rider-book-button { min-width: 0; height: auto; min-height: 52px; padding: 12px 16px; white-space: normal; flex-wrap: wrap; line-height: 1.35; text-align: center; overflow-wrap: anywhere; }
+.rider-book-button > svg { flex-shrink: 0; }
+.booking-button-amount { white-space: nowrap; }
+.brand-theme .rider-book-button:disabled { opacity: 1; background: #252b35; color: #bac4d2; border-color: #ffffff1a; box-shadow: none; }

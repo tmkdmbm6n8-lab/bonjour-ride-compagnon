@@ -28,9 +28,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
-import useRoadAlerts from "@/hooks/useRoadAlerts";
 import useGeolocation from "@/hooks/useGeolocation";
-import { RoadAlertButtons, RoadAlertPrompt } from "@/components/driver/RoadAlertControls";
 
 import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
@@ -131,33 +129,11 @@ function DriverDashboard() {
     cancelTrip,
   } = useDriverState({ onEvent });
 
-  // Position suivie même hors ligne : les signalements restent disponibles sans course
-  const { position: idlePosition } = useGeolocation({ watch: !online && !ride });
-  const alertPosition = position || idlePosition;
-  const roadAlerts = useRoadAlerts(alertPosition, true);
-  const [reporting, setReporting] = useState(null);
-  async function handleReport(kind) {
-    if (reporting) return;
-    setReporting(kind);
-    try {
-      const res = await roadAlerts.report(kind);
-      toast(
-        res.merged
-          ? "Merci, signalement confirmé"
-          : kind === "police"
-            ? "Contrôle de police signalé aux autres chauffeurs"
-            : "Radar signalé et visible par tous les chauffeurs",
-        "success",
-        3000,
-      );
-    } catch (err) {
-      toast(err.message, "error", 4000);
-    } finally {
-      setReporting(null);
-    }
-  }
+  // A single local fix keeps the idle map centered, without road-alert polling or sounds.
+  const { position: idlePosition } = useGeolocation({ watch: false });
 
-  // Ring (Uber-style, repeated) while a ride request is on screen
+
+  // Keep incoming ride notifications independent from removed radar sounds.
   useEffect(() => {
     if (!offer?.rideId) return undefined;
     return startRinging("offer");
@@ -387,8 +363,6 @@ function DriverDashboard() {
               fit
               fitTo={[position, ride.status === "in_progress" ? ride.dropoff : ride.pickup].filter(Boolean)}
               navigationMode={false}
-              alerts={roadAlerts.alerts}
-              showRoadAlerts
             />
           </div>
 
@@ -423,7 +397,6 @@ function DriverDashboard() {
           {/* 3. Au-dessus du volet bas : Pause 2 min à gauche / Annuler à droite */}
           <div className="drv-ride-dock">
           <div className="drv-mid-actions-bar">
-            <RoadAlertButtons roadAlerts={roadAlerts} reporting={reporting} onReport={handleReport} canReportRadar={profile?.isPriority === true} />
             <RidePauseButton key={ride.id} rideId={ride.id}/>
 
             {ride.status !== "in_progress" && (
@@ -516,7 +489,6 @@ function DriverDashboard() {
             </div>
           </div>
           </div>
-          <RoadAlertPrompt roadAlerts={roadAlerts} />
         </div>
       ) : (
         <DriverHome
@@ -526,7 +498,7 @@ function DriverDashboard() {
           busy={busy}
           isConnected={isConnected}
           needsVehicle={needsVehicle}
-          position={position}
+          position={position || idlePosition}
           center={center}
           onToggle={handleToggle}
           acceptsPet={acceptsPet}
@@ -535,10 +507,6 @@ function DriverDashboard() {
           acceptsCash={acceptsCash}
           togglingCash={togglingCash}
           onToggleCash={handleToggleCash}
-          roadAlerts={roadAlerts}
-          reporting={reporting}
-          onReport={handleReport}
-          canReportRadar={profile?.isPriority === true}
         />
       )}
 

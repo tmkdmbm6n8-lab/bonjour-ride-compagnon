@@ -18,7 +18,6 @@ import Modal from "@/components/ui/Modal";
 import { money } from "@/components/ui/bits";
 import useGeolocation from "@/hooks/useGeolocation";
 import { KovaIcon } from "@/components/brand/KovaLogo";
-import { RoadAlertButtons, RoadAlertPrompt } from "@/components/driver/RoadAlertControls";
 
 export default function DriverHome({
   loading,
@@ -36,10 +35,6 @@ export default function DriverHome({
   togglingCash,
   onToggleCash,
   onWaybill,
-  roadAlerts,
-  reporting,
-  onReport,
-  canReportRadar = false,
 }) {
   const [today, setToday] = useState(null);
   const [lastRide, setLastRide] = useState(null);
@@ -102,8 +97,6 @@ export default function DriverHome({
           zoom={14}
           userPosition={position || localPosition || undefined}
           followPosition={online && position ? position : undefined}
-          alerts={roadAlerts?.alerts}
-          showRoadAlerts
         />
       </div>
 
@@ -191,14 +184,6 @@ export default function DriverHome({
       </div>
 
       </div>
-
-      {/* ── Signalements police / radar (aussi sans course) ── */}
-      {roadAlerts && (
-        <>
-          <RoadAlertButtons roadAlerts={roadAlerts} reporting={reporting} onReport={onReport} canReportRadar={canReportRadar} className="is-home" />
-          <RoadAlertPrompt roadAlerts={roadAlerts} className="is-home" />
-        </>
-      )}
 
       {/* ── Bouton GO compact flottant en bas ── */}
       <div className="drv-cockpit-bottom-bar">

@@ -4,9 +4,6 @@ import { useEffect, useRef } from "react";
 import { Map as MLMap, Marker, LngLatBounds, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
-import { policeCapSvg, frenchRadarSvg } from "@/components/icons/road-alert-icons";
-import useMapSpeedCameras from "@/hooks/useMapSpeedCameras";
-import { mergeCameraAlerts } from "@/lib/vtc-speed-cameras";
 import { drawRoute } from "@/lib/map-route";
 
 setWorkerUrl(maplibreWorkerUrl);
@@ -28,10 +25,6 @@ const PIN_SVG =
 const SQUARE_SVG =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 
-const POLICE_SVG = policeCapSvg(20);
-
-const RADAR_SVG = frenchRadarSvg(20);
-
 export default function MapView({
   center = { lat: 40.7128, lng: -74.006 },
   zoom = 13,
@@ -45,10 +38,8 @@ export default function MapView({
   fitTo,
   fitKey,
   compact = false,
-  showRoadAlerts = false,
   followPosition,
   navigationMode = false,
-  alerts = [],
   onClick,
   className = "",
   style,
@@ -58,7 +49,6 @@ export default function MapView({
   const readyRef = useRef(false);
   const markersRef = useRef({ pickup: null, dropoff: null, driver: null, user: null });
   const driverDotsRef = useRef(new Map());
-  const alertDotsRef = useRef(new Map());
   const animRef = useRef(null);
   const routeGeomRef = useRef(null);
   const lastUserMoveRef = useRef(0);
@@ -112,7 +102,6 @@ export default function MapView({
       cancelAnimationFrame(animRef.current);
       markersRef.current = { pickup: null, dropoff: null, driver: null, user: null };
       driverDotsRef.current.clear();
-      alertDotsRef.current.clear();
       try {
         map.remove();
       } catch (err) {
@@ -189,37 +178,6 @@ export default function MapView({
       }
     }
   }, [drivers]);
-
-  const osmCameras = useMapSpeedCameras(mapRef, showRoadAlerts && !compact);
-
-  // Signalements communautaires et radars OpenStreetMap.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const dots = alertDotsRef.current;
-    const seen = new Set();
-    for (const a of showRoadAlerts ? mergeCameraAlerts(alerts || [], osmCameras) : []) {
-      if (!Number.isFinite(a?.lat) || !Number.isFinite(a?.lng)) continue;
-      const key = `${a.id}:${a.kind}:${a.permanent ? 1 : 0}`;
-      seen.add(key);
-      if (dots.has(key)) {
-        dots.get(key).setLngLat([a.lng, a.lat]);
-        continue;
-      }
-      const node = el(
-        `marker-road-alert is-${a.kind}${a.permanent ? " is-permanent" : ""}`,
-        a.kind === "police" ? POLICE_SVG : RADAR_SVG,
-      );
-      node.title = a.source === "official-fr" ? `Radar · Sécurité routière${a.maxspeed ? ` · ${a.maxspeed} km/h` : ''}` : a.source === "osm" ? `Radar OpenStreetMap${a.maxspeed ? ` · ${a.maxspeed}` : ''}` : a.kind === "police" ? "Contrôle de police signalé" : "Radar fixe";
-      dots.set(key, new Marker({ element: node }).setLngLat([a.lng, a.lat]).addTo(map));
-    }
-    for (const [key, marker] of dots) {
-      if (!seen.has(key)) {
-        marker.remove();
-        dots.delete(key);
-      }
-    }
-  }, [alerts, osmCameras, showRoadAlerts]);
 
   // Tracé d'itinéraire
   useEffect(() => {

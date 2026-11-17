@@ -3,6 +3,7 @@
 export const NAV_APPS = { apple: "Plans (Apple)", google: "Google Maps", waze: "Waze" };
 const APP_KEY = "strasdrive.navApp";
 const AUTO_KEY = "strasdrive.navAuto";
+let memoryNavApp = null;
 
 /** Deep link that opens the chosen GPS app in driving navigation to `dest` ({lat,lng}). */
 export function navigationUrl(app, dest) {
@@ -25,16 +26,18 @@ export function navigationUrl(app, dest) {
 export function getNavApp() {
   try {
     const app = localStorage.getItem(APP_KEY);
-    return Object.hasOwn(NAV_APPS, app) ? app : "google";
+    return Object.hasOwn(NAV_APPS, app) ? app : null;
   } catch {
-    return "google";
+    return memoryNavApp;
   }
 }
 export function setNavApp(app) {
+  memoryNavApp = Object.hasOwn(NAV_APPS, app) ? app : null;
   try {
-    localStorage.setItem(APP_KEY, Object.hasOwn(NAV_APPS, app) ? app : "google");
+    if (memoryNavApp) localStorage.setItem(APP_KEY, memoryNavApp);
+    else localStorage.removeItem(APP_KEY);
   } catch {
-    /* private mode */
+    /* Retain the explicit choice in memory if storage is unavailable. */
   }
 }
 export function getNavAuto() {
