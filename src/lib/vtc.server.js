@@ -151,6 +151,15 @@ function profileShape(p, email) {
   };
 }
 async function serialize(db, r, actor, raw = false) {
+  if (!r) return null;
+  if (!CHAT_ACTIVE_STATUSES.includes(r.status) && r.status !== "searching" && (r.messages || []).length) {
+    try {
+      await closeRideChat(db, r.id);
+    } catch {
+      console.warn("Chat cleanup pending: scheduled retry required");
+    }
+    r = { ...r, messages: [] };
+  }
   let driver;
   let isPriorityDriver = false;
   if (r.driver_id) {
@@ -209,45 +218,6 @@ async function serialize(db, r, actor, raw = false) {
     dropoff: dropoffClean,
     rating: cleanRating,
     route: mustAnonymize ? undefined : r.route,
-    messages: CHAT_ACTIVE_STATUSES.includes(r.status) ? visibleChatMessages(r.messages) : [],
-    id: r.id,
-    _id: r.id,
-    createdAt: r.created_at,
-    completedAt: r.completed_at,
-    vehicleType: r.vehicle_type,
-    driver,
-    pin: r.rider_id === actor || r.is_test ? r.pin : undefined,
-    isTest: Boolean(r.is_test),
-    live_route: undefined,
-  };
-
-  if (!r) return null;
-  if (!CHAT_ACTIVE_STATUSES.includes(r.status) && r.status !== "searching" && (r.messages || []).length) {
-    try {
-      await closeRideChat(db, r.id);
-    } catch {
-      console.warn("Chat cleanup pending: scheduled retry required");
-    }
-    r = { ...r, messages: [] };
-  }
-
-  if (!r) return null;
-  let driver;
-  if (r.driver_id) {
-    const p = required(await db.from("profiles").select("*").eq("id", r.driver_id).single());
-    const d = required(await db.from("drivers").select("*").eq("user_id", r.driver_id).single());
-    driver = {
-      id: p.id,
-      name: p.name,
-      avatar: p.avatar,
-      rating: p.rating.average,
-      totalTrips: d.stats.totalTrips,
-      vehicle: { ...d.vehicle, type: driverClass(d) },
-      location: d.location,
-    };
-  }
-  const out = {
-    ...r,
     messages: CHAT_ACTIVE_STATUSES.includes(r.status) ? visibleChatMessages(r.messages) : [],
     id: r.id,
     _id: r.id,
