@@ -75,5 +75,5 @@ export default function DriverLayout({ children }) {
     );
   }
 
-  return <AppShell nav={NAV}>{children}</AppShell>;
+  return <AppShell nav={NAV} variant="driver">{children}</AppShell>;
 }

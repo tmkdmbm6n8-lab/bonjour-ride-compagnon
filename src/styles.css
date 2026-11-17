@@ -8335,3 +8335,23 @@ a.activity-pill:hover {
   flex-direction: column;
   gap: 12px;
 }
+
+.google-map-status { position: absolute; top: 45%; left: 50%; transform: translate(-50%,-50%); width: min(280px,90%); padding: 14px; color: #e2e8f0; background: #101319ed; border-radius: 12px; font-size: 12px; text-align: center; z-index: 1; }
+.google-map-status button { margin-top: 8px; }
+/* Keep the driver controls and all five labels inside Safari's visible area. */
+@media (max-width: 900px) {
+  .shell.shell-driver { position: fixed; top: var(--shell-visible-top, 0px); left: 0; right: 0; height: var(--shell-visible-height, 100dvh); min-height: 0; overflow: hidden; }
+  .shell-driver .sidebar { position: absolute; inset: auto 0 0; height: auto; min-height: 0; padding: 6px 6px max(8px, env(safe-area-inset-bottom, 0px)); gap: 0; z-index: 40; }
+  .shell-driver .sidebar-brand, .shell-driver .sidebar-footer { display: none; }
+  .shell-driver .sidebar-nav { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); width: 100%; gap: 2px; min-height: 0; overflow: visible; }
+  .shell-driver .nav-item { min-width: 0; min-height: 52px; padding: 6px 2px; gap: 4px; justify-content: center; align-items: center; font-size: 10px; line-height: 1.2; color: #d4dce7; }
+  .shell-driver .nav-item span { display: block; white-space: nowrap; text-align: center; }
+  .shell-driver .nav-item.active { color: #facc15; }
+  .shell-driver .content { position: absolute; inset: 0 0 var(--shell-nav-height, 72px); height: auto; min-height: 0; padding-bottom: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+  .shell-driver .content:has(.drv-active-ride-page), .shell-driver .content:has(.drv-cockpit-root) { height: auto; overflow: hidden; padding: 0; }
+  .shell-driver .drv-active-ride-page { position: relative; inset: auto; width: 100%; height: 100%; min-height: 0; }
+  .shell-driver .drv-cockpit-root { height: 100%; min-height: 0; }
+  .shell-driver .driver-tab-page { min-height: 100%; }
+  .shell-driver .drv-ride-dock { width: 100%; max-width: 600px; left: 50%; right: auto; transform: translateX(-50%); }
+  .shell-driver .drv-top-passenger-bar { width: calc(100% - 24px); max-width: 576px; left: 50%; right: auto; transform: translateX(-50%); }
+}
