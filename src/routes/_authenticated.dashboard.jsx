@@ -514,7 +514,7 @@ function RiderDashboard() {
   const center = geo || { lat: 48.5734, lng: 7.7521 };
 
   return (
-    <div className="ride-page rider-workspace">
+    <div className={`ride-page rider-workspace ${phase === "active" ? "rider-active-trip" : ""}`}>
       <div className="map-fill">
         <MapView center={center} zoom={13} {...mapProps} />
       </div>
@@ -523,7 +523,10 @@ function RiderDashboard() {
         className={`ride-panel rider-trip-panel ${searchFocused ? "is-editing" : ""}`}
         ref={bookingPanelRef}
         style={
-          vv ? {
+          phase === "active" && vv ? {
+            "--rider-visible-height": `${vv.height}px`,
+            top: vv.top + 8,
+          } : vv ? {
             position: "fixed",
             top: "auto",
             bottom: keyboardOpen
@@ -862,7 +865,7 @@ function RiderDashboard() {
 
         {/* ── ACTIVE ── */}
         {phase === "active" && ride && (
-          <div className="card card-pad animate-in">
+          <div className="card card-pad animate-in rider-active-card">
             <div className="rider-safety-actions"><RideSafety ride={ride}/><ReportDriverButton key={ride.id} ride={ride}/></div>
             {ride.status !== "in_progress" && (
               <div className="rider-trip-toolbar">
@@ -937,7 +940,7 @@ function RiderDashboard() {
             )}
 
             {ride.driver && (
-              <div className="flex items-center gap-3 mb-4">
+              <div className="rider-active-driver flex items-center gap-3 mb-4">
                 <Avatar name={ride.driver.name} src={ride.driver.avatar} size="lg" />
                 <div className="flex-1" style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 700 }} className="truncate">
@@ -948,7 +951,7 @@ function RiderDashboard() {
                     <span className="tiny muted">{ride.driver.totalTrips} courses</span>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="rider-active-vehicle text-right">
                   <div className="small" style={{ fontWeight: 700 }}>
                     {ride.driver.vehicle?.color} {ride.driver.vehicle?.make} {ride.driver.vehicle?.model}
                   </div>
@@ -961,7 +964,7 @@ function RiderDashboard() {
 
             {(ride.status === "accepted" || ride.status === "arrived") && ride.pin && (
               <div
-                className="flex items-center justify-between card-pad mb-4"
+                className="rider-active-pin flex items-center justify-between card-pad mb-4"
                 style={{ background: "var(--gold-50)", borderRadius: 12, padding: "12px 16px" }}
               >
                 <div className="flex items-center gap-2">
@@ -984,7 +987,7 @@ function RiderDashboard() {
               </div>
             )}
 
-            <div className="flex-col gap-2 small" style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+            <div className="rider-active-addresses flex-col gap-2 small" style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
               <div className="flex gap-2">
                 <Circle size={14} style={{ marginTop: 4, color: "var(--gold-600)", flexShrink: 0 }} />
                 <span className="truncate muted">{ride.pickup.address}</span>
@@ -1008,7 +1011,7 @@ function RiderDashboard() {
               </div>
             </div>
 
-            <div className="flex gap-2 mt-4">
+            <div className="rider-active-chat flex gap-2 mt-4">
               <button
                 className={`btn flex-1 ${unread > 0 ? "chat-btn-unread" : "btn-secondary"}`}
                 onClick={() => {

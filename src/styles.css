@@ -7193,3 +7193,69 @@ a.activity-pill:hover {
 
 /* Ratings must stay readable on the dark ride cards. */
 .shell-dark .stars-value { color: #f8fafc !important; }
+
+/* Mobile active trips fit the visible browser area above the measured tab bar. */
+@media (max-width: 900px) {
+  .shell-rider:has(.rider-active-trip),
+  .shell-rider .content:has(.rider-active-trip) { height: 100dvh; min-height: 0; overflow: hidden; padding-bottom: 0; }
+  .shell-rider .rider-active-trip { position: fixed; inset: 0; height: auto; overflow: hidden; }
+  .shell-rider .rider-active-trip > .rider-trip-panel {
+    top: 8px;
+    bottom: auto;
+    max-height: calc(var(--rider-visible-height, 100dvh) - var(--shell-nav-height, 84px) - 16px);
+    overflow: visible;
+    padding: 0;
+  }
+  .shell-rider .rider-active-card {
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.35;
+    animation: none;
+  }
+  .rider-active-card .small { font-size: 12px; }
+  .rider-active-card .tiny { font-size: 11px; }
+  .rider-active-card .mb-4 { margin-bottom: 8px; }
+  .rider-active-card .mb-3 { margin-bottom: 6px; }
+  .rider-active-card .mt-4 { margin-top: 8px; }
+  .rider-active-card .mt-3, .rider-active-card .mt-2 { margin-top: 4px; }
+  .rider-active-card .rider-safety-actions { margin-bottom: 4px; }
+  .rider-active-card .rider-trip-toolbar { margin-bottom: 6px; padding-bottom: 6px; gap: 8px; }
+  .rider-active-card .rider-trip-toolbar strong { font-size: 13px; }
+  .rider-active-card .rider-cancel-button { min-height: 40px; font-size: 12px; padding: 6px 10px; }
+  .rider-active-card .badge { white-space: normal; font-size: 11px; line-height: 1.3; }
+  .rider-active-driver { gap: 8px; }
+  .rider-active-driver .avatar-lg { width: 44px; height: 44px; font-size: 16px; }
+  .rider-active-vehicle { max-width: 42%; overflow-wrap: anywhere; }
+  .rider-active-pin { padding: 8px 10px !important; background: #262217 !important; color: #fde68a; min-height: 44px; gap: 8px; }
+  .rider-active-pin .small { color: #fde68a !important; }
+  .rider-active-pin button { font-size: 18px !important; letter-spacing: .15em !important; color: #fde68a !important; min-height: 32px; }
+  .rider-active-addresses { padding-top: 8px !important; gap: 6px; }
+  .rider-active-addresses > .flex { min-width: 0; gap: 6px; }
+  .rider-active-addresses .truncate { min-width: 0; }
+  .rider-active-chat .btn { min-height: 44px; font-size: 13px; padding: 8px 12px; white-space: normal; }
+}
+@media (max-width: 900px) and (max-height: 650px) {
+  .shell-rider .rider-active-card { padding: 8px 12px; font-size: 12px; }
+  .rider-active-card .rider-safety-actions { margin-bottom: 0; }
+  .rider-active-card .mb-4, .rider-active-card .mb-3 { margin-bottom: 4px; }
+  .rider-active-driver .avatar-lg { width: 36px; height: 36px; }
+  .rider-active-card .rider-trip-toolbar { padding-bottom: 4px; margin-bottom: 4px; }
+  .rider-active-addresses { gap: 4px; }
+}
+
+@media (max-width: 900px) {
+  .shell-rider .rider-active-card { position: relative; }
+  .rider-active-card .rider-trip-toolbar {
+    position: absolute;
+    top: 12px;
+    left: 62px;
+    right: 62px;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+  }
+  .rider-active-card .rider-trip-toolbar strong { display: none; }
+  .rider-active-card .rider-cancel-button { font-size: 11px; padding: 6px; white-space: nowrap; }
+}
