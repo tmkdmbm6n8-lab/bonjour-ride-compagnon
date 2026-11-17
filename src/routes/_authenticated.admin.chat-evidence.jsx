@@ -172,14 +172,14 @@ function EvidencePage() {
               <div className="small mt-1">
                 <strong>Arrivée :</strong> {selected.rideData.dropoff?.address || "Adresse inconnue"}
               </div>
-                          <div className="tiny muted mt-2">
+              <div className="tiny muted mt-2">
                 Montant : {(() => {
                   const f = selected.rideData.fare;
                   const total = typeof f === "object" && f !== null ? f.total : f;
                   return total != null ? `${Number(total).toFixed(2)} €` : "N/C";
                 })()} · Statut : {selected.rideData.status}
               </div>
-
+            </div>
           )}
 
           {/* Fiches Contact : Passager & Chauffeur */}
