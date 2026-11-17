@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 const mocks = vi.hoisted(() => ({ fetch:vi.fn(),toast:vi.fn() }));

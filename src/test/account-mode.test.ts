@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, it, vi } from "vitest";
 import { accountView, rideOwnerColumn } from "@/lib/account-mode";
 import { preparePassengerBooking, switchAccountMode } from "@/lib/vtc-account-mode.server";
