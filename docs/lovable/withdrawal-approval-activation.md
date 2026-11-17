@@ -1,6 +1,6 @@
 # Activation Lovable : demandes de retrait avec validation admin
 
-État : interface et appels serveur préparés ; NON activé en production. Ne pas annoncer une activation sans contrôler les RPC, Stripe, notifications et tâche planifiée. Le formulaire refuse tout envoi si la version de protocole manque. Aucun fichier de migration n’a été modifié ici (AGENTS.md).
+État (2026-11-18) : table et fonctions serveur créées, alerte planifiée toutes les 5 min (`alertes-demandes-retrait`). Restent : e-mail (Resend non connecté) et push iPhone/navigateur (seul Android est actif).
 
 ## Consigne à donner à Lovable
 

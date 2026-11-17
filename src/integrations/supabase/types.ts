@@ -615,12 +615,82 @@ export type Database = {
           },
         ]
       }
+      withdrawal_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          debit: number
+          driver_id: string
+          fee: number
+          id: string
+          notification_email_sent: boolean
+          notification_push_sent: boolean
+          notify_attempts: number
+          notify_next_at: string
+          payout_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          debit: number
+          driver_id: string
+          fee: number
+          id?: string
+          notification_email_sent?: boolean
+          notification_push_sent?: boolean
+          notify_attempts?: number
+          notify_next_at?: string
+          payout_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          debit?: number
+          driver_id?: string
+          fee?: number
+          id?: string
+          notification_email_sent?: boolean
+          notification_push_sent?: boolean
+          notify_attempts?: number
+          notify_next_at?: string
+          payout_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_requests_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawal_requests_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: true
+            referencedRelation: "payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       admin_delete_account: { Args: { _user: string }; Returns: Json }
+      approve_withdrawal: {
+        Args: { _actor: string; _request: string }
+        Returns: Json
+      }
       create_payout: {
         Args: {
           _amount: number
@@ -644,8 +714,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      finish_withdrawal_request: { Args: { _request: string }; Returns: Json }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      pending_withdrawal_notifications: {
+        Args: { _limit: number }
+        Returns: Json[]
+      }
       purge_expired_personal_data: { Args: never; Returns: undefined }
+      record_withdrawal_notifications: {
+        Args: { _email_ok: boolean; _push_ok: boolean; _request: string }
+        Returns: undefined
+      }
+      reject_withdrawal: {
+        Args: { _actor: string; _request: string }
+        Returns: Json
+      }
+      request_withdrawal: {
+        Args: { _debit: number; _driver: string; _fee: number }
+        Returns: Json
+      }
       settle_ride: { Args: { _actor: string; _id: string }; Returns: Json }
       wallet_entry: {
         Args: {
@@ -657,6 +744,11 @@ export type Database = {
         }
         Returns: number
       }
+      withdrawal_json: {
+        Args: { w: Database["public"]["Tables"]["withdrawal_requests"]["Row"] }
+        Returns: Json
+      }
+      withdrawal_request_state: { Args: { _driver: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

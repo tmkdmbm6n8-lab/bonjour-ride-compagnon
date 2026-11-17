@@ -120,6 +120,13 @@
       "when": 1794842334947,
       "tag": "0016_create_push_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794959497184,
+      "tag": "0017_withdrawal_requests",
+      "breakpoints": true
     }
   ]
 }
