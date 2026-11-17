@@ -40,13 +40,25 @@ function DriverTripsPage() {
       {rides?.length === 0 && (
         <Empty icon={Car} title="Aucune course pour le moment" hint="Les courses acceptées apparaîtront ici." />
       )}
+<div className="flex-col gap-1 small">
+  <div className="flex gap-2 items-center">
+    <Circle size={12} style={{ flexShrink: 0 }} />
+    <span className="truncate">
+      {ride.status === 'completed' && ride.pickup?.city
+        ? `Prise en charge à ${ride.pickup.city}`
+        : (ride.pickup?.address || 'Départ')}
+    </span>
+  </div>
+  <div className="flex gap-2 items-center">
+    <MapPin size={12} style={{ color: 'var(--gold-600)', flexShrink: 0 }} />
+    <span className="truncate">
+      {ride.status === 'completed' && ride.dropoff?.city
+        ? `Dépose à ${ride.dropoff.city}`
+        : (ride.dropoff?.address || 'Destination')}
+    </span>
+  </div>
+</div>
 
-      <div className="flex-col gap-3">
-        {rides?.map((ride) => ( <div key={ride._id} className="card card-pad">
-            <div className="flex items-center justify-between mb-3">
-              <span className="tiny muted">{formatDate(ride.createdAt)}</span>
-              <RideStatusBadge status={ride.status} />
-            </div>
             <div className="flex-col gap-1 small">
               <div className="flex gap-2 items-center">
                 <Circle size={12} style={{ flexShrink: 0 }} />
