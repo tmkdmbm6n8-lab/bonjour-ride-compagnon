@@ -13,8 +13,8 @@ const TOPICS = [
   ['data_request', 'Confidentialité / demande concernant les données'],
 ];
 
-export default function ContactForm() {
-  const [form, setForm] = useState({ name: '', email: '', topic: 'general', message: '', company: '' });
+export default function ContactForm({ initialTopic = "general", initialMessage = "" }) {
+  const [form, setForm] = useState({ name: '', email: '', topic: initialTopic, message: initialMessage, company: '' });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');

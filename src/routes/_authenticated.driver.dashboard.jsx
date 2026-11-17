@@ -1,3 +1,4 @@
+import RideSafety from '@/components/ride/RideSafety';
 import { clock as transportClock } from "@/lib/vtc-dates";
 import { createFileRoute } from "@tanstack/react-router";
 import DriverLayout from "@/components/DriverLayout";
@@ -457,58 +458,40 @@ function DriverDashboard() {
           <RoadAlertPrompt roadAlerts={roadAlerts} />
 
           {/* 4. Tout en bas : Volet rétractable d'informations */}
-          <div className="drv-bottom-sheet">
+          <div className="drv-bottom-sheet is-minimal">
             <div className="drv-sheet-header">
-              <div className="flex items-center gap-2">
-                <span className={`badge badge-dot ${ride.status === "in_progress" ? "badge-info" : "badge-gold"}`}>
-                  {ride.status === "accepted" && "Rejoignez le passager"}
-                  {ride.status === "arrived" && "Passager prévenu"}
-                  {ride.status === "in_progress" && "Course en cours"}
+              <div>
+                <span className="drv-sheet-stage">
+                  {ride.status === "accepted" ? "Vers le passager" : ride.status === "arrived" ? "Passager prévenu" : "Course en cours"}
                 </span>
-                <strong className="mono-nums text-gold" style={{ fontSize: "1.2rem" }}>
-                  {money(ride.fare?.driverEarnings)}
-                </strong>
+                <strong className="drv-sheet-earnings mono-nums">{money(ride.fare?.driverEarnings)}</strong>
               </div>
-              <button className="drv-sheet-toggle" onClick={() => setDetailsOpen(!detailsOpen)}>
-                {detailsOpen ? "Moins d'infos" : "Plus d'infos"}
-                {detailsOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+              <button className="drv-sheet-toggle" aria-expanded={detailsOpen} aria-controls="active-ride-details" onClick={() => setDetailsOpen(!detailsOpen)}>
+                Détails {detailsOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
               </button>
             </div>
-
-            {/* Adresses principales */}
+            <p className="drv-sheet-address">
+              {ride.status === "in_progress" ? ride.dropoff.address : ride.pickup.address}
+            </p>
             {navigating && (
-              <p className="text-sm text-muted mb-3" role="status">
-                {!position ? "En attente de votre position GPS…" :
-                  !driverRoute ? (liveRoute?.approximate ? "Itinéraire indisponible, nouvelle tentative en cours…" : "Chargement du tracé…") :
-                  liveLeg ? `${formatDistance(liveLeg.meters)} · ${formatDuration(liveLeg.seconds)} ${liveLeg.label}` : "Itinéraire chargé"}
-              </p>
-            )}
-            <div className="mb-3">
-              {navigating && (
-                <div className={`drv-route-radars ${routeRadars.count > 0 ? "has-radars" : ""}`} role="status">
-                  <Radar className="drv-route-radars-icon" size={28} aria-hidden="true" />
-                  <div className="drv-route-radars-copy">
-                    <strong>
-                      {routeRadars.count == null
-                        ? routeRadars.loading ? "Comptage des radars…" : "Radars indisponibles"
-                        : `${routeRadars.count} radar${routeRadars.count > 1 ? "s" : ""} connu${routeRadars.count > 1 ? "s" : ""}`}
-                    </strong>
-                    <span>{ride.status === "in_progress" ? "Sur votre trajet jusqu’à l’arrivée" : "Sur votre trajet jusqu’au passager"}</span>
-                  </div>
-                  {routeRadars.count != null && <span className="drv-route-radars-count" aria-hidden="true">{routeRadars.count}</span>}
-                </div>
-              )}
-              <div className="flex gap-2 items-center text-sm">
-                <Circle size={10} className="text-gold flex-shrink-0" />
-                <span className="truncate">
-                  {ride.status === "in_progress" ? ride.dropoff.address : ride.pickup.address}
+              <div className="drv-sheet-summary">
+                {liveLeg && <span>{formatDuration(liveLeg.seconds)} · {formatDistance(liveLeg.meters)}{liveLeg.approximate ? " · estimé" : ""}</span>}
+                <span className={`drv-sheet-radar-pill ${routeRadars.count > 0 ? "has-radars" : ""}`} role="status">
+                  <Radar size={15} aria-hidden="true" />
+                  {routeRadars.count == null ? routeRadars.loading ? "Radars…" : "Radars indisponibles" : `${routeRadars.count} radar${routeRadars.count > 1 ? "s" : ""}`}
                 </span>
               </div>
-            </div>
+            )}
+            {navigating && (!position || !driverRoute) && (
+              <p className="drv-sheet-route-status" role="status">
+                {!position ? "En attente du GPS…" : liveRoute?.approximate ? "Itinéraire indisponible · nouvelle tentative…" : "Calcul du trajet…"}
+              </p>
+            )}
 
             {/* Volet dépliable avec tous les détails */}
             {detailsOpen && (
-              <div className="drv-sheet-details">
+              <div className="drv-sheet-details" id="active-ride-details">
+                <RideSafety ride={ride}/>
                 <div className="flex justify-between items-center mb-2 text-sm text-muted">
                   <span>Prise en charge :</span>
                   <span className="text-white truncate max-w-[220px]">{ride.pickup.address}</span>
@@ -527,6 +510,7 @@ function DriverDashboard() {
               </div>
             )}
 
+            <div className="drv-sheet-actions">
             {legTarget && <ExternalNavigationButton key={`${ride.id}:${ride.status}`} destination={legTarget} />}
 
             {/* Gros bouton d'action principal */}
@@ -553,6 +537,7 @@ function DriverDashboard() {
                 <CheckCircle2 size={18} /> Terminer la course
               </button>
             )}
+            </div>
           </div>
         </div>
       ) : (

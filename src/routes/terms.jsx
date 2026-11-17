@@ -16,7 +16,7 @@ function TermsPage() {
         <a href="/mentions-legales" style={linkStyle}>mentions légales</a>). Elles s’appliquent aux passagers et aux chauffeurs. Vous les acceptez en cochant la case prévue lors de la création de votre compte. </p>
 
       <h2>1. Le service</h2>
-      <p> StrasDrive est une centrale de réservation de VTC (articles L3142-1 et suivants du Code des transports). Elle met en relation des passagers avec des chauffeurs VTC indépendants, calcule le prix de la course avant la réservation, gère le paiement (portefeuille ou espèces) et le suivi de la course. Le transport est réalisé par le chauffeur, qui en est responsable ; StrasDrive ne transporte pas elle-même de passagers. Toute course est réservée à l’avance via l’application : un chauffeur VTC ne peut pas être hélé dans la rue. </p>
+      <p> StrasDrive est une centrale de réservation de VTC (articles L3142-1 et suivants du Code des transports). Elle met en relation des passagers avec des chauffeurs VTC indépendants, calcule le prix de la course avant la réservation, gère le paiement (carte bancaire, portefeuille ou espèces) et le suivi de la course. Le transport est réalisé par un exploitant VTC indépendant. Le rôle de mise en relation de StrasDrive ne supprime pas les responsabilités que la loi impose à une centrale de réservation. Toute course est réservée à l’avance via l’application : un chauffeur VTC ne peut pas être hélé dans la rue. </p>
 
       <h2>2. Comptes</h2>
       <ul>
@@ -31,7 +31,7 @@ function TermsPage() {
         <li>Si le tarif calculé est inférieur à ce minimum, un « complément de rémunération minimale chauffeur » est ajouté et affiché avant la validation.</li>
         <li>L’annulation est gratuite tant que le chauffeur n’est pas arrivé au point de prise en charge. Après son arrivée, des frais d’annulation de {formatEuro(3)} sont débités, dont {formatEuro(2.76)} reversés au chauffeur.</li>
         <li>Au départ, le passager communique au chauffeur un code PIN à usage unique. Ne montez jamais dans un véhicule qui ne correspond pas à celui affiché.</li>
-        <li>Conformément à l’article L221-28 du Code de la consommation, une course réservée pour une date déterminée n’ouvre pas de droit de rétractation.</li>
+        <li>Les contrats de transport de passagers relèvent de l’exclusion prévue à l’article L221-2, 9°, du Code de la consommation. Le délai général de rétractation de quatorze jours ne s’applique donc pas à la course ; les règles d’annulation indiquées ici restent applicables. Les droits éventuellement applicables à une recharge de portefeuille sont distincts.</li>
       </ul>
 
       <h2>4. Portefeuille et paiement</h2>
@@ -55,13 +55,13 @@ function TermsPage() {
       </ul>
 
       <h2>6. Rémunération minimale des chauffeurs</h2>
-      <p> Conformément à l’accord conclu au sein de l’Autorité des relations sociales des plateformes d’emploi (ARPE), chaque course garantit au chauffeur, après commission, le plus élevé des montants suivants : </p>
+      <p> Le calcul à la réservation utilise les paramètres suivants de rémunération nette chauffeur et retient le montant le plus élevé : </p>
       <ul>
         <li>{formatEuro(DRIVER_MIN_NET_PER_RIDE)} nets par course, quelle que soit la distance ou la durée ;</li>
         <li>{formatEuro(DRIVER_MIN_NET_PER_HOUR)} nets par heure d’activité, temps d’approche compris ;</li>
         <li>{formatEuro(DRIVER_MIN_NET_PER_KM)} net par kilomètre parcouru.</li>
       </ul>
-      <p> Le prix passager est calculé pour couvrir ce minimum, avec un temps d’approche estimé. Le prix annoncé ne change pas pendant la course : si elle dure plus longtemps que prévu (embouteillages), ni le passager ni StrasDrive ne paient de supplément, et la commission de la plateforme reste inchangée. La rémunération est créditée sur le portefeuille du chauffeur dès la fin de la course. </p>
+      <p> Le prix passager est calculé pour couvrir ce minimum, avec un temps d’approche estimé. Le prix annoncé au passager reste fixe et le calcul ne régularise pas automatiquement les minima selon la durée réelle. Les paramètres de calcul ne valent pas attestation du respect de toutes les garanties applicables aux chauffeurs ; toute régularisation légalement due demeure à la charge de son débiteur et doit être traitée par l’exploitant. La rémunération est créditée sur le portefeuille du chauffeur dès la fin de la course. </p>
 
       <h2>7. Comportement</h2>
       <ul>
@@ -74,7 +74,14 @@ function TermsPage() {
       <p> Nous pouvons suspendre un compte qui enfreint les présentes Conditions ou présente un risque pour la sécurité, après vous en avoir informé et en vous permettant de présenter vos observations, sauf urgence. Vous pouvez fermer votre compte à tout moment depuis votre profil. </p>
 
       <h2>9. Responsabilité</h2>
-      <p> StrasDrive met en œuvre les moyens nécessaires au bon fonctionnement du service. Le chauffeur est responsable de l’exécution du transport. Aucune disposition des présentes Conditions ne limite les droits que vous tenez de la loi, notamment du Code de la consommation. </p>
+      <p> StrasDrive met en œuvre les moyens nécessaires au bon fonctionnement du service. En tant que centrale de réservation, elle répond envers le client de la bonne exécution des obligations du contrat de transport dans les conditions de l’article L3142-3 du Code des transports, y compris lorsque la prestation est réalisée par un chauffeur partenaire. Les possibilités d’exonération sont celles prévues par ce texte. Cette responsabilité est distincte des obligations de l’exploitant et de ses assurances ; aucune clause ne limite les droits impératifs du consommateur. </p>
+
+      <h2>Information sur l’attribution des courses</h2>
+      <p>L’attribution tient compte de la disponibilité du chauffeur, de la gamme demandée, des conditions de prise en charge et des préférences de course compatibles. Le mécanisme donne d’abord accès aux chauffeurs marqués prioritaires par l’administration, puis au chauffeur éligible le plus proche, puis aux autres chauffeurs disponibles. Un mécanisme de répartition peut limiter les offres d’un chauffeur non prioritaire dont les revenus dépassent ceux des autres chauffeurs disponibles. La première acceptation validée par le serveur attribue la course. La priorité administrative ne constitue pas une garantie de course ou de revenu. Les commissions applicables sont indiquées dans les présentes Conditions.</p>
+      <p>Les notes correspondent à des courses de la plateforme ; aucune note n’est présentée comme un contrôle indépendant. Une réclamation sur une attribution ou une note peut être adressée à l’assistance.</p>
+      <h2>Réclamations et documents de course</h2>
+      <p>Le détail d’une course dans l’historique permet de contacter l’assistance avec sa référence, de signaler un problème de paiement ou un objet oublié et de télécharger le récapitulatif disponible. Ce récapitulatif ne remplace pas une facture réglementaire de l’émetteur compétent. Une demande de facture peut être adressée à l’assistance. L’identité de l’émetteur, les mentions fiscales et la numérotation des factures sont distinctes du numéro de réservation.</p>
+      <p>En cas de litige, une réclamation écrite peut être déposée via la page Contact. Après cette démarche et dans les conditions légales applicables, le consommateur peut saisir le médiateur désigné dans les mentions légales. Le signalement auprès de la DGCCRF est également accessible sur <a href="https://signal.conso.gouv.fr/" style={linkStyle} target="_blank" rel="noreferrer">SignalConso</a>.</p>
 
       <h2>10. Modifications</h2>
       <p> Toute modification importante des Conditions vous est annoncée dans l’application avant son entrée en vigueur. </p>

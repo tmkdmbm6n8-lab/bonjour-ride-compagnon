@@ -1,7 +1,10 @@
+import { supportOwnedBy } from "./vtc-support";
+import { exportPageOptions, PERSONAL_DATA_PAGE_SIZE } from "./personal-data-export";
+import { assertRideActionMethod, privateDocumentPath, validLocation, invoiceRequestMessage } from "./vtc-access";
 import { discoverBoard, returnHintForRide } from "./vtc-transport.server";
 import { driverWeekSummary } from "./vtc-driver-stats";
 import { parisDay, validDay } from "./vtc-dates";
-import { inboxForDriver, sendSupportMessage } from "./vtc-support.server";
+import { inboxForDriver, sendSupportMessage, personalSupportRequests } from "./vtc-support.server";
 import { buildWaybill, sanitizeOperator } from "./vtc-waybill";
 import { geoSearch } from "./vtc-geocoding.server";
 import { passengerDisplayName } from "./passenger-name";
@@ -334,38 +337,42 @@ export async function handleVtc(input, context) {
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
   const profile = required(await db.from("profiles").select("*").eq("id", uid).single());
   if (p === "/api/users/me/export") {
-    // Droit d'accès et de portabilité (RGPD art. 15 et 20) : toutes les données liées au compte.
-    const driver =
-      role === "driver" ? required(await db.from("drivers").select("*").eq("user_id", uid).maybeSingle()) : null;
-    const rides = required(
-      await db
-        .from("rides")
-        .select("*")
-        .or(`rider_id.eq.${uid},driver_id.eq.${uid}`)
-        .order("created_at", { ascending: false })
-        .limit(5000),
-    ).map(({ pin, offer_driver_id, offer_expires_at, declined, ...rest }) => rest);
-    const transactions = required(
-      await db
-        .from("wallet_transactions")
-        .select("*")
-        .eq("user_id", uid)
-        .order("created_at", { ascending: false })
-        .limit(10000),
-    );
-    const documents =
-      role === "driver"
-        ? required(await db.from("driver_documents").select("*").eq("user_id", uid)).map(docShape)
-        : undefined;
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    const {page, until, from, to} = exportPageOptions(q);
+    const driver = page === 0 && role === "driver"
+      ? required(await db.from("drivers").select("*").eq("user_id", uid).maybeSingle()) : undefined;
+    const rows = required(await db.from("rides").select("*")
+      .or(`rider_id.eq.${uid},driver_id.eq.${uid}`).lte("created_at",until)
+      .order("created_at",{ascending:true}).order("id",{ascending:true}).range(from,to));
+    const walletRows = required(await db.from("wallet_transactions").select("*").eq("user_id",uid)
+      .lte("created_at",until).order("created_at",{ascending:true}).order("id",{ascending:true}).range(from,to));
+    const documents = page === 0 && role === "driver"
+      ? required(await db.from("driver_documents").select("*").eq("user_id",uid)).map(docShape) : undefined;
+    const email = context.claims.email;
+    const escapedEmail = String(email || "").replace(/[\\%_]/g, "\\$&");
+    const supportByEmail = email ? required(await admin.from("contact_messages")
+      .select("id,email,topic,message,status,created_at,resolved_at").ilike("email",escapedEmail)
+      .lte("created_at",until).order("created_at",{ascending:true}).order("id",{ascending:true}).range(from,to)) : [];
+    const supportByUser = required(await admin.from("contact_messages")
+      .select("id,email,topic,message,status,created_at,resolved_at").eq("topic","driver_conversation")
+      .like("message",'%"userId":"'+uid+'"%').lte("created_at",until)
+      .order("created_at",{ascending:true}).order("id",{ascending:true}).range(from,to));
+    const supportRows = [...new Map([
+      ...supportByEmail.slice(0,PERSONAL_DATA_PAGE_SIZE),...supportByUser.slice(0,PERSONAL_DATA_PAGE_SIZE),
+    ].map(row=>[row.id,row])).values()].filter(row=>supportOwnedBy(row,uid,email));
     return {
-      exportedAt: new Date().toISOString(),
-      account: { email: context.claims.email || "", role, consent: context.claims.user_metadata?.consent || null },
-      profile,
-      driver,
-      documents,
-      rides,
-      walletTransactions: transactions,
+      exportedAt:until,
+      ...(page === 0 ? {account:{email:email || "",role,consent:context.claims.user_metadata?.consent || null},profile,driver,documents} : {}),
+      rides:rows.slice(0,PERSONAL_DATA_PAGE_SIZE).map(({pin,offer_driver_id,offer_expires_at,declined,...rest})=>rest),
+      walletTransactions:walletRows.slice(0,PERSONAL_DATA_PAGE_SIZE),
+      supportRequests:supportRows,
+      pagination:{page,hasMore:[rows,walletRows,supportByEmail,supportByUser].some(items=>items.length > PERSONAL_DATA_PAGE_SIZE)},
     };
+  }
+  if (p === "/api/users/me/support") {
+    if (method === "GET") return personalSupportRequests(admin,uid,context.claims.email,Number(q.get("page") || 0));
+    if (method === "POST") return sendSupportMessage(admin,{uid,email:context.claims.email,name:profile.name,role,body});
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/users/me/deletion-request" && method === "POST") {
     // Droit à l'effacement (RGPD art. 17) : demande enregistrée et traitée sous un mois.
@@ -531,7 +538,7 @@ export async function handleVtc(input, context) {
       if (!spec) throw new Error("Type de document inconnu");
       const fields = validateDocumentInput(body.type, body);
       const path = String(body.path || "");
-      if (!path.startsWith(`${uid}/`) || path.includes("..") || path.length > 200) throw new Error("Fichier invalide");
+      if (!privateDocumentPath(path, uid)) throw new Error("Fichier invalide");
       const check = await admin.storage.from(DOCUMENTS_BUCKET).createSignedUrl(path, 10);
       if (check.error) throw new Error("Fichier introuvable, renvoyez-le");
       const previous = required(
@@ -567,6 +574,8 @@ export async function handleVtc(input, context) {
     return { documents: docs.map(docShape), compliance: { ...c, problem: complianceProblem(c) } };
   }
   if (p === "/api/drivers/me/status") {
+    if (method !== "POST") throw new Error("Méthode non autorisée");
+    if (typeof body.online !== "boolean") throw new Error("Statut invalide");
     const d = required(await db.from("drivers").select("*").eq("user_id", uid).single());
     const current = required(await db.from("rides").select("id").eq("driver_id", uid).in("status", active));
     if (!body.online && current.length) throw new Error("Terminez votre course avant de passer hors ligne");
@@ -580,7 +589,7 @@ export async function handleVtc(input, context) {
         if (!dc.canDrive) throw new Error(`${complianceProblem(dc)} — mettez à jour vos documents dans votre profil`);
       }
       if (Number(profile.balance) < -25) throw new Error("Régularisez votre solde avant de passer en ligne");
-      if (!body.location || ![body.location.lat, body.location.lng].every(Number.isFinite))
+      if (!validLocation(body.location))
         throw new Error("Position invalide");
     }
     required(
@@ -588,7 +597,7 @@ export async function handleVtc(input, context) {
         .from("drivers")
         .update({
           is_online: Boolean(body.online),
-          location: body.location || d.location,
+          location: body.online ? body.location : null,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", uid),
@@ -597,12 +606,16 @@ export async function handleVtc(input, context) {
   }
   if (p === "/api/drivers/location") {
     if (role !== "driver") throw new Error("Accès refusé");
-    if (![body.lat, body.lng].every(Number.isFinite)) throw new Error("Position invalide");
+    if (method !== "POST") throw new Error("Méthode non autorisée");
+    if (!validLocation(body)) throw new Error("Position invalide");
+    const driver = required(await db.from("drivers").select("is_online").eq("user_id", uid).single());
+    const ongoing = required(await db.from("rides").select("id").eq("driver_id", uid).in("status", active));
+    if (!driver.is_online && !ongoing.length) return {ok:true, ignored:true};
     required(
       await db
         .from("drivers")
         .update({
-          location: { lat: body.lat, lng: body.lng, heading: body.heading },
+          location: { lat: body.lat, lng: body.lng, heading: Number.isFinite(body.heading) ? ((body.heading % 360) + 360) % 360 : null },
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", uid),
@@ -825,6 +838,7 @@ export async function handleVtc(input, context) {
   const match = p.match(/^\/api\/rides\/([^/]+)(?:\/(\w+))?$/);
   if (match) {
     const [, id, action] = match;
+    assertRideActionMethod(action, method);
     const r = required(await admin.from("rides").select("*").eq("id", id).single());
     const participant = r.rider_id === uid || r.driver_id === uid;
     if (action === "accept") {
@@ -868,6 +882,18 @@ export async function handleVtc(input, context) {
     }
     if (!participant && role !== "admin") throw new Error("Course inaccessible");
     if (!action) return { ride: await serialize(admin, r, uid) };
+    if (action === "invoice") {
+      const message = invoiceRequestMessage(r, uid, role);
+      const email = context.claims.email;
+      if (!email) throw new Error("Une adresse e-mail de compte est nécessaire");
+      // Existing support storage provides an authenticated, persistent request without issuing a fiscal document.
+      const previous = required(await admin.from("contact_messages").select("id")
+        .eq("email", email).eq("topic", "payments").eq("message", message).limit(1));
+      if (!previous.length) required(await admin.from("contact_messages").insert({
+        name: profile.name || "Utilisateur", email, topic: "payments", message,
+      }));
+      return {ok:true, message:"Votre demande de facture a été transmise à l’assistance. Aucune facture n’a encore été émise."};
+    }
     if (action === "radars" && method === "GET") {
       requireCameraReader(role);
       if (r.driver_id !== uid) throw new Error("Accès refusé");

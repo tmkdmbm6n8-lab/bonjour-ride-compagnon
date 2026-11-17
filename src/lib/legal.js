@@ -1,7 +1,7 @@
 // Informations légales de l'éditeur. Les valeurs entre crochets doivent être remplacées
 // par les informations réelles de la société avant la mise en ligne.
-export const LEGAL_VERSION = '2026-11-15';
-export const LEGAL_UPDATED_LABEL = '15 novembre 2026';
+export const LEGAL_VERSION = '2026-11-17';
+export const LEGAL_UPDATED_LABEL = '17 novembre 2026';
 
 export const COMPANY = {
   brand: 'StrasDrive',

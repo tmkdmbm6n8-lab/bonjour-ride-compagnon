@@ -52,16 +52,24 @@ export function setNavAuto(on) {
   }
 }
 
-/** Opens the GPS app; returns false when the browser blocked it (the driver then taps the button). */
+/** Dispatch a normal same-tab link, so iOS can hand it to the installed GPS app.
+ * A null window.open result does not indicate failure for mobile app handoffs.
+ * True means the link was dispatched, not confirmation that an app is installed.
+ */
 export function openNavigation(app, dest) {
   const url = navigationUrl(app, dest);
   if (!url) return false;
-  const w = window.open(url, "_blank");
-  if (!w) return false;
+  const link = document.createElement("a");
+  link.href = url;
+  link.target = "_self";
+  link.hidden = true;
   try {
-    w.opener = null;
+    document.body.appendChild(link);
+    link.click();
+    return true;
   } catch {
-    /* cross-origin */
+    return false;
+  } finally {
+    link.remove();
   }
-  return true;
 }

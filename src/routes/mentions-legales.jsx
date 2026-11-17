@@ -32,6 +32,8 @@ function LegalNoticePage() {
         <li>Chaque chauffeur doit être titulaire de la carte professionnelle VTC, inscrit au registre des exploitants VTC et assuré pour le transport de personnes à titre onéreux.</li>
       </ul>
 
+      <p>La centrale de réservation doit disposer de sa propre assurance de responsabilité civile professionnelle pour cette activité (article L3142-4 du Code des transports). La vérification des assurances des chauffeurs ne remplace pas cette obligation de l’éditeur.</p>
+
       <h2>3. Hébergeur</h2>
       <ul>
         <li><strong>{HOST.name}</strong></li>

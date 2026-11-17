@@ -2,8 +2,8 @@ import { createStripeClient, getStripeErrorMessage } from "./stripe.server";
 import { topupAmountProblem, toCents, isStripeEnv, cardBookingExpired, safeOrigin } from "./vtc-checkout";
 const VEHICLE_CLASS_LABELS = { economy: "Go", comfort: "Comfort", pet: "Pet", xl: "XL" };
 
-// Looks up the Stripe Customer by userId metadata (then email), or creates one, so later reads stay searchable.
-async function resolveOrCreateCustomer(stripe, options) {
+// Reuse only a Stripe Customer already linked to this verified user; matching email alone never transfers ownership.
+export async function resolveOrCreateCustomer(stripe, options) {
   if (options.userId && !/^[a-zA-Z0-9_-]+$/.test(options.userId)) throw new Error("Invalid userId");
   if (options.userId) {
     const found = await stripe.customers.search({ query: `metadata['userId']:'${options.userId}'`, limit: 1 });
@@ -11,13 +11,8 @@ async function resolveOrCreateCustomer(stripe, options) {
   }
   if (options.email) {
     const existing = await stripe.customers.list({ email: options.email, limit: 1 });
-    if (existing.data.length) {
-      const customer = existing.data[0];
-      if (options.userId && customer.metadata?.userId !== options.userId) {
-        await stripe.customers.update(customer.id, { metadata: { ...customer.metadata, userId: options.userId } });
-      }
-      return customer.id;
-    }
+    const owned = existing.data.find(customer => customer.metadata?.userId === options.userId);
+    if (owned && options.userId) return owned.id;
   }
   const created = await stripe.customers.create({
     ...(options.email && { email: options.email }),

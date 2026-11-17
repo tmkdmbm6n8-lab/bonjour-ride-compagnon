@@ -1,3 +1,5 @@
+import PersonalSupport from '@/components/profile/PersonalSupport';
+import { downloadPersonalData } from '@/lib/personal-data-export';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
@@ -220,22 +222,23 @@ function FieldRow({ label, children }) {
 function PersonalDataCard() {
   const toast = useToast();
   const [exporting, setExporting] = useState(false);
+
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
 
   async function exportData() {
     setExporting(true);
     try {
-      const res = await fetch('/api/users/me/export');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await downloadPersonalData(fetch);
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `strasdrive-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),30000);
       toast('Vos données ont été téléchargées', 'success');
     } catch {
       toast('Le téléchargement a échoué — réessayez', 'error');
@@ -252,7 +255,7 @@ function PersonalDataCard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setRequested(true);
-      toast('Demande envoyée — réponse sous un mois maximum', 'success');
+      toast('Demande envoyée — réponse en principe sous un mois', 'success');
     } catch {
       toast('La demande n’a pas pu être envoyée', 'error');
     } finally {
@@ -262,6 +265,7 @@ function PersonalDataCard() {
 
   return (
     <div className="card card-pad mt-4">
+      <PersonalSupport/>
       <h3 className="small mb-1" style={{ fontWeight: 700 }}>Mes données personnelles</h3>
       <p className="tiny muted mb-4" style={{ lineHeight: 1.6 }}>
         Téléchargez une copie de vos données ou demandez la suppression de votre compte. Détails dans la{' '}

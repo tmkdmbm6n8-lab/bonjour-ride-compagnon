@@ -1,3 +1,4 @@
+import { useSearchParams } from '@/lib/archive-navigation';
 import {createFileRoute} from '@tanstack/react-router';
 import PublicLayout from '@/components/PublicLayout';
 import { Mail, MessageSquare, LifeBuoy } from 'lucide-react';
@@ -24,6 +25,10 @@ const CHANNELS = [
 ];
 
 function ContactPage() {
+  const params = useSearchParams();
+  const topic = ['ride_issue','payments','safety','driver_support','data_request'].includes(params.get('topic')) ? params.get('topic') : 'general';
+  const rideId = (params.get('ride') || '').slice(0,80).replace(/[^a-zA-Z0-9-]/g,'');
+  const context = rideId ? `Référence de course : ${rideId}\n\nDécrivez votre demande : ` : '';
   return (
     <div className="prose-page" style={{ maxWidth: 920 }}>
       <h1>Nous contacter</h1>
@@ -40,7 +45,7 @@ function ContactPage() {
 
       <div className="card card-pad" style={{ maxWidth: 640 }}>
         <h2 style={{ fontSize: '1.15rem', marginBottom: 16 }}>Envoyez-nous un message</h2>
-        <ContactForm />
+        <ContactForm key={`${topic}:${rideId}`} initialTopic={topic} initialMessage={context}/>
       </div>
     </div>
   );

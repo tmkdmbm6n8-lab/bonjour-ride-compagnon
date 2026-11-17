@@ -7035,3 +7035,25 @@ a.activity-pill:hover {
   }
 }
 
+
+/* Compact active-course sheet; passenger header and map controls stay unchanged. */
+.drv-bottom-sheet.is-minimal {
+  padding: 16px 18px max(18px, env(safe-area-inset-bottom));
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 20px #0003;
+  max-height: 65dvh;
+  overflow-y: auto;
+}
+.is-minimal .drv-sheet-header { gap: 12px; margin-bottom: 10px; }
+.drv-sheet-stage { display: block; color: #94a3b8; font-size: 12px; margin-bottom: 3px; }
+.drv-sheet-earnings { display: block; color: #f8fafc; font-size: 24px; line-height: 1.15; letter-spacing: -.03em; }
+.is-minimal .drv-sheet-toggle { min-height: 44px; padding: 8px; }
+.drv-sheet-address { margin: 0 0 8px; font-size: 14px; color: #e2e8f0; overflow-wrap: anywhere; }
+.drv-sheet-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; color: #94a3b8; font-size: 13px; }
+.drv-sheet-radar-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+.drv-sheet-radar-pill.has-radars { color: #facc15; }
+.drv-sheet-route-status { margin: 0 0 12px; color: #94a3b8; font-size: 12px; }
+.drv-sheet-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }
+.drv-sheet-actions > .btn { margin: 0; padding: 10px 12px; min-height: 46px; font-size: 13px; border-radius: 12px; box-shadow: none; }
+.drv-sheet-actions > [role="alert"] { grid-column: 1 / -1; }
+.is-minimal .drv-sheet-details { margin: 0 0 14px; padding: 12px 0 0; border-top: 1px solid #ffffff12; }

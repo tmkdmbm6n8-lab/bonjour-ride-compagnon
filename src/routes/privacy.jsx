@@ -12,6 +12,7 @@ function PrivacyPage() {
 
       <p> Cette politique explique quelles données StrasDrive traite, pourquoi, combien de temps elles sont gardées et comment exercer vos droits, conformément au Règlement général sur la protection des données (RGPD) et à la loi Informatique et Libertés. Nous ne vendons pas vos données et ne les utilisons pas à des fins publicitaires. </p>
 
+      <p>Vous pouvez partager volontairement un résumé de course à une personne de votre choix à l’aide du partage de votre téléphone ou du presse-papiers. Ce résumé contient les adresses, la référence de course et, lorsqu’ils sont disponibles, le nom du chauffeur et l’immatriculation. Il ne contient pas le code PIN et ne donne pas accès à un suivi public en direct. La plateforme ne choisit pas le destinataire et ne conserve pas de copie supplémentaire de ce partage.</p>
       <h2>1. Responsable du traitement</h2>
       <p> {COMPANY.legalName}, {COMPANY.address} (voir les{' '}
         <a href="/mentions-legales" style={linkStyle}>mentions légales</a>). Contact données personnelles : {COMPANY.dpoEmail}, ou la{' '}
@@ -56,11 +57,11 @@ function PrivacyPage() {
 
       <h2>5. Combien de temps</h2>
       <ul>
-        <li><strong>Compte</strong> — tant que le compte est ouvert. Après une demande de suppression, il est supprimé ou anonymisé dans un délai d’un mois.</li>
+        <li><strong>Compte</strong> — tant que le compte est ouvert. Une demande de suppression est examinée après vérification de l’identité ; les données sont supprimées ou anonymisées sous réserve des obligations de conservation et des autres exceptions légales.</li>
         <li><strong>Messages échangés pendant une course</strong> — effacés 1 an après la course.</li>
         <li><strong>Adresses précises et tracé des courses</strong> — 3 ans, puis arrondis à environ 1 km.</li>
         <li><strong>Montants des courses et opérations du portefeuille</strong> — 10 ans, durée imposée pour les pièces comptables (article L123-22 du Code de commerce), puis supprimés.</li>
-        <li><strong>Dernière position d’un chauffeur</strong> — effacée 24 heures après son passage hors ligne.</li>
+        <li><strong>Dernière position d’un chauffeur</strong> — effacée lors du passage hors ligne sans course active ; la purge existante supprime aussi les anciennes positions hors ligne après 24 heures.</li>
         <li><strong>Signalements police et radar</strong> — contrôles de police effacés 2 heures après leur dernier signalement ; un radar reste jusqu’à sa suppression par l’administrateur.</li>
         <li><strong>Messages d’assistance (formulaire et Inbox)</strong> — 3 ans après l’envoi.</li>
         <li><strong>Preuve d’acceptation des conditions</strong> — tant que le compte est ouvert.</li>
@@ -87,7 +88,7 @@ function PrivacyPage() {
         <li><strong>Supprimer</strong> votre compte : bouton « Supprimer mon compte » dans votre profil.</li>
         <li><strong>Autres demandes</strong> : via la <a href="/contact" style={linkStyle}>page de contact</a> ou {COMPANY.dpoEmail}.</li>
       </ul>
-      <p> Nous répondons dans un délai d’un mois. Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL (<a href="https://www.cnil.fr" style={linkStyle} target="_blank" rel="noreferrer">cnil.fr</a>). </p>
+      <p> Nous répondons en principe dans un délai d’un mois. Une prolongation motivée peut être appliquée dans les conditions prévues par le RGPD, après information de la personne concernée. Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL (<a href="https://www.cnil.fr" style={linkStyle} target="_blank" rel="noreferrer">cnil.fr</a>). </p>
 
       <h2>10. Modifications</h2>
       <p> Nous vous informons dans l’application de toute modification importante de cette politique. </p>

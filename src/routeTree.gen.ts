@@ -15,6 +15,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MentionsLegalesRouteImport } from './routes/mentions-legales'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RecoverAccountRouteImport } from './routes/recover-account'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
@@ -68,6 +69,11 @@ const MentionsLegalesRoute = MentionsLegalesRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecoverAccountRoute = RecoverAccountRouteImport.update({
+  id: '/recover-account',
+  path: '/recover-account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/privacy': typeof PrivacyRoute
+  '/recover-account': typeof RecoverAccountRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/privacy': typeof PrivacyRoute
+  '/recover-account': typeof RecoverAccountRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -283,6 +291,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/privacy': typeof PrivacyRoute
+  '/recover-account': typeof RecoverAccountRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -317,6 +326,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mentions-legales'
     | '/privacy'
+    | '/recover-account'
     | '/signup'
     | '/terms'
     | '/dashboard'
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mentions-legales'
     | '/privacy'
+    | '/recover-account'
     | '/signup'
     | '/terms'
     | '/dashboard'
@@ -382,6 +393,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mentions-legales'
     | '/privacy'
+    | '/recover-account'
     | '/signup'
     | '/terms'
     | '/_authenticated/dashboard'
@@ -416,6 +428,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MentionsLegalesRoute: typeof MentionsLegalesRoute
   PrivacyRoute: typeof PrivacyRoute
+  RecoverAccountRoute: typeof RecoverAccountRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   ApiPublicJobsWeeklyPayoutsRoute: typeof ApiPublicJobsWeeklyPayoutsRoute
@@ -464,6 +477,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recover-account': {
+      id: '/recover-account'
+      path: '/recover-account'
+      fullPath: '/recover-account'
+      preLoaderRoute: typeof RecoverAccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -711,6 +731,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MentionsLegalesRoute: MentionsLegalesRoute,
   PrivacyRoute: PrivacyRoute,
+  RecoverAccountRoute: RecoverAccountRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   ApiPublicJobsWeeklyPayoutsRoute: ApiPublicJobsWeeklyPayoutsRoute,

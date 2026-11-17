@@ -1,3 +1,7 @@
+import InvoiceRequest from '@/components/ride/InvoiceRequest';
+import ReceiptDownload from '@/components/ride/ReceiptDownload';
+import RideSafety from '@/components/ride/RideSafety';
+import Link from '@/lib/archive-navigation';
 import {createFileRoute} from '@tanstack/react-router';
 import { drawableRoute } from '@/lib/utils/route-display';
 import RiderLayout from '@/components/RiderLayout';
@@ -122,6 +126,14 @@ function RideDetailPage() {
           </div>
         </div>
       )}
+
+      <div className="card card-pad mt-4 flex-col gap-3">
+        <ReceiptDownload ride={ride}/>
+        <InvoiceRequest key={ride.id} ride={ride}/>
+        <RideSafety ride={ride}/>
+        <Link href={`/contact?topic=ride_issue&ride=${encodeURIComponent(ride.id)}`} className="btn btn-ghost btn-sm">Réclamation ou objet oublié</Link>
+        <Link href={`/contact?topic=payments&ride=${encodeURIComponent(ride.id)}`} className="btn btn-ghost btn-sm">Question sur ce paiement ou demande de facture</Link>
+      </div>
 
       {ride.rating?.byRider && (
         <div className="card card-pad mt-4">

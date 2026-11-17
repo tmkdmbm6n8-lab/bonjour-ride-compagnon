@@ -1,3 +1,4 @@
+import RideSafety from '@/components/ride/RideSafety';
 import { createFileRoute } from "@tanstack/react-router";
 import RiderLayout from "@/components/RiderLayout";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
@@ -815,10 +816,11 @@ function RiderDashboard() {
                     </>
                   ) : (
                     <>
-                      Réserver {VEHICLE_LABELS[vehicleType]} · {money(selectedFare?.total || 0)}
+                      Commander avec obligation de paiement · {money(selectedFare?.total || 0)}
                     </>
                   )}
                 </button>
+                <p className="tiny muted mt-3">Prix TTC annoncé avant commande. Consultez les <Link href="/terms" style={{textDecoration:'underline'}}>conditions de réservation et d’annulation</Link>. Le mode de paiement sélectionné s’applique à cette course.</p>
               </>
             )}
           </div>
@@ -858,6 +860,7 @@ function RiderDashboard() {
         {/* ── ACTIVE ── */}
         {phase === "active" && ride && (
           <div className="card card-pad animate-in">
+            <RideSafety ride={ride}/>
             {ride.status !== "in_progress" && (
               <div className="rider-trip-toolbar">
                 <strong>Votre course</strong>

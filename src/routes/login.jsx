@@ -127,6 +127,7 @@ function LoginForm() {
             )}
           </button>
         </form>
+        <Link href="/recover-account" className="btn btn-ghost btn-full mt-3">Mot de passe oublié ou e-mail non reçu ?</Link>
 
         <p className="text-center small muted mt-6">
           Vous découvrez StrasDrive ?{' '}

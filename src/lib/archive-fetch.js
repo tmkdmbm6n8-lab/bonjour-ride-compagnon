@@ -1,7 +1,7 @@
 import {LEGAL_VERSION} from './legal';
 import {vtcRequest,contactRequest,publicVtcRequest} from './vtc.functions';
 import {supabase} from '@/integrations/supabase/client';
-const PUBLIC_PAGES=['/','/login','/signup','/contact','/privacy','/terms','/mentions-legales'];
+const PUBLIC_PAGES=['/','/login','/signup','/recover-account','/contact','/privacy','/terms','/mentions-legales'];
 let redirecting=false;
 function sessionExpired(){
  if(typeof window!=='undefined'&&!redirecting&&!PUBLIC_PAGES.includes(window.location.pathname)){redirecting=true;const back=window.location.pathname+window.location.search;window.location.href=`/login?expired=1&callbackUrl=${encodeURIComponent(back)}`;}

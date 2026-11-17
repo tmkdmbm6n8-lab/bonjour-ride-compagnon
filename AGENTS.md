@@ -60,3 +60,6 @@ use the editor.
 - Camera visibility is driver-only: showRoadAlerts is opt-in on driver maps and /api/maps/speed-cameras verifies the authenticated driver role. The official French camera snapshot (src/data/speed-cameras-fr.json, Licence Ouverte 2.0) is server-only and primary in France; Overpass is the fallback elsewhere. Refresh with scripts/refresh-speed-cameras.mjs.
 - Android (Capacitor) loads the published URL via `server.url`; `capacitor-shell/` is only redirect + offline page, since TanStack Start has no static index.html.
 - Ride-offer pushes go out from `assignOffer` only when its guarded update wins, to `newlyOfferedDriverIds` (`vtc-push.js`); tokens in service-role `push_tokens`. Each dispatch step notifies once, no send log.
+
+- User instruction (2026-11-17): never alter the pricing calculations, amounts, remuneration parameters, or the external link supplying prices. Preserve the quote/estimate integrations. Security and compliance work must not recalculate or adjust fares.
+- Run `npm run check:pricing` after any future change. Do not refresh the protected pricing baseline to conceal a change; obtain an explicit new user instruction before any alteration of the protected calculation/link.
