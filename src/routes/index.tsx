@@ -4,7 +4,7 @@ import {Capacitor} from '@capacitor/core';
 import {useSession} from '@/lib/archive-auth';
 import Link from '@/lib/archive-navigation';
 import {
-  Zap, ShieldCheck, Wallet, Radio, Route as RouteIcon, Car, Crown, Users,
+  Zap, ShieldCheck, Wallet, Radio, Route as RouteIcon, Car, PawPrint, Users,
   ArrowRight, Star, Clock, MessageCircle,
 } from 'lucide-react';
 import SiteHeader from '@/components/shell/SiteHeader';
@@ -50,7 +50,7 @@ const FEATURES = [
 const TIERS = [
   { icon: Car, name: 'StrasDrive Go', text: 'Des courses au quotidien à prix avantageux' },
   { icon: Car, name: 'StrasDrive Comfort', text: 'Voitures récentes, plus d’espace pour les jambes' },
-  { icon: Crown, name: 'StrasDrive Lux', text: 'Chauffeurs d’excellence, voitures haut de gamme' },
+  { icon: PawPrint, name: 'StrasDrive Pet', text: 'Transport avec animaux — cage de transport obligatoire' },
   { icon: Users, name: 'StrasDrive XL', text: 'De la place pour six personnes maximum' },
 ];
 

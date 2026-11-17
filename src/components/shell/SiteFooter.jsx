@@ -50,7 +50,7 @@ export default function SiteFooter() {
               <KovaIcon size={30} />
               <span style={{ fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.02em' }}> StrasDrive </span>
             </span>
-            <p className="small muted mt-3" style={{ maxWidth: 260, lineHeight: 1.6 }}> Un service VTC haut de gamme avec tarifs annoncés à l’avance, suivi en direct et prises en charge vérifiées par code PIN. Déplacez-vous en toute sérénité. </p>
+            <p className="small muted mt-3" style={{ maxWidth: 260, lineHeight: 1.6 }}> Notre ambition : le VTC le moins cher de Strasbourg. Avec une commission fixe de seulement 5 %, nous privilégions des prix bas pour les passagers et 95 % du prix de la course pour les chauffeurs. </p>
           </div>
 
           {COLUMNS.map((col) => ( <div key={col.title}>
