@@ -7451,18 +7451,18 @@ a.activity-pill:hover {
     min-height: 0;
     overflow: hidden;
   }
-  /* La page de course s'arrête exactement au-dessus de la barre de menu */
+  /* La page de course s'arrête nettement au-dessus de la barre de menu */
   .drv-active-ride-page {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
     height: auto;
     min-height: 0;
   }
   .drv-ride-dock .drv-bottom-sheet.is-minimal {
-    padding-bottom: 8px;
+    padding-bottom: 12px;
   }
 }
 
