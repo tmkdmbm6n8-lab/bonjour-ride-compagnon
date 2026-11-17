@@ -97,7 +97,11 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
             return (
               <div
                 key={i}
-                style={{
+                style={m.type === 'audio' ? {
+                  alignSelf: mine ? 'flex-end' : 'flex-start',
+                  maxWidth: '86%',
+                  color: 'var(--ink-400)',
+                } : {
                   alignSelf: mine ? 'flex-end' : 'flex-start',
                   maxWidth: '82%',
                   padding: '10px 14px',

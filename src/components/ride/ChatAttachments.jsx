@@ -23,8 +23,8 @@ export default function ChatAttachments({ rideId }) {
     finally { pending.current = false; if (mounted.current) setBusy(false); }
   }
   const mode = useRef('discard'), held = useRef(false), startX = useRef(0), startedAt = useRef(0);
-  const [slide, setSlide] = useState(0), [finger, setFinger] = useState(null);
-  const CANCEL_PX = 80;
+  const [slide, setSlide] = useState(0), [finger, setFinger] = useState(null), [reach, setReach] = useState(160);
+  const endX = useRef(0), xMark = useRef(null);
   async function startRecording() {
     if (pending.current || recorder.current?.state === 'recording') return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') { toast('Les vocaux ne sont pas disponibles dans ce navigateur.', 'error'); return; }
@@ -68,19 +68,25 @@ export default function ChatAttachments({ rideId }) {
     try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch {}
     held.current = true; startX.current = e.clientX ?? 0; setSlide(0);
     const box = e.currentTarget.closest('.chat-attachments')?.getBoundingClientRect();
+    // Supprimé seulement quand le doigt atteint la croix, tout au bout de la barre.
+    endX.current = (box ? box.left : 0) + 46; setReach(Math.max(1, startX.current - endX.current));
     setFinger({ x: e.clientX ?? 0, y: box ? box.top : (e.clientY ?? 0) });
     startRecording();
   }
   function onMicMove(e) {
     if (!held.current) return;
-    const dx = Math.max(0, startX.current - (e.clientX ?? 0));
-    setSlide(Math.min(dx, 160));
-    setFinger(f => f && { ...f, x: e.clientX ?? f.x });
+    const x = e.clientX ?? startX.current;
+    const mark = xMark.current?.getBoundingClientRect();
+    if (mark && mark.width) endX.current = mark.right;
+    const max = Math.max(1, startX.current - endX.current);
+    if (x <= endX.current) { try { navigator.vibrate?.(30); } catch {} finish(false); return; }
+    setReach(max); setSlide(Math.min(Math.max(0, startX.current - x), max));
+    setFinger(f => f && { ...f, x });
   }
   function onMicUp(e) {
     if (!held.current) return;
-    const dx = Math.max(0, startX.current - (e.clientX ?? startX.current));
-    finish(dx < CANCEL_PX);
+    const x = e.clientX ?? startX.current;
+    finish(x > endX.current);
   }
   async function shareLocation() {
     if (pending.current) return;
@@ -93,18 +99,19 @@ export default function ChatAttachments({ rideId }) {
     } catch { toast('La position n’a pas pu être partagée. Vérifiez l’autorisation de localisation.', 'error'); }
     finally { pending.current = false; if (mounted.current) setBusy(false); }
   }
-  const cancelling = slide >= CANCEL_PX;
+  const progress = Math.min(1, slide / reach), cancelling = progress >= 0.85;
   return <div className={`chat-attachments${recording ? ' is-recording' : ''}`}>
     {draft ? <div className="chat-voice-preview"><audio controls src={draft.url} aria-label="Écouter le vocal avant envoi" /><button type="button" className="btn btn-ghost btn-icon" aria-label="Supprimer le vocal" disabled={busy} onClick={clearDraft}><X size={18} /></button><button type="button" className="btn btn-primary btn-icon" aria-label="Envoyer le vocal" disabled={busy} onClick={() => upload(draft.file, draft.duration)}><Send size={18} /></button></div> : <>
       {!recording && <button type="button" className="btn btn-ghost btn-icon" aria-label={menu ? 'Fermer les pièces jointes' : 'Ajouter une pièce jointe'} aria-expanded={menu} disabled={busy} onClick={() => setMenu(!menu)}><Plus size={20} /></button>}
       {!recording && <span className="chat-att-spacer" />}
-      {recording && <div className={`chat-rec-bar${cancelling ? ' is-cancel' : ''}`} role="status" onPointerMove={onMicMove} onPointerUp={onMicUp} onPointerCancel={() => finish(false)}>
-        <span className="chat-rec-x" aria-hidden="true"><X size={16} strokeWidth={3} /></span>
-        <span className="chat-rec-hint" style={{ transform: `translateX(${-slide * 0.6}px)`, opacity: cancelling ? 0 : Math.max(0.2, 1 - slide / 120) }}><ChevronsLeft size={18} /> Glisser pour annuler</span>
+      {recording && <div className={`chat-rec-bar${cancelling ? ' is-cancel' : ''}`} role="status" style={{ '--rec-progress': progress }} onPointerMove={onMicMove} onPointerUp={onMicUp} onPointerCancel={() => finish(false)}>
+        <span className="chat-rec-fill" aria-hidden="true" />
+        <span ref={xMark} className="chat-rec-x" aria-hidden="true"><X size={16} strokeWidth={3} /></span>
+        <span className="chat-rec-hint" style={{ transform: `translateX(${-slide * 0.5}px)`, opacity: Math.max(0, 1 - progress * 1.3) }}><ChevronsLeft size={18} /> Glisser jusqu’au bout pour supprimer</span>
       </div>}
       <button type="button" className={`chat-mic${recording ? ' is-recording' : ''}${cancelling ? ' is-cancel' : ''}`} aria-label="Enregistrer un vocal" title="Maintenir pour parler" disabled={busy} onPointerDown={onMicDown} onPointerMove={onMicMove} onPointerUp={onMicUp} onPointerCancel={() => finish(false)} onContextMenu={e => e.preventDefault()}><AudioLines size={24} /></button>
       {recording && finger && typeof document !== 'undefined' && createPortal(<div className={`chat-rec-bubble${cancelling ? ' is-cancel' : ''}`} aria-hidden="true" style={{ left: Math.max(56, Math.min(finger.x, (window.innerWidth || 400) - 56)), top: finger.y - 64 }}>
-        <svg viewBox="0 0 100 100" className="chat-rec-ring"><circle cx="50" cy="50" r="47" pathLength="60" style={{ strokeDasharray: `${seconds} 60` }} /></svg>
+        <svg viewBox="0 0 100 100" className="chat-rec-ring"><circle className="chat-rec-track" cx="50" cy="50" r="45" /><circle className="chat-rec-progress" cx="50" cy="50" r="45" /></svg>
         {cancelling ? <Trash2 size={30} /> : <><span className="chat-rec-dots"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></span><span className="chat-rec-time">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</span></>}
       </div>, document.body)}
       {busy && <span role="status" className="tiny">Envoi…</span>}
