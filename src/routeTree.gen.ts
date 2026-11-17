@@ -26,6 +26,7 @@ import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminChatEvidenceRouteImport } from './routes/_authenticated.admin.chat-evidence'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated.admin.dashboard'
 import { Route as AuthenticatedAdminDriversRouteImport } from './routes/_authenticated.admin.drivers'
+import { Route as AuthenticatedAdminMonitoringRouteImport } from './routes/_authenticated.admin.monitoring'
 import { Route as AuthenticatedAdminPricingRouteImport } from './routes/_authenticated.admin.pricing'
 import { Route as AuthenticatedAdminRidesRouteImport } from './routes/_authenticated.admin.rides'
 import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated.admin.support'
@@ -42,6 +43,7 @@ import { Route as AuthenticatedDriverWalletRouteImport } from './routes/_authent
 import { Route as AuthenticatedRidesIdRouteImport } from './routes/_authenticated.rides.$id'
 import { Route as ApiPublicJobsChatRetentionRouteImport } from './routes/api/public/jobs/chat-retention'
 import { Route as ApiPublicJobsWeeklyPayoutsRouteImport } from './routes/api/public/jobs/weekly-payouts'
+import { Route as ApiPublicJobsWithdrawalNotificationsRouteImport } from './routes/api/public/jobs/withdrawal-notifications'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -130,6 +132,12 @@ const AuthenticatedAdminDriversRoute =
   AuthenticatedAdminDriversRouteImport.update({
     id: '/admin/drivers',
     path: '/admin/drivers',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminMonitoringRoute =
+  AuthenticatedAdminMonitoringRouteImport.update({
+    id: '/admin/monitoring',
+    path: '/admin/monitoring',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminPricingRoute =
@@ -224,6 +232,12 @@ const ApiPublicJobsWeeklyPayoutsRoute =
     path: '/api/public/jobs/weekly-payouts',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsWithdrawalNotificationsRoute =
+  ApiPublicJobsWithdrawalNotificationsRouteImport.update({
+    id: '/api/public/jobs/withdrawal-notifications',
+    path: '/api/public/jobs/withdrawal-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -248,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/drivers': typeof AuthenticatedAdminDriversRoute
+  '/admin/monitoring': typeof AuthenticatedAdminMonitoringRoute
   '/admin/pricing': typeof AuthenticatedAdminPricingRoute
   '/admin/rides': typeof AuthenticatedAdminRidesRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
@@ -264,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
+  '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -283,6 +299,7 @@ export interface FileRoutesByTo {
   '/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/drivers': typeof AuthenticatedAdminDriversRoute
+  '/admin/monitoring': typeof AuthenticatedAdminMonitoringRoute
   '/admin/pricing': typeof AuthenticatedAdminPricingRoute
   '/admin/rides': typeof AuthenticatedAdminRidesRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
@@ -299,6 +316,7 @@ export interface FileRoutesByTo {
   '/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
+  '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -320,6 +338,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/drivers': typeof AuthenticatedAdminDriversRoute
+  '/_authenticated/admin/monitoring': typeof AuthenticatedAdminMonitoringRoute
   '/_authenticated/admin/pricing': typeof AuthenticatedAdminPricingRoute
   '/_authenticated/admin/rides': typeof AuthenticatedAdminRidesRoute
   '/_authenticated/admin/support': typeof AuthenticatedAdminSupportRoute
@@ -336,6 +355,7 @@ export interface FileRoutesById {
   '/_authenticated/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
+  '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -357,6 +377,7 @@ export interface FileRouteTypes {
     | '/admin/chat-evidence'
     | '/admin/dashboard'
     | '/admin/drivers'
+    | '/admin/monitoring'
     | '/admin/pricing'
     | '/admin/rides'
     | '/admin/support'
@@ -373,6 +394,7 @@ export interface FileRouteTypes {
     | '/rides/$id'
     | '/api/public/jobs/chat-retention'
     | '/api/public/jobs/weekly-payouts'
+    | '/api/public/jobs/withdrawal-notifications'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -392,6 +414,7 @@ export interface FileRouteTypes {
     | '/admin/chat-evidence'
     | '/admin/dashboard'
     | '/admin/drivers'
+    | '/admin/monitoring'
     | '/admin/pricing'
     | '/admin/rides'
     | '/admin/support'
@@ -408,6 +431,7 @@ export interface FileRouteTypes {
     | '/rides/$id'
     | '/api/public/jobs/chat-retention'
     | '/api/public/jobs/weekly-payouts'
+    | '/api/public/jobs/withdrawal-notifications'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -428,6 +452,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/chat-evidence'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/drivers'
+    | '/_authenticated/admin/monitoring'
     | '/_authenticated/admin/pricing'
     | '/_authenticated/admin/rides'
     | '/_authenticated/admin/support'
@@ -444,6 +469,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rides/$id'
     | '/api/public/jobs/chat-retention'
     | '/api/public/jobs/weekly-payouts'
+    | '/api/public/jobs/withdrawal-notifications'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -459,6 +485,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiPublicJobsChatRetentionRoute: typeof ApiPublicJobsChatRetentionRoute
   ApiPublicJobsWeeklyPayoutsRoute: typeof ApiPublicJobsWeeklyPayoutsRoute
+  ApiPublicJobsWithdrawalNotificationsRoute: typeof ApiPublicJobsWithdrawalNotificationsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -583,6 +610,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminDriversRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/monitoring': {
+      id: '/_authenticated/admin/monitoring'
+      path: '/admin/monitoring'
+      fullPath: '/admin/monitoring'
+      preLoaderRoute: typeof AuthenticatedAdminMonitoringRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/pricing': {
       id: '/_authenticated/admin/pricing'
       path: '/admin/pricing'
@@ -695,6 +729,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsWeeklyPayoutsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/withdrawal-notifications': {
+      id: '/api/public/jobs/withdrawal-notifications'
+      path: '/api/public/jobs/withdrawal-notifications'
+      fullPath: '/api/public/jobs/withdrawal-notifications'
+      preLoaderRoute: typeof ApiPublicJobsWithdrawalNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -725,6 +766,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminChatEvidenceRoute: typeof AuthenticatedAdminChatEvidenceRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminDriversRoute: typeof AuthenticatedAdminDriversRoute
+  AuthenticatedAdminMonitoringRoute: typeof AuthenticatedAdminMonitoringRoute
   AuthenticatedAdminPricingRoute: typeof AuthenticatedAdminPricingRoute
   AuthenticatedAdminRidesRoute: typeof AuthenticatedAdminRidesRoute
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
@@ -749,6 +791,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminChatEvidenceRoute: AuthenticatedAdminChatEvidenceRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
   AuthenticatedAdminDriversRoute: AuthenticatedAdminDriversRoute,
+  AuthenticatedAdminMonitoringRoute: AuthenticatedAdminMonitoringRoute,
   AuthenticatedAdminPricingRoute: AuthenticatedAdminPricingRoute,
   AuthenticatedAdminRidesRoute: AuthenticatedAdminRidesRoute,
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
@@ -779,6 +822,8 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiPublicJobsChatRetentionRoute: ApiPublicJobsChatRetentionRoute,
   ApiPublicJobsWeeklyPayoutsRoute: ApiPublicJobsWeeklyPayoutsRoute,
+  ApiPublicJobsWithdrawalNotificationsRoute:
+    ApiPublicJobsWithdrawalNotificationsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
