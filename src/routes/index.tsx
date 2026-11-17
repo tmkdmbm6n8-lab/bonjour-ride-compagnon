@@ -1,4 +1,7 @@
-import {createFileRoute} from '@tanstack/react-router';
+import {createFileRoute, Navigate} from '@tanstack/react-router';
+import {useEffect, useState} from 'react';
+import {Capacitor} from '@capacitor/core';
+import {useSession} from '@/lib/archive-auth';
 import Link from '@/lib/archive-navigation';
 import {
   Zap, ShieldCheck, Wallet, Radio, Route as RouteIcon, Car, Crown, Users,
@@ -57,6 +60,19 @@ const STEPS = [
 ];
 
 function LandingPage() {
+  const {data: session, status} = useSession();
+  const [nativeApp, setNativeApp] = useState<boolean | null>(null);
+  useEffect(() => { setNativeApp(Capacitor.isNativePlatform()); }, []);
+
+  // Restore the verified session before showing the public landing page.
+  if (nativeApp === null || (nativeApp && status === 'loading')) {
+    return <div role="status" aria-live="polite" style={{minHeight: '100dvh', display: 'grid', placeItems: 'center', background: '#0b0c10', color: '#f3f4f6'}}>Ouverture de StrasDrive…</div>;
+  }
+  if (nativeApp && session?.user) {
+    const destination = session.user.role === 'driver' ? '/driver/dashboard'
+      : session.user.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    return <Navigate to={destination} replace />;
+  }
   return (
     <div className="landing-page brand-theme">
       <SiteHeader />

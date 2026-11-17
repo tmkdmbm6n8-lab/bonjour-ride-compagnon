@@ -5633,6 +5633,13 @@ a.activity-pill:hover {
   pointer-events: none;
 }
 
+@media (max-width: 900px) {
+  .drv-cockpit-bottom-bar {
+    position: fixed;
+    bottom: calc(var(--shell-nav-height, calc(84px + env(safe-area-inset-bottom, 0px))) + 18px);
+  }
+}
+
 .drv-go-btn {
   pointer-events: auto !important;
   cursor: pointer;
