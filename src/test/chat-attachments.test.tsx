@@ -61,7 +61,7 @@ describe('pièces jointes de discussion',()=>{
   await screen.findByRole('status');
   const now=Date.now();vi.spyOn(Date,'now').mockReturnValue(now+3000);
   fireEvent.pointerMove(mic,{clientX:160});fireEvent.pointerUp(mic,{clientX:160});
-  console.log('TOAST',JSON.stringify(mocks.toast.mock.calls));
+  await new Promise(r=>setTimeout(r,50));console.log('DBG',JSON.stringify(mocks.toast.mock.calls),document.body.textContent);
   await waitFor(()=>expect(mocks.fetch).toHaveBeenCalled());
   expect(mocks.fetch.mock.calls[0][0]).toBe('/api/rides/ride/attachment');
  });
