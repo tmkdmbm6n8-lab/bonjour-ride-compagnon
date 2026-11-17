@@ -34,6 +34,7 @@ import useGeolocation from "@/hooks/useGeolocation";
 import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
 import MessageAlert from "@/components/ride/MessageAlert";
+import { whenChatMessageReady } from "@/lib/chat-media-cache";
 import DispatchWheel from "@/components/ride/DispatchWheel";
 import Waybill from "@/components/driver/Waybill";
 import DriverHome from "@/components/driver/DriverHome";
@@ -99,12 +100,14 @@ function DriverDashboard() {
         );
       }
       if (type === "message" && data?.from === "rider") {
-        playSound("message");
-        if (!chatOpenRef.current) {
-          setUnread((u) => u + 1);
-          setLastMsg(data);
-          if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
-        }
+        whenChatMessageReady(data.rideId, data).then(() => {
+          playSound("message");
+          if (!chatOpenRef.current) {
+            setUnread((u) => u + 1);
+            setLastMsg(data);
+            if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+          }
+        });
       }
       if (type === "rider-cancelled" || type === "offer-withdrawn") playSound("cancelled");
     },

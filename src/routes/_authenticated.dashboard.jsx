@@ -32,6 +32,7 @@ import MapView from "@/components/ArchiveMap";
 import PlaceSearch from "@/components/maps/PlaceSearch";
 import ChatSheet from "@/components/ride/ChatSheet";
 import MessageAlert from "@/components/ride/MessageAlert";
+import { whenChatMessageReady } from "@/lib/chat-media-cache";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { Avatar, Stars, StarPicker, VEHICLE_LABELS, money } from "@/components/ui/bits";
@@ -131,7 +132,6 @@ function RiderDashboard() {
         completed: "completed",
       }[type];
       if (sound) playSound(sound);
-      if (type === "message" && data?.from === "driver") playSound("message");
       if (type === "accepted") toast("Chauffeur trouvé — il est en route !", "success");
       if (type === "arrived") toast("Votre chauffeur est arrivé", "success", 5000);
       if (type === "started") toast("Course démarrée — bon trajet", "info");
@@ -145,10 +145,14 @@ function RiderDashboard() {
           8000,
         );
       }
-      if (type === "message" && data?.from === "driver" && !chatOpenRef.current) {
-        setUnread((u) => u + 1);
-        setLastMsg(data);
-        if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+      if (type === "message" && data?.from === "driver") {
+        whenChatMessageReady(data.rideId, data).then(() => {
+          playSound("message");
+          if (chatOpenRef.current) return;
+          setUnread((u) => u + 1);
+          setLastMsg(data);
+          if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+        });
       }
     },
     [toast],
