@@ -45,6 +45,8 @@ import { playSound } from "@/lib/sounds";
 import useVisualViewport from "@/hooks/useVisualViewport";
 import useGeolocation from "@/hooks/useGeolocation";
 import { useLiveRoute } from "@/hooks/useLiveRoute";
+import { riderTripActivity } from "@/lib/live-activity";
+import { syncLiveActivity, stopLiveActivity } from "@/lib/live-activity-native";
 import { routeQualityLabel } from "@/lib/vtc-routing";
 import { readRideDraft, clearRideDraft } from "@/lib/ride-draft";
 import { drawableRoute, arrivalClock } from "@/lib/utils/route-display";
@@ -431,6 +433,12 @@ function RiderDashboard() {
   // Live distance + ETA: traffic-aware route from the server (Google Routes, shared with the driver),
   // with a rough estimate from the driver's GPS until the first answer arrives.
   const liveRoute = useLiveRoute(phase === "active" ? ride?.id : null, ride?.status);
+  useEffect(() => {
+    if (loadingActive) return;
+    const activity = riderTripActivity(ride, liveRoute);
+    if (activity) void syncLiveActivity(activity);
+    else void stopLiveActivity('rider_trip');
+  }, [loadingActive, ride?.id, ride?.status, liveRoute?.status, liveRoute?.durationSeconds]);
   const liveTrip = useMemo(() => {
     if (phase !== "active" || !ride || (ride.status !== "accepted" && ride.status !== "in_progress")) return null;
     const toDestination = ride.status === "in_progress";

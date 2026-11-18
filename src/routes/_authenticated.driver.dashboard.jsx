@@ -49,6 +49,8 @@ import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFo
 import { playSound, startRinging } from "@/lib/sounds";
 import ExternalNavigationButton from "@/components/driver/ExternalNavigationButton";
 import { useLiveRoute } from "@/hooks/useLiveRoute";
+import { driverOfferActivity } from "@/lib/live-activity";
+import { syncLiveActivity, stopLiveActivity } from "@/lib/live-activity-native";
 import useRouteRadars from "@/hooks/useRouteRadars";
 import { routeQualityLabel } from "@/lib/vtc-routing";
 import { drawableRoute, arrivalClock } from "@/lib/utils/route-display";
@@ -134,6 +136,13 @@ function DriverDashboard() {
     complete,
     cancelTrip,
   } = useDriverState({ onEvent });
+
+  useEffect(() => {
+    if (loading) return;
+    const activity = driverOfferActivity(offer);
+    if (activity) void syncLiveActivity(activity);
+    else void stopLiveActivity('driver_offer');
+  }, [loading, offer?.rideId, offer?.receivedAt, offer?.expiresInSeconds, offer?.etaMinutes, offer?.durationSeconds, offer?.earnings]);
 
   // A single local fix keeps the idle map centered, without road-alert polling or sounds.
   const { position: idlePosition } = useGeolocation({ watch: false });

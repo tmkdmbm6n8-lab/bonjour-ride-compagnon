@@ -27,6 +27,7 @@ vi.mock('@/components/driver/ExternalNavigationButton', () => ({ default: () => 
 vi.mock('@/components/ui/CloseControl', () => ({ default: () => null }));
 vi.mock('@/lib/sounds', () => ({ playSound: vi.fn(), startRinging: vi.fn() }));
 vi.mock('@/lib/chat-media-cache', () => ({ whenChatMessageReady: vi.fn() }));
+vi.mock('@/lib/live-activity-native', () => ({ syncLiveActivity: vi.fn(), stopLiveActivity: vi.fn() }));
 afterEach(cleanup);
 
 it('ouvre l’accueil chauffeur et lui transmet les commandes de disponibilité', () => {
