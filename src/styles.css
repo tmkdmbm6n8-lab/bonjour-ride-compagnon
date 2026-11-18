@@ -6877,6 +6877,56 @@ a.activity-pill:hover {
   .rider-account-balance:hover { background: #272a34; color: #fff; }
   .rider-account-signout:hover { background: rgba(239,68,68,.2); }
   .rider-account button:focus-visible, .rider-account a:focus-visible { outline-color: #facc15; }
+  .shell-rider .activity-page {
+    max-width: 1320px;
+    padding: 48px 28px 80px;
+    color: #f1f5f9;
+  }
+  .shell-rider .activity-side a {
+    display: inline-flex;
+    padding: 12px 16px;
+    border: 1px solid rgba(234,179,8,.22);
+    border-radius: 12px;
+    background: rgba(234,179,8,.08);
+    color: #f4cf72;
+  }
+  .shell-rider .activity-main h1,
+  .shell-rider .activity-section-heading h2 { color: #f8fafc; }
+  .shell-rider .activity-upcoming-card,
+  .shell-rider .activity-ride-card,
+  .shell-rider .activity-empty {
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 20px;
+    background: #11141b;
+    color: #edf0f6;
+    box-shadow: 0 14px 35px rgba(0,0,0,.2);
+  }
+  .shell-rider .activity-empty { padding: 28px; }
+  .shell-rider .activity-empty p,
+  .shell-rider .activity-ride-info p { color: #b6c0d0; }
+  .shell-rider .activity-empty > svg { color: #e9bd50; }
+  .shell-rider .activity-ride-card { padding: 16px; }
+  .shell-rider .activity-map { background: #1b2029; color: #e9bd50; }
+  .shell-rider .activity-destination { color: #f8fafc; }
+  .shell-rider .activity-pill {
+    background: #20232c;
+    border: 1px solid rgba(255,255,255,.1);
+    color: #edf0f6;
+  }
+  .shell-rider button.activity-pill:hover,
+  .shell-rider a.activity-pill:hover { background: #302b1e; border-color: #9f7b28; color: #f9d46e; }
+  .shell-rider .activity-pill svg { color: #e9bd50; }
+  .shell-rider .activity-filters select { color: #edf0f6; }
+  .shell-rider .activity-filters option { background: #20232c; color: #edf0f6; }
+  .shell-rider .activity-banner { background: #171a20; }
+  .shell-rider .activity-banner > rect { fill: #171a20; }
+  .shell-rider .activity-banner > path:nth-of-type(1) { fill: #302b1c; }
+  .shell-rider .activity-banner > path:nth-of-type(2) { fill: #665020; }
+  .shell-rider .activity-banner > path:nth-of-type(3) { fill: #b78a2a; }
+  .shell-rider .activity-banner > path:nth-of-type(4) { fill: #171a20; }
+  .shell-rider .activity-page a:focus-visible,
+  .shell-rider .activity-page button:focus-visible,
+  .shell-rider .activity-page select:focus-visible { outline: 2px solid #facc15; outline-offset: 3px; }
 }
 
 /* Rider booking stays anchored above the tabs, including while typing. */
