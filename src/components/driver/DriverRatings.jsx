@@ -5,6 +5,13 @@ import useDriverData from '@/hooks/useDriverData';
 function RatingContent() {
   const { data, error, reload } = useDriverData('/api/drivers/me/ratings');
   if (!data) return <div>{error ? <><p role="alert">{error}</p><button className="btn btn-secondary" onClick={reload}>Réessayer</button></> : <p className="muted">Chargement de vos avis…</p>}</div>;
+  if (data.locked) return <div className="driver-ratings-unlock">
+    <strong className="driver-ratings-progress" aria-label={`${data.count} avis sur ${data.threshold}`}>{data.count}<span>/{data.threshold}</span></strong>
+    <Star className="driver-ratings-unlock-star" size={104} strokeWidth={1.4} aria-hidden="true" />
+    <h2>Votre aperçu détaillé se prépare</h2>
+    <p>Atteignez {data.threshold} avis pour débloquer un aperçu plus détaillé de vos notes.</p>
+    <div className="driver-ratings-progress-track" role="progressbar" aria-label="Progression vers le détail des avis" aria-valuemin={0} aria-valuemax={data.threshold} aria-valuenow={data.count}><span style={{ width: `${data.count / data.threshold * 100}%` }} /></div>
+  </div>;
   const max = Math.max(1, ...data.distribution.map((row) => row.count));
   return <div className="driver-ratings">
     <div className="driver-rating-score"><Star size={34} aria-hidden="true" /><strong>{data.average == null ? '—' : data.average.toFixed(2).replace('.', ',')}</strong><span>{data.count} note{data.count > 1 ? 's' : ''}</span></div>
