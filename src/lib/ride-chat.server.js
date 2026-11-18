@@ -421,6 +421,50 @@ export async function handleAdminReportAction(admin, body) {
     return { ok: true, message: "Signalement classé sans suite (injustifié)." };
   }
 
+  if (action === "classify_report") {
+    const { rideId, degree, comment, warningText, dismiss } = body;
+    const result = await recordAdminDecision(admin, {
+      rideId,
+      degree,
+      comment,
+      isDismissed: Boolean(dismiss),
+    });
+
+    if (warningText && typeof warningText === "string" && warningText.trim().length >= 5) {
+      const ride = await loadRide(admin, rideId);
+      const authUser = required(await admin.auth.admin.getUserById(ride.driver_id)).user;
+      if (authUser?.email) {
+        const recipient = required(await admin.from("profiles").select("name").eq("id", ride.driver_id).single());
+        const thread = newSupportThread(
+          ride.driver_id,
+          "Avertissement officiel",
+          warningText.trim(),
+          new Date().toISOString(),
+          "driver",
+        );
+        thread.messages[0].from = "admin";
+        await admin.from("contact_messages").insert({
+          topic: "driver_conversation",
+          name: recipient?.name || "Chauffeur",
+          email: authUser.email.toLowerCase(),
+          message: JSON.stringify(thread),
+        });
+      }
+    }
+
+    return {
+      ok: true,
+      message: dismiss
+        ? "Signalement classé sans suite (injustifié)."
+        : result.driverSuspended
+          ? "Décision enregistrée. Le compte chauffeur est suspendu."
+          : "Décision enregistrée et avertissement comptabilisé.",
+      decision: result.decision,
+      activeWarningsCount: result.activeWarningsCount,
+      driverSuspended: result.driverSuspended,
+    };
+  }
+
   if (action === "suspend_driver") {
     await admin
       .from("drivers")
