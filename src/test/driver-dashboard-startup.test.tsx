@@ -1,0 +1,39 @@
+import React from 'react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { Route } from '@/routes/_authenticated.driver.dashboard';
+
+const fixture = vi.hoisted(() => ({ home: vi.fn() }));
+vi.mock('@/components/DriverLayout', () => ({ default: ({ children }: any) => <>{children}</> }));
+vi.mock('@/components/driver/DriverHome', () => ({ default: (props: any) => { fixture.home(props); return <div>Accueil chauffeur chargé</div>; } }));
+vi.mock('@/hooks/useDriverState', () => ({ default: () => ({ loading: false, profile: { vehicle: { plate: 'AA-123-AA' } }, online: false, position: null, offer: null, ride: null, busy: false, isConnected: false }) }));
+vi.mock('@/hooks/useGeolocation', () => ({ default: () => ({ position: null }) }));
+vi.mock('@/hooks/useLiveRoute', () => ({ useLiveRoute: () => null }));
+vi.mock('@/hooks/useRouteRadars', () => ({ default: () => ({ count: 0 }) }));
+vi.mock('@/lib/archive-fetch', () => ({ apiFetch: vi.fn() }));
+vi.mock('@/lib/archive-navigation', () => ({ default: ({ children }: any) => <>{children}</> }));
+vi.mock('@/components/ui/Toast', () => ({ useToast: () => vi.fn() }));
+vi.mock('@/components/ArchiveMap', () => ({ default: () => null }));
+vi.mock('@/components/ui/Modal', () => ({ default: () => null }));
+vi.mock('@/components/driver/Waybill', () => ({ default: () => null }));
+vi.mock('@/components/ride/ChatSheet', () => ({ default: () => null }));
+vi.mock('@/components/ride/MessageAlert', () => ({ default: () => null }));
+vi.mock('@/components/ride/DispatchWheel', () => ({ default: () => null }));
+vi.mock('@/components/ride/RideSafety', () => ({ default: () => null }));
+vi.mock('@/components/driver/PassengerInfo', () => ({ default: () => null }));
+vi.mock('@/components/driver/RidePauseButton', () => ({ default: () => null }));
+vi.mock('@/components/driver/FinishRideButton', () => ({ default: () => null }));
+vi.mock('@/components/driver/ExternalNavigationButton', () => ({ default: () => null }));
+vi.mock('@/components/ui/CloseControl', () => ({ default: () => null }));
+vi.mock('@/lib/sounds', () => ({ playSound: vi.fn(), startRinging: vi.fn() }));
+vi.mock('@/lib/chat-media-cache', () => ({ whenChatMessageReady: vi.fn() }));
+afterEach(cleanup);
+
+it('ouvre l’accueil chauffeur et lui transmet les commandes de disponibilité', () => {
+  const Component = Route.options.component as any;
+  render(<Component />);
+  expect(screen.getByText('Accueil chauffeur chargé')).toBeTruthy();
+  expect(fixture.home.mock.calls.at(-1)?.[0].onToggle).toEqual(expect.any(Function));
+  expect(fixture.home.mock.calls.at(-1)?.[0].onTogglePet).toEqual(expect.any(Function));
+  expect(fixture.home.mock.calls.at(-1)?.[0].onToggleCash).toEqual(expect.any(Function));
+});

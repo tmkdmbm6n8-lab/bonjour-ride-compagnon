@@ -595,12 +595,16 @@ function DriverDashboard() {
             online={online}
             busy={busy}
             isConnected={isConnected}
-            position={position}
+            needsVehicle={needsVehicle}
+            position={position || idlePosition}
             center={center}
-            onToggleOnline={toggleOnline}
-            profile={profile}
-            earnings={earnings}
-            offers={offers}
+            onToggle={handleToggle}
+            acceptsPet={acceptsPet}
+            togglingPet={togglingPet}
+            onTogglePet={handleTogglePet}
+            acceptsCash={acceptsCash}
+            togglingCash={togglingCash}
+            onToggleCash={handleToggleCash}
           />
         </>
       )}
