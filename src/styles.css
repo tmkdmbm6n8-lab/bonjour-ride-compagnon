@@ -5374,6 +5374,10 @@ a.activity-pill:hover {
   flex-direction: column;
   gap: 10px;
 }
+.driver-warning-summary { width: 100%; display: flex; align-items: center; gap: 12px; margin: 0 0 16px; padding: 16px; border: 1px solid rgba(234,179,8,.4); border-radius: 16px; background: #261e10; color: #f5d783; text-align: left; cursor: pointer; }
+.driver-warning-summary > span { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.driver-warning-summary small { color: #cfbd93; }
+.driver-warning-summary:focus-visible { outline: 2px solid #facc15; outline-offset: 3px; }
 .drv-inbox-card {
   display: flex;
   flex-direction: column;

@@ -25,10 +25,13 @@ function InboxPage() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
   const [read, setRead] = useState({});
+  const [warningOpen, setWarningOpen] = useState(false);
 
   const { data: session } = useSession();
   const readKey = `strasdrive:inbox-read:${session?.user?.id || "account"}`;
   const { data, error, reload } = useDriverData(`/api/drivers/me/inbox?page=${page}`, 15000);
+  const { data: driverData } = useDriverData('/api/drivers/me', 15000);
+  const activeWarnings = driverData?.driver?.activeWarningsCount || 0;
   const requestSubject = subjectCategory === "other" ? subject.trim() : subjectCategory;
 
   useEffect(() => {
@@ -167,6 +170,15 @@ function InboxPage() {
 
       <div className="drv-inbox-filters"><span className="drv-inbox-pill active">Administration</span></div>
 
+      {activeWarnings > 0 && <button type="button" className="driver-warning-summary" onClick={() => setWarningOpen(true)}>
+        <ShieldCheck size={20} /> <span><strong>{activeWarnings} avertissement{activeWarnings > 1 ? 's' : ''} actif{activeWarnings > 1 ? 's' : ''}</strong><small>Appuyez pour voir les informations</small></span><ChevronRight size={18} />
+      </button>}
+      <Modal open={warningOpen} onClose={() => setWarningOpen(false)} title="Vos avertissements" portal keyboardSafe sheetOnMobile={false}>
+        <p>Vous avez {activeWarnings} avertissement{activeWarnings > 1 ? 's' : ''} actif{activeWarnings > 1 ? 's' : ''}.</p>
+        <p className="mt-3">À trois avertissements actifs, votre compte chauffeur sera suspendu définitivement. Contactez l’assistance si vous avez besoin de précisions.</p>
+        <button type="button" className="btn btn-secondary btn-full mt-4" onClick={() => setWarningOpen(false)}>Fermer</button>
+      </Modal>
+
       {error && (
         <p className="driver-notice" role="alert">
           {error}
@@ -178,7 +190,7 @@ function InboxPage() {
 
       {!data && !entries.length && !error && <Loading label="Chargement des conversations…" />}
 
-      {data && !visible.length && (
+      {data && !visible.length && activeWarnings === 0 && (
         <div className="drv-inbox-empty">
           <MessagesSquare size={36} />
           <p>Aucun message dans cette section.</p>

@@ -3,7 +3,7 @@ import {
   recordAdminDecision,
   getDriverDecisions,
 } from "./driver-warnings.server";
-import { countActiveWarnings } from "./driver-warnings";
+import { countActiveWarnings, WARNING_DEGREES } from "./driver-warnings";
 import { newSupportThread } from "./vtc-support";
 import { createHmac } from "node:crypto";
 import {
@@ -430,25 +430,29 @@ export async function handleAdminReportAction(admin, body) {
       isDismissed: Boolean(dismiss),
     });
 
-    if (warningText && typeof warningText === "string" && warningText.trim().length >= 5) {
+    if (!dismiss && WARNING_DEGREES[degree]?.countsAsWarning) {
       const ride = await loadRide(admin, rideId);
       const authUser = required(await admin.auth.admin.getUserById(ride.driver_id)).user;
-      if (authUser?.email) {
+      if (!authUser?.email) throw new Error("Décision enregistrée, mais l’avertissement n’a pas pu être envoyé : adresse du chauffeur indisponible.");
+      {
         const recipient = required(await admin.from("profiles").select("name").eq("id", ride.driver_id).single());
+        const explanation = typeof warningText === "string" && warningText.trim().length >= 5
+          ? warningText.trim().slice(0, 4000)
+          : "L’administration vous a adressé un avertissement à la suite d’un signalement vérifié. Contactez l’assistance si vous avez besoin de précisions.";
         const thread = newSupportThread(
           ride.driver_id,
           "Avertissement officiel",
-          warningText.trim(),
+          explanation,
           new Date().toISOString(),
           "driver",
         );
         thread.messages[0].from = "admin";
-        await admin.from("contact_messages").insert({
+        required(await admin.from("contact_messages").insert({
           topic: "driver_conversation",
           name: recipient?.name || "Chauffeur",
           email: authUser.email.toLowerCase(),
           message: JSON.stringify(thread),
-        });
+        }));
       }
     }
 

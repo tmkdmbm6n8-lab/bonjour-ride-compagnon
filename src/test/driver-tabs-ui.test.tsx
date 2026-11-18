@@ -146,6 +146,15 @@ describe("onglets chauffeur", () => {
     expect(screen.getByRole("dialog", { name: "Mon versement" })).toBeTruthy();
     expect(screen.getByText("StrasDrive Régulation")).toBeTruthy();
   });
+  it('montre les avertissements actifs dans l’Inbox', () => {
+    fixtures.data['/api/drivers/me/inbox'] = { threads: [], rides: [], hasMore: false };
+    fixtures.data['/api/drivers/me'] = { driver: { activeWarningsCount: 1 } };
+    const Component = InboxRoute.options.component as any;
+    render(<Component />);
+    fireEvent.click(screen.getByRole('button', { name: /1 avertissement actif/ }));
+    expect(screen.getByRole('dialog', { name: 'Vos avertissements' })).toBeTruthy();
+    expect(screen.getByText(/À trois avertissements actifs/)).toBeTruthy();
+  });
   it("garde l’administration seule et exige une confirmation avant suppression", async () => {
     fixtures.data["/api/drivers/me/inbox"] = {
       threads: [{id:'11111111-1111-1111-1111-111111111111',subject:'Conversation à supprimer',messages:[{id:'message',from:'admin',text:'Bonjour',createdAt:'2026-11-18T08:00:00Z'}],status:'open',updatedAt:'2026-11-18T08:00:00Z'}],
