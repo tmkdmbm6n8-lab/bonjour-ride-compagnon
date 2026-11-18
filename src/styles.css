@@ -8698,3 +8698,8 @@ a.activity-pill:hover {
 .admin-record-message p { margin-top: 8px; white-space: pre-wrap; }
 .admin-record-message img, .admin-record-message audio { max-width: 100%; margin-top: 12px; }
 @media(max-width:500px) { .admin-record-people { grid-template-columns: minmax(0,1fr); gap: 0; } }
+
+/* Aide IA de l'assistance admin : suggestion relue par l'admin, jamais envoyée seule. */
+.admin-support-assist { margin-top: 12px; }
+.admin-support-assist-card { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--gold-500); border-radius: 12px; display: flex; flex-direction: column; gap: 8px; }
+.admin-support-assist-card ul { margin: 0; padding-left: 18px; }
