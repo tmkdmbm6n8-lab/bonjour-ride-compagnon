@@ -232,23 +232,30 @@ function DriverDashboard() {
     if (actionBusy || !ride) return;
     setActionBusy(true);
     try {
-      if (!navigator.geolocation) throw new Error('Position GPS introuvable — activez la localisation');
-      const location = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
-        (fix) => resolve({ lat: fix.coords.latitude, lng: fix.coords.longitude }),
-        () => reject(new Error('Position GPS introuvable — activez la localisation et réessayez.')),
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
-      ));
+      if (!navigator.geolocation) throw new Error("Position GPS introuvable — activez la localisation");
+      const location = await new Promise((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(
+          (fix) => resolve({ lat: fix.coords.latitude, lng: fix.coords.longitude }),
+          () => reject(new Error("Position GPS introuvable — activez la localisation et réessayez.")),
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+        ),
+      );
       const problem = pickupZoneProblem(location, ride.pickup, ARRIVAL_ZONE_METERS);
-      if (problem) { setArrivalNotice(problem); return; }
-      const res = await fetch('/api/drivers/location', { method: 'POST', body: JSON.stringify(location) });
+      if (problem) {
+        setArrivalNotice(problem);
+        return;
+      }
+      const res = await fetch("/api/drivers/location", { method: "POST", body: JSON.stringify(location) });
       const data = await res.json();
-      if (!res.ok || data.ignored) throw new Error(data.error || 'Impossible de transmettre votre position.');
+      if (!res.ok || data.ignored) throw new Error(data.error || "Impossible de transmettre votre position.");
       await arrive();
-      toast('Le passager a été informé de votre arrivée', 'success');
+      toast("Le passager a été informé de votre arrivée", "success");
     } catch (error) {
-      if (/GPS|localisation|prise en charge/i.test(error.message || '')) setArrivalNotice(error.message);
-      else toast(error.message || 'Impossible de signaler votre arrivée', 'error', 4000);
-    } finally { setActionBusy(false); }
+      if (/GPS|localisation|prise en charge/i.test(error.message || "")) setArrivalNotice(error.message);
+      else toast(error.message || "Impossible de signaler votre arrivée", "error", 4000);
+    } finally {
+      setActionBusy(false);
+    }
   }
 
   async function handleComplete() {
@@ -560,29 +567,61 @@ function DriverDashboard() {
           </div>
         </div>
       ) : (
-        <DriverHome
-          onWaybill={() => setWaybillOpen(true)}
-          loading={loading}
-          online={online}
-          busy={busy}
-          isConnected={isConnected}
-          needsVehicle={needsVehicle}
-          position={position || idlePosition}
-          center={center}
-          onToggle={handleToggle}
-          acceptsPet={acceptsPet}
-          togglingPet={togglingPet}
-          onTogglePet={handleTogglePet}
-          acceptsCash={acceptsCash}
-          togglingCash={togglingCash}
-          onToggleCash={handleToggleCash}
-        />
+        <>
+          {profile?.activeWarningsCount > 0 && !profile?.isReportSuspended && (
+            <div
+              style={{
+                position: "fixed",
+                top: "calc(var(--sat, 0px) + 64px)",
+                left: 16,
+                right: 16,
+                zIndex: 35,
+                background: "#2a1b05",
+                border: "1px solid #f59e0b",
+                borderRadius: 10,
+                padding: "10px 14px",
+                color: "#fef3c7",
+                fontSize: "0.85rem",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+              }}
+            >
+              Avertissements actifs : {profile.activeWarningsCount} / 3. À trois avertissements actifs, votre compte
+              chauffeur sera suspendu définitivement.
+            </div>
+          )}
+          <DriverHome
+            onWaybill={() => setWaybillOpen(true)}
+            loading={loading}
+            online={online}
+            busy={busy}
+            isConnected={isConnected}
+            position={position}
+            center={center}
+            onToggleOnline={toggleOnline}
+            profile={profile}
+            earnings={earnings}
+            offers={offers}
+          />
+        </>
       )}
 
       <Waybill open={waybillOpen} onClose={() => setWaybillOpen(false)} />
-      <Modal open={Boolean(arrivalNotice)} onClose={() => setArrivalNotice("")} title="Zone de prise en charge" portal keyboardSafe sheetOnMobile={false}>
-        <p role="alert">{arrivalNotice.startsWith('Rapprochez-vous') ? 'Vous n’êtes pas dans la zone de prise en charge. Approchez-vous à moins de 20 mètres, puis réessayez.' : arrivalNotice}</p>
-        <button type="button" className="btn btn-secondary btn-full mt-4" onClick={() => setArrivalNotice("")}>Retour</button>
+      <Modal
+        open={Boolean(arrivalNotice)}
+        onClose={() => setArrivalNotice("")}
+        title="Zone de prise en charge"
+        portal
+        keyboardSafe
+        sheetOnMobile={false}
+      >
+        <p role="alert">
+          {arrivalNotice.startsWith("Rapprochez-vous")
+            ? "Vous n’êtes pas dans la zone de prise en charge. Approchez-vous à moins de 20 mètres, puis réessayez."
+            : arrivalNotice}
+        </p>
+        <button type="button" className="btn btn-secondary btn-full mt-4" onClick={() => setArrivalNotice("")}>
+          Retour
+        </button>
       </Modal>
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
 
