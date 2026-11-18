@@ -115,7 +115,7 @@ function PayoutCardInner() {
           <AlertTriangle size={18} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
           <div className="tiny">
             <strong>{money(owed)} de commissions sur vos courses en espèces.</strong> Ce montant est repris automatiquement
-            sur vos prochaines courses payées par carte bancaire (CB), avant tout virement.
+            sur vos prochaines courses payées par carte bancaire, avant tout virement.
           </div>
         </div>
       )}

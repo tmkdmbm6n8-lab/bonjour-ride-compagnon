@@ -205,15 +205,14 @@ export default function DriverHome({
       </div>
 
       <Modal open={sosOpen} onClose={() => setSosOpen(false)} title="SOS — Urgences en France" portal keyboardSafe sheetOnMobile={false}>
-        <p className="drv-sos-intro">En cas de danger immédiat, appelez le 112. Choisissez un service pour ouvrir l’appel sur votre téléphone.</p>
+        <p className="drv-sos-intro">StrasDrive ne contacte pas les secours à votre place. Pour votre sécurité, arrêtez-vous dès que possible dans un endroit sûr.</p>
         <div className="drv-sos-list">
           {[
-            ["Police / Gendarmerie", "Danger, agression, accident", "17"],
             ["SAMU", "Urgence médicale", "15"],
+            ["Police / Gendarmerie", "Danger, agression, accident", "17"],
             ["Sapeurs-pompiers", "Incendie, accident, secours", "18"],
             ["Urgences européennes", "Tous types d’urgence", "112"],
             ["Urgence par SMS", "Personnes sourdes, malentendantes ou ne pouvant pas parler", "114", "sms"],
-            ["SAMU social", "Hébergement d’urgence", "115"],
             ["Enfance en danger", "Enfant en danger ou en risque de l’être", "119"],
             ["Prévention du suicide", "Détresse psychologique", "3114"],
           ].map(([name, description, number, scheme = "tel"]) => (
@@ -223,7 +222,6 @@ export default function DriverHome({
             </a>
           ))}
         </div>
-        <p className="drv-sos-intro">StrasDrive ne contacte pas les secours à votre place. Pour votre sécurité, arrêtez-vous dès que possible dans un endroit sûr.</p>
       </Modal>
 
       {/* ── Modal Aide & Questions/Réponses ── */}

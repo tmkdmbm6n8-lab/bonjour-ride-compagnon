@@ -1,5 +1,6 @@
+import DriverRatings from '@/components/driver/DriverRatings';
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Circle, MapPin } from "lucide-react";
 import DriverLayout from "@/components/DriverLayout";
 import Link from "@/lib/archive-navigation";
@@ -9,7 +10,20 @@ import useDriverData from "@/hooks/useDriverData";
 import { parisDay, shiftDay, workDuration } from "@/lib/vtc-dates";
 function EarningsPage() {
   const [day, setDay] = useState(parisDay()),
-    [selectedDay, setSelectedDay] = useState(null);
+    [selectedDay, setSelectedDay] = useState(parisDay()),
+    [ratingsOpen, setRatingsOpen] = useState(false);
+  useEffect(() => {
+    const today = parisDay();
+    setDay(today); setSelectedDay(today);
+    let observedDay = today;
+    const checkDay = () => {
+      const currentDay = parisDay();
+      if (currentDay !== observedDay) { observedDay = currentDay; setDay(currentDay); setSelectedDay(currentDay); }
+    };
+    const timer = setInterval(checkDay, 60000);
+    window.addEventListener('focus', checkDay);
+    return () => { clearInterval(timer); window.removeEventListener('focus', checkDay); };
+  }, []);
   const { data, error, reload } = useDriverData(`/api/drivers/me/earnings?day=${day}`);
   const date = (value) =>
     new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "numeric", month: "short" }).format(
@@ -51,7 +65,7 @@ function EarningsPage() {
         <button
           onClick={() => {
             setDay(shiftDay(day, -7));
-            setSelectedDay(null);
+            setSelectedDay(shiftDay(day, -7));
           }}
           aria-label="Semaine précédente"
         >
@@ -64,7 +78,7 @@ function EarningsPage() {
           disabled={week.end > parisDay()}
           onClick={() => {
             setDay(shiftDay(day, 7));
-            setSelectedDay(null);
+            setSelectedDay(shiftDay(day, 7));
           }}
           aria-label="Semaine suivante"
         >
@@ -100,11 +114,12 @@ function EarningsPage() {
           <span>Courses</span>
           <strong>{selected ? selected.trips : week.trips}</strong>
         </div>
-        <div>
+        <button type="button" className="earnings-rating-button" onClick={() => setRatingsOpen(true)} aria-label="Voir ma note chauffeur et mes avis">
           <span>Note chauffeur</span>
           <strong>{Number(data.stats?.averageRating ?? 5).toFixed(2)}</strong>
-        </div>
+        </button>
       </div>
+      <DriverRatings open={ratingsOpen} onClose={() => setRatingsOpen(false)} />
       <section className="earnings-daily-rides" aria-label="Courses du jour">
         {rides.length === 0 && <p className="muted">Aucune course terminée le {date(day)}.</p>}
         <div className="flex-col gap-3">
