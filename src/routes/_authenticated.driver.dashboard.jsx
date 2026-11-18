@@ -568,27 +568,6 @@ function DriverDashboard() {
         </div>
       ) : (
         <>
-          {profile?.activeWarningsCount > 0 && !profile?.isReportSuspended && (
-            <div
-              style={{
-                position: "fixed",
-                top: "calc(var(--sat, 0px) + 64px)",
-                left: 16,
-                right: 16,
-                zIndex: 35,
-                background: "#2a1b05",
-                border: "1px solid #f59e0b",
-                borderRadius: 10,
-                padding: "10px 14px",
-                color: "#fef3c7",
-                fontSize: "0.85rem",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-              }}
-            >
-              Avertissements actifs : {profile.activeWarningsCount} / 3. À trois avertissements actifs, votre compte
-              chauffeur sera suspendu définitivement.
-            </div>
-          )}
           <DriverHome
             onWaybill={() => setWaybillOpen(true)}
             loading={loading}

@@ -175,7 +175,10 @@ function InboxPage() {
       </button>}
       <Modal open={warningOpen} onClose={() => setWarningOpen(false)} title="Vos avertissements" portal keyboardSafe sheetOnMobile={false}>
         <p>Vous avez {activeWarnings} avertissement{activeWarnings > 1 ? 's' : ''} actif{activeWarnings > 1 ? 's' : ''}.</p>
-        <p className="mt-3">À trois avertissements actifs, votre compte chauffeur sera suspendu définitivement. Contactez l’assistance si vous avez besoin de précisions.</p>
+        <p className="mt-3">Un avertissement peut être attribué après vérification d’un signalement par l’administration. Les signalements très légers ne comptent pas comme avertissement.</p>
+        <p className="mt-3">Selon les faits, un avertissement peut compter pendant 14 jours, pendant 30 jours ou sans expiration automatique. Le nombre affiché comprend uniquement les avertissements actifs.</p>
+        <p className="mt-3">À trois avertissements actifs, votre compte chauffeur est suspendu définitivement. Des faits extrêmement graves peuvent entraîner une suspension immédiate après vérification par l’administration.</p>
+        <p className="mt-3">La suspension concerne votre activité chauffeur. Pour toute question ou si vous pensez qu’une erreur a été commise, contactez l’assistance.</p>
         <button type="button" className="btn btn-secondary btn-full mt-4" onClick={() => setWarningOpen(false)}>Fermer</button>
       </Modal>
 

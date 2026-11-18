@@ -154,6 +154,8 @@ describe("onglets chauffeur", () => {
     fireEvent.click(screen.getByRole('button', { name: /1 avertissement actif/ }));
     expect(screen.getByRole('dialog', { name: 'Vos avertissements' })).toBeTruthy();
     expect(screen.getByText(/À trois avertissements actifs/)).toBeTruthy();
+    expect(screen.getByText(/pendant 14 jours, pendant 30 jours/)).toBeTruthy();
+    expect(screen.getByText(/faits extrêmement graves/)).toBeTruthy();
   });
   it("garde l’administration seule et exige une confirmation avant suppression", async () => {
     fixtures.data["/api/drivers/me/inbox"] = {

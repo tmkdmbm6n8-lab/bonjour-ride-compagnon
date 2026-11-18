@@ -6,7 +6,7 @@ import { Route } from '@/routes/_authenticated.driver.dashboard';
 const fixture = vi.hoisted(() => ({ home: vi.fn() }));
 vi.mock('@/components/DriverLayout', () => ({ default: ({ children }: any) => <>{children}</> }));
 vi.mock('@/components/driver/DriverHome', () => ({ default: (props: any) => { fixture.home(props); return <div>Accueil chauffeur chargé</div>; } }));
-vi.mock('@/hooks/useDriverState', () => ({ default: () => ({ loading: false, profile: { vehicle: { plate: 'AA-123-AA' } }, online: false, position: null, offer: null, ride: null, busy: false, isConnected: false }) }));
+vi.mock('@/hooks/useDriverState', () => ({ default: () => ({ loading: false, profile: { vehicle: { plate: 'AA-123-AA' }, activeWarningsCount: 1 }, online: false, position: null, offer: null, ride: null, busy: false, isConnected: false }) }));
 vi.mock('@/hooks/useGeolocation', () => ({ default: () => ({ position: null }) }));
 vi.mock('@/hooks/useLiveRoute', () => ({ useLiveRoute: () => null }));
 vi.mock('@/hooks/useRouteRadars', () => ({ default: () => ({ count: 0 }) }));
@@ -33,6 +33,7 @@ it('ouvre l’accueil chauffeur et lui transmet les commandes de disponibilité'
   const Component = Route.options.component as any;
   render(<Component />);
   expect(screen.getByText('Accueil chauffeur chargé')).toBeTruthy();
+  expect(screen.queryByText(/Avertissements actifs/)).toBeNull();
   expect(fixture.home.mock.calls.at(-1)?.[0].onToggle).toEqual(expect.any(Function));
   expect(fixture.home.mock.calls.at(-1)?.[0].onTogglePet).toEqual(expect.any(Function));
   expect(fixture.home.mock.calls.at(-1)?.[0].onToggleCash).toEqual(expect.any(Function));
