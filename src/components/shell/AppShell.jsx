@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import Link from "@/lib/archive-navigation";
-import { usePathname } from "@/lib/archive-navigation";
+import { usePathname, useSearchParams } from "@/lib/archive-navigation";
+import { navigationActive } from "@/lib/navigation-active";
 import { useSession, signOut } from "@/lib/archive-auth";
 import RiderAccountMenu from "@/components/shell/RiderAccountMenu";
 import { LogOut } from "lucide-react";
@@ -27,6 +28,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
     return () => observer.disconnect();
   }, []);
   const pathname = usePathname();
+  const search = useSearchParams();
   useEffect(() => {
     if (!pathname.startsWith('/driver/')) return;
     const frame = requestAnimationFrame(() => {
@@ -51,7 +53,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
 
         <nav className="sidebar-nav" aria-label="Navigation principale">
           {nav.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
+            const active = navigationActive(href, pathname, search, nav);
             return (
               <Link
                 key={href}
