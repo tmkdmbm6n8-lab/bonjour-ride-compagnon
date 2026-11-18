@@ -546,6 +546,13 @@ export async function handleVtc(input, context) {
     );
     return { ok: true };
   }
+  if (p === "/api/users/me/avatar") {
+    if (method !== "POST") throw new Error("Méthode non autorisée");
+    const { validProfileAvatar } = await import("./profile-avatar");
+    if (!validProfileAvatar(body.avatar)) throw new Error("Photo invalide. Choisissez une image JPEG, PNG ou WebP.");
+    required(await db.from("profiles").update({ avatar: body.avatar }).eq("id", uid));
+    return { avatar: body.avatar };
+  }
   if (p === "/api/users/me") {
     if (method === "PATCH") {
       const payload = {};

@@ -10,6 +10,31 @@ import { LogOut, Pencil, Check, Camera, Download, Trash2 } from 'lucide-react';
 import { Avatar, Stars, Loading, money } from '@/components/ui/bits';
 import { useToast } from '@/components/ui/Toast';
 
+function prepareAvatar(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      try {
+        const size = Math.min(image.naturalWidth, image.naturalHeight);
+        if (!size) throw new Error();
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error();
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, 256, 256);
+        context.drawImage(image, (image.naturalWidth - size) / 2, (image.naturalHeight - size) / 2, size, size, 0, 0, 256, 256);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      } catch { reject(new Error('Impossible de préparer cette image.')); }
+      finally { URL.revokeObjectURL(url); }
+    };
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Impossible de lire cette image.')); };
+    image.src = url;
+  });
+}
+
 /** Shared profile editor for riders and drivers. */
 export default function ProfileCard({ children, mode = 'rider' }) {
   const toast = useToast();
@@ -31,9 +56,8 @@ export default function ProfileCard({ children, mode = 'rider' }) {
     }
     setUploading(true);
     try {
-      const body = new FormData();
-      body.append('file', file);
-      const res = await fetch('/api/users/me/avatar', { method: 'POST', body });
+      const avatar = await prepareAvatar(file);
+      const res = await fetch('/api/users/me/avatar', { method: 'POST', body: JSON.stringify({ avatar }) });
       const data = await res.json();
       if (!res.ok) {
         toast(data.error || 'Échec de l’envoi', 'error');
@@ -42,8 +66,8 @@ export default function ProfileCard({ children, mode = 'rider' }) {
         await update({ avatar: data.avatar }); // refresh sidebar avatar
         toast('Photo de profil mise à jour', 'success');
       }
-    } catch {
-      toast('Échec de l’envoi — vérifiez votre connexion', 'error');
+    } catch (error) {
+      toast(error.message || 'Échec de l’envoi — vérifiez votre connexion', 'error');
     } finally {
       setUploading(false);
     }
