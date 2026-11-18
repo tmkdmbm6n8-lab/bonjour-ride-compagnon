@@ -1539,10 +1539,6 @@ export async function handleVtc(input, context) {
         ),
     };
   }
-  if (p === "/api/admin/support/assist" && method === "POST") {
-    const { supportAssist } = await import("./support-assist.server");
-    return supportAssist(admin, body.id);
-  }
   if (p === "/api/admin/support") {
     if (method === "PATCH") {
       if (!["open", "resolved"].includes(body.status)) throw new Error("Statut invalide");
