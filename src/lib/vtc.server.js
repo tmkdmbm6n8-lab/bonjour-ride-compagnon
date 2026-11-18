@@ -739,29 +739,7 @@ export async function handleVtc(input, context) {
         throw new Error("Vérifiez les informations du véhicule");
       required(await db.from("drivers").update({ vehicle: v }).eq("user_id", uid));
     }
-    const driverRow = required(await db.from("drivers").select("*").eq("user_id", uid).single());
-    if (
-      driverRow.stats?.pending_suspension_at &&
-      new Date(driverRow.stats.pending_suspension_at).getTime() <= Date.now()
-    ) {
-      if (driverRow.is_approved) {
-        await admin
-          .from("drivers")
-          .update({
-            is_approved: false,
-            is_online: false,
-            documents_override: false,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", uid);
-        driverRow.is_approved = false;
-        driverRow.is_online = false;
-      }
-    }
-
-    const driver = driverShape(driverRow);
-    driver.isReportSuspended = !driver.isApproved && (await reportedRideCount(admin, uid)) >= 3;
-    return { driver };
+    is_online: false;
   }
   if (p === "/api/drivers/me/classes" && method === "PATCH") {
     const cur = required(await db.from("drivers").select("vehicle_class").eq("user_id", uid).single());
