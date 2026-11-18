@@ -5,6 +5,7 @@ import AdminLayout from "@/components/AdminLayout";
 import { apiFetch } from "@/lib/archive-fetch";
 import ChatMedia from "@/components/ride/ChatMedia";
 import { useToast } from "@/components/ui/Toast";
+import AdminRideMap from "@/components/admin/AdminRideMap";
 
 function EvidencePage() {
   const toast = useToast();
@@ -105,7 +106,8 @@ function EvidencePage() {
               disabled={busy}
               onClick={() => inspect(a.archiveId)}
             >
-              <strong>Course #{a.rideId}</strong>
+              <strong>Course #{a.rideId.slice(0, 10)}</strong>
+              <p className="small mt-1">{a.rideCreatedAt ? new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", dateStyle: "medium", timeStyle: "short" }).format(new Date(a.rideCreatedAt)) : "Date indisponible"} · {a.driverName || "Chauffeur indisponible"}</p>
               <p className="small mt-1">
                 {a.messageCount} message(s) archivé(s) · Suppression le {new Date(a.expiresAt).toLocaleString("fr-FR")}
               </p>
@@ -127,7 +129,7 @@ function EvidencePage() {
           {/* Entête */}
           <div className="flex justify-between items-center gap-2 mb-4 wrap">
             <div>
-              <h2 style={{ fontSize: "1.25rem", margin: 0 }}>Dossier Course #{selected.rideId}</h2>
+              <h2 style={{ fontSize: "1.25rem", margin: 0 }}>Dossier Course #{selected.rideId.slice(0, 10)}</h2>
               <span className="tiny muted">
                 Archivage expiré le {new Date(selected.expiresAt).toLocaleString("fr-FR")}
               </span>
@@ -179,6 +181,7 @@ function EvidencePage() {
                   return total != null ? `${Number(total).toFixed(2)} €` : "N/C";
                 })()} · Statut : {selected.rideData.status}
               </div>
+              <div className="mt-3"><AdminRideMap pickup={selected.rideData.pickup} dropoff={selected.rideData.dropoff} /></div>
             </div>
           )}
 

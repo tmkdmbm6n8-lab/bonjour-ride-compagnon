@@ -3695,13 +3695,16 @@ a.activity-pill:hover {
   display: block;
 }
 .admin-support-message {
-  border-left: 3px solid #d6d3d1;
+  border: 1px solid rgba(229, 184, 105, .25);
+  border-radius: 12px;
   padding: 10px 14px;
   margin: 10px 0;
-  background: #fafafa;
+  background: #191c25;
+  color: #f1f5f9;
+  overflow-wrap: anywhere;
 }
 .admin-support-message small {
-  color: #777;
+  color: #aebaca;
 }
 @media (min-width: 901px) {
   .driver-tab-page {
@@ -8914,6 +8917,10 @@ a.activity-pill:hover {
 .admin-record-message time { display: block; margin-top: 4px; color: #aebaca; font-size: 11px; }
 .admin-record-message p { margin-top: 8px; white-space: pre-wrap; }
 .admin-record-message img, .admin-record-message audio { max-width: 100%; margin-top: 12px; }
+.admin-ride-map { position: relative; height: 260px; min-height: 200px; overflow: hidden; border: 1px solid rgba(229,184,105,.25); border-radius: 16px; background: #111a22; }
+@media (max-width: 900px) {
+  .drv-active-ride-page .drv-top-passenger-bar { top: max(36px, calc(env(safe-area-inset-top, 0px) + 14px)); }
+}
 @media(max-width:500px) { .admin-record-people { grid-template-columns: minmax(0,1fr); gap: 0; } }
 
 /* Fine gold edge shared by the app's framed surfaces on all screen sizes. */

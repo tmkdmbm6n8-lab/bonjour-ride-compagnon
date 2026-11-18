@@ -349,11 +349,19 @@ export async function adminChatEvidence(admin, q) {
       .order("created_at", { ascending: false })
       .limit(100),
   );
+  const evidence = rows.map(decodeEvidence).filter((e) => e && Date.parse(e.expiresAt) > Date.now());
+  if (!evidence.length) return { archives: [] };
+  const rideIds = [...new Set(evidence.map((item) => item.rideId).filter(Boolean))];
+  const driverIds = [...new Set(evidence.map((item) => item.driverId).filter(Boolean))];
+  const [rides, drivers] = await Promise.all([
+    rideIds.length ? admin.from('rides').select('id,created_at').in('id', rideIds) : { data: [], error: null },
+    driverIds.length ? admin.from('profiles').select('id,name').in('id', driverIds) : { data: [], error: null },
+  ]);
+  const rideDates = new Map(required(rides).map((ride) => [ride.id, ride.created_at]));
+  const driverNames = new Map(required(drivers).map((driver) => [driver.id, driver.name]));
   return {
-    archives: rows
-      .map(decodeEvidence)
-      .filter((e) => e && Date.parse(e.expiresAt) > Date.now())
-      .map((e) => ({ ...e, messages: undefined, messageCount: e.messages.length })),
+    archives: evidence.map((e) => ({ ...e, messages: undefined, messageCount: e.messages.length,
+      rideCreatedAt: rideDates.get(e.rideId) || null, driverName: driverNames.get(e.driverId) || null })),
   };
 }
 
