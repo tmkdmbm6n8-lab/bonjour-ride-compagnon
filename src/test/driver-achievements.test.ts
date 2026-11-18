@@ -1,6 +1,15 @@
 import {describe,expect,it} from 'vitest';
-import {driverAchievements,DRIVER_BADGE_TIERS} from '../lib/driver-achievements';
+import {driverAchievements,DRIVER_BADGE_TIERS,currentAndNextBadge} from '../lib/driver-achievements';
 describe('distinctions chauffeur sur les notes cinq étoiles',()=>{
+  it('ne montre que le palier actuel et le prochain, sans perdre les acquis',()=>{
+    const all=driverAchievements(1000);
+    const visible=currentAndNextBadge(all.badges);
+    expect(visible.current?.threshold).toBe(1000);
+    expect(visible.next?.threshold).toBe(5000);
+    expect(all.badges.filter(b=>b.earned)).toHaveLength(4);
+    expect(currentAndNextBadge(driverAchievements(0).badges).current).toBeNull();
+    expect(currentAndNextBadge(driverAchievements(50000).badges).next).toBeNull();
+  });
   it('définit des paliers distincts jusqu’à 50 000',()=>{
     expect(DRIVER_BADGE_TIERS.map(b=>b.threshold)).toEqual([50,100,500,1000,5000,10000,50000]);
     expect(new Set(DRIVER_BADGE_TIERS.map(b=>b.motif)).size).toBe(7);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import CloseControl from './CloseControl';
 import useVisualViewport from '@/hooks/useVisualViewport';
@@ -13,14 +13,18 @@ export default function Modal({
   sheetOnMobile = true,
   closable = true,
   maxWidth = 440,
+  fullScreen = false,
+  className = '',
   portal = false, // escape map/sheet stacking contexts for critical confirmations
   keyboardSafe = false, // keep the dialog inside the area above the phone keyboard
 }) {
   const vv = useVisualViewport(open && keyboardSafe);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => {
-      if (e.key === 'Escape' && closable) onClose?.();
+      if (e.key === 'Escape' && closable) closeRef.current?.();
     };
     document.addEventListener('keydown', onKey);
     const body = document.body;
@@ -37,22 +41,22 @@ export default function Modal({
       Object.assign(body.style, previous);
       if (portal) window.scrollTo(0, scrollY);
     };
-  }, [open, onClose, closable, portal]);
+  }, [open, closable, portal]);
 
   if (!open) return null;
 
   const dialog = (
     <div
-      className={`overlay ${portal ? 'modal-portal-overlay' : ''} ${sheetOnMobile && !keyboardSafe ? 'sheet-on-mobile' : ''}`}
-      style={vv ? { top: vv.top, height: vv.height, bottom: 'auto', alignItems: portal ? 'center' : 'flex-start', paddingTop: 16 } : undefined}
+      className={`overlay ${portal ? 'modal-portal-overlay' : ''} ${sheetOnMobile && !keyboardSafe && !fullScreen ? 'sheet-on-mobile' : ''} ${fullScreen ? 'modal-fullscreen-overlay' : ''}`}
+      style={{ ...(vv ? { top: vv.top, height: vv.height, bottom: 'auto', alignItems: portal ? 'center' : 'flex-start', paddingTop: 16 } : {}), ...(fullScreen ? { padding: 0, alignItems: 'stretch' } : {}) }}
       onClick={closable ? onClose : undefined}
       role="dialog"
       aria-modal="true"
       aria-label={title || 'Boîte de dialogue'}
     >
       <div
-        className="modal modal-pad"
-        style={{ maxWidth, ...(vv ? { maxHeight: vv.height - 32 } : null) }}
+        className={`modal modal-pad ${fullScreen ? 'modal-fullscreen' : ''} ${className}`}
+        style={{ maxWidth: fullScreen ? '100%' : maxWidth, ...(fullScreen ? { height: '100%', maxHeight: '100%' } : vv ? { maxHeight: vv.height - 32 } : {}) }}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || closable) && (

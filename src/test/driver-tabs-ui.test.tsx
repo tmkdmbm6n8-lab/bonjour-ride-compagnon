@@ -182,7 +182,20 @@ describe("onglets chauffeur", () => {
     fireEvent.click(screen.getByRole('button',{name:'Ouvrir mon profil chauffeur et mes distinctions'}));
     expect(screen.getByRole('dialog',{name:'Votre profil chauffeur'})).toBeTruthy();
     expect(screen.getByText('Première distinction')).toBeTruthy();
-    expect(screen.getByText('Obtenu')).toBeTruthy();
+    expect(screen.getByText('Badge actuel')).toBeTruthy();
+  });
+  it("propose des objets VTC et un objet libre uniquement dans Autre", async () => {
+    fixtures.data["/api/drivers/me/inbox"]={threads:[],rides:[],hasMore:false};
+    fixtures.request.mockResolvedValue({ok:true,json:async()=>({driver:{isApproved:true},thread:{id:'request',subject:'Question spécifique',messages:[],status:'open',updatedAt:'2026-11-18T11:00:00Z'}})});
+    const Component=InboxRoute.options.component as any;render(<Component/>);
+    fireEvent.click(screen.getByRole('button',{name:"Nouvelle demande d'assistance"}));
+    expect(screen.getByRole('combobox',{name:'Objet de la demande'})).toBeTruthy();
+    expect(screen.queryByRole('textbox',{name:'Précisez l’objet'})).toBeNull();
+    fireEvent.change(screen.getByRole('combobox',{name:'Objet de la demande'}),{target:{value:'other'}});
+    fireEvent.change(screen.getByRole('textbox',{name:'Précisez l’objet'}),{target:{value:'Question spécifique'}});
+    fireEvent.change(screen.getByRole('textbox',{name:'Votre message'}),{target:{value:'Bonjour'}});
+    fireEvent.click(screen.getByRole('button',{name:'Envoyer'}));
+    await waitFor(()=>expect(fixtures.request.mock.calls.some(([path,options])=>path==='/api/drivers/me/inbox/support'&&options?.method==='POST'&&JSON.parse(options.body).subject==='Question spécifique')).toBe(true));
   });
   it("présente toutes les sections du menu dans la même page", () => {
     fixtures.data["/api/users/me"] = {

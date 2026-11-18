@@ -13,3 +13,9 @@ export function driverAchievements(fiveStarCount) {
   const next = badges.find((tier) => !tier.earned);
   return { count, badges, next: next ? {threshold:next.threshold,remaining:next.threshold-count,progress:Math.min(1,count/next.threshold)} : null };
 }
+
+export function currentAndNextBadge(badges) {
+  const current = [...badges].reverse().find(badge => badge.earned) || null;
+  const next = badges.find(badge => !badge.earned) || null;
+  return { current, next };
+}

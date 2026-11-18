@@ -8,7 +8,7 @@ import { apiFetch } from "@/lib/archive-fetch";
 import { useSession } from "@/lib/archive-auth";
 import Modal from "@/components/ui/Modal";
 import { Loading } from "@/components/ui/bits";
-import useVisualViewport from "@/hooks/useVisualViewport";
+
 
 function InboxPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -20,6 +20,7 @@ function InboxPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [text, setText] = useState("");
   const [subject, setSubject] = useState("");
+  const [subjectCategory, setSubjectCategory] = useState("");
   const [compose, setCompose] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
@@ -28,7 +29,7 @@ function InboxPage() {
   const { data: session } = useSession();
   const readKey = `strasdrive:inbox-read:${session?.user?.id || "account"}`;
   const { data, error, reload } = useDriverData(`/api/drivers/me/inbox?page=${page}`, 15000);
-  const viewport = useVisualViewport(Boolean(selectedId || compose));
+  const requestSubject = subjectCategory === "other" ? subject.trim() : subjectCategory;
 
   useEffect(() => {
     try {
@@ -61,6 +62,14 @@ function InboxPage() {
   }, [data, page]);
 
   const selected = entries.find((entry) => entry.id === selectedId);
+  const historyRef = useRef(null), followTail = useRef(true), openedThread = useRef(null);
+  useEffect(() => {
+    const isNewThread = openedThread.current !== selectedId;
+    openedThread.current = selectedId;
+    if (!selectedId) return;
+    if (isNewThread) followTail.current = true;
+    if (followTail.current && historyRef.current) historyRef.current.scrollTop = historyRef.current.scrollHeight;
+  }, [selectedId, selected?.messages?.length]);
 
   function open(entry) {
     setSelectedId(entry.id);
@@ -76,6 +85,7 @@ function InboxPage() {
   async function send(event) {
     event.preventDefault();
     if (!text.trim() || sending) return;
+    if (compose && !requestSubject) { setSendError("Choisissez un objet ou précisez votre demande dans Autre."); return; }
     setSending(true);
     setSendError("");
     try {
@@ -85,7 +95,7 @@ function InboxPage() {
           : `/api/rides/${selected.targetId}/messages`;
       const response = await apiFetch(path, {
         method: "POST",
-        body: JSON.stringify({ text, ...(compose ? { subject } : { id: selected.targetId }) }),
+        body: JSON.stringify({ text, ...(compose ? { subject: requestSubject } : { id: selected.targetId }) }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Envoi impossible");
@@ -105,6 +115,7 @@ function InboxPage() {
         setEntries((old) => [entry, ...old.filter((item) => item.id !== entry.id)]);
         setSelectedId(entry.id);
       }
+      followTail.current = true;
       setText("");
       setCompose(false);
       reload();
@@ -145,6 +156,7 @@ function InboxPage() {
             setSelectedId(null);
             setText("");
             setSubject("");
+            setSubjectCategory("");
             setSendError("");
           }}
           aria-label="Nouvelle demande d'assistance"
@@ -175,6 +187,7 @@ function InboxPage() {
             onClick={() => {
               setCompose(true);
               setSelectedId(null);
+              setSubjectCategory(""); setSubject(""); setSendError("");
             }}
           >
             Écrire à l'administration
@@ -249,26 +262,24 @@ function InboxPage() {
         }}
         title={compose ? "Nouvel échange avec l'administration" : selected?.subject}
         maxWidth={620}
+        fullScreen={Boolean(selected) && !compose}
         portal
         keyboardSafe
       >
         <div
-          className="inbox-conversation"
-          style={viewport ? { maxHeight: Math.max(160, viewport.height - 160) } : undefined}
+          className={`inbox-conversation ${compose ? 'inbox-new-request' : 'admin-inbox-conversation'}`}
         >
-          {compose && (
-            <input
-              className="input drv-input"
-              placeholder="Objet de la demande…"
-              aria-label="Sujet"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              maxLength={160}
-              required
-            />
-          )}
+          {compose && <div className="inbox-request-subject">
+            <label htmlFor="support-subject">Objet de la demande</label>
+            <select id="support-subject" className="input drv-input" value={subjectCategory} onChange={event => { setSubjectCategory(event.target.value); setSendError(''); }} required>
+              <option value="" disabled>Choisissez un objet</option>
+              {['Course et prise en charge','Annulation de course','Paiement d’une course','Portefeuille et virement','Documents professionnels','Véhicule et gamme','Comportement d’un passager','Objet oublié','Problème de GPS ou d’application','Compte et accès'].map(option => <option value={option} key={option}>{option}</option>)}
+              <option value="other">Autre</option>
+            </select>
+            {subjectCategory === 'other' && <input className="input drv-input" aria-label="Précisez l’objet" placeholder="Précisez l’objet de votre demande…" value={subject} onChange={event => setSubject(event.target.value)} maxLength={160} required />}
+          </div>}
 
-          <div className="inbox-messages drv-chat-box">
+          {!compose && <div className="inbox-messages drv-chat-box" ref={historyRef} onScroll={event => { const list = event.currentTarget; followTail.current = list.scrollHeight - list.scrollTop - list.clientHeight < 48; }} tabIndex={0} aria-label="Messages de la conversation">
             {selected?.messages.map((message) => (
               <div key={message.id} className={`drv-chat-bubble ${message.from === "driver" ? "mine" : "theirs"}`}>
                 <div className="drv-chat-meta">
@@ -292,7 +303,7 @@ function InboxPage() {
                 <p>{message.text}</p>
               </div>
             ))}
-          </div>
+          </div>}
 
           {sendError && (
             <p role="alert" className="driver-notice">
@@ -308,12 +319,13 @@ function InboxPage() {
                 className="input drv-textarea"
                 aria-label="Votre message"
                 placeholder="Écrivez votre message…"
+                rows={2}
                 required
                 maxLength={selected?.kind === "ride" ? 500 : 4000}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
               />
-              <button className="drv-cta-btn" disabled={sending || !text.trim()}>
+              <button className="drv-cta-btn" aria-label={sending ? "Envoi en cours" : "Envoyer"} disabled={sending || !text.trim() || (compose && !requestSubject)}>
                 <Send size={16} />
                 <span>{sending ? "Envoi…" : "Envoyer"}</span>
               </button>
