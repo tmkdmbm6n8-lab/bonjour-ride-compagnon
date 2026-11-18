@@ -26,9 +26,18 @@ export function decodeDecision(row) {
   }
 }
 
-// L ancien déclenchement automatique sur signalements bruts est neutralisé.
-// Seules les décisions administratives vérifiées déclenchent avertissements et suspensions.
-return { ok: true };
+export async function getRideDecision(admin, rideId) {
+  const rows = required(
+    await admin
+      .from("contact_messages")
+      .select("*")
+      .eq("topic", "safety_decision")
+      .eq("name", `Decision ${rideId}`)
+      .limit(1),
+  );
+  if (!rows.length) return null;
+  return decodeDecision(rows[0]);
+}
 
 export async function getDriverDecisions(admin, driverId) {
   const rows = required(await admin.from("contact_messages").select("*").eq("topic", "safety_decision"));
