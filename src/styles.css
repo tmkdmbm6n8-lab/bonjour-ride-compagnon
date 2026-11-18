@@ -8909,3 +8909,30 @@ a.activity-pill:hover {
 .admin-record-message p { margin-top: 8px; white-space: pre-wrap; }
 .admin-record-message img, .admin-record-message audio { max-width: 100%; margin-top: 12px; }
 @media(max-width:500px) { .admin-record-people { grid-template-columns: minmax(0,1fr); gap: 0; } }
+
+/* Fine gold edge shared by the app's framed surfaces on all screen sizes. */
+:is(.card, .auth-card, .rider-account-popover, .activity-upcoming-card,
+    .activity-ride-card, .activity-empty, .monitor-card, .driver-status-panel,
+    .driver-tools-panel, .drv-hero-card, .drv-group, .drv-tile, .drv-traffic-card,
+    .drv-inbox-card, .sd-settings-panel, .driver-badge-tile, .earnings-overview,
+    .earnings-stats > div, .earnings-rating-button, .earnings-payout,
+    .rider-account-shortcuts > *, .rider-account-balance,
+    .driver-desktop-status, .driver-desktop-earnings,
+    .driver-desktop-quick-links a):not(.selected):not(.active):not(.unread):not(.on) {
+  border-color: rgba(212, 160, 46, .26) !important;
+  box-shadow: 0 0 0 1px rgba(212, 160, 46, .035), 0 5px 20px rgba(0, 0, 0, .18) !important;
+}
+.shell-dark .ride-panel > .card:not(.selected) {
+  border-color: rgba(212, 160, 46, .26) !important;
+}
+.modal:not(.modal-fullscreen) {
+  border-color: rgba(212, 160, 46, .26) !important;
+  box-shadow: 0 0 0 1px rgba(212, 160, 46, .035), 0 16px 50px rgba(0, 0, 0, .4) !important;
+}
+.avatar {
+  box-shadow: 0 0 0 1px rgba(234, 179, 8, .36), 0 0 12px rgba(234, 179, 8, .13);
+}
+.rider-account-profile-photo {
+  outline-color: rgba(234, 179, 8, .5);
+  box-shadow: 0 0 0 3px rgba(234, 179, 8, .07), 0 0 16px rgba(234, 179, 8, .16);
+}
