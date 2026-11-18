@@ -758,29 +758,6 @@ export async function handleVtc(input, context) {
         driverRow.is_online = false;
       }
     }
-    const { getDriverDecisions, countActiveWarnings, shouldSuspendDriver } = await import("./driver-warnings.server");
-    const driverDecisions = await getDriverDecisions(admin, uid);
-    const activeWarningsCount = countActiveWarnings(driverDecisions);
-    const mustSuspend = shouldSuspendDriver(driverDecisions);
-
-    if (mustSuspend && driverRow.is_approved) {
-      await admin
-        .from("drivers")
-        .update({
-          is_approved: false,
-          is_online: false,
-          documents_override: false,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", uid);
-      driverRow.is_approved = false;
-      driverRow.is_online = false;
-    }
-
-    const driver = driverShape(driverRow);
-    driver.activeWarningsCount = activeWarningsCount;
-    driver.isReportSuspended = !driver.isApproved && mustSuspend;
-    return { driver };
 
     const driver = driverShape(driverRow);
     driver.isReportSuspended = !driver.isApproved && (await reportedRideCount(admin, uid)) >= 3;
