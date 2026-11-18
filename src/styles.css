@@ -6780,6 +6780,105 @@ a.activity-pill:hover {
   box-shadow: 0 0 0 7px #8cc8f025 !important;
 }
 
+/* Desktop passenger workspace: keep these changes separate from the mobile UI. */
+.rider-desktop-intro { display: none; }
+@media (min-width: 901px) {
+  .shell-rider.shell-dark .sidebar {
+    height: 72px;
+    min-height: 72px;
+    border-bottom: 1px solid rgba(234, 179, 8, .17);
+    padding-inline: max(28px, calc((100vw - 1600px) / 2));
+    gap: 48px;
+  }
+  .shell-rider.shell-dark .sidebar-nav { align-items: center; }
+  .shell-rider.shell-dark .nav-item {
+    min-height: 44px;
+    margin: 0;
+    padding: 0 20px;
+    border: 1px solid transparent;
+    color: #b7bdca;
+  }
+  .shell-rider.shell-dark .nav-item svg { color: currentColor; }
+  .shell-rider.shell-dark .nav-item.active {
+    background: rgba(234, 179, 8, .13);
+    border-color: rgba(234, 179, 8, .35);
+    color: #facc15;
+  }
+  .shell-rider .rider-workspace {
+    max-width: 1600px;
+    grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
+    gap: 24px;
+    padding: 24px 28px;
+    min-height: calc(100dvh - 72px);
+  }
+  .shell-rider .rider-workspace > .map-fill {
+    top: 96px;
+    height: calc(100dvh - 120px);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 22px;
+    background: #101820;
+  }
+  .shell-rider .rider-booking-card { padding: 28px; }
+  .shell-rider .rider-booking-card h2 { color: #f8fafc; font-size: 1.45rem !important; }
+  .rider-desktop-intro {
+    display: block;
+    margin: 8px 0 24px;
+    color: #a5afbf;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .shell-rider .rider-booking-card .input { height: 52px; min-height: 52px; }
+  .shell-rider .rider-booking-card .input-wrap > svg { color: #e5b84e; }
+  .rider-booking-context { gap: 10px; margin-top: 18px; color: #d9dee8; }
+  .rider-pickup-time, .rider-passenger {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.08);
+    color: #d9dee8;
+  }
+  .rider-pickup-time svg, .rider-passenger svg { color: #e5b84e; }
+  .shell-rider .rider-search-button {
+    min-height: 52px;
+    margin-top: 8px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #f4c328, #d49a08);
+    color: #16120a;
+    font-weight: 700;
+  }
+  .shell-rider .rider-search-button:hover { background: #f5ca42; color: #16120a; }
+  .rider-activity-button {
+    background: #181b23;
+    border: 1px solid rgba(255,255,255,.1);
+    color: #f1f5f9;
+  }
+  .rider-activity-button:hover { background: #242731; color: #fff; }
+  .rider-account-trigger { color: #f4d178; }
+  .rider-account-popover {
+    top: calc(100% + 18px);
+    padding: 22px;
+    background: #11141b;
+    border: 1px solid rgba(234,179,8,.2);
+    border-radius: 22px;
+    color: #f1f5f9;
+    box-shadow: 0 22px 60px #0009;
+  }
+  .rider-account-heading h2 { color: #f8fafc; font-size: 22px; }
+  .rider-account-shortcuts > *, .rider-account-balance {
+    background: #1b1e27;
+    border: 1px solid rgba(255,255,255,.07);
+    color: #edf0f6;
+  }
+  .rider-account-shortcuts svg { color: #e5b84e; }
+  .rider-account-balance strong { color: #f4ca54; }
+  .rider-account-links > * { color: #e1e5ed; border-radius: 10px; }
+  .rider-account-links > :first-child { border-bottom-color: rgba(255,255,255,.08); }
+  .rider-account-links svg { color: #e5b84e; }
+  .rider-account-signout { background: rgba(239,68,68,.1); color: #fca5a5; }
+  .rider-account-shortcuts > *:hover, .rider-account-links > *:hover,
+  .rider-account-balance:hover { background: #272a34; color: #fff; }
+  .rider-account-signout:hover { background: rgba(239,68,68,.2); }
+  .rider-account button:focus-visible, .rider-account a:focus-visible { outline-color: #facc15; }
+}
+
 /* Rider booking stays anchored above the tabs, including while typing. */
 .shell-rider .rider-trip-panel {
   overflow-anchor: none;

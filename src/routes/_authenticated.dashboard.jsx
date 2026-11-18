@@ -548,7 +548,7 @@ function RiderDashboard() {
             <div className="rider-booking-heading">
             <h2 style={{ fontSize: "1.25rem", marginBottom: 0 }}>
               <span className="rider-mobile-heading">Où allez-vous ?</span>
-              <span className="rider-desktop-heading">Commander une course</span>
+              <span className="rider-desktop-heading">Votre prochain trajet</span>
             </h2>
             {estimate && (
               <CloseControl
@@ -568,6 +568,8 @@ function RiderDashboard() {
               />
             )}
             </div>
+
+            <p className="rider-desktop-intro">Indiquez votre départ et votre destination pour découvrir votre trajet.</p>
 
 
             <div className="flex-col gap-3">
