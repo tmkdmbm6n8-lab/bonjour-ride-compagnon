@@ -1,3 +1,4 @@
+import CloseControl from "@/components/ui/CloseControl";
 import {createFileRoute} from '@tanstack/react-router';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
@@ -6,13 +7,13 @@ import { useEffect, useRef, useState, Suspense } from 'react';
 import Link from '@/lib/archive-navigation';
 import { useSearchParams, useRouter } from '@/lib/archive-navigation';
 import { signIn, useSession } from '@/lib/archive-auth';
-import { User, AtSign, Lock, ArrowRight, Car, Navigation, MailCheck, ExternalLink, X } from 'lucide-react';
+import { User, AtSign, Lock, ArrowRight, Car, Navigation, MailCheck, ExternalLink } from 'lucide-react';
 import { KovaLogo } from '@/components/brand/KovaLogo';
 import LegalFooter from '@/components/shell/LegalFooter';
 import { REQUIRED_DOCUMENTS } from '@/lib/vtc-documents';
 
 function SignupCloseLink() {
-  return <Link href="/" className="signup-close" aria-label="Fermer l’inscription" title="Retour à l’accueil"><X size={20} aria-hidden="true" /></Link>;
+  return <CloseControl href="/" className="signup-close" label="Fermer l’inscription" title="Retour à l’accueil" />;
 }
 
 function SignupForm() {

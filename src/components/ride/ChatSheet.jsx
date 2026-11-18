@@ -1,3 +1,4 @@
+import CloseControl from "@/components/ui/CloseControl";
 import ChatAttachments from "./ChatAttachments";
 import ChatMedia from "./ChatMedia";
 import { CHAT_NOTICE } from "@/lib/ride-chat";
@@ -5,7 +6,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, X, MessageCircle } from 'lucide-react';
+import { Send, MessageCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import useVisualViewport from '@/hooks/useVisualViewport';
 
@@ -81,9 +82,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
             {counterpartName || 'Discussion'}
           </span>
         </div>
-        <button className="btn btn-ghost btn-icon" style={{ minHeight: 32, width: 32 }} onClick={onClose} aria-label="Fermer la discussion">
-          <X size={16} />
-        </button>
+        <CloseControl onClick={onClose} label="Fermer la discussion" />
       </div>
 
       <p className="chat-retention-notice">{CHAT_NOTICE}</p>

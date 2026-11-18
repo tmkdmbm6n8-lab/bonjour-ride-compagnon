@@ -1,3 +1,4 @@
+import CloseControl from "@/components/ui/CloseControl";
 import InvoiceRequest from '@/components/ride/InvoiceRequest';
 import ReceiptDownload from '@/components/ride/ReceiptDownload';
 import RideSafety from '@/components/ride/RideSafety';
@@ -10,7 +11,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from '@/lib/archive-navigation';
-import { ArrowLeft, Circle, MapPin } from 'lucide-react';
+import { Circle, MapPin } from 'lucide-react';
 import MapView from '@/components/ArchiveMap';
 import { RideStatusBadge, Avatar, Stars, Loading, VEHICLE_LABELS, money } from '@/components/ui/bits';
 import { formatDate, formatDistance, formatDuration } from '@/lib/utils/geo';
@@ -51,8 +52,7 @@ function RideDetailPage() {
 
   return (
     <div className="content-pad" style={{ maxWidth: 760 }}>
-      <button className="btn btn-ghost btn-sm mb-4" onClick={() => router.back()}>
-        <ArrowLeft size={16} /> Retour </button>
+      <CloseControl className="mb-4" onClick={() => router.back()} label="Retour aux courses" />
 
       <div className="flex items-center justify-between mb-4">
         <div>

@@ -1,4 +1,5 @@
-import { MessageCircle, X } from 'lucide-react';
+import CloseControl from "@/components/ui/CloseControl";
+import { MessageCircle } from 'lucide-react';
 
 /**
  * Large, high-contrast banner shown at the top of the screen when a chat message
@@ -21,9 +22,7 @@ export default function MessageAlert({ message, fromLabel, count = 1, onOpen, on
           <span className="msg-alert-cta">Touchez pour répondre</span>
         </span>
       </button>
-      <button type="button" className="msg-alert-close" onClick={onDismiss} aria-label="Fermer l’alerte">
-        <X size={18} />
-      </button>
+      <CloseControl className="msg-alert-close" onClick={onDismiss} label="Fermer l’alerte" />
     </div>
   );
 }

@@ -28,9 +28,10 @@ export default function SwipeInboxItem({ children, label, onDelete }) {
     }
   }
   return <div className="inbox-swipe-item">
-    <button type="button" className="inbox-swipe-delete" aria-label={`Supprimer ${label}`} onClick={onDelete}><Trash2 size={24} /></button>
+    {offset < -35 && <button type="button" className="inbox-swipe-delete" aria-label={`Supprimer ${label}`} onClick={onDelete}><Trash2 size={24} /></button>}
     <div className="inbox-swipe-content" style={{transform:`translateX(${offset}px)`}} onPointerDown={start} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{gesture.current=null;setOffset(0);}}
-      onClickCapture={(event)=>{if(suppressClick.current){event.preventDefault();event.stopPropagation();suppressClick.current=false;}}}>
+      onKeyDown={(event)=>{if(event.key==='ArrowLeft'){event.preventDefault();setOffset(-84);}if(event.key==='Escape'||event.key==='ArrowRight')setOffset(0);}}
+      onClickCapture={(event)=>{if(suppressClick.current){event.preventDefault();event.stopPropagation();suppressClick.current=false;}else if(offset<0){event.preventDefault();event.stopPropagation();setOffset(0);}}}>
       {children}
     </div>
   </div>;

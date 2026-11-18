@@ -1,3 +1,4 @@
+import CloseControl from "@/components/ui/CloseControl";
 import ReportDriverButton from "@/components/ride/ReportDriverButton";
 import RideSafety from '@/components/ride/RideSafety';
 import { createFileRoute } from "@tanstack/react-router";
@@ -550,10 +551,9 @@ function RiderDashboard() {
               <span className="rider-desktop-heading">Commander une course</span>
             </h2>
             {estimate && (
-              <button
-                type="button"
+              <CloseControl
                 className="rider-close-estimate"
-                aria-label="Fermer les tarifs"
+                label="Fermer les tarifs"
                 title="Fermer les tarifs"
                 disabled={booking}
                 onClick={() => {
@@ -565,9 +565,7 @@ function RiderDashboard() {
                   setEstimate(null);
                   setEstimating(false);
                 }}
-              >
-                <X size={21} />
-              </button>
+              />
             )}
             </div>
 

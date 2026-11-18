@@ -1,3 +1,4 @@
+import CloseControl from "@/components/ui/CloseControl";
 import PersonalSupport from '@/components/profile/PersonalSupport';
 import { downloadPersonalData } from '@/lib/personal-data-export';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
@@ -5,7 +6,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 
 import { useEffect, useRef, useState } from 'react';
 import { signOut, useSession } from '@/lib/archive-auth';
-import { LogOut, Pencil, Check, X, Camera, Download, Trash2 } from 'lucide-react';
+import { LogOut, Pencil, Check, Camera, Download, Trash2 } from 'lucide-react';
 import { Avatar, Stars, Loading, money } from '@/components/ui/bits';
 import { useToast } from '@/components/ui/Toast';
 
@@ -150,15 +151,13 @@ export default function ProfileCard({ children, mode = 'rider' }) {
               <button className="btn btn-primary btn-sm" onClick={save} disabled={saving}>
                 {saving ? <span className="spinner" /> : <><Check size={14} /> Enregistrer</>}
               </button>
-              <button
-                className="btn btn-ghost btn-sm"
+              <CloseControl
+                label="Annuler la modification du profil"
                 onClick={() => {
                   setEditing(false);
                   setForm({ name: user.name, phone: user.phone, email: user.email });
                 }}
-              >
-                <X size={14} />
-              </button>
+              />
             </div>
           )}
         </div>

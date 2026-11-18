@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import CloseControl from './CloseControl';
 import useVisualViewport from '@/hooks/useVisualViewport';
 
 export default function Modal({
@@ -59,15 +59,7 @@ export default function Modal({
           <div className="modal-header flex items-center justify-between mb-4">
             {title ? <h3 style={{ fontSize: '1.15rem' }}>{title}</h3> : <span />}
             {closable && (
-              <button
-                type="button"
-                className="btn btn-ghost btn-icon"
-                onClick={onClose}
-                aria-label="Fermer la boîte de dialogue"
-                style={{ minHeight: 36, width: 36 }}
-              >
-                <X size={18} />
-              </button>
+              <CloseControl onClick={onClose} label="Fermer la boîte de dialogue" />
             )}
           </div>
         )}

@@ -1,3 +1,4 @@
+import CloseControl from "@/components/ui/CloseControl";
 import { ShieldAlert } from "lucide-react";
 import RidePauseButton from "@/components/driver/RidePauseButton";
 import FinishRideButton from "@/components/driver/FinishRideButton";
@@ -614,25 +615,7 @@ function DriverDashboard() {
                 <span>{VEHICLE_LABELS[offer.rideClass] || "StrasDrive Go"}</span>
               </div>
 
-              <button
-                onClick={decline}
-                disabled={actionBusy}
-                aria-label="Ignorer la course"
-                style={{
-                  background: "rgba(255, 255, 255, 0.06)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  color: "#9ca3af",
-                  width: 34,
-                  height: 34,
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                }}
-              >
-                <X size={16} />
-              </button>
+              <CloseControl onClick={decline} disabled={actionBusy} label="Ignorer la course" />
             </div>
 
             {/* 2. Gain net en or géant */}

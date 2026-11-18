@@ -22,3 +22,16 @@ it('laisse le défilement vertical et ne supprime rien',()=>{
   fireEvent.pointerUp(content,{clientX:195,clientY:70,pointerId:1,pointerType:'touch'});
   expect(content.style.transform).toBe('translateX(0px)');expect(remove).not.toHaveBeenCalled();
 });
+
+it('un simple appui ouvre le message sans afficher une corbeille',()=>{
+  const open=vi.fn(),remove=vi.fn();
+  render(<SwipeInboxItem label="Conversation" onDelete={remove}><button onClick={open}>Ouvrir</button></SwipeInboxItem>);
+  const button=screen.getByRole('button',{name:'Ouvrir'}), content=button.parentElement!;
+  expect(screen.queryByRole('button',{name:'Supprimer Conversation'})).toBeNull();
+  fireEvent.pointerDown(content,{clientX:100,clientY:20,pointerId:1,pointerType:'touch'});
+  fireEvent.pointerUp(content,{clientX:100,clientY:20,pointerId:1,pointerType:'touch'});
+  fireEvent.click(button);
+  expect(open).toHaveBeenCalledOnce();
+  expect(screen.queryByRole('button',{name:'Supprimer Conversation'})).toBeNull();
+  expect(remove).not.toHaveBeenCalled();
+});

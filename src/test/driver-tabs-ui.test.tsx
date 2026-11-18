@@ -157,6 +157,11 @@ describe("onglets chauffeur", () => {
     expect(screen.queryByText('Centre de messagerie')).toBeNull();
     expect(screen.queryByText('Passagers')).toBeNull();
     expect(screen.queryByText('Message passager invisible')).toBeNull();
+    expect(screen.queryByRole('button',{name:'Supprimer Conversation à supprimer'})).toBeNull();
+    const swipe=screen.getByText('Conversation à supprimer').closest('button')!.parentElement!;
+    fireEvent.pointerDown(swipe,{clientX:200,clientY:20,pointerId:1,pointerType:'touch'});
+    fireEvent.pointerMove(swipe,{clientX:110,clientY:22,pointerId:1,pointerType:'touch'});
+    fireEvent.pointerUp(swipe,{clientX:110,clientY:22,pointerId:1,pointerType:'touch'});
     fireEvent.click(screen.getByRole('button',{name:'Supprimer Conversation à supprimer'}));
     expect(screen.getByRole('dialog',{name:'Supprimer cette conversation ?'})).toBeTruthy();
     expect(fixtures.request.mock.calls.filter(([,options])=>options?.method==='DELETE')).toHaveLength(0);
