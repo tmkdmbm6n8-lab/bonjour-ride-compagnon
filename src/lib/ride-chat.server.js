@@ -318,6 +318,38 @@ export async function adminChatEvidence(admin, q) {
       reportedRideCount(admin, evidence.driverId),
     ]);
 
+    const decision = await getRideDecision(admin, evidence.rideId);
+    const driverDecisions = await getDriverDecisions(admin, evidence.driverId);
+    const activeWarningsCount = countActiveWarnings(driverDecisions);
+
+    return {
+      evidence: {
+        ...evidence,
+        reportInfo,
+        decision,
+        activeWarningsCount,
+        rideData,
+        rider: riderProfile || { id: evidence.riderId, name: "Passager" },
+        driver: {
+          ...(driverProfile || { id: evidence.driverId, name: "Chauffeur" }),
+          isApproved: driverRecord?.is_approved ?? false,
+          isOnline: driverRecord?.is_online ?? false,
+          vehicle: driverRecord?.vehicle || null,
+          reportCount: driverReports || 0,
+        },
+        messages: await Promise.all(
+          evidence.messages.map(async (m) => {
+            if (!["audio", "image"].includes(m.type)) return m;
+            return {
+              ...m,
+              url: required(await admin.storage.from(CHAT_BUCKET).createSignedUrl(m.path, ttl)).signedUrl,
+              path: undefined,
+            };
+          }),
+        ),
+      },
+    };
+
     return {
       evidence: {
         ...evidence,
