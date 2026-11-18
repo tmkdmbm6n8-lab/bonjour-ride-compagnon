@@ -6886,6 +6886,9 @@ a.activity-pill:hover {
   .rider-account-eyebrow { display: block; margin-bottom: 7px; color: #d8b15d; font-size: 10px; font-weight: 700; letter-spacing: .13em; }
   .rider-account-heading h2 { font-size: 24px; }
   .rider-account-heading p { margin: 5px 0 0; color: #aab4c3; font-size: 13px; }
+  .rider-account-profile-photo { display: inline-flex; flex-shrink: 0; border-radius: 50%; outline: 1px solid transparent; transition: box-shadow .2s ease, outline-color .2s ease; }
+  .rider-account-profile-photo:hover, .rider-account-profile-photo:focus-visible { outline-color: rgba(234,179,8,.65); box-shadow: 0 0 0 4px rgba(234,179,8,.1), 0 0 20px rgba(234,179,8,.23); }
+  @media (prefers-reduced-motion: reduce) { .rider-account-profile-photo { transition: none; } }
   .rider-account-shortcuts { grid-column: 1; grid-row: 2; gap: 6px; }
   .rider-account-shortcuts > * { height: 76px; gap: 7px; font-size: 12px; }
   .rider-account-balance { grid-column: 1; grid-row: 3; margin: 0; }

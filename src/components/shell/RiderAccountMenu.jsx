@@ -2,7 +2,7 @@ import AccountModeSwitch from '@/components/shell/AccountModeSwitch';
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, LifeBuoy, Wallet, ReceiptText, UserRound, Tag, Info } from "lucide-react";
+import { ChevronDown, LifeBuoy, Wallet, ReceiptText, Tag, Info } from "lucide-react";
 import Link, { usePathname } from "@/lib/archive-navigation";
 import { apiFetch } from "@/lib/archive-fetch";
 import { signOut } from "@/lib/archive-auth";
@@ -93,7 +93,9 @@ export default function RiderAccountMenu({ user }) {
         <div id="rider-account-popover" className="rider-account-popover" role="region" aria-label="Menu du compte">
           <div className="rider-account-heading">
             <div><span className="rider-account-eyebrow">ESPACE PERSONNEL</span><h2>{user?.name || "Mon compte"}</h2><p>Votre compte StrasDrive, en un coup d’œil.</p></div>
-            <Avatar name={user?.name || ""} src={user?.avatar || ""} size="lg" />
+            <Link href="/profile" className="rider-account-profile-photo" aria-label="Gérer mon compte" onClick={() => setOpen(false)}>
+              <Avatar name={user?.name || ""} src={user?.avatar || ""} size="lg" />
+            </Link>
           </div>
           <div className="rider-account-shortcuts">
             <button onClick={() => showPanel("help")}>
@@ -116,10 +118,6 @@ export default function RiderAccountMenu({ user }) {
           {isDriver && <AccountModeSwitch mode="driver"/>}
           {user?.role === "admin" && <Link href="/admin/dashboard" className="btn btn-secondary btn-full">Administration</Link>}
           <div className="rider-account-links">
-            <Link href="/profile">
-              <UserRound size={17} />
-              Gérer le compte
-            </Link>
             <button onClick={() => showPanel("bonus")}>
               <Tag size={17} />
               Bonus
