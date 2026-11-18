@@ -8702,6 +8702,41 @@ a.activity-pill:hover {
 @media (prefers-reduced-motion: reduce) { .rating-star-button *, .rating-details-reveal { animation: none !important; transition: none !important; } }
 
 /* Traffic, Earnings and Inbox share the same heading baseline and controls. */
+.driver-desktop-overview { display: none; }
+@media (min-width: 901px) {
+  .drv-cockpit-root { height: 100dvh; min-height: 600px; }
+  .drv-cockpit-root .drv-cockpit-map { inset: 24px 24px 24px 390px; border: 1px solid rgba(255,255,255,.1); border-radius: 20px; overflow: hidden; }
+  .drv-cockpit-root .drv-cockpit-hud,
+  .drv-cockpit-root .drv-cockpit-bottom-bar { display: none; }
+  .driver-desktop-overview { position: absolute; inset: 0 auto 0 0; z-index: 10; display: flex; flex-direction: column; gap: 18px; width: 366px; padding: 42px 24px; overflow-y: auto; background: #0c0e14; border-right: 1px solid rgba(255,255,255,.07); }
+  .driver-desktop-heading > span { color: #d5ac52; font-size: 11px; font-weight: 700; letter-spacing: .13em; }
+  .driver-desktop-heading h1 { margin: 12px 0 8px; color: #f8fafc; font-size: 28px; line-height: 1.15; }
+  .driver-desktop-heading p { margin: 0; color: #aeb8c8; font-size: 14px; line-height: 1.55; }
+  .driver-desktop-status, .driver-desktop-earnings { display: flex; gap: 12px; padding: 17px; border: 1px solid rgba(255,255,255,.09); border-radius: 16px; background: #161923; color: #f8fafc; }
+  .driver-desktop-status { align-items: center; }
+  .driver-desktop-status > div { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .driver-desktop-status small, .driver-desktop-earnings > span { color: #aeb8c8; font-size: 12px; }
+  .driver-desktop-status strong { font-size: 14px; }
+  .driver-desktop-status-dot { width: 9px; height: 9px; flex-shrink: 0; border-radius: 50%; background: #8b95a5; }
+  .driver-desktop-status-dot.is-online { background: #56d990; box-shadow: 0 0 10px #56d99080; }
+  .driver-desktop-status button { padding: 8px; border: 1px solid #784448; border-radius: 9px; background: #351e25; color: #ffc4c4; font: inherit; font-size: 11px; cursor: pointer; }
+  .driver-desktop-earnings { flex-direction: column; gap: 8px; background: linear-gradient(135deg, #2b2417, #181922); border-color: rgba(229,184,105,.23); }
+  .driver-desktop-earnings strong { font-size: 30px; line-height: 1.2; }
+  .driver-desktop-earnings small { color: #e9c267; font-size: 12px; }
+  .driver-desktop-quick-links { display: grid; gap: 8px; }
+  .driver-desktop-quick-links a { display: flex; flex-direction: column; gap: 4px; padding: 13px 16px; border: 1px solid rgba(255,255,255,.08); border-radius: 13px; background: #151820; color: #edf0f6; }
+  .driver-desktop-quick-links strong { font-size: 14px; }
+  .driver-desktop-quick-links span { color: #aeb8c8; font-size: 12px; }
+  .driver-desktop-quick-links a:hover, .driver-desktop-earnings:hover { border-color: #bf9847; }
+  .driver-desktop-assistance { display: flex; gap: 10px; margin-top: auto; }
+  .driver-desktop-assistance button { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; background: #1a1d25; color: #e4e8ef; font: inherit; font-size: 12px; cursor: pointer; }
+  .driver-desktop-overview a:focus-visible, .driver-desktop-overview button:focus-visible { outline: 2px solid #facc15; outline-offset: 3px; }
+  .driver-tab-page.discover-page, .driver-tab-page.earnings-page, .driver-tab-page.inbox-page, .drv-cockpit-page { max-width: 1180px; padding: 40px 36px 64px; }
+  .discover-events { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+  .drv-tiles-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .earnings-daily-rides > .flex-col { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .drv-inbox-cards { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+}
 .driver-tab-page.discover-page, .driver-tab-page.earnings-page, .driver-tab-page.inbox-page { padding-top: calc(22px + env(safe-area-inset-top, 0px)); }
 .driver-tab-page.discover-page .driver-tab-title, .driver-tab-page.earnings-page .driver-tab-title, .driver-tab-page.inbox-page .driver-tab-title { min-height: 48px; align-items: center; margin-bottom: 22px; }
 .driver-tab-title > div { min-width: 0; }

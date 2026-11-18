@@ -100,6 +100,33 @@ export default function DriverHome({
         />
       </div>
 
+      <section className="driver-desktop-overview" aria-label="Tableau de bord chauffeur">
+        <div className="driver-desktop-heading">
+          <span>ESPACE CHAUFFEUR</span>
+          <h1>Bonjour, bienvenue</h1>
+          <p>Retrouvez vos informations et gérez votre activité depuis votre ordinateur.</p>
+        </div>
+        <div className="driver-desktop-status">
+          <span className={`driver-desktop-status-dot ${online ? "is-online" : ""}`} />
+          <div><small>Statut actuel</small><strong>{online ? "En ligne" : "Hors ligne"}</strong></div>
+          {online && <button type="button" onClick={onToggle} disabled={busy || loading}>Passer hors ligne</button>}
+        </div>
+        <Link className="driver-desktop-earnings" href="/driver/earnings">
+          <span>Gains aujourd’hui</span>
+          <strong>{today ? money(today.earnings) : "—"}</strong>
+          <small>Voir mes revenus <span aria-hidden="true">→</span></small>
+        </Link>
+        <div className="driver-desktop-quick-links">
+          <Link href="/driver/discover"><strong>Trafic</strong><span>Aéroport et gare</span></Link>
+          <Link href="/driver/inbox"><strong>Messages</strong><span>Contacter l’équipe</span></Link>
+          <Link href="/driver/menu"><strong>Mon espace</strong><span>Documents et préférences</span></Link>
+        </div>
+        <div className="driver-desktop-assistance">
+          <button type="button" onClick={() => setHelpOpen(true)}><HelpCircle size={17} /> Aide</button>
+          <button type="button" onClick={() => setSosOpen(true)}><ShieldCheck size={17} /> Urgences</button>
+        </div>
+      </section>
+
       {/* ── Bandeau supérieur ultra-fin ── */}
       <div className="drv-cockpit-hud">
       <header className="drv-cockpit-island">
