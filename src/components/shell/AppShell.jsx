@@ -76,7 +76,11 @@ export default function AppShell({ nav, children, variant = "default" }) {
           {variant === "rider" && <RiderAccountMenu user={user} />}
           <div className={variant === "rider" ? "rider-legacy-user" : undefined}>
             <div className="sidebar-user">
-              <Avatar name={user?.name || ""} src={user?.avatar || ""} size="sm" />
+              {pathname.startsWith('/driver/') ? (
+                <Link href="/driver/profile" className="sidebar-driver-profile" aria-label="Ouvrir mon profil chauffeur">
+                  <Avatar name={user?.name || ""} src={user?.avatar || ""} size="sm" />
+                </Link>
+              ) : <Avatar name={user?.name || ""} src={user?.avatar || ""} size="sm" />}
               <div className="flex-1 truncate">
                 <div className="small truncate" style={{ fontWeight: 600 }}>
                   {user?.name || "—"}

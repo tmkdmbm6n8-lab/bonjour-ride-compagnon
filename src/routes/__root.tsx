@@ -14,7 +14,6 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import Providers from '@/components/providers';
 import PaymentTestModeBanner from '@/components/payments/PaymentTestModeBanner';
-import TigranTool from '@/components/dev/TigranTool';
 
 function NotFoundComponent() {
   return (
@@ -130,7 +129,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <PaymentTestModeBanner />
-      <Providers><Outlet /><TigranTool /></Providers>
+      <Providers><Outlet /></Providers>
     </QueryClientProvider>
   );
 }
