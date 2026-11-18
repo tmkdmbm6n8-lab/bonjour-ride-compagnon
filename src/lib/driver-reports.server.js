@@ -29,5 +29,4 @@ export async function sendDriverReport(admin, { ride, uid, email, name, body }) 
     // L'ancien système suspendait automatiquement à 3 signalements bruts.
   // Ce déclenchement est neutralisé au profit des décisions administratives vérifiées.
   return { ok: true };
-
-  
+}

@@ -92,6 +92,13 @@ beforeEach(() => {
   fake.filters = [];
 });
 describe("autorisations réelles du gestionnaire serveur", () => {
+  it("renvoie à nouveau le profil chauffeur et son compteur d’avertissements", async () => {
+    fake.role = "driver";
+    const result = await handleVtc({ path: "/api/drivers/me", method: "GET" }, context());
+    expect(result.driver).toBeTruthy();
+    expect(result.driver.activeWarningsCount).toBe(0);
+    expect(fake.writes).toEqual([]);
+  });
   it("refuse l’arrivée au-delà de 20 mètres, même pour une course test", async () => {
     fake.role = "driver";
     fake.ride = { id: "private", rider_id: "rider", driver_id: "self", status: "accepted", is_test: true, pickup: { lat: 48.58, lng: 7.75 } };

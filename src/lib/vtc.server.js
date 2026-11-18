@@ -739,7 +739,14 @@ export async function handleVtc(input, context) {
         throw new Error("Vérifiez les informations du véhicule");
       required(await db.from("drivers").update({ vehicle: v }).eq("user_id", uid));
     }
-    is_online: false;
+    const driverRow = required(await db.from("drivers").select("*").eq("user_id", uid).single());
+    const { getDriverDecisions } = await import("./driver-warnings.server");
+    const { countActiveWarnings, shouldSuspendDriver } = await import("./driver-warnings");
+    const decisions = await getDriverDecisions(admin, uid);
+    const driver = driverShape(driverRow);
+    driver.activeWarningsCount = countActiveWarnings(decisions);
+    driver.isReportSuspended = !driver.isApproved && shouldSuspendDriver(decisions);
+    return { driver };
   }
   if (p === "/api/drivers/me/classes" && method === "PATCH") {
     const cur = required(await db.from("drivers").select("vehicle_class").eq("user_id", uid).single());
