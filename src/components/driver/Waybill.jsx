@@ -59,7 +59,7 @@ export default function Waybill({ open, onClose }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return (
-    <Modal open={open} onClose={onClose} title="Réservation préalable · Waybill" maxWidth={680}>
+    <Modal open={open} onClose={onClose} title="Réservation préalable · Waybill" maxWidth={680} portal keyboardSafe sheetOnMobile={false}>
       {error && (
         <p role="alert" className="waybill-warning">
           {error}

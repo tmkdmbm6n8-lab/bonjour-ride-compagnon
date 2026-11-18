@@ -1,3 +1,4 @@
+import { accountRating } from "./account-ratings.server";
 import { recordOnlineTime } from "./driver-online-time.server";
 import { driverReportMessage } from "./driver-reports";
 import { visibleChatMessages, CHAT_ACTIVE_STATUSES } from "./ride-chat";
@@ -20,7 +21,7 @@ import { assertRideActionMethod, privateDocumentPath, validLocation, invoiceRequ
 import { discoverBoard, returnHintForRide } from "./vtc-transport.server";
 import { driverWeekSummary } from "./vtc-driver-stats";
 import { parisDay, validDay } from "./vtc-dates";
-import { inboxForDriver, sendSupportMessage, personalSupportRequests } from "./vtc-support.server";
+import { inboxForDriver, sendSupportMessage, personalSupportRequests, hideDriverSupportThread } from "./vtc-support.server";
 import { buildWaybill, sanitizeOperator } from "./vtc-waybill";
 import { geoSearch } from "./vtc-geocoding.server";
 import { passengerDisplayName } from "./passenger-name";
@@ -171,7 +172,7 @@ async function serialize(db, r, actor, raw = false) {
       id: p.id,
       name: p.name,
       avatar: p.avatar,
-      rating: p.rating.average,
+      rating: (await accountRating(db, r.driver_id, "driver")).average ?? 5,
       totalTrips: d.stats.totalTrips,
       vehicle: { ...d.vehicle, type: driverClass(d) },
       location: d.location,
@@ -239,7 +240,7 @@ async function serialize(db, r, actor, raw = false) {
         name: raw ? rp.name || "Passager" : passengerDisplayName(rp.name),
         avatar: rp.avatar || "",
         phone: rp.phone || "",
-        rating: rp.rating?.average || 5.0,
+        rating: (await accountRating(db, r.rider_id, "rider")).average ?? 5,
       };
     } catch {
       out.rider = { name: "Passager", phone: "", rating: 5.0 };
@@ -553,7 +554,9 @@ export async function handleVtc(input, context) {
       required(await db.from("profiles").update(payload).eq("id", uid));
     }
     const fresh = required(await db.from("profiles").select("*").eq("id", uid).single());
-    return { user: { ...profileShape(fresh, context.claims.email), role, canDrive } };
+    const mode = q.get("view") === "driver" && canDrive ? "driver" : "rider";
+    const rating = await accountRating(admin, uid, mode);
+    return { user: { ...profileShape(fresh, context.claims.email), rating, role, canDrive } };
   }
   if (p === "/api/geo/search") return geoSearch(q);
   if (p === "/api/maps/speed-cameras" && method === "GET") {
@@ -564,12 +567,28 @@ export async function handleVtc(input, context) {
   if (p === "/api/drivers/me/discover" && method === "GET") return discoverBoard(q.get("day") || parisDay());
   if (p === "/api/drivers/me/inbox" && method === "GET")
     return inboxForDriver(admin, uid, context.claims?.email, q.get("page"));
+  if (p === "/api/drivers/me/inbox/support" && method === "DELETE")
+    return hideDriverSupportThread(admin, { uid, email: context.claims?.email, id: body.id, expectedUpdatedAt: body.expectedUpdatedAt });
   if (p === "/api/drivers/me/inbox/support" && method === "POST")
     return sendSupportMessage(admin, { uid, email: context.claims?.email, name: profile.name, role, body });
   if (p.startsWith("/api/drivers/me/road-alerts") || p.startsWith("/api/admin/road-alerts"))
     return roadAlerts(admin, { p, method, body, q, uid, isAdmin: role === "admin" });
   if (p === "/api/admin/support/reply" && method === "POST")
     return sendSupportMessage(admin, { uid, email: context.claims?.email, name: profile.name, role, body });
+  if (p === "/api/drivers/me/achievements") {
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    const { driverAchievements } = await import("./driver-achievements");
+    const [driverResult, trips, stars, rating] = await Promise.all([
+      admin.from("drivers").select("vehicle").eq("user_id", uid).single(),
+      admin.from("rides").select("id", { count: "exact", head: true }).eq("driver_id", uid).eq("status", "completed").eq("is_test", false),
+      admin.from("rides").select("id", { count: "exact", head: true }).eq("driver_id", uid).eq("status", "completed").eq("is_test", false).eq("rating->>byRider", "5").lte("completed_at", new Date(Date.now() - 12 * 3600000).toISOString()),
+      accountRating(admin, uid, "driver"),
+    ]);
+    required(driverResult); required(trips); required(stars);
+    return { name: profile.name, avatar: profile.avatar, memberSince: profile.created_at,
+      vehicle: { make: driverResult.data.vehicle?.make || "", model: driverResult.data.vehicle?.model || "" },
+      completedTrips: trips.count || 0, rating, achievements: driverAchievements(stars.count || 0) };
+  }
   if (p === "/api/drivers/me/ratings-unlock") {
     if (method !== "POST") throw new Error("Méthode non autorisée");
     const { claimRatingCelebration } = await import("./driver-rating-unlock.server");

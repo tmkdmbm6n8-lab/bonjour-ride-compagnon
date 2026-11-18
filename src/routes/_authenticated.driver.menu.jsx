@@ -1,3 +1,4 @@
+import DriverProfileOverview from "@/components/driver/DriverProfileOverview";
 import AccountModeSwitch from '@/components/shell/AccountModeSwitch';
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -24,10 +25,11 @@ import Waybill from "@/components/driver/Waybill";
 
 function DriverMenuPage() {
   const { data: session } = useSession();
-  const { data } = useDriverData("/api/users/me", 0);
+  const { data } = useDriverData("/api/users/me?view=driver", 0);
   const { data: driverData } = useDriverData("/api/drivers/me", 0);
   const [panel, setPanel] = useState(null);
   const [waybill, setWaybill] = useState(false);
+  const [overviewOpen, setOverviewOpen] = useState(false);
 
   const user = data?.user || session?.user || {};
   const driver = driverData?.driver;
@@ -35,7 +37,7 @@ function DriverMenuPage() {
   return (
     <div className="driver-tab-page drv-cockpit-page">
       {/* ── Carte Chauffeur Pro ── */}
-      <div className="drv-hero-card">
+      <button type="button" className="drv-hero-card driver-profile-open" onClick={() => setOverviewOpen(true)} aria-label="Ouvrir mon profil chauffeur et mes distinctions">
         <Avatar name={user.name || ""} src={user.avatar || ""} size="lg" />
         <div className="drv-hero-info">
           <h1>{user.name || "Chauffeur StrasDrive"}</h1>
@@ -47,16 +49,16 @@ function DriverMenuPage() {
         </div>
         <div className="drv-hero-rating">
           <Star size={14} fill="currentColor" />
-          <span>{Number(user.rating?.average ?? driver?.stats?.averageRating ?? 5).toFixed(2)}</span>
+          <span>{user.rating?.count ? Number(user.rating.average).toFixed(2) : "—"}</span>
         </div>
-      </div>
+      </button>
 
       <AccountModeSwitch mode="rider"/>
 
       {/* ── Grille 2x2 des outils essentiels ── */}
       <h2 className="drv-grid-title">Espace de conduite</h2>
       <div className="drv-tiles-grid">
-        <Link href="/driver/profile#driver-vehicle" className="drv-tile">
+        <Link href="/driver/profile" className="drv-tile">
           <div className="drv-tile-icon">
             <Car size={22} />
           </div>
@@ -123,6 +125,7 @@ function DriverMenuPage() {
         </button>
       </div>
 
+      <DriverProfileOverview open={overviewOpen} onClose={() => setOverviewOpen(false)} />
       <Waybill open={waybill} onClose={() => setWaybill(false)} />
       <Modal open={panel !== null} onClose={() => setPanel(null)} title="Sécurité & Assistance">
         <div className="flex-col gap-3">

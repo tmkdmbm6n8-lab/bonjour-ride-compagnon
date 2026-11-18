@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DriverLayout from "@/components/DriverLayout";
 import { Route as DiscoverRoute } from "@/routes/_authenticated.driver.discover";
 import { Route as EarningsRoute } from "@/routes/_authenticated.driver.earnings";
 import { Route as InboxRoute } from "@/routes/_authenticated.driver.inbox";
 import { Route as MenuRoute } from "@/routes/_authenticated.driver.menu";
-const fixtures = vi.hoisted(() => ({ data: {} as Record<string, any> }));
+const fixtures = vi.hoisted(() => ({ data: {} as Record<string, any>, request: vi.fn() }));
+vi.mock("@/lib/archive-fetch", () => ({ apiFetch: (...args: any[]) => fixtures.request(...args) }));
+vi.mock("@/lib/native-push", () => ({ registerDriverPush: vi.fn() }));
 vi.mock("@/components/shell/AppShell", () => ({
   default: ({ nav, children }: any) => (
     <>
@@ -54,6 +56,7 @@ vi.mock("@/hooks/useVisualViewport", () => ({ default: () => null }));
 afterEach(() => {
   cleanup();
   fixtures.data = {};
+  fixtures.request.mockReset();
   localStorage.clear();
 });
 describe("onglets chauffeur", () => {
@@ -139,9 +142,42 @@ describe("onglets chauffeur", () => {
     };
     const Component = InboxRoute.options.component as any;
     render(<Component />);
-    fireEvent.click(screen.getByRole("button", { name: /Mon versement/ }));
+    fireEvent.click(screen.getByText("Mon versement").closest("button")!);
     expect(screen.getByRole("dialog", { name: "Mon versement" })).toBeTruthy();
     expect(screen.getByText("StrasDrive Régulation")).toBeTruthy();
+  });
+  it("garde l’administration seule et exige une confirmation avant suppression", async () => {
+    fixtures.data["/api/drivers/me/inbox"] = {
+      threads: [{id:'11111111-1111-1111-1111-111111111111',subject:'Conversation à supprimer',messages:[{id:'message',from:'admin',text:'Bonjour',createdAt:'2026-11-18T08:00:00Z'}],status:'open',updatedAt:'2026-11-18T08:00:00Z'}],
+      rides:[{id:'passenger',messages:[{text:'Message passager invisible'}]}],hasMore:false,
+    };
+    fixtures.request.mockResolvedValue({ok:true,json:async()=>({driver:{isApproved:true},ok:true})});
+    const Component=InboxRoute.options.component as any;
+    render(<Component />);
+    expect(screen.queryByText('Centre de messagerie')).toBeNull();
+    expect(screen.queryByText('Passagers')).toBeNull();
+    expect(screen.queryByText('Message passager invisible')).toBeNull();
+    fireEvent.click(screen.getByRole('button',{name:'Supprimer Conversation à supprimer'}));
+    expect(screen.getByRole('dialog',{name:'Supprimer cette conversation ?'})).toBeTruthy();
+    expect(fixtures.request.mock.calls.filter(([,options])=>options?.method==='DELETE')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button',{name:'Annuler'}));
+    expect(screen.getByText('Conversation à supprimer')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button',{name:'Supprimer Conversation à supprimer'}));
+    fireEvent.click(screen.getByRole('button',{name:'Supprimer',exact:true}));
+    await waitFor(()=>expect(screen.queryByText('Conversation à supprimer')).toBeNull());
+    expect(fixtures.request.mock.calls.filter(([,options])=>options?.method==='DELETE')).toHaveLength(1);
+  });
+  it("ouvre la fiche chauffeur et ses distinctions depuis la photo et le nom", () => {
+    fixtures.data["/api/users/me"]={user:{name:'Tigran',rating:{count:5,average:5}}};
+    fixtures.data["/api/drivers/me"]={driver:{isApproved:true,vehicle:{make:'MG',model:'ZS'}}};
+    fixtures.data["/api/drivers/me/achievements"]={name:'Tigran',vehicle:{make:'MG',model:'ZS'},memberSince:'2026-01-01T00:00:00Z',completedTrips:120,rating:{average:5,count:100},achievements:{count:100,next:{remaining:400},badges:[{threshold:50,name:'Première distinction',motif:'star',accent:'#e3b864',shape:'round',earned:true}]}};
+    const Component=MenuRoute.options.component as any;
+    render(<Component />);
+    expect(screen.getByRole('link',{name:/Véhicule.*Documents/}).getAttribute('href')).toBe('/driver/profile');
+    fireEvent.click(screen.getByRole('button',{name:'Ouvrir mon profil chauffeur et mes distinctions'}));
+    expect(screen.getByRole('dialog',{name:'Votre profil chauffeur'})).toBeTruthy();
+    expect(screen.getByText('Première distinction')).toBeTruthy();
+    expect(screen.getByText('Obtenu')).toBeTruthy();
   });
   it("présente toutes les sections du menu dans la même page", () => {
     fixtures.data["/api/users/me"] = {

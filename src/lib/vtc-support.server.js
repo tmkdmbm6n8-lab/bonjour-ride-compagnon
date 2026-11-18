@@ -1,5 +1,4 @@
-import { visibleChatMessages, CHAT_ACTIVE_STATUSES } from "./ride-chat";
-import { newSupportThread, parseSupportThread, supportOwnedBy, supportShape } from "./vtc-support";
+import { newSupportThread, parseSupportThread, supportOwnedBy, supportShape, supportHiddenForOwner } from "./vtc-support";
 function required(result) {
   if (result.error) throw new Error(result.error.message);
   return result.data;
@@ -7,7 +6,7 @@ function required(result) {
 export async function inboxForDriver(admin, uid, email, page = 1) {
   const start = (Math.max(1, Number(page) || 1) - 1) * 50;
   const escapedEmail = String(email || "").replace(/[\\%_]/g, "\\$&");
-  const [support, owned, rides] = await Promise.all([
+  const [support, owned] = await Promise.all([
     email
       ? admin
           .from("contact_messages")
@@ -23,25 +22,16 @@ export async function inboxForDriver(admin, uid, email, page = 1) {
       .like("message", '%"userId":"' + uid + '"%')
       .order("created_at", { ascending: false })
       .range(start, start + 49),
-    admin
-      .from("rides")
-      .select("id,created_at,status,pickup,dropoff,messages")
-      .eq("driver_id", uid)
-      .eq("is_test", false)
-      .neq("messages", "[]")
-      .order("created_at", { ascending: false })
-      .range(start, start + 49),
   ]);
   const rows = [
     ...new Map([...required(support), ...required(owned)].map((row) => [row.id, row])).values(),
   ].filter((row) => supportOwnedBy(row, uid, email));
   return {
-    threads: rows.map(supportShape),
-    rides: required(rides).filter(r => CHAT_ACTIVE_STATUSES.includes(r.status)).map(r => ({ ...r, messages: visibleChatMessages(r.messages) })),
+    threads: rows.filter((row) => !supportHiddenForOwner(row)).map(supportShape),
+    rides: [],
     hasMore:
       (support.data?.length || 0) === 50 ||
-      (owned.data?.length || 0) === 50 ||
-      (rides.data?.length || 0) === 50,
+      (owned.data?.length || 0) === 50,
   };
 }
 export async function sendSupportMessage(admin, { uid, email, name, role, body }) {
@@ -132,4 +122,20 @@ export async function personalSupportRequests(admin, uid, email, page = 0) {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     hasMore: byEmail.data.length === 25 || byUser.data.length === 25,
   };
+}
+
+export async function hideDriverSupportThread(admin, { uid, email, id, expectedUpdatedAt }) {
+  if (!/^[0-9a-f-]{36}$/i.test(id || '')) throw new Error('Conversation invalide');
+  for (let attempt=0;attempt<3;attempt++) {
+    const row=required(await admin.from('contact_messages').select('*').eq('id',id).single());
+    if(!row || !supportOwnedBy(row,uid,email))throw new Error('Conversation inaccessible');
+    if(expectedUpdatedAt && supportShape(row).updatedAt !== expectedUpdatedAt)
+      throw new Error('Un nouveau message est arrivé. Relisez la conversation avant de la supprimer.');
+    const thread=parseSupportThread(row);
+    if(!thread.messages.length)throw new Error('Conversation vide');
+    const value={...thread,userId:thread.userId || uid,hiddenThroughMessageId:thread.messages.at(-1).id};
+    const result=required(await admin.from('contact_messages').update({topic:'driver_conversation',message:JSON.stringify(value)}).eq('id',id).eq('message',row.message).select('id'));
+    if(result.length)return {ok:true};
+  }
+  throw new Error('La conversation a changé. Réessayez.');
 }

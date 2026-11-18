@@ -8,9 +8,9 @@ import { Loading } from '@/components/ui/bits';
 
 function WalletPage() {
   return (
-    <Suspense fallback={<div className="content-pad"><Loading /></div>}>
+    <div className="driver-account-page"><Suspense fallback={<div className="content-pad"><Loading /></div>}>
       <WalletPanel />
-    </Suspense>
+    </Suspense></div>
   );
 }
 

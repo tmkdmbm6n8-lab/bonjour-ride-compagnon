@@ -10,7 +10,7 @@ import { Avatar, Stars, Loading, money } from '@/components/ui/bits';
 import { useToast } from '@/components/ui/Toast';
 
 /** Shared profile editor for riders and drivers. */
-export default function ProfileCard({ children }) {
+export default function ProfileCard({ children, mode = 'rider' }) {
   const toast = useToast();
   const { update } = useSession();
   const [user, setUser] = useState(null);
@@ -52,7 +52,7 @@ export default function ProfileCard({ children }) {
     let ignore = false;
     (async () => {
       try {
-        const res = await fetch('/api/users/me');
+        const res = await fetch(`/api/users/me?view=${mode}`);
         if (res.ok) {
           const { user: u } = await res.json();
           if (!ignore) {
@@ -63,12 +63,12 @@ export default function ProfileCard({ children }) {
       } catch { /* ignore */ }
     })();
     return () => { ignore = true; };
-  }, []);
+  }, [mode]);
 
   async function save() {
     setSaving(true);
     try {
-      const res = await fetch('/api/users/me', {
+      const res = await fetch(`/api/users/me?view=${mode}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -139,7 +139,7 @@ export default function ProfileCard({ children }) {
             <h2 style={{ fontSize: '1.2rem' }}>{user.name}</h2>
             <div className="flex items-center gap-3 mt-1">
               <span className="tiny muted">@{user.username}</span>
-              <Stars value={user.rating?.average ?? 5} />
+              {user.rating?.count > 0 ? <><Stars value={user.rating.average} /><span className="tiny muted">{user.rating.count} avis</span></> : <span className="tiny muted">0 avis</span>}
             </div>
           </div>
           {!editing ? (

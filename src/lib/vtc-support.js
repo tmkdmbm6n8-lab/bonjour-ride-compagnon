@@ -69,3 +69,10 @@ export function supportShape(row) {
     updatedAt: thread.messages.at(-1)?.createdAt || row.created_at,
   };
 }
+
+// A driver may remove a thread from their inbox; the administration keeps its copy.
+// A genuinely new message makes the thread visible again.
+export function supportHiddenForOwner(row) {
+  const thread = parseSupportThread(row);
+  return Boolean(thread.hiddenThroughMessageId && thread.hiddenThroughMessageId === thread.messages.at(-1)?.id);
+}

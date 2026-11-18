@@ -1,8 +1,7 @@
-import ChatMedia from "@/components/ride/ChatMedia";
-import ChatAttachments from "@/components/ride/ChatAttachments";
+import SwipeInboxItem from "@/components/driver/SwipeInboxItem";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { MessagesSquare, Plus, Send, ShieldCheck, Car, ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { MessagesSquare, Plus, Send, ShieldCheck, ChevronRight } from "lucide-react";
 import DriverLayout from "@/components/DriverLayout";
 import useDriverData from "@/hooks/useDriverData";
 import { apiFetch } from "@/lib/archive-fetch";
@@ -12,7 +11,10 @@ import { Loading } from "@/components/ui/bits";
 import useVisualViewport from "@/hooks/useVisualViewport";
 
 function InboxPage() {
-  const [filter, setFilter] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const hidden = useRef(new Map());
   const [page, setPage] = useState(1);
   const [entries, setEntries] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -50,27 +52,13 @@ function InboxPage() {
         status: thread.status,
         updatedAt: thread.updatedAt,
       })),
-      ...data.rides.map((ride) => ({
-        id: `ride:${ride.id}`,
-        targetId: ride.id,
-        kind: "ride",
-        category: "ride",
-        subject: `Course · ${ride.dropoff?.address || "Passager"}`,
-        messages: (ride.messages || []).map((message, index) => ({
-          ...message,
-          id: message.id || `${ride.id}:${index}`,
-          createdAt: message.at || message.createdAt,
-        })),
-        status: ride.status,
-        updatedAt: ride.messages?.at(-1)?.at || ride.created_at,
-      })),
     ];
     setEntries((previous) =>
-      [...new Map([...previous.filter(item => item.kind !== "ride"), ...next].map((item) => [item.id, item])).values()].sort(
+      [...new Map([...(page === 1 ? [] : previous), ...next].map((item) => [item.id, item])).values()].filter(item => hidden.current.get(item.id) !== item.updatedAt).sort(
         (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt),
       ),
     );
-  }, [data]);
+  }, [data, page]);
 
   const selected = entries.find((entry) => entry.id === selectedId);
 
@@ -127,14 +115,27 @@ function InboxPage() {
     }
   }
 
-  const visible = entries.filter((entry) => filter === "all" || entry.category === filter);
+  const visible = entries;
+  async function confirmDelete() {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true); setDeleteError('');
+    try {
+      const response = await apiFetch('/api/drivers/me/inbox/support', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: deleteTarget.targetId, expectedUpdatedAt: deleteTarget.updatedAt }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Suppression impossible');
+      hidden.current.set(deleteTarget.id, deleteTarget.updatedAt);
+      setEntries(old => old.filter(item => item.id !== deleteTarget.id));
+      if (selectedId === deleteTarget.id) setSelectedId(null);
+      setDeleteTarget(null); reload();
+    } catch (error) { setDeleteError(error.message); }
+    finally { setDeleting(false); }
+  }
 
   return (
     <div className="driver-tab-page inbox-page drv-cockpit-page">
       {/* ── En-tête ── */}
       <div className="driver-tab-title">
         <div>
-          <p className="drv-eyebrow">Centre de messagerie</p>
           <h1>Inbox</h1>
         </div>
         <button
@@ -152,21 +153,7 @@ function InboxPage() {
         </button>
       </div>
 
-      {/* ── Filtres cockpit ── */}
-      <div className="drv-inbox-filters">
-        <button className={`drv-inbox-pill ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>
-          Tous ({entries.length})
-        </button>
-        <button
-          className={`drv-inbox-pill ${filter === "support" ? "active" : ""}`}
-          onClick={() => setFilter("support")}
-        >
-          Administration
-        </button>
-        <button className={`drv-inbox-pill ${filter === "ride" ? "active" : ""}`} onClick={() => setFilter("ride")}>
-          Passagers
-        </button>
-      </div>
+      <div className="drv-inbox-filters"><span className="drv-inbox-pill active">Administration</span></div>
 
       {error && (
         <p className="driver-notice" role="alert">
@@ -202,18 +189,11 @@ function InboxPage() {
           const lastMsg = entry.messages?.at(-1);
 
           return (
-            <button key={entry.id} className={`drv-inbox-card ${isUnread ? "unread" : ""}`} onClick={() => open(entry)}>
+            <SwipeInboxItem key={entry.id} label={entry.subject} onDelete={() => { setDeleteTarget(entry); setDeleteError(''); }}>
+            <button className={`drv-inbox-card ${isUnread ? "unread" : ""}`} onClick={() => open(entry)}>
               <div className="drv-inbox-card-header">
                 <div className="drv-inbox-source">
-                  {entry.kind === "support" ? (
-                    <span className="drv-badge-support">
-                      <ShieldCheck size={13} /> Administration
-                    </span>
-                  ) : (
-                    <span className="drv-badge-ride">
-                      <Car size={13} /> Course
-                    </span>
-                  )}
+                  <span className="drv-badge-support"><ShieldCheck size={13} /> Administration</span>
                   {isUnread && <span className="drv-unread-dot" aria-label="Non lu" />}
                 </div>
                 <time className="drv-inbox-time">
@@ -239,6 +219,7 @@ function InboxPage() {
                 <ChevronRight size={15} />
               </div>
             </button>
+            </SwipeInboxItem>
           );
         })}
       </div>
@@ -249,6 +230,16 @@ function InboxPage() {
         </button>
       )}
 
+      <Modal open={Boolean(deleteTarget)} onClose={() => { if (!deleting) setDeleteTarget(null); }} title="Supprimer cette conversation ?" portal keyboardSafe sheetOnMobile={false} closable={!deleting}>
+        <p>Êtes-vous sûr de vouloir retirer cette conversation de votre Inbox ?</p>
+        <p className="small muted mt-2">L’administration conserve sa copie. Une nouvelle réponse fera réapparaître la conversation.</p>
+        {deleteError && <p role="alert" className="driver-notice mt-3">{deleteError}</p>}
+        <div className="flex gap-2 mt-4">
+          <button className="btn btn-secondary flex-1" disabled={deleting} onClick={() => setDeleteTarget(null)}>Annuler</button>
+          <button className="btn btn-primary flex-1" disabled={deleting} onClick={confirmDelete}>{deleting ? 'Suppression…' : 'Supprimer'}</button>
+        </div>
+      </Modal>
+
       {/* ── Volet de conversation ── */}
       <Modal
         open={Boolean(selected || compose)}
@@ -258,9 +249,9 @@ function InboxPage() {
         }}
         title={compose ? "Nouvel échange avec l'administration" : selected?.subject}
         maxWidth={620}
+        portal
         keyboardSafe
       >
-        {selected?.kind === 'ride' && ["accepted", "arrived", "in_progress"].includes(selected.status) && <ChatAttachments key={selected.targetId} rideId={selected.targetId} />}
         <div
           className="inbox-conversation"
           style={viewport ? { maxHeight: Math.max(160, viewport.height - 160) } : undefined}
@@ -298,7 +289,7 @@ function InboxPage() {
                     </time>
                   )}
                 </div>
-                {selected.kind === 'ride' && ['audio', 'image'].includes(message.type) ? <ChatMedia message={message} rideId={selected.targetId} /> : message.type === 'location' ? <a href={`https://www.google.com/maps/search/?api=1&query=${message.lat},${message.lng}`} target="_blank" rel="noreferrer">Position partagée · ouvrir la carte</a> : <p>{message.text}</p>}
+                <p>{message.text}</p>
               </div>
             ))}
           </div>

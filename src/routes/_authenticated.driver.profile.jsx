@@ -127,11 +127,11 @@ function DriverProfilePage() {
   }
 
   return (
-    <div className="content-pad" style={{ maxWidth: 640 }}>
+    <div className="content-pad driver-account-page" style={{ maxWidth: 640 }}>
       <h1 className="page-title">Profil</h1>
       <p className="page-sub mb-6">Votre compte, votre véhicule et vos documents</p>
 
-      <ProfileCard>
+      <ProfileCard mode="driver">
         <div className="card card-pad mt-4" id="driver-vehicle">
           <div className="flex items-center justify-between mb-4">
             <h3 className="flex items-center gap-2" style={{ fontSize: '1.05rem' }}>

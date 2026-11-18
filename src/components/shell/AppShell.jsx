@@ -16,6 +16,7 @@ import { Avatar } from "@/components/ui/bits";
 export default function AppShell({ nav, children, variant = "default" }) {
   const shellRef = useRef(null);
   const sidebarRef = useRef(null);
+  const contentRef = useRef(null);
   useEffect(() => {
     const sidebar = sidebarRef.current;
     const update = () => shellRef.current?.style.setProperty("--shell-nav-height", `${sidebar.getBoundingClientRect().height}px`);
@@ -26,6 +27,14 @@ export default function AppShell({ nav, children, variant = "default" }) {
     return () => observer.disconnect();
   }, []);
   const pathname = usePathname();
+  useEffect(() => {
+    if (!pathname.startsWith('/driver/')) return;
+    const frame = requestAnimationFrame(() => {
+      if (contentRef.current) contentRef.current.scrollTop = 0;
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pathname]);
   const { data: session } = useSession();
   const user = session?.user;
   const homeHref =
@@ -88,7 +97,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
         </div>
       </aside>
 
-      <main className="content">{children}</main>
+      <main ref={contentRef} className="content">{children}</main>
     </div>
   );
 }

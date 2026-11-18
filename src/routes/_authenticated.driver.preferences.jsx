@@ -4,7 +4,7 @@ import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { useEffect, useState } from "react";
 import Link from "@/lib/archive-navigation";
 import {
-  ArrowLeft,
+  X,
   Check,
   UserRound,
   Armchair,
@@ -104,13 +104,11 @@ function PreferencesPage() {
 
 
   return (
-    <div className="drv-home">
+    <div className="driver-tab-page driver-preferences">
       <div className="drv-home-inner">
         <div className="drv-pref-head">
-          <Link href="/driver/dashboard" className="drv-back" aria-label="Retour">
-            <ArrowLeft size={26} />
-          </Link>
           <h1>Préférences</h1>
+          <Link href="/driver/menu" className="driver-icon-button" aria-label="Fermer les préférences"><X size={22} /></Link>
         </div>
 
         {failed ? (
