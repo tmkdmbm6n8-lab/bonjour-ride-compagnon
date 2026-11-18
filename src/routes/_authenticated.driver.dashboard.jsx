@@ -40,7 +40,7 @@ import DispatchWheel from "@/components/ride/DispatchWheel";
 import Waybill from "@/components/driver/Waybill";
 import DriverHome from "@/components/driver/DriverHome";
 import PassengerInfo from "@/components/driver/PassengerInfo";
-import { pickupZoneProblem } from "@/lib/vtc-dispatch";
+import { pickupZoneProblem, ARRIVAL_ZONE_METERS } from "@/lib/vtc-dispatch";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { money, VEHICLE_LABELS } from "@/components/ui/bits";
@@ -65,6 +65,7 @@ function DriverDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [pinValue, setPinValue] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
+  const [arrivalNotice, setArrivalNotice] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -225,6 +226,29 @@ function DriverDashboard() {
     } finally {
       setActionBusy(false);
     }
+  }
+
+  async function handleArrive() {
+    if (actionBusy || !ride) return;
+    setActionBusy(true);
+    try {
+      if (!navigator.geolocation) throw new Error('Position GPS introuvable — activez la localisation');
+      const location = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
+        (fix) => resolve({ lat: fix.coords.latitude, lng: fix.coords.longitude }),
+        () => reject(new Error('Position GPS introuvable — activez la localisation et réessayez.')),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+      ));
+      const problem = pickupZoneProblem(location, ride.pickup, ARRIVAL_ZONE_METERS);
+      if (problem) { setArrivalNotice(problem); return; }
+      const res = await fetch('/api/drivers/location', { method: 'POST', body: JSON.stringify(location) });
+      const data = await res.json();
+      if (!res.ok || data.ignored) throw new Error(data.error || 'Impossible de transmettre votre position.');
+      await arrive();
+      toast('Le passager a été informé de votre arrivée', 'success');
+    } catch (error) {
+      if (/GPS|localisation|prise en charge/i.test(error.message || '')) setArrivalNotice(error.message);
+      else toast(error.message || 'Impossible de signaler votre arrivée', 'error', 4000);
+    } finally { setActionBusy(false); }
   }
 
   async function handleComplete() {
@@ -512,9 +536,9 @@ function DriverDashboard() {
                 {/* Gros bouton d'action principal */}
                 {ride.status === "accepted" && (
                   <button
-                    className="btn btn-primary btn-lg btn-full"
-                    onClick={() => run(arrive, "Le passager a été informé de votre arrivée")}
-                    disabled={actionBusy || Boolean(zoneProblem)}
+                    className="btn btn-primary btn-lg btn-full drv-arrival-button"
+                    onClick={handleArrive}
+                    disabled={actionBusy}
                   >
                     <Flag size={18} /> Je suis arrivé
                   </button>
@@ -556,6 +580,10 @@ function DriverDashboard() {
       )}
 
       <Waybill open={waybillOpen} onClose={() => setWaybillOpen(false)} />
+      <Modal open={Boolean(arrivalNotice)} onClose={() => setArrivalNotice("")} title="Zone de prise en charge" portal keyboardSafe sheetOnMobile={false}>
+        <p role="alert">{arrivalNotice.startsWith('Rapprochez-vous') ? 'Vous n’êtes pas dans la zone de prise en charge. Approchez-vous à moins de 20 mètres, puis réessayez.' : arrivalNotice}</p>
+        <button type="button" className="btn btn-secondary btn-full mt-4" onClick={() => setArrivalNotice("")}>Retour</button>
+      </Modal>
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
 
       {/* ── Notification de course : Cockpit StrasDrive (Design Original) ── */}

@@ -117,7 +117,7 @@ describe('fair share (+30 %)', () => {
   });
 });
 
-import { pickupZoneProblem } from '@/lib/vtc-dispatch';
+import { pickupZoneProblem, ARRIVAL_ZONE_METERS } from '@/lib/vtc-dispatch';
 describe('pickup zone (150 m)', () => {
   const pickup = { lat: 48.5833, lng: 7.7458 };
   it('allows a driver about 100 m away', () => {
@@ -128,5 +128,18 @@ describe('pickup zone (150 m)', () => {
   });
   it('blocks when there is no GPS position', () => {
     expect(pickupZoneProblem(null, pickup)).toMatch(/GPS/);
+  });
+});
+
+describe('déclaration d’arrivée à 20 mètres', () => {
+  const pickup = { lat: 48.5833, lng: 7.7458 };
+  const north = (meters: number) => ({ lat: pickup.lat + (meters / 6371000) * (180 / Math.PI), lng: pickup.lng });
+  it('autorise 19,99 m et refuse 20,01 m sans arrondir la distance', () => {
+    expect(pickupZoneProblem(north(19.99), pickup, ARRIVAL_ZONE_METERS)).toBeNull();
+    expect(pickupZoneProblem(north(20.01), pickup, ARRIVAL_ZONE_METERS)).toMatch(/Rapprochez-vous/);
+  });
+  it('refuse une position GPS ou un point de prise en charge indisponible', () => {
+    expect(pickupZoneProblem(null, pickup, ARRIVAL_ZONE_METERS)).toMatch(/GPS/);
+    expect(pickupZoneProblem(north(0), null, ARRIVAL_ZONE_METERS)).toMatch(/indisponible/);
   });
 });

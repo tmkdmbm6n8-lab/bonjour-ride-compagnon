@@ -4,6 +4,7 @@ const fake = vi.hoisted(() => ({
   role: "rider",
   ride: null as Record<string, unknown> | null,
   online: false,
+  location: null as { lat: number; lng: number } | null,
   writes: [] as unknown[],
   reads: [] as string[],
   messages: [] as unknown[],
@@ -16,7 +17,7 @@ function query(table: string, admin = false) {
       : table === "profiles"
         ? { id: "self", name: "Self", balance: 100 }
         : table === "drivers"
-          ? { user_id: "self", is_online: fake.online }
+          ? { user_id: "self", is_online: fake.online, location: fake.location }
           : table === "rides"
             ? fake.ride
             : table === "contact_messages"
@@ -84,12 +85,20 @@ beforeEach(() => {
   fake.role = "rider";
   fake.ride = { id: "private", rider_id: "other", driver_id: "different", status: "accepted" };
   fake.online = false;
+  fake.location = null;
   fake.writes = [];
   fake.reads = [];
   fake.messages = [];
   fake.filters = [];
 });
 describe("autorisations réelles du gestionnaire serveur", () => {
+  it("refuse l’arrivée au-delà de 20 mètres, même pour une course test", async () => {
+    fake.role = "driver";
+    fake.ride = { id: "private", rider_id: "rider", driver_id: "self", status: "accepted", is_test: true, pickup: { lat: 48.58, lng: 7.75 } };
+    fake.location = { lat: 48.5803, lng: 7.75 };
+    await expect(handleVtc({ path: "/api/rides/private/arrive", method: "POST" }, context())).rejects.toThrow(/Rapprochez-vous/);
+    expect(fake.writes.some((write: any) => write.table === 'rides')).toBe(false);
+  });
   it.each(["rider", "driver"])("refuse les mesures d’administration au rôle %s", async role => {
     fake.role = role;
     await expect(handleVtc({ path: "/api/admin/monitoring", method: "GET" }, context())).rejects.toThrow("Accès administrateur requis");

@@ -93,6 +93,7 @@ import {
   profitability,
   TEST_OFFER_SECONDS,
   pickupZoneProblem,
+  ARRIVAL_ZONE_METERS,
 } from "./vtc-dispatch";
 import { sanitizeTripPrefs, tripPrefsOf, riderAverage } from "./vtc-trip-prefs";
 import { evaluateDriverProgress } from "./vtc-tracking";
@@ -1209,9 +1210,9 @@ export async function handleVtc(input, context) {
     if (action === "arrive" || action === "start" || action === "complete") {
       const previous = { arrive: "accepted", start: "arrived", complete: "in_progress" }[action];
       if (r.driver_id !== uid || r.status !== previous) throw new Error("Action non autorisée");
-      if ((action === "arrive" || action === "start") && !r.is_test) {
+      if (action === "arrive" || (action === "start" && !r.is_test)) {
         const loc = required(await admin.from("drivers").select("location").eq("user_id", uid).single()).location;
-        const zone = pickupZoneProblem(loc, r.pickup);
+        const zone = action === "arrive" ? pickupZoneProblem(loc, r.pickup, ARRIVAL_ZONE_METERS) : pickupZoneProblem(loc, r.pickup);
         if (zone) throw new Error(zone);
       }
       if (action === "start" && body.pin !== r.pin) throw new Error("Code PIN incorrect");
