@@ -1547,6 +1547,10 @@ export async function handleVtc(input, context) {
     };
   }
   if (p === "/api/admin/support") {
+    if (method === "POST") {
+      const { archiveSupport } = await import("./admin-support-archive.server");
+      return archiveSupport(admin, body.id, body.expectedMessage);
+    }
     if (method === "PATCH") {
       if (!["open", "resolved"].includes(body.status)) throw new Error("Statut invalide");
       required(
@@ -1557,15 +1561,10 @@ export async function handleVtc(input, context) {
       );
       return { ok: true };
     }
-    return {
-      messages: required(
-        await admin
-          .from("contact_messages")
-          .select("*")
-          .eq("status", q.get("status") || "open")
-          .not("topic", "in", "(ride_chat_archive,ride_chat_cleanup)"),
-      ).map((m) => ({ ...m, _id: m.id, createdAt: m.created_at, resolvedAt: m.resolved_at })),
-    };
+    const status = q.get("status") || "open";
+    if (!["open", "resolved", "archive"].includes(status)) throw new Error("Statut invalide");
+    const { adminSupportMessages } = await import("./admin-support-archive.server");
+    return adminSupportMessages(admin, status);
   }
   if (p === "/api/admin/overview") {
     const rs = required(

@@ -9,6 +9,8 @@ import { Inbox, CheckCircle2, RotateCcw, Mail } from 'lucide-react';
 import { Avatar, Loading, Empty } from '@/components/ui/bits';
 import { useToast } from '@/components/ui/Toast';
 import { formatRelativeTime } from '@/lib/utils/geo';
+import Link, { useSearchParams } from '@/lib/archive-navigation';
+import CloseControl from '@/components/ui/CloseControl';
 
 const TOPIC_LABEL = {
   general: 'Général',
@@ -32,19 +34,21 @@ const TOPIC_TONE = {
 function AdminSupportPage() {
   const toast = useToast();
   const [status, setStatus] = useState('open');
+  const archiveView = useSearchParams().get('archive') === '1';
+  const displayedStatus = archiveView ? 'archive' : status;
   const [messages, setMessages] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setMessages(null);
     try {
-      const res = await fetch(`/api/admin/support?status=${status}`);
+      const res = await fetch(`/api/admin/support?status=${displayedStatus}`);
       const data = await res.json();
       setMessages(res.ok ? data.messages : []);
     } catch {
       setMessages([]);
     }
-  }, [status]);
+  }, [displayedStatus]);
 
   useEffect(() => {
     load();
@@ -74,24 +78,38 @@ function AdminSupportPage() {
     }
   }
 
+  async function archiveMessage(row) {
+    if (!window.confirm('Archiver cette conversation ? Elle restera consultable dans Archives.')) return;
+    setBusyId(row._id);
+    try {
+      const res = await fetch('/api/admin/support', { method: 'POST', body: JSON.stringify({ id: row._id, expectedMessage: row.message }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Archivage impossible');
+      toast('Conversation archivée', 'success');
+      await load();
+    } catch (error) { toast(error.message || 'Archivage impossible', 'error'); }
+    finally { setBusyId(null); }
+  }
+
   return (
     <div className="content-pad" style={{ maxWidth: 860 }}>
       <div className="flex items-center justify-between mb-6 wrap gap-3">
         <div>
-          <h1 className="page-title">Boîte de réception de l’assistance</h1>
-          <p className="page-sub">Messages du formulaire de contact</p>
+          <h1 className="page-title">{archiveView ? 'Archives' : 'Boîte de réception de l’assistance'}</h1>
+          <p className="page-sub">{archiveView ? 'Conversations d’assistance archivées' : 'Messages du formulaire de contact'}</p>
         </div>
-        <div className="segmented">
+        {!archiveView && <div className="segmented">
           <button className={status === 'open' ? 'active' : ''} onClick={() => setStatus('open')}> Ouverts </button>
           <button className={status === 'resolved' ? 'active' : ''} onClick={() => setStatus('resolved')}> Résolus </button>
-        </div>
+        </div>}
       </div>
+      {archiveView && <div className="flex gap-2 wrap mb-4"><Link className="btn btn-secondary" href="/admin/rides">Dossiers de courses</Link><Link className="btn btn-secondary" href="/admin/chat-evidence">Échanges signalés</Link></div>}
 
       {messages === null && <Loading label="Chargement des messages…" />}
       {messages?.length === 0 && (
         <Empty
           icon={Inbox}
-          title={status === 'open' ? 'Aucun message en attente' : 'Aucun message résolu pour le moment'}
+          title={archiveView ? 'Aucune conversation archivée' : status === 'open' ? 'Aucun message en attente' : 'Aucun message résolu pour le moment'}
           hint={status === 'open' ? 'Les nouveaux messages du formulaire de contact apparaîtront ici.' : undefined}
         />
       )}
@@ -117,6 +135,7 @@ function AdminSupportPage() {
                 {TOPIC_LABEL[m.topic] || m.topic}
               </span>
               <span className="tiny muted">{formatRelativeTime(m.createdAt)}</span>
+              {!archiveView && <CloseControl label={`Archiver la conversation de ${m.name}`} title="Archiver" disabled={busyId === m._id} onClick={() => archiveMessage(m)} />}
             </div>
 
             <SupportConversation row={m} onSent={() => load(true)} />

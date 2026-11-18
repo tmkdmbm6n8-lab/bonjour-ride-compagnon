@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Route, Car, Users, DollarSign, Inbox, MessagesSquare, Activity } from 'lucide-react';
+import { LayoutDashboard, Route, Car, Users, DollarSign, Inbox, MessagesSquare, Activity, Archive } from 'lucide-react';
 
 import { useEffect } from 'react';
 import { registerDriverPush } from '@/lib/native-push';
@@ -15,6 +15,7 @@ const NAV = [
   { href: '/admin/pricing', label: 'Tarification', icon: DollarSign },
   { href: '/admin/support', label: 'Assistance', icon: Inbox },
   { href: '/admin/chat-evidence', label: 'Échanges signalés', icon: MessagesSquare },
+  { href: '/admin/support?archive=1', label: 'Archives', icon: Archive },
 ];
 
 export default function AdminLayout({ children }) {

@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { newSupportThread } from "./vtc-support";
 import {
   CHAT_ACTIVE_STATUSES,
   CHAT_RETENTION_MS,
@@ -406,15 +407,22 @@ export async function handleAdminReportAction(admin, body) {
   }
 
   if (action === "send_warning") {
-    if (!warningText || warningText.trim().length < 5)
+    if (typeof warningText !== 'string' || warningText.trim().length < 5 || warningText.trim().length > 4000)
       throw new Error("Rédigez un avertissement (minimum 5 caractères)");
-    await admin.from("contact_messages").insert({
-      topic: "safety",
-      name: `Avertissement — ${warningTarget === "rider" ? "Passager" : "Chauffeur"}`,
-      email: body.email || "support@strasdrive.fr",
-      message: `AVERTISSEMENT ADMINISTRATEUR (Course ${body.rideId})\nDestinataire : ${warningTarget === "rider" ? "Passager" : "Chauffeur"}\nMotif : ${warningText.trim()}\nDate : ${new Date().toLocaleString("fr-FR")}`,
-    });
-    return { ok: true, message: "Avertissement officiel consigné avec succès." };
+    if (!['driver', 'rider'].includes(warningTarget)) throw new Error('Destinataire invalide');
+    const ride = await loadRide(admin, body.rideId);
+    const recipientId = warningTarget === 'driver' ? ride.driver_id : ride.rider_id;
+    if (!recipientId) throw new Error('Destinataire indisponible');
+    const authUser = required(await admin.auth.admin.getUserById(recipientId)).user;
+    if (!authUser?.email) throw new Error('Adresse du destinataire indisponible');
+    const recipient = required(await admin.from('profiles').select('name').eq('id', recipientId).single());
+    const thread = newSupportThread(recipientId, 'Avertissement', warningText.trim(), new Date().toISOString(), warningTarget);
+    thread.messages[0].from = 'admin';
+    required(await admin.from('contact_messages').insert({
+      topic: 'driver_conversation', name: recipient?.name || 'Utilisateur', email: authUser.email.toLowerCase(),
+      message: JSON.stringify(thread),
+    }));
+    return { ok: true, message: 'Avertissement envoyé dans la messagerie du destinataire.' };
   }
 
   throw new Error("Action inconnue");
