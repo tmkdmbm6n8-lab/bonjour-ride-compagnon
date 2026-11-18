@@ -21,7 +21,12 @@ import { assertRideActionMethod, privateDocumentPath, validLocation, invoiceRequ
 import { discoverBoard, returnHintForRide } from "./vtc-transport.server";
 import { driverWeekSummary } from "./vtc-driver-stats";
 import { parisDay, validDay } from "./vtc-dates";
-import { inboxForDriver, sendSupportMessage, personalSupportRequests, hideDriverSupportThread } from "./vtc-support.server";
+import {
+  inboxForDriver,
+  sendSupportMessage,
+  personalSupportRequests,
+  hideDriverSupportThread,
+} from "./vtc-support.server";
 import { buildWaybill, sanitizeOperator } from "./vtc-waybill";
 import { geoSearch } from "./vtc-geocoding.server";
 import { passengerDisplayName } from "./passenger-name";
@@ -576,7 +581,12 @@ export async function handleVtc(input, context) {
   if (p === "/api/drivers/me/inbox" && method === "GET")
     return inboxForDriver(admin, uid, context.claims?.email, q.get("page"));
   if (p === "/api/drivers/me/inbox/support" && method === "DELETE")
-    return hideDriverSupportThread(admin, { uid, email: context.claims?.email, id: body.id, expectedUpdatedAt: body.expectedUpdatedAt });
+    return hideDriverSupportThread(admin, {
+      uid,
+      email: context.claims?.email,
+      id: body.id,
+      expectedUpdatedAt: body.expectedUpdatedAt,
+    });
   if (p === "/api/drivers/me/inbox/support" && method === "POST")
     return sendSupportMessage(admin, { uid, email: context.claims?.email, name: profile.name, role, body });
   if (p.startsWith("/api/drivers/me/road-alerts") || p.startsWith("/api/admin/road-alerts"))
@@ -588,14 +598,34 @@ export async function handleVtc(input, context) {
     const { driverAchievements } = await import("./driver-achievements");
     const [driverResult, trips, stars, rating] = await Promise.all([
       admin.from("drivers").select("vehicle").eq("user_id", uid).single(),
-      admin.from("rides").select("id", { count: "exact", head: true }).eq("driver_id", uid).eq("status", "completed").eq("is_test", false),
-      admin.from("rides").select("id", { count: "exact", head: true }).eq("driver_id", uid).eq("status", "completed").eq("is_test", false).eq("rating->>byRider", "5").lte("completed_at", new Date(Date.now() - 12 * 3600000).toISOString()),
+      admin
+        .from("rides")
+        .select("id", { count: "exact", head: true })
+        .eq("driver_id", uid)
+        .eq("status", "completed")
+        .eq("is_test", false),
+      admin
+        .from("rides")
+        .select("id", { count: "exact", head: true })
+        .eq("driver_id", uid)
+        .eq("status", "completed")
+        .eq("is_test", false)
+        .eq("rating->>byRider", "5")
+        .lte("completed_at", new Date(Date.now() - 12 * 3600000).toISOString()),
       accountRating(admin, uid, "driver"),
     ]);
-    required(driverResult); required(trips); required(stars);
-    return { name: profile.name, avatar: profile.avatar, memberSince: profile.created_at,
+    required(driverResult);
+    required(trips);
+    required(stars);
+    return {
+      name: profile.name,
+      avatar: profile.avatar,
+      memberSince: profile.created_at,
       vehicle: { make: driverResult.data.vehicle?.make || "", model: driverResult.data.vehicle?.model || "" },
-      completedTrips: trips.count || 0, rating, achievements: driverAchievements(stars.count || 0) };
+      completedTrips: trips.count || 0,
+      rating,
+      achievements: driverAchievements(stars.count || 0),
+    };
   }
   if (p === "/api/drivers/me/ratings-unlock") {
     if (method !== "POST") throw new Error("Méthode non autorisée");
@@ -606,11 +636,18 @@ export async function handleVtc(input, context) {
     if (method !== "GET") throw new Error("Méthode non autorisée");
     const { driverRatingSummary } = await import("./driver-rating-summary");
     const driver = required(await admin.from("drivers").select("is_priority,stats").eq("user_id", uid).single());
-    const rows = required(await admin.from("rides").select("rating")
-      .eq("driver_id", uid).eq("status", "completed").eq("is_test", false)
-      .not("rating->byRider", "is", null)
-      .lte("completed_at", new Date(Date.now() - 12 * 3600000).toISOString())
-      .order("completed_at", { ascending: false }).limit(500));
+    const rows = required(
+      await admin
+        .from("rides")
+        .select("rating")
+        .eq("driver_id", uid)
+        .eq("status", "completed")
+        .eq("is_test", false)
+        .not("rating->byRider", "is", null)
+        .lte("completed_at", new Date(Date.now() - 12 * 3600000).toISOString())
+        .order("completed_at", { ascending: false })
+        .limit(500),
+    );
     const summary = driverRatingSummary(rows, Boolean(driver.is_priority));
     return summary.locked ? summary : { ...summary, unlockAnimationSeen: Boolean(driver.stats?.ratingUnlockSeenAt) };
   }
@@ -649,7 +686,11 @@ export async function handleVtc(input, context) {
       stats: driver.stats,
       today: week.today,
       week,
-      recentRides: await Promise.all(finishedThisWeek.filter((ride) => parisDay(ride.completed_at) === day).map((ride) => serialize(admin, ride, uid, true))),
+      recentRides: await Promise.all(
+        finishedThisWeek
+          .filter((ride) => parisDay(ride.completed_at) === day)
+          .map((ride) => serialize(admin, ride, uid, true)),
+      ),
     };
   }
   if (p === "/api/drivers/me/operator" && method === "PATCH") {
@@ -717,6 +758,30 @@ export async function handleVtc(input, context) {
         driverRow.is_online = false;
       }
     }
+    const { getDriverDecisions, countActiveWarnings, shouldSuspendDriver } = await import("./driver-warnings.server");
+    const driverDecisions = await getDriverDecisions(admin, uid);
+    const activeWarningsCount = countActiveWarnings(driverDecisions);
+    const mustSuspend = shouldSuspendDriver(driverDecisions);
+
+    if (mustSuspend && driverRow.is_approved) {
+      await admin
+        .from("drivers")
+        .update({
+          is_approved: false,
+          is_online: false,
+          documents_override: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", uid);
+      driverRow.is_approved = false;
+      driverRow.is_online = false;
+    }
+
+    const driver = driverShape(driverRow);
+    driver.activeWarningsCount = activeWarningsCount;
+    driver.isReportSuspended = !driver.isApproved && mustSuspend;
+    return { driver };
+
     const driver = driverShape(driverRow);
     driver.isReportSuspended = !driver.isApproved && (await reportedRideCount(admin, uid)) >= 3;
     return { driver };
@@ -833,7 +898,11 @@ export async function handleVtc(input, context) {
     }
     await recordOnlineTime(admin, uid, {
       online: body.online,
-      patch: { is_online: body.online, location: body.online ? body.location : null, updated_at: new Date().toISOString() },
+      patch: {
+        is_online: body.online,
+        location: body.online ? body.location : null,
+        updated_at: new Date().toISOString(),
+      },
     });
     return { ok: true };
   }
@@ -1212,7 +1281,10 @@ export async function handleVtc(input, context) {
       if (r.driver_id !== uid || r.status !== previous) throw new Error("Action non autorisée");
       if (action === "arrive" || (action === "start" && !r.is_test)) {
         const loc = required(await admin.from("drivers").select("location").eq("user_id", uid).single()).location;
-        const zone = action === "arrive" ? pickupZoneProblem(loc, r.pickup, ARRIVAL_ZONE_METERS) : pickupZoneProblem(loc, r.pickup);
+        const zone =
+          action === "arrive"
+            ? pickupZoneProblem(loc, r.pickup, ARRIVAL_ZONE_METERS)
+            : pickupZoneProblem(loc, r.pickup);
         if (zone) throw new Error(zone);
       }
       if (action === "start" && body.pin !== r.pin) throw new Error("Code PIN incorrect");
