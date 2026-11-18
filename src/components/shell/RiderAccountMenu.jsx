@@ -2,18 +2,23 @@ import AccountModeSwitch from '@/components/shell/AccountModeSwitch';
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, LifeBuoy, Wallet, ReceiptText, UserRound, Tag, Info } from "lucide-react";
+import { ChevronDown, LifeBuoy, Wallet, ReceiptText, UserRound, Tag, Info, Car, CreditCard, SlidersHorizontal, FileCheck, ShieldCheck, Star, ChevronRight } from "lucide-react";
 import Link, { usePathname } from "@/lib/archive-navigation";
 import { apiFetch } from "@/lib/archive-fetch";
 import { signOut } from "@/lib/archive-auth";
 import { Avatar, money } from "@/components/ui/bits";
 import Modal from "@/components/ui/Modal";
+import DriverProfileOverview from "@/components/driver/DriverProfileOverview";
+import Waybill from "@/components/driver/Waybill";
 
 export default function RiderAccountMenu({ user }) {
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState(null);
   const [balance, setBalance] = useState(null);
   const [verifiedDriver,setVerifiedDriver] = useState(null);
+  const [driverInfo, setDriverInfo] = useState(null);
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const [waybillOpen, setWaybillOpen] = useState(false);
   const root = useRef(null);
   const trigger = useRef(null);
   const pathname = usePathname();
@@ -65,6 +70,24 @@ export default function RiderAccountMenu({ user }) {
     };
   }, [open]);
 
+  const isDriver = verifiedDriver && verifiedDriver.userId === user?.id
+    ? verifiedDriver.allowed
+    : user?.role === "driver" || user?.canDrive === true;
+
+  useEffect(() => {
+    setDriverInfo(null);
+    if (!open || !isDriver) return;
+    let cancelled = false;
+    Promise.all([apiFetch("/api/users/me?view=driver"), apiFetch("/api/drivers/me")])
+      .then(async ([profile, driver]) => {
+        if (!profile.ok || !driver.ok) throw new Error("Informations indisponibles");
+        const [profileData, driverData] = await Promise.all([profile.json(), driver.json()]);
+        if (!cancelled) setDriverInfo({ user: profileData.user, driver: driverData.driver });
+      })
+      .catch(() => { if (!cancelled) setDriverInfo(null); });
+    return () => { cancelled = true; };
+  }, [open, isDriver, user?.id]);
+
   const showPanel = (value) => {
     setOpen(false);
     setPanel(value);
@@ -109,7 +132,25 @@ export default function RiderAccountMenu({ user }) {
             <span>StrasDrive Cash</span>
             <strong>{balance === null ? "—" : money(balance)}</strong>
           </Link>
-          {(verifiedDriver && verifiedDriver.userId===user?.id ? verifiedDriver.allowed : user?.role === "driver" || user?.canDrive===true) && <AccountModeSwitch mode="driver"/>}
+          {isDriver && <>
+            <section className="rider-driver-menu" aria-label="Espace chauffeur">
+              <h3>Espace chauffeur</h3>
+              <button type="button" className="rider-driver-profile" onClick={() => { setOpen(false); setOverviewOpen(true); }}>
+                <Avatar name={driverInfo?.user?.name || user?.name || ""} src={driverInfo?.user?.avatar || user?.avatar || ""} size="sm" />
+                <span><strong>{driverInfo?.user?.name || user?.name || "Profil chauffeur"}</strong><small>{driverInfo?.driver?.vehicle ? `${driverInfo.driver.vehicle.make || ""} ${driverInfo.driver.vehicle.model || ""} · ${driverInfo.driver.vehicle.plate || ""}` : "Profil et distinctions"}</small></span>
+                <span className="rider-driver-rating"><Star size={14} fill="currentColor" /> {driverInfo?.user?.rating?.count ? Number(driverInfo.user.rating.average).toFixed(2) : "—"}</span>
+              </button>
+              <div className="rider-driver-links">
+                <Link href="/driver/profile"><Car size={17} /><span>Véhicule & Documents</span><ChevronRight size={15} /></Link>
+                <Link href="/driver/wallet"><CreditCard size={17} /><span>Portefeuille & Virements</span><ChevronRight size={15} /></Link>
+                <Link href="/driver/preferences"><SlidersHorizontal size={17} /><span>Préférences de course</span><ChevronRight size={15} /></Link>
+                <button type="button" onClick={() => { setOpen(false); setWaybillOpen(true); }}><FileCheck size={17} /><span>Feuille de route VTC</span><ChevronRight size={15} /></button>
+                <Link href="/driver/inbox"><LifeBuoy size={17} /><span>Assistance StrasDrive</span><ChevronRight size={15} /></Link>
+                <button type="button" onClick={() => showPanel("safety")}><ShieldCheck size={17} /><span>Sécurité & Charte</span><ChevronRight size={15} /></button>
+              </div>
+              <AccountModeSwitch mode="driver"/>
+            </section>
+          </>}
           {user?.role === "admin" && <Link href="/admin/dashboard" className="btn btn-secondary btn-full">Administration</Link>}
           <div className="rider-account-links">
             <Link href="/profile">
@@ -130,10 +171,12 @@ export default function RiderAccountMenu({ user }) {
           </button>
         </div>
       )}
+      <DriverProfileOverview open={overviewOpen} onClose={() => setOverviewOpen(false)} />
+      <Waybill open={waybillOpen} onClose={() => setWaybillOpen(false)} />
       <Modal
         open={panel !== null}
         onClose={() => setPanel(null)}
-        title={panel === "help" ? "Aide" : panel === "bonus" ? "Bonus" : "Informations légales"}
+        title={panel === "help" ? "Aide" : panel === "bonus" ? "Bonus" : panel === "safety" ? "Sécurité & Assistance" : "Informations légales"}
       >
         {panel === "help" && (
           <div className="flex-col gap-3">
@@ -147,6 +190,13 @@ export default function RiderAccountMenu({ user }) {
           </div>
         )}
         {panel === "bonus" && <p>Aucun bonus n’est disponible pour le moment.</p>}
+        {panel === "safety" && (
+          <div className="flex-col gap-3">
+            <p>Retrouvez vos documents professionnels, la discussion avec le client et les informations de votre course dans l’application.</p>
+            <Link href="/driver/profile" onClick={() => setPanel(null)}>Mes documents</Link>
+            <Link href="/driver/inbox" onClick={() => setPanel(null)}>Contacter l’administration</Link>
+          </div>
+        )}
         {panel === "legal" && (
           <div className="flex-col gap-3">
             <Link href="/mentions-legales">Mentions légales</Link>
