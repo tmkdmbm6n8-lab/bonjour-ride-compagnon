@@ -570,16 +570,22 @@ export async function handleVtc(input, context) {
     return roadAlerts(admin, { p, method, body, q, uid, isAdmin: role === "admin" });
   if (p === "/api/admin/support/reply" && method === "POST")
     return sendSupportMessage(admin, { uid, email: context.claims?.email, name: profile.name, role, body });
+  if (p === "/api/drivers/me/ratings-unlock") {
+    if (method !== "POST") throw new Error("Méthode non autorisée");
+    const { claimRatingCelebration } = await import("./driver-rating-unlock.server");
+    return claimRatingCelebration(admin, uid);
+  }
   if (p === "/api/drivers/me/ratings") {
     if (method !== "GET") throw new Error("Méthode non autorisée");
     const { driverRatingSummary } = await import("./driver-rating-summary");
-    const driver = required(await admin.from("drivers").select("is_priority").eq("user_id", uid).single());
+    const driver = required(await admin.from("drivers").select("is_priority,stats").eq("user_id", uid).single());
     const rows = required(await admin.from("rides").select("rating")
       .eq("driver_id", uid).eq("status", "completed").eq("is_test", false)
       .not("rating->byRider", "is", null)
       .lte("completed_at", new Date(Date.now() - 12 * 3600000).toISOString())
       .order("completed_at", { ascending: false }).limit(500));
-    return driverRatingSummary(rows, Boolean(driver.is_priority));
+    const summary = driverRatingSummary(rows, Boolean(driver.is_priority));
+    return summary.locked ? summary : { ...summary, unlockAnimationSeen: Boolean(driver.stats?.ratingUnlockSeenAt) };
   }
   if (p === "/api/drivers/me/earnings") {
     const day = q.get("day") || parisDay();

@@ -1,0 +1,45 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import DriverRatings from '../components/driver/DriverRatings';
+const fixture=vi.hoisted(()=>({data:null as any,fetch:vi.fn()}));
+vi.mock('@/hooks/useDriverData',()=>({default:()=>({data:fixture.data,error:null,reload:vi.fn()})}));
+vi.mock('@/lib/archive-fetch',()=>({apiFetch:(...args:any[])=>fixture.fetch(...args)}));
+vi.mock('@/components/ui/Modal',()=>({default:({open,children}:any)=>open?<div>{children}</div>:null}));
+afterEach(()=>{cleanup();vi.useRealTimers();fixture.fetch.mockReset();});
+describe('étoile et démonstration isolée',()=>{
+  it('remplit proportionnellement et ne démarre le mode caché qu’au 25e appui',async()=>{
+    vi.useFakeTimers();
+    const original=Object.freeze({locked:true,count:23,threshold:50,priority:false});fixture.data=original;
+    const {rerender}=render(<DriverRatings open onClose={()=>{}} />);
+    const star=screen.getByRole('button',{name:'Étoile de progression des avis'});
+    expect(star.style.getPropertyValue('--star-level')).toBe('46%');
+    for(let i=0;i<24;i++)fireEvent.click(star);
+    expect(star.className).not.toContain('is-filling');
+    fireEvent.click(star);expect(star.className).toContain('is-filling');
+    await act(async()=>{vi.advanceTimersByTime(450);});
+    expect(star.className).toContain('is-bursting');
+    await act(async()=>{vi.advanceTimersByTime(650);});
+    expect(screen.getByText(/Démonstration/)).toBeTruthy();
+    expect(fixture.fetch).not.toHaveBeenCalled();expect(fixture.data).toBe(original);
+    rerender(<DriverRatings open={false} onClose={()=>{}} />);
+    rerender(<DriverRatings open onClose={()=>{}} />);
+    expect(screen.queryByText(/Démonstration/)).toBeNull();
+    expect(screen.getByRole('button',{name:'Étoile de progression des avis'}).className).not.toContain('is-filling');
+  });
+  it('joue le vrai déblocage une fois et ne bloque pas la prochaine ouverture',async()=>{
+    vi.useFakeTimers();
+    fixture.data={locked:false,count:50,threshold:50,priority:false,unlockAnimationSeen:false,average:5,distribution:[{stars:5,count:50}],comments:[]};
+    fixture.fetch.mockResolvedValue({ok:true,json:async()=>({celebrate:true})});
+    const {rerender}=render(<DriverRatings open onClose={()=>{}} />);
+    await act(async()=>{});
+    expect(fixture.fetch).toHaveBeenCalledExactlyOnceWith('/api/drivers/me/ratings-unlock',{method:'POST'});
+    await act(async()=>{vi.advanceTimersByTime(850);});
+    await act(async()=>{vi.advanceTimersByTime(1100);});
+    expect(screen.getByText('Vos avis positifs')).toBeTruthy();
+    rerender(<DriverRatings open={false} onClose={()=>{}} />);
+    fixture.data={...fixture.data,unlockAnimationSeen:true};
+    rerender(<DriverRatings open onClose={()=>{}} />);
+    expect(screen.getByText('Vos avis positifs')).toBeTruthy();
+    expect(fixture.fetch).toHaveBeenCalledTimes(1);
+  });
+});
