@@ -1,3 +1,4 @@
+// @ts-nocheck — server actions kept as-is from the original JS file; .ts so TanStack Start registers them.
 import {createServerFn} from '@tanstack/react-start';
 import {requireSupabaseAuth} from '@/integrations/supabase/auth-middleware';
 import {DEFAULT_PRICING,calculateFare} from './vtc-pricing';

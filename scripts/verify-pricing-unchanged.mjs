@@ -14,7 +14,7 @@ for (const [path, expected] of Object.entries(baseline)) {
     if (from < 0 || to < 0) throw new Error("Bloc de tarification introuvable");
     text = source.slice(from, to);
   } else if (path === "vtc.functions.js:homeEstimate") {
-    const source = readFileSync(new URL("../src/lib/vtc.functions.js", import.meta.url), "utf8");
+    const source = readFileSync(new URL("../src/lib/vtc.functions.ts", import.meta.url), "utf8");
     const from = source.indexOf("export const homeEstimate");
     if (from < 0) throw new Error("Estimation publique introuvable");
     text = source.slice(from);
