@@ -8592,3 +8592,46 @@ a.activity-pill:hover {
 .driver-badge-art.locked { filter: grayscale(.9); opacity: .35; }
 .driver-badge-tile.locked h4, .driver-badge-tile.locked > small { color: #8f99a9; }
 @media (min-width: 580px) { .driver-badges-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+
+/* StrasDrive settings: three compact chapters, with a shared close control. */
+.driver-account-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.driver-account-heading > :first-child { min-width: 0; }
+.driver-account-heading h1 { line-height: 1.2; margin: 0; }
+.driver-page-close { flex: 0 0 44px; width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid rgba(216,182,104,.3); border-radius: 50%; color: #f4e4be; background: #191b22; text-decoration: none; }
+.driver-page-close:focus-visible { outline: 2px solid #e8bb3c; outline-offset: 4px; }
+.driver-page-close:hover { background: #28251d; }
+.sd-preferences { max-width: 680px; padding-bottom: 40px; }
+.sd-settings-brand { display: block; font-size: 11px; color: #d8b668; margin-bottom: 10px; }
+.sd-preferences .driver-account-heading h1 { font-size: clamp(23px, 6vw, 30px); }
+.sd-settings-intro { color: #aebaca; font-size: 14px; margin-bottom: 26px; }
+.sd-settings-navigation { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin-bottom: 22px; }
+.sd-settings-navigation button { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; border: 1px solid rgba(255,255,255,.11); border-radius: 15px; padding: 15px 12px; background: #12151d; color: #aebaca; font-size: 13px; text-align: left; cursor: pointer; min-width: 0; }
+.sd-settings-navigation button small { position: absolute; top: 12px; right: 10px; font-size: 10px; opacity: .55; }
+.sd-settings-navigation button[aria-selected="true"] { color: #f1d897; border-color: #b18a37; background: linear-gradient(135deg,rgba(201,162,39,.13),#12151d); box-shadow: inset 0 -2px #c9a227; }
+.sd-settings-panel { padding: 22px; background: #10131b; border: 1px solid rgba(255,255,255,.10); border-radius: 20px; }
+.sd-settings-kicker { font-size: 11px; color: #d8b668; letter-spacing: .04em; }
+.sd-preferences .sd-settings-panel h2 { font-size: 21px; color: #f1f5f9; text-transform: none; letter-spacing: -.02em; margin: 12px 0; line-height: 1.35; }
+.sd-settings-panel > p { color: #aebaca; font-size: 13px; line-height: 1.6; }
+.sd-primary-service { display: flex; align-items: center; gap: 12px; padding: 18px 0; margin-top: 12px; border-bottom: 1px solid rgba(255,255,255,.10); color: #d8b668; }
+.sd-primary-service > div { flex: 1; min-width: 0; }
+.sd-primary-service strong { display: block; font-size: 14px; color: #f1f5f9; }
+.sd-primary-service > div > span { display: block; font-size: 11px; color: #aebaca; margin-top: 4px; }
+.sd-service-status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
+.sd-service-choice, .sd-cash-choice { display: flex; align-items: center; gap: 12px; padding: 18px 0; border-bottom: 1px solid rgba(255,255,255,.08); cursor: pointer; color: #b6bdc9; }
+.sd-service-choice > span, .sd-cash-choice > span { flex: 1; min-width: 0; }
+.sd-service-choice strong, .sd-cash-choice strong { font-size: 14px; color: #f1f5f9; display: block; }
+.sd-service-choice small, .sd-cash-choice small { display: block; font-size: 12px; line-height: 1.5; color: #aebaca; margin-top: 5px; }
+.sd-service-choice input, .sd-cash-choice input { width: 21px; height: 21px; accent-color: #d8b668; flex-shrink: 0; cursor: pointer; }
+.sd-service-choice.selected > svg { color: #d8b668; }
+.sd-settings-field { display: grid; gap: 10px; margin-top: 24px; font-size: 14px; color: #e4e8ef; }
+.sd-settings-field select { background: #1a1d26; color: #f1f5f9; font-size: 16px; min-width: 0; width: 100%; color-scheme: dark; }
+.sd-settings-field small { font-size: 12px; line-height: 1.5; color: #aebaca; }
+.sd-settings-panel .sd-settings-note { padding: 12px 0 0; font-size: 12px; color: #c4b68f; }
+.sd-gps-choices { display: grid; gap: 10px; margin-top: 22px; }
+.sd-gps-choices button { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid rgba(255,255,255,.12); border-radius: 13px; background: #171a23; color: #f1f5f9; text-align: left; cursor: pointer; font-size: 14px; }
+.sd-gps-choices button.selected { border-color: #bc9743; background: rgba(201,162,39,.07); }
+.sd-gps-emblem { color: #d8b668; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: rgba(216,182,104,.09); }
+.sd-gps-check { margin-left: auto; color: #e8bb3c; }
+.sd-gps-reset { background: none; border: 0; color: #d8b668; min-height: 44px; margin-top: 12px; padding: 8px 0; cursor: pointer; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+.sd-settings-save { font-size: 11px; color: #929eaf; text-align: center; margin-top: 20px; }
+@media (max-width:360px) { .sd-settings-panel { padding: 18px 14px; } .sd-service-status { font-size: 10px; } }

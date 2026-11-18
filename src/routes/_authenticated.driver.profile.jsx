@@ -1,3 +1,4 @@
+import DriverPageClose from "@/components/driver/DriverPageClose";
 import {createFileRoute} from '@tanstack/react-router';
 import DriverLayout from '@/components/DriverLayout';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
@@ -128,7 +129,7 @@ function DriverProfilePage() {
 
   return (
     <div className="content-pad driver-account-page" style={{ maxWidth: 640 }}>
-      <h1 className="page-title">Profil</h1>
+      <div className="driver-account-heading"><h1 className="page-title">Véhicule & Documents</h1><DriverPageClose label="Fermer Véhicule et Documents" /></div>
       <p className="page-sub mb-6">Votre compte, votre véhicule et vos documents</p>
 
       <ProfileCard mode="driver">

@@ -1,3 +1,4 @@
+import DriverPageClose from "@/components/driver/DriverPageClose";
 import {createFileRoute} from '@tanstack/react-router';
 import DriverLayout from '@/components/DriverLayout';
 'use client';
@@ -9,7 +10,7 @@ import { Loading } from '@/components/ui/bits';
 function WalletPage() {
   return (
     <div className="driver-account-page"><Suspense fallback={<div className="content-pad"><Loading /></div>}>
-      <WalletPanel />
+      <WalletPanel headingAction={<DriverPageClose label="Fermer Portefeuille et Virements" />} />
     </Suspense></div>
   );
 }

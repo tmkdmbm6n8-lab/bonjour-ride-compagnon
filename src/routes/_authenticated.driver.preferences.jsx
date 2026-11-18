@@ -1,23 +1,9 @@
+import DriverPageClose from "@/components/driver/DriverPageClose";
 import { createFileRoute } from "@tanstack/react-router";
 import DriverLayout from "@/components/DriverLayout";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { useEffect, useState } from "react";
-import Link from "@/lib/archive-navigation";
-import {
-  X,
-  Check,
-  UserRound,
-  Armchair,
-  PawPrint,
-  Users,
-  Banknote,
-  Star,
-  BarChart3,
-  ChevronRight,
-  ChevronDown,
-  Navigation,
-  Zap,
-} from "lucide-react";
+import { Check, UserRound, Armchair, PawPrint, Users, Navigation, SlidersHorizontal, Car } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { VEHICLE_LABELS } from "@/components/ui/bits";
 import { NAV_APPS, getNavApp, setNavApp } from "@/lib/navigation";
@@ -31,20 +17,12 @@ import {
 const CLASS_ICONS = { economy: UserRound, comfort: Armchair, pet: PawPrint, xl: Users };
 const num = (n, d = 2) => n.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-function Switch({ on, busy }) {
-  return (
-    <span className={`drv-switch ${on ? "on" : ""}`} aria-hidden="true">
-      {busy ? <span className="spinner" style={{ width: 14, height: 14 }} /> : <span className="knob" />}
-    </span>
-  );
-}
-
 function PreferencesPage() {
   const toast = useToast();
   const [driver, setDriver] = useState(null);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(null);
-  const [open, setOpen] = useState(null); // "rating" | "pay" | null
+  const [section, setSection] = useState("services");
   const [navApp, setNavAppState] = useState(null);
 
   useEffect(() => {
@@ -104,214 +82,40 @@ function PreferencesPage() {
 
 
   return (
-    <div className="driver-tab-page driver-preferences">
-      <div className="drv-home-inner">
-        <div className="drv-pref-head">
-          <h1>Préférences</h1>
-          <Link href="/driver/menu" className="driver-icon-button" aria-label="Fermer les préférences"><X size={22} /></Link>
-        </div>
-
-        {failed ? (
-          <p className="drv-pref-note mt-4">Impossible de charger vos préférences. Vérifiez votre connexion et réessayez.</p>
-        ) : !driver ? (
-          <div className="flex justify-center mt-6">
-            <span className="spinner" />
-          </div>
-        ) : (
-          <>
-            {isFiltering(prefs) && <div className="drv-banner">Courses filtrées selon vos préférences</div>}
-
-            <h2 className="drv-pref-title">Services</h2>
-            <div className="drv-tiles">
-              <div className="drv-tile on locked" aria-label={`${VEHICLE_LABELS[own]}, votre gamme, toujours activée`}>
-                <span className="drv-check" aria-hidden="true">
-                  <Check size={18} strokeWidth={3} />
-                </span>
-                {(() => {
-                  const Icon = CLASS_ICONS[own] || UserRound;
-                  return <Icon size={34} strokeWidth={1.8} />;
-                })()}
-                <span className="drv-tile-label">{VEHICLE_LABELS[own]}</span>
-                <span className="drv-tile-hint">Votre gamme</span>
-              </div>
-              {lower.map((cls) => {
-                const Icon = CLASS_ICONS[cls] || UserRound;
-                const on = accepted.includes(cls);
-                return (
-                  <button
-                    key={cls}
-                    type="button"
-                    className={`drv-tile ${on ? "on" : ""}`}
-                    role="checkbox"
-                    aria-checked={on}
-                    disabled={busy === `class-${cls}`}
-                    onClick={() => toggleClass(cls)}
-                  >
-                    <span className="drv-check" aria-hidden="true">
-                      {busy === `class-${cls}` ? (
-                        <span className="spinner" style={{ width: 14, height: 14 }} />
-                      ) : (
-                        on && <Check size={18} strokeWidth={3} />
-                      )}
-                    </span>
-                    <Icon size={34} strokeWidth={1.8} />
-                    <span className="drv-tile-label">{VEHICLE_LABELS[cls]}</span>
-                    <span className="drv-tile-hint">Payée au tarif {VEHICLE_LABELS[cls]}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {lower.length === 0 && (
-              <p className="drv-pref-note">Votre gamme reçoit uniquement ses propres courses.</p>
-            )}
-
-            <div className="drv-divider" />
-
-            <h2 className="drv-pref-title">Filtres et options de course</h2>
-            <div className="drv-list">
-              <button
-                type="button"
-                className="drv-row"
-                role="switch"
-                aria-checked={prefs.acceptCash}
-                disabled={busy === "cash"}
-                onClick={() =>
-                  setPrefs(
-                    "cash",
-                    { acceptCash: !prefs.acceptCash },
-                    prefs.acceptCash ? "Vous ne recevrez plus les courses payées en espèces" : "Courses en espèces acceptées",
-                  )
-                }
-              >
-                <Banknote size={24} />
-                <span className="drv-row-label">Accepter les espèces</span>
-                <Switch on={prefs.acceptCash} busy={busy === "cash"} />
-              </button>
-
-              <button
-                type="button"
-                className="drv-row"
-                role="switch"
-                aria-checked={prefs.minRiderRating != null}
-                disabled={busy === "rating"}
-                onClick={() => {
-                  if (prefs.minRiderRating != null) {
-                    setOpen(null);
-                    setPrefs("rating", { minRiderRating: null }, "Note minimale désactivée");
-                  } else {
-                    setOpen("rating");
-                    setPrefs("rating", { minRiderRating: 4.5 }, "Note minimale : 4,5");
-                  }
-                }}
-              >
-                <Star size={24} />
-                <span className="drv-row-label">
-                  Note du passager
-                  <span className="drv-row-sub">
-                    {prefs.minRiderRating != null
-                      ? `Uniquement les passagers notés ${num(prefs.minRiderRating, 1)} ou plus.`
-                      : "Fixez une note minimale pour les demandes de course."}
-                  </span>
-                </span>
-                <Switch on={prefs.minRiderRating != null} busy={busy === "rating"} />
-              </button>
-              {prefs.minRiderRating != null && (
-                <div className="drv-chips" role="radiogroup" aria-label="Note minimale du passager">
-                  {MIN_RIDER_RATING_OPTIONS.map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      role="radio"
-                      aria-checked={prefs.minRiderRating === r}
-                      className={`drv-chip ${prefs.minRiderRating === r ? "on" : ""}`}
-                      onClick={() => setPrefs("rating", { minRiderRating: r })}
-                    >
-                      <Star size={14} /> {num(r, 1)}+
-                    </button>
-                  ))}
-                  <p className="drv-pref-note" style={{ width: "100%" }}>
-                    Les nouveaux passagers (moins de 3 notes) restent toujours visibles.
-                  </p>
-                </div>
-              )}
-
-              <button
-                type="button"
-                className="drv-row"
-                aria-expanded={open === "pay"}
-                onClick={() => setOpen(open === "pay" ? null : "pay")}
-              >
-                <BarChart3 size={24} />
-                <span className="drv-row-label">
-                  Gain minimum
-                  <span className="drv-row-sub">
-                    {prefs.minPayPerKm != null
-                      ? `${num(prefs.minPayPerKm)} €/km ou plus, approche comprise`
-                      : "1,00 €/km ou plus (minimum garanti)"}
-                  </span>
-                </span>
-                {open === "pay" ? (
-                  <ChevronDown size={22} className="drv-row-chev" />
-                ) : (
-                  <ChevronRight size={22} className="drv-row-chev" />
-                )}
-              </button>
-              {open === "pay" && (
-                <div className="drv-options" role="radiogroup" aria-label="Gain minimum par km">
-                  {[null, ...MIN_PAY_PER_KM_OPTIONS].map((v) => {
-                    const on = prefs.minPayPerKm === v;
-                    return (
-                      <button
-                        key={String(v)}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        className={`drv-option ${on ? "on" : ""}`}
-                        disabled={busy === "pay"}
-                        onClick={() =>
-                          setPrefs(
-                            "pay",
-                            { minPayPerKm: v },
-                            v == null ? "Gain minimum retiré" : `Gain minimum : ${num(v)} €/km`,
-                          )
-                        }
-                      >
-                        <span>{v == null ? "1,00 €/km (minimum garanti)" : `${num(v)} €/km ou plus`}</span>
-                        <span className="drv-radio" aria-hidden="true" />
-                      </button>
-                    );
-                  })}
-                  <p className="drv-pref-note">
-                    Gain net par km, trajet d’approche compris. Plus le minimum est haut, moins vous recevez de demandes.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="drv-divider" />
-
-            <h2 className="drv-pref-title">Navigation</h2>
-            <div className="drv-list">
-              {Object.entries(NAV_APPS).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={`drv-row drv-option-row ${navApp === id ? "on" : ""}`}
-                  role="radio"
-                  aria-checked={navApp === id}
-                  onClick={() => chooseNavApp(id)}
-                >
-                  <Navigation size={24} />
-                  <span className="drv-row-label">{label}</span>
-                  <span className="drv-radio" aria-hidden="true" />
-                </button>
-              ))}
-              <p className="small muted" style={{padding:'12px 16px'}}>Votre GPS choisi s’ouvre directement au clic sur « Démarrer le trajet ». Sans choix enregistré, les trois applications vous seront proposées.</p>
-              {navApp && <button type="button" className="btn btn-ghost btn-sm" onClick={()=>chooseNavApp(null)}>Effacer le choix du GPS</button>}
-            </div>
-          </>
-        )}
+    <div className="driver-tab-page sd-preferences">
+      <header className="driver-account-heading"><div><span className="sd-settings-brand">StrasDrive · Votre conduite</span><h1>Préférences de course</h1></div><DriverPageClose label="Fermer les préférences" /></header>
+      <p className="sd-settings-intro">Composez votre journée à votre façon.</p>
+      <div className="sd-settings-navigation" role="tablist" aria-label="Sections des préférences">
+        {[
+          ['services','Services',Car],['criteria','Critères',SlidersHorizontal],['navigation','GPS',Navigation],
+        ].map(([id,label,Icon],index)=><button key={id} id={`settings-tab-${id}`} type="button" role="tab" aria-selected={section===id} aria-controls={`settings-panel-${id}`} onClick={()=>setSection(id)}><Icon size={19}/><span>{label}</span><small>0{index+1}</small></button>)}
       </div>
+      {failed ? <p className="driver-notice" role="alert">Impossible de charger vos préférences. Réouvrez cette page pour réessayer.</p> : !driver ? <p className="muted">Chargement de votre configuration…</p> : <>
+        {section==='services' && <section className="sd-settings-panel" id="settings-panel-services" role="tabpanel" aria-labelledby="settings-tab-services">
+          <span className="sd-settings-kicker">01 · Vos services</span><h2>Les courses qui vous correspondent</h2>
+          <p>Votre gamme reste active. Vous choisissez les gammes supplémentaires accessibles à votre véhicule.</p>
+          <div className="sd-primary-service"><Car size={26}/><div><strong>{VEHICLE_LABELS[own]}</strong><span>Votre gamme principale</span></div><span className="sd-service-status"><Check size={15}/>Active</span></div>
+          <div className="sd-service-list">{lower.map(cls=>{
+            const Icon=CLASS_ICONS[cls]||UserRound;const on=accepted.includes(cls);
+            return <label className={`sd-service-choice ${on?'selected':''}`} key={cls}><Icon size={22}/><span><strong>{VEHICLE_LABELS[cls]}</strong><small>Payée au tarif {VEHICLE_LABELS[cls]}</small></span><input type="checkbox" checked={on} disabled={busy!==null} onChange={()=>toggleClass(cls)}/></label>;
+          })}</div>
+          {lower.length===0&&<p className="sd-settings-note">Votre véhicule reçoit uniquement les courses de sa gamme.</p>}
+        </section>}
+        {section==='criteria' && <section className="sd-settings-panel" id="settings-panel-criteria" role="tabpanel" aria-labelledby="settings-tab-criteria">
+          <span className="sd-settings-kicker">02 · Vos critères</span><h2>Affinez les demandes reçues</h2><p>Des réglages simples, applicables à vos prochaines propositions de course.</p>
+          <label className="sd-cash-choice"><span><strong>Accepter les espèces</strong><small>Recevoir aussi les courses réglées en espèces.</small></span><input type="checkbox" checked={prefs.acceptCash} disabled={busy!==null} onChange={()=>setPrefs('cash',{acceptCash:!prefs.acceptCash},prefs.acceptCash?'Vous ne recevrez plus les courses payées en espèces':'Courses en espèces acceptées')}/></label>
+          <label className="sd-settings-field"><strong>Note minimale du passager</strong><select className="input" value={prefs.minRiderRating??''} disabled={busy!==null} onChange={event=>setPrefs('rating',{minRiderRating:event.target.value===''?null:Number(event.target.value)})}><option value="">Sans filtre de note</option>{MIN_RIDER_RATING_OPTIONS.map(value=><option value={value} key={value}>{num(value,1)} étoiles ou plus</option>)}</select><small>Les nouveaux passagers ayant moins de 3 notes restent visibles.</small></label>
+          <label className="sd-settings-field"><strong>Gain minimum par kilomètre</strong><select className="input" value={prefs.minPayPerKm??''} disabled={busy!==null} onChange={event=>setPrefs('pay',{minPayPerKm:event.target.value===''?null:Number(event.target.value)})}><option value="">1,00 €/km (minimum garanti)</option>{MIN_PAY_PER_KM_OPTIONS.map(value=><option value={value} key={value}>{num(value)} €/km ou plus</option>)}</select><small>Gain net, approche comprise. Un minimum plus élevé réduit le nombre de demandes reçues.</small></label>
+          {isFiltering(prefs)&&<p className="sd-settings-note">Vos critères personnalisés sont actifs.</p>}
+        </section>}
+        {section==='navigation' && <section className="sd-settings-panel" id="settings-panel-navigation" role="tabpanel" aria-labelledby="settings-tab-navigation">
+          <span className="sd-settings-kicker">03 · Votre navigation</span><h2>Votre GPS, prêt au départ</h2><p>Choisissez l’application à ouvrir lorsque vous appuyez sur « Démarrer le trajet ».</p>
+          <div className="sd-gps-choices" role="radiogroup" aria-label="Application GPS préférée">{Object.entries(NAV_APPS).map(([id,label])=><button key={id} type="button" role="radio" aria-checked={navApp===id} className={navApp===id?'selected':''} onClick={()=>chooseNavApp(id)}><span className="sd-gps-emblem"><Navigation size={22}/></span><span>{label}</span><span className="sd-gps-check">{navApp===id&&<Check size={18}/>}</span></button>)}</div>
+          <button className="sd-gps-reset" type="button" onClick={()=>chooseNavApp(null)}>Me demander à chaque trajet</button>
+          <p className="sd-settings-note">{navApp?'Le GPS choisi s’ouvrira directement au démarrage du trajet.':'Les trois applications vous seront proposées au démarrage du trajet.'}</p>
+        </section>}
+        <p className="sd-settings-save" role="status">{busy?'Enregistrement en cours…':'Vos choix sont enregistrés automatiquement.'}</p>
+      </>}
     </div>
   );
 }

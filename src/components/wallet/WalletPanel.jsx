@@ -25,7 +25,7 @@ const TXN_LABEL = {
   cash_commission: 'Commission (course payée en espèces)',
 };
 
-export default function WalletPanel() {
+export default function WalletPanel({ headingAction = null }) {
   const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -148,7 +148,7 @@ export default function WalletPanel() {
 
   return (
     <div className="content-pad" style={{ maxWidth: 720 }}>
-      <h1 className="page-title">Portefeuille</h1>
+      {headingAction ? <div className="driver-account-heading"><h1 className="page-title">Portefeuille</h1>{headingAction}</div> : <h1 className="page-title">Portefeuille</h1>}
       <p className="page-sub mb-6">Payez vos courses instantanément, sans chercher votre carte</p>
 
       <div
