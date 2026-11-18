@@ -8707,6 +8707,10 @@ a.activity-pill:hover {
 /* Traffic, Earnings and Inbox share the same heading baseline and controls. */
 .driver-desktop-overview { display: none; }
 @media (min-width: 901px) {
+  /* Keep the page canvas continuous beyond centered content on desktop. */
+  .shell-dark .driver-tab-page,
+  .shell-dark .driver-preferences,
+  .shell-dark .activity-page { background: transparent; }
   .drv-cockpit-root { height: 100dvh; min-height: 600px; }
   .drv-cockpit-root .drv-cockpit-map { inset: 24px 24px 24px 390px; border: 1px solid rgba(255,255,255,.1); border-radius: 20px; overflow: hidden; }
   .drv-cockpit-root .drv-cockpit-hud,
