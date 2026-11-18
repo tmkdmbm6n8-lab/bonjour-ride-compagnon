@@ -30,3 +30,7 @@ Conserver des dossiers de courses consultables par l’administration, accessibl
 - Minuit Paris, 23 h au changement d’heure de mars et 25 h en octobre : pas de course du jour voisin.
 - Les anciennes conversations déjà purgées et factures non émises restent signalées indisponibles, sans contenu inventé.
 - `npm run check:pricing` reste vert, sans modifier le baseline.
+
+## Mise en œuvre (2026-11-18)
+
+Installé : dossier scellé à la clôture (terminée/annulée, hors test), comptable 10 ans civils avec empreinte, coordonnées/adresses/réservation 3 ans, discussions non archivées (14 jours sur signalement inchangé), journal de consultation, fiche admin raccordée. Pas d'archive rétroactive. Restent à faire : factures émises réelles, copie des fichiers, liste par date incluant les courses supprimées, gel contentieux via interface. Vérification en conditions réelles d'une clôture non encore effectuée.

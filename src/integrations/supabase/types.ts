@@ -379,6 +379,81 @@ export type Database = {
         }
         Relationships: []
       }
+      ride_archive_access: {
+        Row: {
+          action: string
+          actor: string
+          created_at: string
+          id: string
+          ride_id: string
+        }
+        Insert: {
+          action?: string
+          actor: string
+          created_at?: string
+          id?: string
+          ride_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string
+          created_at?: string
+          id?: string
+          ride_id?: string
+        }
+        Relationships: []
+      }
+      ride_archives: {
+        Row: {
+          accounting: Json
+          accounting_expires_at: string
+          accounting_sha256: string
+          booking: Json | null
+          booking_day: string
+          contacts: Json | null
+          final_status: string
+          legal_hold: boolean
+          personal_erased_at: string | null
+          personal_expires_at: string
+          ride_created_at: string
+          ride_id: string
+          sealed_at: string
+          version: number
+        }
+        Insert: {
+          accounting: Json
+          accounting_expires_at: string
+          accounting_sha256: string
+          booking?: Json | null
+          booking_day: string
+          contacts?: Json | null
+          final_status: string
+          legal_hold?: boolean
+          personal_erased_at?: string | null
+          personal_expires_at: string
+          ride_created_at: string
+          ride_id: string
+          sealed_at?: string
+          version?: number
+        }
+        Update: {
+          accounting?: Json
+          accounting_expires_at?: string
+          accounting_sha256?: string
+          booking?: Json | null
+          booking_day?: string
+          contacts?: Json | null
+          final_status?: string
+          legal_hold?: boolean
+          personal_erased_at?: string | null
+          personal_expires_at?: string
+          ride_created_at?: string
+          ride_id?: string
+          sealed_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       rides: {
         Row: {
           accepted_at: string | null
@@ -687,6 +762,10 @@ export type Database = {
     }
     Functions: {
       admin_delete_account: { Args: { _user: string }; Returns: Json }
+      admin_ride_archive: {
+        Args: { _actor: string; _ride: string }
+        Returns: Json
+      }
       approve_withdrawal: {
         Args: { _actor: string; _request: string }
         Returns: Json

@@ -21,3 +21,16 @@ describe('dossier de course admin',()=>{
     const from=vi.fn();await expect(adminRideRecord({from},'not-a-ride','admin')).rejects.toThrow('Référence');expect(from).not.toHaveBeenCalled();
   });
 });
+describe('dossier scellé',()=>{
+  it('affiche les coordonnées figées de l’archive, pas celles du profil actuel',async()=>{
+    const id='11111111-1111-1111-1111-111111111111';
+    const sealed={ride_id:id,version:1,sealed_at:'2026-11-18T10:00:00Z',hashValid:true,accounting_expires_at:'2037-01-01',personal_expires_at:'2029-11-18',personal_erased_at:null,
+      accounting:{status:'completed',createdAt:'2026-11-18T09:00:00Z',fare:{total:20},payment:{method:'cash'},riderId:'r',driverId:null,walletTransactions:[]},
+      contacts:{rider:{id:'r',name:'Ancien Nom',phone:'+33600000000'},driver:null},booking:{pickup:{address:'A'},dropoff:{address:'B'},vehicle:null}};
+    const q:any={select:()=>q,eq:()=>q,in:()=>q,like:()=>q,order:()=>q,limit:async()=>({data:[]}),maybeSingle:async()=>({data:null})};
+    const out:any=await adminRideRecord({rpc:async()=>({data:sealed}),from:()=>q},id,'admin','admin-id');
+    expect(out.rider.name).toBe('Ancien Nom');
+    expect(out.archive.immutable).toBe(true);
+    expect(out.ride.fare.total).toBe(20);
+  });
+});

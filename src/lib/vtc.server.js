@@ -1055,7 +1055,7 @@ export async function handleVtc(input, context) {
   if (recordMatch) {
     if (method !== "GET") throw new Error("Méthode non autorisée");
     const { adminRideRecord } = await import("./admin-ride-record.server");
-    return adminRideRecord(admin, recordMatch[1], role);
+    return adminRideRecord(admin, recordMatch[1], role, uid);
   }
   if (p === "/api/rides" || p === "/api/admin/rides") {
     const page = Math.max(1, Number(q.get("page")) || 1),

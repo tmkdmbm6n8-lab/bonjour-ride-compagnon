@@ -127,6 +127,13 @@
       "when": 1794959497184,
       "tag": "0017_withdrawal_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795000214550,
+      "tag": "0018_ride_archives",
+      "breakpoints": true
     }
   ]
 }
