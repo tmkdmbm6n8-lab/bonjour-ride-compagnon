@@ -107,7 +107,16 @@ function EvidencePage() {
               onClick={() => inspect(a.archiveId)}
             >
               <strong>Course #{a.rideId.slice(0, 10)}</strong>
-              <p className="small mt-1">{a.rideCreatedAt ? new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", dateStyle: "medium", timeStyle: "short" }).format(new Date(a.rideCreatedAt)) : "Date indisponible"} · {a.driverName || "Chauffeur indisponible"}</p>
+              <p className="small mt-1">
+                {a.rideCreatedAt
+                  ? new Intl.DateTimeFormat("fr-FR", {
+                      timeZone: "Europe/Paris",
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(new Date(a.rideCreatedAt))
+                  : "Date indisponible"}{" "}
+                · {a.driverName || "Chauffeur indisponible"}
+              </p>
               <p className="small mt-1">
                 {a.messageCount} message(s) archivé(s) · Suppression le {new Date(a.expiresAt).toLocaleString("fr-FR")}
               </p>
@@ -175,13 +184,17 @@ function EvidencePage() {
                 <strong>Arrivée :</strong> {selected.rideData.dropoff?.address || "Adresse inconnue"}
               </div>
               <div className="tiny muted mt-2">
-                Montant : {(() => {
+                Montant :{" "}
+                {(() => {
                   const f = selected.rideData.fare;
                   const total = typeof f === "object" && f !== null ? f.total : f;
                   return total != null ? `${Number(total).toFixed(2)} €` : "N/C";
-                })()} · Statut : {selected.rideData.status}
+                })()}{" "}
+                · Statut : {selected.rideData.status}
               </div>
-              <div className="mt-3"><AdminRideMap pickup={selected.rideData.pickup} dropoff={selected.rideData.dropoff} /></div>
+              <div className="mt-3">
+                <AdminRideMap pickup={selected.rideData.pickup} dropoff={selected.rideData.dropoff} />
+              </div>
             </div>
           )}
 
@@ -250,100 +263,126 @@ function EvidencePage() {
             </div>
           </div>
 
-          {/* Barre d'actions administratives */}
+          {/* Classement administratif et avertissements */}
           <div className="card card-pad mb-4">
-            <strong className="small mb-2" style={{ display: "block" }}>
-              Actions administratives
-            </strong>
-            <div className="flex gap-2 wrap">
-              {!selected.reportInfo?.isDismissed && (
-                <button
-                  type="button"
-                  className="btn btn-success btn-sm"
-                  disabled={busy}
-                  onClick={() => handleAction("dismiss_report", { restoreDriver: !selected.driver?.isApproved })}
-                >
-                  <ShieldCheck size={14} /> Retirer le signalement (injustifié)
-                </button>
-              )}
+            <h3 className="small mb-2" style={{ margin: 0 }}>
+              Classement administratif & Avertissements
+            </h3>
+            <p className="tiny muted mb-3">
+              Attribuez un degré de gravité vérifié. Seules ces décisions comptent dans le compteur d avertissements.
+            </p>
 
-              {selected.driver?.isApproved ? (
+            {selected.decision && (
+              <div
+                className="p-3 mb-3"
+                style={{
+                  background: "var(--surface-2)",
+                  borderRadius: 8,
+                  borderLeft: selected.decision.isDismissed
+                    ? "4px solid #22c55e"
+                    : selected.decision.degree === "critical"
+                      ? "4px solid #b91c1c"
+                      : selected.decision.degree === "severe"
+                        ? "4px solid #ef4444"
+                        : selected.decision.degree === "medium"
+                          ? "4px solid #f97316"
+                          : selected.decision.degree === "mild"
+                            ? "4px solid #eab308"
+                            : "4px solid #94a3b8",
+                }}
+              >
+                <div className="flex justify-between items-center wrap gap-2">
+                  <div>
+                    <strong>
+                      Décision actuelle :{" "}
+                      {selected.decision.isDismissed
+                        ? "Classé sans suite"
+                        : selected.decision.degree === "very_mild"
+                          ? "Très léger (aucun avertissement)"
+                          : selected.decision.degree === "mild"
+                            ? "Léger (14 jours)"
+                            : selected.decision.degree === "medium"
+                              ? "Moyen (1 mois)"
+                              : selected.decision.degree === "severe"
+                                ? "Grave (sans expiration)"
+                                : selected.decision.degree === "critical"
+                                  ? "Extrêmement grave (suspension immédiate)"
+                                  : "Non classé"}
+                    </strong>
+                    {selected.decision.expiresAt && (
+                      <p className="tiny muted mt-1">
+                        Expire le : {new Date(selected.decision.expiresAt).toLocaleDateString("fr-FR")}
+                      </p>
+                    )}
+                  </div>
+                  <span className="badge badge-neutral">
+                    {selected.activeWarningsCount || 0} avertissement(s) actif(s) pour ce chauffeur
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Sélecteur de degré */}
+            <div className="flex gap-2 wrap mb-3">
+              {[
+                { id: "very_mild", label: "Très léger", bg: "transparent", border: "var(--border)", color: "inherit" },
+                { id: "mild", label: "Léger (14 j)", bg: "#fef08a", border: "#eab308", color: "#854d0e" },
+                { id: "medium", label: "Moyen (1 mois)", bg: "#ffedd5", border: "#f97316", color: "#9a3412" },
+                { id: "severe", label: "Grave (sans exp.)", bg: "#fee2e2", border: "#ef4444", color: "#991b1b" },
+                { id: "critical", label: "Extrêmement grave", bg: "#7f1d1d", border: "#dc2626", color: "#fef2f2" },
+              ].map((d) => (
                 <button
+                  key={d.id}
                   type="button"
-                  className="btn btn-danger btn-sm"
+                  className="btn btn-sm"
+                  style={{
+                    background: d.bg,
+                    border: `1px solid ${d.border}`,
+                    color: d.color,
+                    fontWeight: 600,
+                  }}
                   disabled={busy}
-                  onClick={() => handleAction("suspend_driver")}
+                  onClick={() => {
+                    const confirmMsg =
+                      d.id === "critical"
+                        ? "Attention : un signalement extrêmement grave suspend immédiatement et définitivement le compte chauffeur. Confirmer ?"
+                        : `Classer ce signalement comme « ${d.label} » ?`;
+                    if (window.confirm(confirmMsg)) {
+                      handleAction("classify_report", { degree: d.id, warningText });
+                    }
+                  }}
                 >
-                  <UserX size={14} /> Suspendre le compte chauffeur
+                  {d.label}
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-success btn-sm"
-                  disabled={busy}
-                  onClick={() => handleAction("unsuspend_driver")}
-                >
-                  <UserCheck size={14} /> Lever la suspension du chauffeur
-                </button>
-              )}
+              ))}
 
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
-                onClick={() => setShowWarningBox(!showWarningBox)}
+                disabled={busy}
+                onClick={() => {
+                  if (window.confirm("Classer ce dossier sans suite (signalement injustifié) ?")) {
+                    handleAction("classify_report", { dismiss: true });
+                  }
+                }}
               >
-                <AlertTriangle size={14} /> Envoyer un avertissement
+                Classer sans suite
               </button>
             </div>
 
-            {/* Boîte d'envoi d'avertissement */}
-            {showWarningBox && (
-              <div className="mt-3 p-3" style={{ background: "var(--surface-2)", borderRadius: 8 }}>
-                <div className="flex gap-3 mb-2 small">
-                  <label>
-                    <input
-                      type="radio"
-                      name="target"
-                      value="driver"
-                      checked={warningTarget === "driver"}
-                      onChange={() => setWarningTarget("driver")}
-                    />{" "}
-                    Chauffeur
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="target"
-                      value="rider"
-                      checked={warningTarget === "rider"}
-                      onChange={() => setWarningTarget("rider")}
-                    />{" "}
-                    Passager
-                  </label>
-                </div>
-                <textarea
-                  className="input mb-2"
-                  rows={3}
-                  placeholder={`Rédigez l'avertissement officiel pour le ${warningTarget === "driver" ? "chauffeur" : "passager"}…`}
-                  value={warningText}
-                  onChange={(e) => setWarningText(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  disabled={busy || warningText.trim().length < 5}
-                  onClick={() =>
-                    handleAction("send_warning", {
-                      warningText,
-                      warningTarget,
-                      email: warningTarget === "driver" ? selected.driver?.email : selected.rider?.email,
-                    })
-                  }
-                >
-                  <Send size={14} /> Consigner et notifier l’avertissement
-                </button>
-              </div>
-            )}
+            {/* Message d avertissement transmis dans l assistance */}
+            <div className="mt-3">
+              <label className="tiny muted mb-1" style={{ display: "block" }}>
+                Texte explicatif transmis au chauffeur (sans mention du degré interne) :
+              </label>
+              <textarea
+                className="input mb-2"
+                rows={2}
+                placeholder="Rédigez le rappel des règles qui sera déposé dans la messagerie d assistance du chauffeur…"
+                value={warningText}
+                onChange={(e) => setWarningText(e.target.value)}
+              />
+            </div>
           </div>
 
           {/* Échanges archivés (messages, vocaux, photos) */}
