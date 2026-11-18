@@ -26,18 +26,8 @@ export async function sendDriverReport(admin, { ride, uid, email, name, body }) 
   if (!previous.some(row => verifiedReport(row.message))) required(await admin.from('contact_messages').insert({
     name: name || 'Passager', email, topic: 'safety', message,
   }));
-  const count = await reportedRideCount(admin, ride.driver_id);
-  if (count >= 3) {
-    // Différé de 12 heures pour préserver l'anonymat du passager
-    const current = required(await admin.from('drivers').select('stats').eq('user_id', ride.driver_id).single());
-    const stats = current.stats || {};
-    if (!stats.pending_suspension_at) {
-      stats.pending_suspension_at = new Date(Date.now() + 12 * 3600 * 1000).toISOString();
-      required(await admin.from('drivers').update({
-        stats,
-        updated_at: new Date().toISOString(),
-      }).eq('user_id', ride.driver_id));
-    }
-  }
+    // L'ancien système suspendait automatiquement à 3 signalements bruts.
+  // Ce déclenchement est neutralisé au profit des décisions administratives vérifiées.
   return { ok: true };
-}
+
+  
