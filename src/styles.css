@@ -105,6 +105,7 @@ html,
 body {
   max-width: 100%;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 @supports (overflow: clip) {
   html,
@@ -147,6 +148,16 @@ textarea,
 select {
   font: inherit;
   color: inherit;
+}
+
+/* iPhone zooms the whole page in when a field's text is under 16px and never
+   zooms back out, which lets every page slide left/right afterwards. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
 }
 
 ::selection {
