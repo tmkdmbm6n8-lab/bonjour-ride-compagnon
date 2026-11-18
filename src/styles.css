@@ -8681,3 +8681,20 @@ a.activity-pill:hover {
 @media (max-width:360px) { .modal-fullscreen .inbox-compose { grid-template-columns: minmax(0,1fr) 48px; } .modal-fullscreen .inbox-compose button > span { display: none; } }
 .modal-portal-overlay:has(.driver-profile-modal) { box-sizing: border-box; padding-top: max(16px,env(safe-area-inset-top,0px)) !important; padding-bottom: max(16px,env(safe-area-inset-bottom,0px)) !important; }
 .modal.driver-profile-modal { max-height: 100% !important; }
+
+.admin-rides-date-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 20px; }
+.admin-rides-date-filter label { font-size: 13px; color: #b8c3d1; }
+.admin-rides-date-filter input { width: auto; max-width: 100%; color-scheme: dark; font-size: 16px; }
+.admin-ride-open-row { cursor: pointer; }
+.admin-record-notice { font-size: 12px; line-height: 1.5; padding: 12px; border: 1px solid rgba(216,182,104,.3); border-radius: 12px; color: #ddc992; }
+.admin-record-section { padding: 18px 0; border-bottom: 1px solid rgba(255,255,255,.12); overflow-wrap: anywhere; }
+.admin-record-section h3 { font-size: 17px; margin-bottom: 14px; }
+.admin-record-section dl { display: grid; gap: 6px; font-size: 13px; margin-block: 12px; }
+.admin-record-section dt { color: #9faec1; }
+.admin-record-section dd { color: #f1f5f9; margin: 0 0 8px; white-space: pre-wrap; }
+.admin-record-people { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.admin-record-message { padding: 12px; margin-top: 10px; background: #191c25; border-radius: 12px; font-size: 13px; }
+.admin-record-message time { display: block; margin-top: 4px; color: #aebaca; font-size: 11px; }
+.admin-record-message p { margin-top: 8px; white-space: pre-wrap; }
+.admin-record-message img, .admin-record-message audio { max-width: 100%; margin-top: 12px; }
+@media(max-width:500px) { .admin-record-people { grid-template-columns: minmax(0,1fr); gap: 0; } }

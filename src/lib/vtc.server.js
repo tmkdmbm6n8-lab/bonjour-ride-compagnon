@@ -1051,6 +1051,12 @@ export async function handleVtc(input, context) {
       },
     };
   }
+  const recordMatch = p.match(/^\/api\/admin\/rides\/([0-9a-f-]+)\/record$/i);
+  if (recordMatch) {
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    const { adminRideRecord } = await import("./admin-ride-record.server");
+    return adminRideRecord(admin, recordMatch[1], role);
+  }
   if (p === "/api/rides" || p === "/api/admin/rides") {
     const page = Math.max(1, Number(q.get("page")) || 1),
       limit = Math.min(100, Math.max(1, Number(q.get("limit")) || 15));
@@ -1060,6 +1066,11 @@ export async function handleVtc(input, context) {
       .order("created_at", { ascending: false });
     if (p !== "/api/admin/rides") query = query.eq(rideOwnerColumn(role, q.get("view"), canDrive), uid);
     if (q.get("status")) query = query.eq("status", q.get("status"));
+    if (p === "/api/admin/rides" && q.get("day")) {
+      const { adminRideDateRange } = await import("./admin-ride-record");
+      const range = adminRideDateRange(q.get("day"));
+      query = query.gte("created_at", range.from).lt("created_at", range.to);
+    }
     const res = await query.range((page - 1) * limit, page * limit - 1);
     const rows = required(res);
     return {
