@@ -59,6 +59,8 @@ export default function AppShell({ nav, children, variant = "default" }) {
                 key={href}
                 href={href}
                 className={`nav-item ${active ? "active" : ""}`}
+                activeProps={{}}
+                activeOptions={{ exact: true, includeSearch: true }}
                 aria-current={active ? "page" : undefined}
               >
                 <Icon size={19} strokeWidth={2} />
