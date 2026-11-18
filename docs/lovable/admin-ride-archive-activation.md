@@ -34,3 +34,13 @@ Conserver des dossiers de courses consultables par l’administration, accessibl
 ## Mise en œuvre (2026-11-18)
 
 Installé : dossier scellé à la clôture (terminée/annulée, hors test), comptable 10 ans civils avec empreinte, coordonnées/adresses/réservation 3 ans, discussions non archivées (14 jours sur signalement inchangé), journal de consultation, fiche admin raccordée. Pas d'archive rétroactive. Restent à faire : factures émises réelles, copie des fichiers, liste par date incluant les courses supprimées, gel contentieux via interface. Vérification en conditions réelles d'une clôture non encore effectuée.
+
+## Corrections après revue (version 6f7ccda)
+
+- Une archive scellée est désormais la seule source des champs historiques de la fiche (prix, paiement, statuts, adresses, coordonnées, véhicule, bulletin). Les valeurs actuelles qui diffèrent sont affichées à part, hors empreinte.
+- Coordonnées/réservation effacées : aucune relecture des profils, véhicules ou documents actuels ; le bulletin est indisponible.
+- Nouveaux dossiers : l’exploitant et les numéros SIREN/REVTC approuvés sont figés à la clôture. Les dossiers plus anciens sans ces numéros sont signalés « figé partiellement ».
+- Verrou renforcé : durée personnelle non prolongeable, effacement irréversible, date de réservation figée.
+- Liste admin unifiée (RPC service_role `admin_ride_index`, contrôle admin) : courses actuelles + archives sans course, dédupliquées, ordre stable date puis identifiant, filtre jour de Paris.
+- Vérification en base (transaction annulée, aucune donnée gardée) : scellement à la clôture, empreinte valide, refus non-admin, journal de consultation, refus de modification, effacement à 3 ans par la purge, archive toujours listée après suppression de la course.
+- Restent hors périmètre : factures émises, copie des messages/fichiers, archives rétroactives, gel de litige depuis l’écran admin.

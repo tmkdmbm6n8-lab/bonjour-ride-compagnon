@@ -1057,6 +1057,11 @@ export async function handleVtc(input, context) {
     const { adminRideRecord } = await import("./admin-ride-record.server");
     return adminRideRecord(admin, recordMatch[1], role, uid);
   }
+  if (p === "/api/admin/rides") {
+    if (role !== "admin") throw new Error("Accès administrateur requis");
+    const { adminRideList } = await import("./admin-ride-list.server");
+    return adminRideList(admin, uid, q, (r) => serialize(admin, r, uid, true));
+  }
   if (p === "/api/rides" || p === "/api/admin/rides") {
     const page = Math.max(1, Number(q.get("page")) || 1),
       limit = Math.min(100, Math.max(1, Number(q.get("limit")) || 15));

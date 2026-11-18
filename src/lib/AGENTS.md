@@ -1,0 +1,1 @@
+- A sealed `ride_archives` row is the only source of a record's historical fields (`sealedParts` in `admin-ride-record.js`); erased contacts/booking stay unavailable and are never rebuilt from current profiles, and the admin list goes through the `admin_ride_index` RPC so archives without a `rides` row stay listed by Paris day.

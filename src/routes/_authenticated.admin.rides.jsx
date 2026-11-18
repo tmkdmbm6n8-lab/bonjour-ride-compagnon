@@ -90,7 +90,7 @@ function AdminRidesPage() {
                   <td className="small mono-nums" style={{ fontWeight: 600 }}>
                     {r.status === 'completed' ? money(r.fare?.total) : '—'}
                   </td>
-                  <td><RideStatusBadge status={r.status} /></td><td><button className="btn btn-secondary btn-sm" onClick={event=>{event.stopPropagation();setSelectedId(r._id);}} aria-label={`Ouvrir le dossier de la course ${r._id}`}>Ouvrir</button></td>
+                  <td><RideStatusBadge status={r.status} />{r.archived&&<div className="tiny muted">{r.source==='archive'?'Dossier archivé seul':'Dossier scellé'}</div>}</td><td><button className="btn btn-secondary btn-sm" onClick={event=>{event.stopPropagation();setSelectedId(r._id);}} aria-label={`Ouvrir le dossier de la course ${r._id}`}>Ouvrir</button></td>
                 </tr>
               ))}
             </tbody>

@@ -134,6 +134,13 @@
       "when": 1795000214550,
       "tag": "0018_ride_archives",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795007572827,
+      "tag": "0019_ride_archive_v2_index",
+      "breakpoints": true
     }
   ]
 }

@@ -766,6 +766,17 @@ export type Database = {
         Args: { _actor: string; _ride: string }
         Returns: Json
       }
+      admin_ride_index: {
+        Args: {
+          _actor: string
+          _from: string
+          _limit: number
+          _offset: number
+          _status: string
+          _to: string
+        }
+        Returns: Json
+      }
       approve_withdrawal: {
         Args: { _actor: string; _request: string }
         Returns: Json
