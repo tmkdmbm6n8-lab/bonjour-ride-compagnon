@@ -1,5 +1,11 @@
-import { createHmac } from "node:crypto";
+import {
+  getRideDecision,
+  recordAdminDecision,
+  getDriverDecisions,
+  countActiveWarnings,
+} from "./driver-warnings.server";
 import { newSupportThread } from "./vtc-support";
+import { createHmac } from "node:crypto";
 import {
   CHAT_ACTIVE_STATUSES,
   CHAT_RETENTION_MS,
@@ -67,14 +73,12 @@ async function saveEvidence(admin, ride, marker) {
     for (const { row } of previous) required(await admin.from("contact_messages").update({ message }).eq("id", row.id));
   } else
     required(
-      await admin
-        .from("contact_messages")
-        .insert({
-          topic: ARCHIVE,
-          name: `Course ${ride.id}`,
-          email: "internal-chat-archive@strasdrive.invalid",
-          message,
-        }),
+      await admin.from("contact_messages").insert({
+        topic: ARCHIVE,
+        name: `Course ${ride.id}`,
+        email: "internal-chat-archive@strasdrive.invalid",
+        message,
+      }),
     );
 }
 export async function preserveRideChat(admin, rideId, uid, now = Date.now()) {
@@ -128,14 +132,12 @@ export async function appendChat(admin, rideId, uid, message) {
 async function queueDeletion(admin, paths) {
   if (!paths.length) return;
   required(
-    await admin
-      .from("contact_messages")
-      .insert({
-        topic: CLEANUP,
-        name: "Suppression de fichiers de discussion",
-        email: "internal-chat-archive@strasdrive.invalid",
-        message: encode({ paths }),
-      }),
+    await admin.from("contact_messages").insert({
+      topic: CLEANUP,
+      name: "Suppression de fichiers de discussion",
+      email: "internal-chat-archive@strasdrive.invalid",
+      message: encode({ paths }),
+    }),
   );
 }
 export async function closeRideChat(admin, id, { allowSearching = false } = {}) {
@@ -355,14 +357,19 @@ export async function adminChatEvidence(admin, q) {
   const rideIds = [...new Set(evidence.map((item) => item.rideId).filter(Boolean))];
   const driverIds = [...new Set(evidence.map((item) => item.driverId).filter(Boolean))];
   const [rides, drivers] = await Promise.all([
-    rideIds.length ? admin.from('rides').select('id,created_at').in('id', rideIds) : { data: [], error: null },
-    driverIds.length ? admin.from('profiles').select('id,name').in('id', driverIds) : { data: [], error: null },
+    rideIds.length ? admin.from("rides").select("id,created_at").in("id", rideIds) : { data: [], error: null },
+    driverIds.length ? admin.from("profiles").select("id,name").in("id", driverIds) : { data: [], error: null },
   ]);
   const rideDates = new Map(required(rides).map((ride) => [ride.id, ride.created_at]));
   const driverNames = new Map(required(drivers).map((driver) => [driver.id, driver.name]));
   return {
-    archives: evidence.map((e) => ({ ...e, messages: undefined, messageCount: e.messages.length,
-      rideCreatedAt: rideDates.get(e.rideId) || null, driverName: driverNames.get(e.driverId) || null })),
+    archives: evidence.map((e) => ({
+      ...e,
+      messages: undefined,
+      messageCount: e.messages.length,
+      rideCreatedAt: rideDates.get(e.rideId) || null,
+      driverName: driverNames.get(e.driverId) || null,
+    })),
   };
 }
 
@@ -407,22 +414,32 @@ export async function handleAdminReportAction(admin, body) {
   }
 
   if (action === "send_warning") {
-    if (typeof warningText !== 'string' || warningText.trim().length < 5 || warningText.trim().length > 4000)
+    if (typeof warningText !== "string" || warningText.trim().length < 5 || warningText.trim().length > 4000)
       throw new Error("Rédigez un avertissement (minimum 5 caractères)");
-    if (!['driver', 'rider'].includes(warningTarget)) throw new Error('Destinataire invalide');
+    if (!["driver", "rider"].includes(warningTarget)) throw new Error("Destinataire invalide");
     const ride = await loadRide(admin, body.rideId);
-    const recipientId = warningTarget === 'driver' ? ride.driver_id : ride.rider_id;
-    if (!recipientId) throw new Error('Destinataire indisponible');
+    const recipientId = warningTarget === "driver" ? ride.driver_id : ride.rider_id;
+    if (!recipientId) throw new Error("Destinataire indisponible");
     const authUser = required(await admin.auth.admin.getUserById(recipientId)).user;
-    if (!authUser?.email) throw new Error('Adresse du destinataire indisponible');
-    const recipient = required(await admin.from('profiles').select('name').eq('id', recipientId).single());
-    const thread = newSupportThread(recipientId, 'Avertissement', warningText.trim(), new Date().toISOString(), warningTarget);
-    thread.messages[0].from = 'admin';
-    required(await admin.from('contact_messages').insert({
-      topic: 'driver_conversation', name: recipient?.name || 'Utilisateur', email: authUser.email.toLowerCase(),
-      message: JSON.stringify(thread),
-    }));
-    return { ok: true, message: 'Avertissement envoyé dans la messagerie du destinataire.' };
+    if (!authUser?.email) throw new Error("Adresse du destinataire indisponible");
+    const recipient = required(await admin.from("profiles").select("name").eq("id", recipientId).single());
+    const thread = newSupportThread(
+      recipientId,
+      "Avertissement",
+      warningText.trim(),
+      new Date().toISOString(),
+      warningTarget,
+    );
+    thread.messages[0].from = "admin";
+    required(
+      await admin.from("contact_messages").insert({
+        topic: "driver_conversation",
+        name: recipient?.name || "Utilisateur",
+        email: authUser.email.toLowerCase(),
+        message: JSON.stringify(thread),
+      }),
+    );
+    return { ok: true, message: "Avertissement envoyé dans la messagerie du destinataire." };
   }
 
   throw new Error("Action inconnue");
