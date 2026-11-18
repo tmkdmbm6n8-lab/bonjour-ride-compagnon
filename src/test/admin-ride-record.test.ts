@@ -5,7 +5,7 @@ import {adminRideRecord} from '../lib/admin-ride-record.server';
 describe('dossier de course admin',()=>{
   it('filtre les limites réelles du jour de Paris',()=>{
     expect(adminRideDateRange('2026-11-18')).toEqual({from:'2026-11-17T23:00:00.000Z',to:'2026-11-18T23:00:00.000Z'});
-    const spring=adminRideDateRange('2026-03-29'),fall=adminRideDateRange('2026-10-25');
+    const spring=adminRideDateRange('2026-03-29') as {from:string,to:string},fall=adminRideDateRange('2026-10-25') as {from:string,to:string};
     expect(Date.parse(spring.to)-Date.parse(spring.from)).toBe(23*3600000);
     expect(Date.parse(fall.to)-Date.parse(fall.from)).toBe(25*3600000);
     expect(()=>adminRideDateRange('2026-02-30')).toThrow();

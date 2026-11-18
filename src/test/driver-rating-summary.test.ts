@@ -8,7 +8,7 @@ const rows = [
   {rating:{byRider:6}},
 ];
 describe('avis chauffeur anonymisés', () => {
-  const ratings = (count) => Array.from({length:count},()=>({rating:{byRider:5,riderComment:'Bien'}}));
+  const ratings = (count: number) => Array.from({length:count},()=>({rating:{byRider:5,riderComment:'Bien'}}));
   it.each([0,23,49])('masque les détails côté serveur à %s avis', (count) => {
     expect(driverRatingSummary(ratings(count),false)).toEqual({count,threshold:50,locked:true,priority:false});
   });

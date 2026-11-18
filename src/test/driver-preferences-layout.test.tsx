@@ -39,7 +39,7 @@ it('conserve les mêmes champs de préférences sans toucher aux prix',async()=>
 it('garde le choix GPS local et la possibilité de le retirer',async()=>{
   setup();await screen.findByText('Les courses qui vous correspondent');
   fireEvent.click(screen.getByRole('tab',{name:/GPS/}));
-  const [id,label]=Object.entries(NAV_APPS)[0];
+  const [id,label]=Object.entries(NAV_APPS)[0] as [string,string];
   fireEvent.click(screen.getByRole('radio',{name:label}));expect(getNavApp()).toBe(id);
   fireEvent.click(screen.getByRole('button',{name:'Me demander à chaque trajet'}));expect(getNavApp()).toBeNull();
   expect(fixture.request.mock.calls.some(([,options])=>options?.method==='PATCH')).toBe(false);
