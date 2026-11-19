@@ -271,7 +271,7 @@ function PersonalDataCard() {
   }
 
   async function requestDeletion() {
-    if (!window.confirm('Supprimer définitivement votre compte et vos données ? Cette action est immédiate et irréversible. Les données de facturation restent archivées 10 ans conformément aux obligations légales.')) return;
+    if (!window.confirm('Supprimer définitivement votre compte et vos données ? Cette action est irréversible. La suppression peut être bloquée si une course est en cours ou si des opérations financières doivent être conservées.')) return;
     setRequesting(true);
     try {
       const res = await fetch('/api/users/me/deletion-request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
