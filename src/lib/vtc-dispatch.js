@@ -51,6 +51,7 @@ export function availableFor(ride, drivers) {
 export function favoriteCanTake(ride, driver) {
   return Boolean(
     driver &&
+      (driver.is_priority === true || driver.gold_active === true) &&
       driver.user_id !== ride.rider_id &&
       canServe(driver, ride.vehicle_type) &&
       !(ride.declined || []).includes(driver.user_id) &&

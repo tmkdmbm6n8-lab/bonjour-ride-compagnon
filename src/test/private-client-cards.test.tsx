@@ -23,12 +23,25 @@ describe('clients privés', () => {
 
   it('ne présente pas un QR expiré et permet de réessayer', async () => {
     const loadQr = vi.fn().mockResolvedValueOnce({ image: <span>Code expiré</span>, expiresAt: Date.now() - 1 }).mockResolvedValueOnce({ image: <span>Code valide</span>, expiresAt: Date.now() + 60000 });
-    render(<PrivateClientsPanel clients={[]} loadQr={loadQr} />);
+    render(<PrivateClientsPanel clients={[]} loadQr={loadQr} goldActive />);
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.queryByText('Code expiré')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
     await waitFor(() => expect(screen.getByText('Code valide')).toBeTruthy());
     expect(screen.getByText('Vous n’avez pas encore de client privé.')).toBeTruthy();
+  });
+
+  it('conserve les clients et masque le QR lorsque Gold devient inactif', async () => {
+    const loadQr = vi.fn().mockResolvedValue({ image: <span>Code Gold</span>, expiresAt: Date.now() + 60000 });
+    const clients = [{ id: 'client', name: 'Camille' }];
+    const { rerender } = render(<PrivateClientsPanel clients={clients} loadQr={loadQr} goldActive={false} />);
+    expect(screen.getByRole('list')).toHaveClass('private-clients-list-inactive');
+    expect(loadQr).not.toHaveBeenCalled();
+    rerender(<PrivateClientsPanel clients={clients} loadQr={loadQr} goldActive />);
+    expect(await screen.findByText('Code Gold')).toBeTruthy();
+    rerender(<PrivateClientsPanel clients={clients} loadQr={loadQr} goldActive={false} />);
+    expect(screen.queryByText('Code Gold')).toBeNull();
+    expect(screen.getByRole('list')).toHaveTextContent('Camille');
   });
 
   it('demande confirmation avant de remplacer un favori existant', async () => {

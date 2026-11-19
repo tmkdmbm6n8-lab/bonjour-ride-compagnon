@@ -10,11 +10,27 @@ async function handleWebhook(req: Request, env: StripeEnv) {
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded": {
       const session = event.data.object;
+      if (session.mode === "subscription") {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { syncGoldEvent } = await import("@/lib/driver-gold.server");
+        await syncGoldEvent(supabaseAdmin, env, event);
+        break;
+      }
       if (session.payment_status === "paid") {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { creditPaidSession } = await import("@/lib/vtc-checkout.server");
         await creditPaidSession(supabaseAdmin, session);
       }
+      break;
+    }
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted":
+    case "invoice.payment_succeeded":
+    case "invoice.payment_failed": {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { syncGoldEvent } = await import("@/lib/driver-gold.server");
+      await syncGoldEvent(supabaseAdmin, env, event);
       break;
     }
     case "checkout.session.async_payment_failed":

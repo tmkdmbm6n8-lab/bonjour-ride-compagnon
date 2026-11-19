@@ -1,3 +1,4 @@
+import { goldPeriodText, goldStatusLabel } from "@/components/private-clients/DriverGoldCard";
 import DriverProfileOverview from "@/components/driver/DriverProfileOverview";
 import AccountModeSwitch from '@/components/shell/AccountModeSwitch';
 import { createFileRoute } from "@tanstack/react-router";
@@ -27,6 +28,7 @@ function DriverMenuPage() {
   const { data: session } = useSession();
   const { data } = useDriverData("/api/users/me?view=driver", 0);
   const { data: driverData } = useDriverData("/api/drivers/me", 0);
+  const { data: goldData } = useDriverData("/api/drivers/me/gold", 15000);
   const [panel, setPanel] = useState(null);
   const [waybill, setWaybill] = useState(false);
   const [overviewOpen, setOverviewOpen] = useState(false);
@@ -54,6 +56,18 @@ function DriverMenuPage() {
       </button>
 
       <AccountModeSwitch mode="rider"/>
+
+      {goldData?.gold && (
+        <div className="card card-pad driver-notice">
+          <strong>{goldStatusLabel(goldData.gold)}</strong>
+          {goldData.gold.active && <p className="small mt-2">{goldPeriodText(goldData.gold)}</p>}
+          {!goldData.gold.active && !goldData.gold.unavailable && (
+            <Link href="/driver/private-clients" className="btn btn-secondary mt-2">
+              {goldData.gold.trialAvailable ? "Découvrir StrasDrive Gold" : "Réactiver StrasDrive Gold"}
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* ── Grille 2x2 des outils essentiels ── */}
       <h2 className="drv-grid-title">Espace de conduite</h2>

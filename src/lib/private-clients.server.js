@@ -1,3 +1,4 @@
+import { driverGold, loadDriverGold } from "./driver-gold.server";
 // Private clients and favorite driver: server operations. Identity always comes from the verified session;
 // links go through the manage_favorite_driver RPC (as the rider) which requires a ride together or a scanned QR.
 import { PRIVATE_INVITATION_SECONDS, PRIVATE_CLAIM_HOURS, favoriteStatus, favoriteEtaMinutes } from "./private-client-policy";
@@ -81,7 +82,7 @@ export async function favoriteForQuote(admin, riderId, pickup, quote, { loadPool
   const id = await favoriteDriverId(admin, riderId);
   if (!id) return null;
   const who = await driverIdentity(admin, id);
-  if (!who) return null;
+  if (!who || !(await driverGold(admin, who.row)).active) return null;
   const pool = await loadPool();
   const inPool = pool.some((d) => d.user_id === id);
   let busy = false;
@@ -109,13 +110,16 @@ export async function favoriteBooking(admin, riderId, pool) {
   if (!id) throw new Error("Vous n’avez pas de chauffeur favori");
   const fav = pool.find((d) => d.user_id === id);
   if (!fav) throw new Error("Votre chauffeur favori n’est plus disponible — choisissez une autre gamme");
+  if (!(await driverGold(admin, fav)).active) throw new Error("L’option chauffeur favori n’est plus disponible — choisissez une autre gamme");
   return { driverId: id, vehicleType: driverClass(fav) };
 }
 
 /** Driver: new five-minute QR invitation. Only the SHA-256 fingerprint is stored. */
 export async function createInvitation(admin, driverId) {
+  const gold = await loadDriverGold(admin, driverId);
+  if (!gold.active) throw new Error("StrasDrive Gold est inactif.");
+  const expiresAt = Math.min(Date.now() + PRIVATE_INVITATION_SECONDS * 1000, gold.endsAt ? Date.parse(gold.endsAt) : Infinity);
   const token = randomToken();
-  const expiresAt = Date.now() + PRIVATE_INVITATION_SECONDS * 1000;
   required(
     await admin
       .from("driver_private_invitations")
@@ -134,7 +138,8 @@ export async function privateClients(admin, driverId) {
       .order("created_at", { ascending: false })
       .limit(200),
   );
-  if (!links.length) return { clients: [] };
+  const gold = await loadDriverGold(admin, driverId);
+  if (!links.length) return { clients: [], gold };
   const profiles = required(
     await admin
       .from("profiles")
@@ -146,6 +151,7 @@ export async function privateClients(admin, driverId) {
   );
   const byId = new Map(profiles.map((p) => [p.id, p]));
   return {
+    gold,
     clients: links.map((l) => ({
       id: l.rider_id,
       name: shortName(byId.get(l.rider_id)?.name, "Client StrasDrive"),
@@ -168,7 +174,7 @@ export async function scanInvitation(admin, token) {
   if (!inv || new Date(inv.expires_at).getTime() <= Date.now())
     throw new Error("Ce QR code a expiré — demandez au chauffeur d’afficher un nouveau code");
   const who = await driverIdentity(admin, inv.driver_id);
-  if (!who) throw new Error("Ce QR code n’appartient pas à un chauffeur StrasDrive");
+  if (!who || !(await driverGold(admin, who.row)).active) throw new Error("Ce QR code n’est plus disponible.");
   const claimToken = randomToken();
   const expiresAt = Date.now() + PRIVATE_CLAIM_HOURS * 3600 * 1000;
   required(
@@ -191,6 +197,7 @@ export async function redeemClaim(admin, db, uid, claimToken, confirmReplacement
   let claim = required(await admin.from("driver_invitation_claims").select("*").eq("claim_token_hash", hash).maybeSingle());
   if (!claim || new Date(claim.claim_expires_at).getTime() <= Date.now())
     throw new Error("Cette invitation a expiré — scannez un nouveau QR code du chauffeur");
+  if (!(await loadDriverGold(admin, claim.driver_id)).active) throw new Error("Cette invitation est temporairement indisponible.");
   if (claim.driver_id === uid) throw new Error("Vous ne pouvez pas vous choisir vous-même");
   if (!claim.rider_id) {
     const won = required(
@@ -218,6 +225,7 @@ export async function redeemClaim(admin, db, uid, claimToken, confirmReplacement
 /** Rider: add/replace (after a ride together) or remove the favorite. */
 export async function setFavorite(admin, db, uid, { driverId, confirmReplacement, expectedDriverId }) {
   if (typeof driverId !== "string" || !/^[0-9a-f-]{36}$/i.test(driverId)) throw new Error("Chauffeur invalide");
+  if (!(await loadDriverGold(admin, driverId)).active) throw new Error("Ce chauffeur ne peut pas être ajouté en favori actuellement.");
   if (confirmReplacement === true) {
     const current = await favoriteDriverId(admin, uid);
     // Another change happened since the question was asked: ask again instead of replacing someone else.

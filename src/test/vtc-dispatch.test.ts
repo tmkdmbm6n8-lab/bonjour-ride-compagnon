@@ -25,7 +25,7 @@ describe('attribution des courses', () => {
   });
 
   it('propose d’abord la course au seul chauffeur favori choisi, même loin, pendant 30 s', () => {
-    const fav = driver('favori', 20);
+    const fav = { ...driver('favori', 20), gold_active: true };
     const pool = [...all, fav];
     const r = apply(ride({ favorite_driver_id: fav.user_id }), planDispatch(ride({ favorite_driver_id: fav.user_id }), pool, NOW));
     expect(r.dispatch_phase).toBe('private');
@@ -37,12 +37,22 @@ describe('attribution des courses', () => {
   });
 
   it('passe au dispatch normal si le favori refuse ou n’est pas disponible', () => {
-    const fav = driver('favori', 20);
+    const fav = { ...driver('favori', 20), gold_active: true };
     const pool = [...all, fav];
     const offered = apply(ride({ favorite_driver_id: 'favori' }), planDispatch(ride({ favorite_driver_id: 'favori' }), pool, NOW));
     const declined = { ...offered, declined: ['favori'], offer_driver_id: null };
     expect(planDispatch(declined, pool, NOW + 1000)?.dispatch_phase).toBe('priority');
     expect(planDispatch(ride({ favorite_driver_id: 'favori' }), all, NOW)?.dispatch_phase).toBe('priority');
+  });
+
+  it('bascule une offre privée vers le dispatch normal lorsque Gold devient inactif', () => {
+    const fav = driver('favori', 20);
+    const pool = [...all, fav];
+    const base = ride({ favorite_driver_id: fav.user_id });
+    expect(planDispatch(base, pool, NOW)?.dispatch_phase).toBe('priority');
+    const offered = { ...base, dispatch_phase: 'private', offer_driver_id: fav.user_id, offer_expires_at: new Date(NOW + 30000).toISOString() };
+    expect(canSeeOffer(offered, fav, NOW, pool)).toBe(false);
+    expect(planDispatch(offered, pool, NOW)?.dispatch_phase).toBe('priority');
   });
 
   it('sans choix du favori, le favori reste dans le dispatch normal comme les autres', () => {

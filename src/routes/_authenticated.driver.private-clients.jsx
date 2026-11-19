@@ -1,23 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import QRCode from "qrcode";
 import DriverLayout from "@/components/DriverLayout";
+import DriverGoldCard from "@/components/private-clients/DriverGoldCard";
+import useDriverData from "@/hooks/useDriverData";
 import PrivateClientsPanel from "@/components/private-clients/PrivateClientsPanel";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 
 function PrivateClientsPage() {
-  const [clients, setClients] = useState(null);
-
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/drivers/me/private-clients")
-      .then((r) => r.json())
-      .then((d) => alive && setClients(Array.isArray(d.clients) ? d.clients : []))
-      .catch(() => alive && setClients([]));
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const waitingForStripe = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("gold") === "return";
+  const { data, error, reload } = useDriverData("/api/drivers/me/private-clients", waitingForStripe ? 5000 : 15000);
+  const { clients = null, gold } = data || {};
 
   const loadQr = useCallback(async () => {
     const res = await fetch("/api/drivers/me/private-clients/qr", { method: "POST" });
@@ -48,7 +41,11 @@ function PrivateClientsPage() {
           <h1>Clients privés</h1>
         </div>
       </header>
-      <PrivateClientsPanel clients={clients} loadQr={loadQr} />
+      {error && <p role="alert">{error} <button type="button" className="btn btn-secondary" onClick={reload}>Réessayer</button></p>}
+      <div className="flex-col gap-4">
+        <DriverGoldCard gold={gold} waitingForStripe={waitingForStripe} />
+        <PrivateClientsPanel clients={clients} loadQr={loadQr} goldActive={gold?.active === true && !error} />
+      </div>
     </div>
   );
 }

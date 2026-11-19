@@ -596,6 +596,18 @@ export async function handleVtc(input, context) {
     const { redeemClaim } = await import("./private-clients.server");
     return redeemClaim(admin, db, uid, body.claimToken, body.confirmReplacement);
   }
+  if (p === "/api/drivers/me/gold" && method === "GET") {
+    const { loadDriverGold } = await import("./driver-gold.server");
+    return { gold: await loadDriverGold(admin, uid) };
+  }
+  if (p === "/api/drivers/me/gold" && method === "POST") {
+    const { openGoldBilling } = await import("./driver-gold.server");
+    try {
+      return await openGoldBilling(admin, uid, body.manage === true);
+    } catch {
+      throw new Error("Impossible d’ouvrir la facturation StrasDrive Gold. Réessayez ou contactez le support.");
+    }
+  }
   if (p === "/api/drivers/me/private-clients" && method === "GET") {
     const { privateClients } = await import("./private-clients.server");
     return privateClients(admin, uid);
@@ -1069,6 +1081,10 @@ export async function handleVtc(input, context) {
     const rs = required(
       await admin.from("rides").select("*").eq("status", "searching").eq("is_test", false).limit(100),
     );
+    if (me && rs.some((ride) => (ride.dispatch_phase === "private" && ride.offer_driver_id === uid) ||
+      (!ride.dispatch_phase && ride.favorite_driver_id === uid))) {
+      me = await withDriverGold(admin, me);
+    }
     const fresh = [];
     for (const r of rs) fresh.push(await assignOffer(admin, r, pool));
     let r = fresh
@@ -1186,7 +1202,8 @@ export async function handleVtc(input, context) {
           throw new Error("Cette demande n’est plus disponible");
       } else {
         const pool = canDrive ? await dispatchPool(admin) : [];
-        const me = pool.find((d) => d.user_id === uid) || null;
+        const candidate = pool.find((d) => d.user_id === uid) || null;
+        const me = r.dispatch_phase === "private" ? await withDriverGold(admin, candidate) : candidate;
         if (!canSeeOffer(r, me, Date.now(), pool)) throw new Error("Cette demande n’est plus disponible");
       }
       let claim = admin
@@ -1589,6 +1606,12 @@ export async function handleVtc(input, context) {
     if (!/^[0-9a-f-]{36}$/i.test(target)) throw new Error("Compte invalide");
     if (target === uid) throw new Error("Vous ne pouvez pas supprimer votre propre compte");
     const files = (await admin.storage.from(DOCUMENTS_BUCKET).list(target, { limit: 1000 })).data || [];
+    const { closeGoldBillingForDeletedAccount } = await import("./driver-gold.server");
+    try {
+      await closeGoldBillingForDeletedAccount(admin, target);
+    } catch {
+      throw new Error("La facturation StrasDrive Gold doit être clôturée avant la suppression du compte.");
+    }
     const removed = required(await admin.rpc("admin_delete_account", { _user: target }));
     required(await admin.from("push_tokens").delete().eq("user_id", target));
     // Inbox threads are owned by immutable account id even after an e-mail change.
@@ -1747,6 +1770,11 @@ async function dispatchPool(db) {
   }
   return free.map((d) => ({ ...d, earned_today: Math.round((earned[d.user_id] || 0) * 100) / 100 }));
 }
+async function withDriverGold(db, driver) {
+  if (!driver || driver.is_priority) return driver;
+  const { driverGold } = await import("./driver-gold.server");
+  return { ...driver, gold_active: (await driverGold(db, driver)).active };
+}
 async function assignOffer(db, r, pool) {
   if (r.status !== "searching") return r;
   if (r.is_test) {
@@ -1762,7 +1790,13 @@ async function assignOffer(db, r, pool) {
       )[0] || r
     );
   }
-  const drivers = pool || (await dispatchPool(db));
+  let drivers = pool || (await dispatchPool(db));
+  const targetId = r.dispatch_phase === "private" ? r.offer_driver_id : !r.dispatch_phase ? r.favorite_driver_id : null;
+  const target = targetId && drivers.find((driver) => driver.user_id === targetId);
+  if (target) {
+    const checked = await withDriverGold(db, target);
+    drivers = drivers.map((driver) => driver === target ? checked : driver);
+  }
   const patch = planDispatch(r, drivers);
   if (!patch) return r;
   let q = db.from("rides").update(patch).eq("id", r.id).eq("status", "searching");
