@@ -2042,21 +2042,23 @@ export async function getRandomRealRide() {
   const ride = rides[Math.floor(Math.random() * rides.length)];
   const [{ data: driver }, { data: profile }] = await Promise.all([
     supabaseAdmin.from("drivers").select("vehicle").eq("user_id", ride.driver_id).maybeSingle(),
-    supabaseAdmin.from("profiles").select("name").eq("id", ride.driver_id).maybeSingle(),
+    supabaseAdmin.from("profiles").select("name, avatar").eq("id", ride.driver_id).maybeSingle(),
   ]);
   const v = driver?.vehicle || {};
   const clean = (x) => (typeof x === "string" ? x.trim() : "");
   const vehicleText = [clean(v.make), clean(v.model), clean(v.color).toLowerCase()].filter(Boolean).join(" ");
   const firstName = clean(profile?.name).split(/\s+/)[0] || "Chauffeur";
+  const avatar = typeof profile?.avatar === "string" && profile.avatar.trim().length > 0 ? profile.avatar.trim() : null;
   const distance = Number(ride.distance);
   const duration = Number(ride.duration);
   const total = Number(ride.total);
   return {
     driverName: firstName,
+    driverAvatar: avatar,
     vehicleText: vehicleText || "Véhicule StrasDrive",
     approachMin: Math.floor(Math.random() * 3) + 2,
     durationMin: duration > 0 ? Math.max(1, Math.round(duration / 60)) : 12,
     distanceKm: distance > 0 ? (distance / 1000).toFixed(1).replace(".", ",") : "4,8",
     fareTotal: total > 0 ? total.toFixed(2).replace(".", ",") : "11,20",
   };
-}
+
