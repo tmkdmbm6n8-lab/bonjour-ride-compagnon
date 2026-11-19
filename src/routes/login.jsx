@@ -96,9 +96,10 @@ function LoginCloseLink() {
     );
   }
 
-  return (
+   return (
     <div className="auth-page login-page brand-theme">
-      <div className="auth-card login-card animate-in">
+      <div className="auth-card login-card animate-in signup-dismissible">
+        <LoginCloseLink />
         <div className="flex justify-center mb-6">
           <Link href="/" aria-label="Accueil StrasDrive">
             <KovaLogo size={38} />
