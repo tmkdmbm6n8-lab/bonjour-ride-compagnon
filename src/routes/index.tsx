@@ -112,62 +112,84 @@ function LandingPage() {
     <div className="landing-page brand-theme">
       <SiteHeader />
 
-      {/* ── Hero ── */}
-      <section className="landing-hero">
-        <StrasbourgSkyline />
-        <div className="landing-estimator-wrap">
-          <HomeRideEstimator />
+      {/* ── Hero identique à la maquette ── */}
+      <section className="landing-hero-showcase">
+        {/* Illustration dorée de Strasbourg en arrière-plan avec fondu */}
+        <div className="hero-backdrop" aria-hidden="true">
+          <img src="/strasbourg-hero.png" alt="" className="hero-backdrop-img" />
+          <div className="hero-backdrop-fade" />
         </div>
-        <h1 className="display landing-confidence">
-          Voyagez en toute <span>confiance</span>.
-        </h1>
 
-        {/* Mock trip card */}
-        <div
-          className="card"
-          style={{
-            margin: "48px auto 0",
-            width: "100%",
-            maxWidth: 720,
-            padding: 28,
-            boxShadow: "var(--shadow-lg)",
-            borderRadius: "var(--radius-xl)",
-          }}
-        >
-          <div className="flex items-center justify-between wrap gap-4">
-            <div className="flex items-center gap-4">
-              <span className="avatar avatar-lg" style={{ background: "var(--ink-950)" }}>
-                <Car size={22} color="#fff" />
+        <div className="hero-content">
+          {/* Titre principal avec vague dorée */}
+          <div className="text-center">
+            <h1 className="hero-title">
+              Voyagez en toute <br />
+              <span className="hero-title-accent">
+                confiance.
+                <svg className="hero-swoop" viewBox="0 0 180 18" fill="none" aria-hidden="true">
+                  <path d="M 6 12 Q 90 20 174 4" stroke="#f5b700" strokeWidth="4" strokeLinecap="round" />
+                </svg>
               </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span style={{ fontWeight: 700 }}>Chauffeur en route</span>
-                  <span className="badge badge-gold badge-dot">3 min</span>
-                </div>
-                <span className="small muted">Toyota Camry argentée · PLT 2048</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-6">
-              <span className="flex items-center gap-2 small muted">
-                <Clock size={15} /> Trajet de 12 min{" "}
+            </h1>
+
+            {/* Les 3 garanties sous le titre */}
+            <div className="hero-trust-bar">
+              <span className="hero-trust-item">
+                <ShieldCheck size={18} className="hero-trust-icon" />
+                <span>Chauffeurs vérifiés</span>
               </span>
-              <span className="flex items-center gap-2 small muted">
-                <RouteIcon size={15} /> 4,8 km{" "}
+              <span className="hero-trust-sep" />
+              <span className="hero-trust-item">
+                <Clock size={18} className="hero-trust-icon" />
+                <span>Disponible 24/7</span>
               </span>
-              <span style={{ fontWeight: 800, fontSize: "1.2rem" }} className="mono-nums">
-                11,20 €
+              <span className="hero-trust-sep" />
+              <span className="hero-trust-item">
+                <Car size={18} className="hero-trust-icon" />
+                <span>Prix transparents</span>
               </span>
             </div>
           </div>
-          <div style={{ height: 8, borderRadius: 4, background: "var(--ink-100)", marginTop: 22, overflow: "hidden" }}>
-            <div
-              style={{
-                width: "62%",
-                height: "100%",
-                borderRadius: 4,
-                background: "linear-gradient(90deg, var(--ink-900), var(--gold-600))",
-              }}
-            />
+
+          {/* Estimateur de course */}
+          <div className="hero-estimator-wrap">
+            <HomeRideEstimator />
+          </div>
+
+          {/* Carte trajet en cours */}
+          <div className="hero-trip-card">
+            <div className="flex items-center justify-between wrap gap-4">
+              <div className="flex items-center gap-3.5">
+                <span className="hero-car-avatar">
+                  <Car size={20} color="#fff" />
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontWeight: 700, color: "#fff" }}>Chauffeur en route</span>
+                    <span className="hero-eta-pill">• 3 min</span>
+                  </div>
+                  <span className="small muted">Toyota Camry argentée · PLT 2048</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6">
+                <span className="flex items-center gap-2 small muted">
+                  <Clock size={15} /> Trajet de 12 min
+                </span>
+                <span className="flex items-center gap-2 small muted">
+                  <RouteIcon size={15} /> 4,8 km
+                </span>
+                <span style={{ fontWeight: 800, fontSize: "1.25rem", color: "#fff" }} className="mono-nums">
+                  11,20 €
+                </span>
+              </div>
+            </div>
+
+            {/* Barre de progression bicolore dorée / blanche */}
+            <div className="hero-progress-track">
+              <div className="hero-progress-bar" />
+            </div>
           </div>
         </div>
       </section>
