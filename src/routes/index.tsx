@@ -35,6 +35,7 @@ type RideSummary = {
 // Shown until a real completed ride is loaded (or when none exists yet).
 const DEMO_RIDE: RideSummary = {
   driverName: "Chauffeur",
+  driverAvatar: null,
   vehicleText: "Toyota Camry argentée",
   approachMin: 3,
   durationMin: 12,
