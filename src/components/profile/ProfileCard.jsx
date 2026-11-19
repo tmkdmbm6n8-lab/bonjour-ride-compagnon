@@ -271,17 +271,17 @@ function PersonalDataCard() {
   }
 
   async function requestDeletion() {
-    if (!window.confirm('Demander la suppression de votre compte et de vos données personnelles ? Les données de facturation sont conservées 10 ans, comme la loi l’exige.')) return;
+    if (!window.confirm('Supprimer définitivement votre compte et vos données ? Cette action est immédiate et irréversible. Les données de facturation restent archivées 10 ans conformément aux obligations légales.')) return;
     setRequesting(true);
     try {
       const res = await fetch('/api/users/me/deletion-request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setRequested(true);
-      toast('Demande envoyée — réponse en principe sous un mois', 'success');
-    } catch {
-      toast('La demande n’a pas pu être envoyée', 'error');
-    } finally {
+      if (!res.ok) throw new Error(data.error || 'Erreur lors de la suppression');
+      toast('Votre compte a été supprimé avec succès', 'success');
+      await signOut();
+      window.location.href = '/';
+    } catch (err) {
+      toast(err.message || 'La suppression du compte a échoué', 'error');
       setRequesting(false);
     }
   }
@@ -291,7 +291,7 @@ function PersonalDataCard() {
       <PersonalSupport/>
       <h3 className="small mb-1" style={{ fontWeight: 700 }}>Mes données personnelles</h3>
       <p className="tiny muted mb-4" style={{ lineHeight: 1.6 }}>
-        Téléchargez une copie de vos données ou demandez la suppression de votre compte. Détails dans la{' '}
+        Téléchargez une copie de vos données ou supprimez définitivement votre compte. Détails dans la{' '}
         <a href="/privacy" style={{ fontWeight: 600, color: 'var(--text)', textDecoration: 'underline' }}>politique de confidentialité</a>.
       </p>
       <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
