@@ -169,8 +169,13 @@ function LandingPage() {
           <div className="flex items-center justify-between wrap gap-4">
             <div className="flex items-center gap-4">
               <span className="avatar avatar-lg" style={{ background: "var(--ink-950)" }}>
-                <Car size={22} color="#fff" />
+                {ride.driverAvatar ? (
+                  <img src={ride.driverAvatar} alt={ride.driverName} />
+                ) : (
+                  <Car size={22} color="#fff" />
+                )}
               </span>
+
               <div>
                 <div className="flex items-center gap-2">
                   <span style={{ fontWeight: 700 }}>{ride.driverName} en route</span>
