@@ -1,3 +1,4 @@
+import CloseControl from "@/components/ui/CloseControl";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { createFileRoute } from "@tanstack/react-router";
 ("use client");
@@ -11,8 +12,9 @@ import { KovaLogo } from "@/components/brand/KovaLogo";
 import LegalFooter from "@/components/shell/LegalFooter";
 import { lovable } from '@/integrations/lovable/index';
 
-function LoginForm() {
-  const router = useRouter();
+function LoginCloseLink() {
+  return <CloseControl href="/" className="signup-close" label="Fermer la connexion" title="Retour à l’accueil" />;
+}
   const { data: session, update } = useSession();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState("");
