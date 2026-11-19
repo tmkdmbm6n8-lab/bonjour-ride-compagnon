@@ -141,6 +141,20 @@
       "when": 1795007572827,
       "tag": "0019_ride_archive_v2_index",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795095665487,
+      "tag": "0020_fix_manage_favorite_driver",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795095724059,
+      "tag": "0021_favorite_driver_inbox_format",
+      "breakpoints": true
     }
   ]
 }
