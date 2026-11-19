@@ -543,17 +543,28 @@ export async function handleVtc(input, context) {
     throw new Error("Méthode non autorisée");
   }
   if (p === "/api/users/me/deletion-request" && method === "POST") {
-    // Droit à l'effacement (RGPD art. 17) : demande enregistrée et traitée sous un mois.
+    // Suppression immédiate et autonome du compte (exigence Apple 5.1.1(v) et RGPD)
+    const files = (await admin.storage.from(DOCUMENTS_BUCKET).list(uid, { limit: 1000 })).data || [];
+    const { closeGoldBillingForDeletedAccount } = await import("./driver-gold.server");
+    try {
+      await closeGoldBillingForDeletedAccount(admin, uid);
+    } catch {
+      // Clôture silencieuse si pas d'abonnement actif
+    }
+    const removed = required(await admin.rpc("admin_delete_account", { _user: uid }));
+    required(await admin.from("push_tokens").delete().eq("user_id", uid));
     required(
-      await admin.from("contact_messages").insert({
-        name: profile.name || profile.username || "Utilisateur",
-        email: context.claims.email || "",
-        topic: "data_request",
-        message:
-          `Demande de suppression du compte ${uid} (${role}). ${String(body.reason || "").slice(0, 1000)}`.trim(),
-      }),
+      await admin
+        .from("contact_messages")
+        .delete()
+        .eq("topic", "driver_conversation")
+        .like("message", '%"userId":"' + uid + '"%'),
     );
-    return { ok: true };
+    if (files.length) await admin.storage.from(DOCUMENTS_BUCKET).remove(files.map((f) => `${uid}/${f.name}`));
+    const { error } = await admin.auth.admin.deleteUser(uid);
+    if (error && !/not.?found/i.test(error.message))
+      throw new Error(`Données effacées, mais l'accès au compte n'a pas pu être supprimé : ${error.message}`);
+    return { ok: true, removed };
   }
   if (p === "/api/users/me/avatar") {
     if (method !== "POST") throw new Error("Méthode non autorisée");
