@@ -1,6 +1,16 @@
 "use client";
 
-import { Gauge, Route as RouteIcon, Wallet, MessagesSquare, Menu, QrCode, Gem, ShieldAlert, LogOut } from "lucide-react";
+import {
+  Gauge,
+  Route as RouteIcon,
+  Wallet,
+  MessagesSquare,
+  Menu,
+  QrCode,
+  Gem,
+  ShieldAlert,
+  LogOut,
+} from "lucide-react";
 import { useEffect, useState, createContext, useContext } from "react";
 import Link from "@/lib/archive-navigation";
 import useDriverData from "@/hooks/useDriverData";
@@ -22,9 +32,28 @@ const GoldContext = createContext(null);
 export const useDriverGold = () => useContext(GoldContext);
 const STANDARD_NAV = [NAV[0], { href: "/driver/private-clients", label: "SDGold", icon: Gem }, ...NAV.slice(3)];
 
+// Cache persistant pour conserver le statut Gold entre les changements d'onglets
+let cachedGold = null;
+try {
+  if (typeof window !== "undefined") {
+    const raw = sessionStorage.getItem("sd_driver_gold_cache");
+    if (raw) cachedGold = JSON.parse(raw);
+  }
+} catch {}
+
 export default function DriverLayout({ children }) {
   const { data: goldData } = useDriverData("/api/drivers/me/gold", 15000);
-  const gold = goldData?.gold;
+
+  // Mémoriser le statut dès réception de la réponse serveur
+  if (goldData?.gold !== undefined) {
+    cachedGold = goldData.gold;
+    try {
+      sessionStorage.setItem("sd_driver_gold_cache", JSON.stringify(goldData.gold));
+    } catch {}
+  }
+
+  // Utiliser immédiatement le cache si la requête est en cours
+  const gold = goldData?.gold ?? cachedGold;
   const [isSuspended, setIsSuspended] = useState(false);
   const [checked, setChecked] = useState(false);
 
@@ -63,14 +92,22 @@ export default function DriverLayout({ children }) {
     const heartbeat = async () => {
       if (stopped || pending) return;
       pending = true;
-      try { await fetch('/api/drivers/me/online-time', { method: 'POST' }); }
-      catch { /* A network gap is not counted as confirmed connection time. */ }
-      finally { pending = false; }
+      try {
+        await fetch("/api/drivers/me/online-time", { method: "POST" });
+      } catch {
+        /* A network gap is not counted as confirmed connection time. */
+      } finally {
+        pending = false;
+      }
     };
     heartbeat();
     const timer = setInterval(heartbeat, 30000);
-    window.addEventListener('focus', heartbeat);
-    return () => { stopped = true; clearInterval(timer); window.removeEventListener('focus', heartbeat); };
+    window.addEventListener("focus", heartbeat);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      window.removeEventListener("focus", heartbeat);
+    };
   }, []);
 
   // Écran de bannissement total : bloque l'accès à toute l'application
@@ -102,7 +139,9 @@ export default function DriverLayout({ children }) {
 
   return (
     <GoldContext.Provider value={gold}>
-      <AppShell nav={gold?.active ? NAV : STANDARD_NAV} variant="driver">{children}</AppShell>
+      <AppShell nav={gold?.active ? NAV : STANDARD_NAV} variant="driver">
+        {children}
+      </AppShell>
     </GoldContext.Provider>
   );
 }
