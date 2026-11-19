@@ -160,6 +160,106 @@ export type Database = {
           },
         ]
       }
+      driver_invitation_claims: {
+        Row: {
+          claim_expires_at: string
+          claim_token_hash: string
+          claimed_at: string
+          completed_at: string | null
+          driver_id: string
+          id: string
+          invitation_id: string
+          rider_id: string | null
+        }
+        Insert: {
+          claim_expires_at?: string
+          claim_token_hash: string
+          claimed_at?: string
+          completed_at?: string | null
+          driver_id: string
+          id?: string
+          invitation_id: string
+          rider_id?: string | null
+        }
+        Update: {
+          claim_expires_at?: string
+          claim_token_hash?: string
+          claimed_at?: string
+          completed_at?: string | null
+          driver_id?: string
+          id?: string
+          invitation_id?: string
+          rider_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_invitation_claims_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_invitation_claims_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "driver_private_invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_invitation_claims_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_private_invitations: {
+        Row: {
+          created_at: string
+          driver_id: string
+          expires_at: string
+          id: string
+          token_hash: string
+          used_at: string | null
+          used_by_rider_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          expires_at: string
+          id?: string
+          token_hash: string
+          used_at?: string | null
+          used_by_rider_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+          used_at?: string | null
+          used_by_rider_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_private_invitations_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_private_invitations_used_by_rider_id_fkey"
+            columns: ["used_by_rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drivers: {
         Row: {
           accepts_classes: string[]
@@ -454,6 +554,42 @@ export type Database = {
         }
         Relationships: []
       }
+      rider_favorite_drivers: {
+        Row: {
+          created_at: string
+          driver_id: string
+          rider_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          rider_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          rider_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_favorite_drivers_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rider_favorite_drivers_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rides: {
         Row: {
           accepted_at: string | null
@@ -465,6 +601,9 @@ export type Database = {
           driver_id: string | null
           dropoff: Json
           fare: Json
+          favorite_driver_id: string | null
+          favorite_free_cancellation: boolean | null
+          favorite_wait_accepted: boolean | null
           id: string
           is_test: boolean
           live_route: Json | null
@@ -492,6 +631,9 @@ export type Database = {
           driver_id?: string | null
           dropoff: Json
           fare: Json
+          favorite_driver_id?: string | null
+          favorite_free_cancellation?: boolean | null
+          favorite_wait_accepted?: boolean | null
           id?: string
           is_test?: boolean
           live_route?: Json | null
@@ -519,6 +661,9 @@ export type Database = {
           driver_id?: string | null
           dropoff?: Json
           fare?: Json
+          favorite_driver_id?: string | null
+          favorite_free_cancellation?: boolean | null
+          favorite_wait_accepted?: boolean | null
           id?: string
           is_test?: boolean
           live_route?: Json | null
@@ -540,6 +685,13 @@ export type Database = {
           {
             foreignKeyName: "rides_driver_id_fkey"
             columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rides_favorite_driver_id_fkey"
+            columns: ["favorite_driver_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -806,6 +958,14 @@ export type Database = {
       }
       finish_withdrawal_request: { Args: { _request: string }; Returns: Json }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      manage_favorite_driver: {
+        Args: {
+          p_action: string
+          p_confirm_replacement?: boolean
+          p_driver_id: string
+        }
+        Returns: Json
+      }
       pending_withdrawal_notifications: {
         Args: { _limit: number }
         Returns: Json[]
