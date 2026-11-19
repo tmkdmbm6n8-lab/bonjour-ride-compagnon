@@ -21,8 +21,36 @@ describe('attribution des courses', () => {
     expect(canSeeOffer(r, far, NOW, all)).toBe(true);
     expect(canSeeOffer(r, near, NOW, all)).toBe(false);
     const next = planDispatch(r, all, NOW + 60000);
-    expect(next?.dispatch_phase).toBeNull();
-    expect(planDispatch(apply(r, next), all, NOW + 60000)?.dispatch_phase).toBe('priority');
+    expect(next?.dispatch_phase).toBe('priority');
+  });
+
+  it('propose d’abord la course au seul chauffeur favori choisi, même loin, pendant 30 s', () => {
+    const fav = driver('favori', 20);
+    const pool = [...all, fav];
+    const r = apply(ride({ favorite_driver_id: fav.user_id }), planDispatch(ride({ favorite_driver_id: fav.user_id }), pool, NOW));
+    expect(r.dispatch_phase).toBe('private');
+    expect(r.offer_driver_id).toBe('favori');
+    expect(new Date(r.offer_expires_at).getTime() - NOW).toBe(30000);
+    expect(canSeeOffer(r, fav, NOW, pool)).toBe(true);
+    expect(canSeeOffer(r, near, NOW, pool)).toBe(false);
+    expect(canSeeOffer(r, far, NOW, pool)).toBe(false);
+  });
+
+  it('passe au dispatch normal si le favori refuse ou n’est pas disponible', () => {
+    const fav = driver('favori', 20);
+    const pool = [...all, fav];
+    const offered = apply(ride({ favorite_driver_id: 'favori' }), planDispatch(ride({ favorite_driver_id: 'favori' }), pool, NOW));
+    const declined = { ...offered, declined: ['favori'], offer_driver_id: null };
+    expect(planDispatch(declined, pool, NOW + 1000)?.dispatch_phase).toBe('priority');
+    expect(planDispatch(ride({ favorite_driver_id: 'favori' }), all, NOW)?.dispatch_phase).toBe('priority');
+  });
+
+  it('sans choix du favori, le favori reste dans le dispatch normal comme les autres', () => {
+    const fav = driver('favori', 0.1);
+    const pool = [near, other, fav];
+    const r = apply(ride(), planDispatch(ride(), pool, NOW));
+    expect(r.dispatch_phase).toBe('nearest');
+    expect(r.offer_driver_id).toBe('favori');
   });
 
   it('tous les chauffeurs prioritaires reçoivent la course en même temps, même loin', () => {

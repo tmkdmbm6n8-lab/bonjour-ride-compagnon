@@ -14,6 +14,7 @@ import {
   HelpCircle,
   FileCheck,
   LogOut,
+  QrCode,
 } from "lucide-react";
 import DriverLayout from "@/components/DriverLayout";
 import Link from "@/lib/archive-navigation";
@@ -82,6 +83,15 @@ function DriverMenuPage() {
           </div>
           <strong>Préférences de course</strong>
           <span>Espèces, note min, GPS</span>
+          <ChevronRight size={16} className="drv-tile-arrow" />
+        </Link>
+
+        <Link href="/driver/private-clients" className="drv-tile">
+          <div className="drv-tile-icon">
+            <QrCode size={22} />
+          </div>
+          <strong>Clients privés</strong>
+          <span>QR code et clients fidèles</span>
           <ChevronRight size={16} className="drv-tile-arrow" />
         </Link>
 

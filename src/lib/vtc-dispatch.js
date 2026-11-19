@@ -10,6 +10,9 @@ export const PRIORITY_WINDOW_SECONDS = 15;
 export const NEAREST_WINDOW_SECONDS = 10;
 export const BROADCAST_WINDOW_SECONDS = 4;
 export const TEST_OFFER_SECONDS = BROADCAST_WINDOW_SECONDS;
+// 0. "private": when the rider explicitly chose her favorite driver, only he sees the ride for this long.
+//    If he declines, lets it expire, goes offline or cannot serve it, the ordinary dispatch starts (he stays in it).
+export const PRIVATE_OFFER_SECONDS = 30;
 
 const iso = (ms) => new Date(ms).toISOString();
 
@@ -44,6 +47,17 @@ export function availableFor(ride, drivers) {
   return fair.length ? fair : pool;
 }
 
+/** Whether the favorite driver (online, approved, free) can take this ride himself: class, not declined, trip preferences. Fair share never applies to a ride the rider addressed to him. */
+export function favoriteCanTake(ride, driver) {
+  return Boolean(
+    driver &&
+      driver.user_id !== ride.rider_id &&
+      canServe(driver, ride.vehicle_type) &&
+      !(ride.declined || []).includes(driver.user_id) &&
+      tripPrefsAllow(driver, ride),
+  );
+}
+
 /** Returns the update to apply to a searching ride, or null when its current step is still running. */
 export function planDispatch(ride, drivers, now = Date.now()) {
   if (ride.status !== "searching") return null;
@@ -52,9 +66,25 @@ export function planDispatch(ride, drivers, now = Date.now()) {
   const running = now < until;
   const phase = ride.dispatch_phase || null;
 
-  if (phase === "private" && running && pool.some((d) => d.user_id === ride.offer_driver_id)) return null;
   if (phase === "private") {
-    return { dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
+    const target = drivers.find((d) => d.user_id === ride.offer_driver_id);
+    if (running && favoriteCanTake(ride, target)) return null;
+    // Ordinary dispatch from the start; the favorite competes like any other driver.
+    return planDispatch(
+      { ...ride, dispatch_phase: null, offer_driver_id: null, offer_expires_at: null, favorite_driver_id: null },
+      drivers,
+      now,
+    );
+  }
+  if (!phase && ride.favorite_driver_id) {
+    const favorite = drivers.find((d) => d.user_id === ride.favorite_driver_id);
+    if (favoriteCanTake(ride, favorite)) {
+      return {
+        dispatch_phase: "private",
+        offer_driver_id: favorite.user_id,
+        offer_expires_at: iso(now + PRIVATE_OFFER_SECONDS * 1000),
+      };
+    }
   }
   if (phase === "priority" && running && pool.some((d) => d.is_priority)) return null;
   if (phase === "nearest" && running && pool.some((d) => d.user_id === ride.offer_driver_id)) return null;
@@ -100,13 +130,13 @@ export function isDriverInCloseZone(ride, driver) {
 }
 
 /** Whether this driver (online, approved, free) may see and accept the ride right now. */
+/** @param {any} ride @param {any} driver @param {number} [now] @param {any[] | null} [pool] */
 export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
   if (!driver || ride.status !== "searching" || !ride.dispatch_phase) return false;
   if (!ride.offer_expires_at || new Date(ride.offer_expires_at).getTime() <= now) return false;
+  if (ride.dispatch_phase === "private") return ride.offer_driver_id === driver.user_id && favoriteCanTake(ride, driver);
   const all = pool && pool.some((d) => d.user_id === driver.user_id) ? pool : [driver];
   if (!availableFor(ride, all).some((d) => d.user_id === driver.user_id)) return false;
-
-  if (ride.dispatch_phase === "private") return ride.offer_driver_id === driver.user_id;
 
   // Phase prioritaires (chauffeurs VIP)
   if (ride.dispatch_phase === "priority") return Boolean(driver.is_priority);

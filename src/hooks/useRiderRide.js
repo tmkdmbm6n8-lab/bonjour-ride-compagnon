@@ -137,11 +137,11 @@ export default function useRiderRide({ onEvent } = {}) {
   }, [socket, isConnected, notify]);
 
   // ── Actions ──
-  const book = useCallback(async ({ pickup, dropoff, vehicleType, paymentMethod }) => {
+  const book = useCallback(async ({ pickup, dropoff, vehicleType, paymentMethod, favorite = false }) => {
     const res = await fetch('/api/rides', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pickup, dropoff, vehicleType, paymentMethod }),
+      body: JSON.stringify({ pickup, dropoff, vehicleType, paymentMethod, favorite: favorite === true }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Impossible de réserver la course');

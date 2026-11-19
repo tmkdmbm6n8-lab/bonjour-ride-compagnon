@@ -58,3 +58,13 @@
 # Page course chauffeur (17/11)
 - [x] Contenu centré, rien ne déborde à droite
 - [x] Textes des onglets du bas visibles sans défiler
+
+# Chauffeur favori et clients privés (19/11)
+- [x] Chauffeur favori en tête du comparateur avec son temps d’arrivée et son prix ; choix explicite → proposé à lui seul 30 s, sinon dispatch normal (favori inclus)
+- [x] Annulation identique aux clients ordinaires
+- [x] Onglet passager « Favori » (fiche, retrait avec confirmation, message Inbox au chauffeur)
+- [x] Bouton « Mettre ce chauffeur en favori » en fin de course, avec confirmation de remplacement
+- [x] Page chauffeur « Clients privés » : QR code renouvelé toutes les 5 min + liste des clients
+- [x] Scan du QR avant inscription (invitation gardée 24 h), paiement carte qui garde le choix du favori
+- [x] Politique de confidentialité et nettoyage nocturne des invitations
+- [ ] Attente d’un favori déjà en course (file d’attente) — non demandé pour l’instant : un favori en course est affiché « En course » et ne peut pas être choisi

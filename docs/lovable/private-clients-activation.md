@@ -1,6 +1,6 @@
 # Clients privés et chauffeur favori — préparation de l'activation
 
-Cette fonctionnalité n'est pas encore activée. Les modifications de schéma, de politiques et de fonctions de base de données doivent être réalisées dans Lovable, conformément à `AGENTS.md`. Ne pas afficher les nouveaux onglets comme opérationnels tant que les opérations serveur et les essais de bout en bout ne sont pas prêts.
+État au 19/11/2026 : activée (schéma, RPC avec preuve de consentement, opérations serveur, onglets passager/chauffeur, QR, comparateur, dispatch `private` de 30 s). Non réalisé : file d'attente d'un favori occupé (un favori en course est non sélectionnable). Les règles retenues par l'utilisateur remplacent l'annulation gratuite : annulation identique aux clients ordinaires.
 
 ## Parcours demandé
 

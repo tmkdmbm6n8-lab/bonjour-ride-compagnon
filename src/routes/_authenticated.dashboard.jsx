@@ -40,6 +40,9 @@ import { Avatar, Stars, StarPicker, VEHICLE_LABELS, money } from "@/components/u
 import useRiderRide from "@/hooks/useRiderRide";
 import { bookingPaymentProblem, paymentMethodLabel } from "@/lib/vtc-pricing";
 import EmbeddedPayment from "@/components/payments/EmbeddedPayment";
+import FavoriteQuoteRow from "@/components/private-clients/FavoriteQuoteRow";
+import FavoriteRideChoice from "@/components/private-clients/FavoriteRideChoice";
+import { readPendingClaim } from "@/lib/private-client-claim";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { playSound } from "@/lib/sounds";
 import useVisualViewport from "@/hooks/useVisualViewport";
@@ -89,6 +92,12 @@ function RiderDashboard() {
   const [estimate, setEstimate] = useState(null); // {route, estimates}
   const [estimating, setEstimating] = useState(false);
   const [vehicleType, setVehicleType] = useState("economy");
+  // True only when the rider explicitly picks her favorite driver; any other row means ordinary dispatch.
+  const [favoriteSelected, setFavoriteSelected] = useState(false);
+  const [pendingClaim, setPendingClaim] = useState(null);
+  useEffect(() => {
+    setPendingClaim(readPendingClaim());
+  }, []);
   const [walletBalance, setWalletBalance] = useState(null);
   const [booking, setBooking] = useState(false);
   const [nearby, setNearby] = useState([]);
@@ -295,7 +304,10 @@ function RiderDashboard() {
         });
         const data = await res.json();
         if (ignore) return;
-        if (res.ok && data?.estimates) setEstimate(data);
+        if (res.ok && data?.estimates) {
+          setEstimate(data);
+          if (data.favorite?.status !== "available" || !data.favorite?.fare) setFavoriteSelected(false);
+        }
         else {
           setEstimate(null);
           toast(data?.error || "Impossible d’estimer le tarif — réessayez dans un instant", "error");
@@ -314,14 +326,18 @@ function RiderDashboard() {
   // ── Book ──
   async function handleBook() {
     if (!pickup || !dropoff || booking) return;
+    const bookedType = favoriteSelected && estimate?.favorite ? estimate.favorite.vehicleType : vehicleType;
     if (paymentMethod === "card") {
-      cardRef.current = { booking: { pickup, dropoff, vehicleType }, sessionId: null };
+      cardRef.current = {
+        booking: { pickup, dropoff, vehicleType: bookedType, ...(favoriteSelected ? { favorite: true } : {}) },
+        sessionId: null,
+      };
       setCardKey((k) => k + 1);
       return;
     }
     setBooking(true);
     try {
-      await book({ pickup, dropoff, vehicleType, paymentMethod });
+      await book({ pickup, dropoff, vehicleType: bookedType, paymentMethod, favorite: favoriteSelected });
       setUnread(0);
       setLastMsg(null);
     } catch (err) {
@@ -413,6 +429,17 @@ function RiderDashboard() {
     }
   }
 
+  const saveFavorite = useCallback(async (driverId, { confirmReplacement, expectedDriverId }) => {
+    const res = await fetch("/api/riders/me/favorite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ driverId, confirmReplacement, expectedDriverId }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Impossible de modifier votre chauffeur favori.");
+    return data;
+  }, []);
+
   async function handleRate() {
     if (!completedRide || !rating || submittingRating) return;
     setSubmittingRating(true);
@@ -465,10 +492,11 @@ function RiderDashboard() {
     };
   }, [phase, ride, driverPosition, liveRoute]);
 
-  const selectedFare = estimate?.estimates?.[vehicleType];
+  const favoriteChosen = favoriteSelected && estimate?.favorite?.status === "available" && estimate.favorite.fare;
+  const selectedFare = favoriteChosen ? estimate.favorite.fare : estimate?.estimates?.[vehicleType];
   const surge = selectedFare?.surgeMultiplier > 1;
   const selectedAvailability = availability?.[vehicleType];
-  const noDriverForSelected = selectedAvailability != null && selectedAvailability.count === 0;
+  const noDriverForSelected = !favoriteChosen && selectedAvailability != null && selectedAvailability.count === 0;
   const payProblem =
     walletBalance != null && selectedFare
       ? bookingPaymentProblem(paymentMethod, walletBalance, selectedFare.total)
@@ -553,6 +581,12 @@ function RiderDashboard() {
         {/* ── IDLE: booking form ── */}
         {phase === "idle" && !loadingActive && (
           <div className="card card-pad animate-in rider-booking-card">
+            {pendingClaim && (
+              <Link href="/join" className="booking-notice tiny mb-3" style={{ display: "block", fontWeight: 600 }}>
+                Invitation de {pendingClaim.driver?.name || "votre chauffeur"} en attente — touchez pour l’ajouter en
+                favori
+              </Link>
+            )}
             <div className="rider-booking-heading">
             <h2 style={{ fontSize: "1.25rem", marginBottom: 0 }}>
               <span className="rider-mobile-heading">Où allez-vous ?</span>
@@ -689,19 +723,27 @@ function RiderDashboard() {
                 </div>
 
                 <div className="flex-col gap-2">
+                  <FavoriteQuoteRow
+                    favorite={estimate.favorite}
+                    selected={Boolean(favoriteChosen)}
+                    onSelect={() => setFavoriteSelected(true)}
+                  />
                   {Object.entries(estimate.estimates).map(([type, fare]) => {
                     const Meta = VEHICLE_META[type];
                     const avail = availability?.[type];
                     return (
                       <button
                         key={type}
-                        className={`vehicle-row ${vehicleType === type ? "selected" : ""}`}
-                        onClick={() => setVehicleType(type)}
-                        aria-pressed={vehicleType === type}
+                        className={`vehicle-row ${!favoriteChosen && vehicleType === type ? "selected" : ""}`}
+                        onClick={() => {
+                          setFavoriteSelected(false);
+                          setVehicleType(type);
+                        }}
+                        aria-pressed={!favoriteChosen && vehicleType === type}
                       >
                         <Meta.icon
                           size={22}
-                          style={{ color: vehicleType === type ? "var(--gold-600)" : "var(--ink-400)", flexShrink: 0 }}
+                          style={{ color: !favoriteChosen && vehicleType === type ? "var(--gold-600)" : "var(--ink-400)", flexShrink: 0 }}
                         />
                         {/* Remplacer l'intérieur du bouton vehicle-row, vers la ligne 381 */}
                         <span className="flex-1" style={{ minWidth: 0 }}>
@@ -1177,9 +1219,14 @@ function RiderDashboard() {
 
             <div className="text-center">
               <p className="small muted mb-2">
-                Comment s’est passée votre course{completedRide.driver ? ` with ${completedRide.driver.name}` : ""}?
+                Comment s’est passée votre course{completedRide.driver ? ` avec ${completedRide.driver.name}` : ""} ?
               </p>
               <StarPicker value={rating} onChange={setRating} />
+              {completedRide.driver?.id && (
+                <div className="mt-3 flex justify-center">
+                  <FavoriteRideChoice driver={completedRide.driver} onSave={saveFavorite} />
+                </div>
+              )}
               {rating > 0 && (
                 <textarea
                   className="input mt-3"

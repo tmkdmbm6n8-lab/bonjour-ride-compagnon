@@ -576,7 +576,34 @@ export async function handleVtc(input, context) {
     requireCameraReader(role);
     return speedCameras(q.get("bbox"));
   }
-  if (p === "/api/rides/estimate") return estimates(admin, body.pickup, body.dropoff);
+  if (p === "/api/rides/estimate") {
+    const quote = await estimates(admin, body.pickup, body.dropoff);
+    const { favoriteForQuote } = await import("./private-clients.server");
+    const favorite = await favoriteForQuote(admin, uid, validPoint(body.pickup), quote, {
+      loadPool: () => dispatchPool(admin),
+      routeBetween,
+    }).catch(() => null);
+    return { ...quote, favorite };
+  }
+  if (p === "/api/riders/me/favorite") {
+    const pc = await import("./private-clients.server");
+    if (method === "GET") return pc.favoriteCard(admin, uid);
+    if (method === "POST") return pc.setFavorite(admin, db, uid, body);
+    if (method === "DELETE") return pc.removeFavorite(db);
+    throw new Error("Méthode non autorisée");
+  }
+  if (p === "/api/private-clients/redeem" && method === "POST") {
+    const { redeemClaim } = await import("./private-clients.server");
+    return redeemClaim(admin, db, uid, body.claimToken, body.confirmReplacement);
+  }
+  if (p === "/api/drivers/me/private-clients" && method === "GET") {
+    const { privateClients } = await import("./private-clients.server");
+    return privateClients(admin, uid);
+  }
+  if (p === "/api/drivers/me/private-clients/qr" && method === "POST") {
+    const { createInvitation } = await import("./private-clients.server");
+    return createInvitation(admin, uid);
+  }
   if (p === "/api/drivers/me/discover" && method === "GET") return discoverBoard(q.get("day") || parisDay());
   if (p === "/api/drivers/me/inbox" && method === "GET")
     return inboxForDriver(admin, uid, context.claims?.email, q.get("page"));
@@ -936,7 +963,12 @@ export async function handleVtc(input, context) {
     if (quote.route.distanceMeters < 100) throw new Error("Le trajet doit faire au moins 100 m");
     return { fare, route: quote.route };
   };
-  const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment }) => {
+  // "Book my favorite driver": the server picks the driver and his class; the ride is first offered to him alone.
+  const resolveFavorite = async () => {
+    const { favoriteBooking } = await import("./private-clients.server");
+    return favoriteBooking(admin, uid, await dispatchPool(admin));
+  };
+  const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment, favoriteDriverId = null }) => {
     await preparePassengerBooking(admin, uid, canDrive);
     const pin = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000).padStart(4, "0");
     // Note moyenne laissée par les chauffeurs, figée à la commande (filtre « note minimale » des chauffeurs).
@@ -964,6 +996,7 @@ export async function handleVtc(input, context) {
           pin,
           payment,
           rider_rating: riderRating,
+          favorite_driver_id: favoriteDriverId,
         })
         .select("*")
         .single(),
@@ -984,6 +1017,7 @@ export async function handleVtc(input, context) {
       body,
       quoteRide,
       createRide,
+      resolveFavorite,
       preparePassenger: () => preparePassengerBooking(admin, uid, canDrive),
       cardBookingProblem: (fare) => bookingPaymentProblem("card", profile.balance, fare.total),
       serializeRide: async (id) =>
@@ -994,16 +1028,19 @@ export async function handleVtc(input, context) {
     await preparePassengerBooking(admin, uid, canDrive);
     const paymentMethod = paymentMethodOf(body.paymentMethod);
     if (paymentMethod === "card") throw new Error("Le paiement par carte se fait depuis l’écran de paiement sécurisé");
-    const { fare, route } = await quoteRide(body);
+    const favorite = body.favorite === true ? await resolveFavorite() : null;
+    const vehicleType = favorite ? favorite.vehicleType : body.vehicleType;
+    const { fare, route } = await quoteRide({ ...body, vehicleType });
     const payProblem = bookingPaymentProblem(paymentMethod, profile.balance, fare.total);
     if (payProblem) throw new Error(payProblem);
     const ride = await createRide({
-      vehicleType: body.vehicleType,
+      vehicleType,
       pickup: body.pickup,
       dropoff: body.dropoff,
       route,
       fare,
       payment: { method: paymentMethod },
+      favoriteDriverId: favorite?.driverId || null,
     });
     return { ride };
   }
@@ -1744,6 +1781,11 @@ export async function publicVtc(input) {
   if (url.pathname === "/api/rides/estimate") {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     return estimates(supabaseAdmin, input.body?.pickup, input.body?.dropoff);
+  }
+  if (url.pathname === "/api/private-clients/scan") {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { scanInvitation } = await import("./private-clients.server");
+    return scanInvitation(supabaseAdmin, input.body?.token);
   }
   throw new Error("Accès refusé");
 }

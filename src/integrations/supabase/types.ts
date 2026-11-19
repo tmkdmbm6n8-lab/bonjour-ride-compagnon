@@ -20,6 +20,7 @@ export type Database = {
           dropoff: Json
           environment: string
           fare: Json
+          favorite_driver_id: string | null
           id: string
           pickup: Json
           ride_id: string | null
@@ -34,6 +35,7 @@ export type Database = {
           dropoff: Json
           environment: string
           fare: Json
+          favorite_driver_id?: string | null
           id?: string
           pickup: Json
           ride_id?: string | null
@@ -48,6 +50,7 @@ export type Database = {
           dropoff?: Json
           environment?: string
           fare?: Json
+          favorite_driver_id?: string | null
           id?: string
           pickup?: Json
           ride_id?: string | null

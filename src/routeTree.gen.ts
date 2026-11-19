@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MentionsLegalesRouteImport } from './routes/mentions-legales'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -19,6 +20,7 @@ import { Route as RecoverAccountRouteImport } from './routes/recover-account'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedFavoriteRouteImport } from './routes/_authenticated.favorite'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as AuthenticatedRidesRouteImport } from './routes/_authenticated.rides'
 import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated.wallet'
@@ -37,6 +39,7 @@ import { Route as AuthenticatedDriverEarningsRouteImport } from './routes/_authe
 import { Route as AuthenticatedDriverInboxRouteImport } from './routes/_authenticated.driver.inbox'
 import { Route as AuthenticatedDriverMenuRouteImport } from './routes/_authenticated.driver.menu'
 import { Route as AuthenticatedDriverPreferencesRouteImport } from './routes/_authenticated.driver.preferences'
+import { Route as AuthenticatedDriverPrivateClientsRouteImport } from './routes/_authenticated.driver.private-clients'
 import { Route as AuthenticatedDriverProfileRouteImport } from './routes/_authenticated.driver.profile'
 import { Route as AuthenticatedDriverTripsRouteImport } from './routes/_authenticated.driver.trips'
 import { Route as AuthenticatedDriverWalletRouteImport } from './routes/_authenticated.driver.wallet'
@@ -58,6 +61,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -93,6 +101,11 @@ const TermsRoute = TermsRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFavoriteRoute = AuthenticatedFavoriteRouteImport.update({
+  id: '/favorite',
+  path: '/favorite',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
@@ -197,6 +210,12 @@ const AuthenticatedDriverPreferencesRoute =
     path: '/driver/preferences',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDriverPrivateClientsRoute =
+  AuthenticatedDriverPrivateClientsRouteImport.update({
+    id: '/driver/private-clients',
+    path: '/driver/private-clients',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDriverProfileRoute =
   AuthenticatedDriverProfileRouteImport.update({
     id: '/driver/profile',
@@ -248,6 +267,7 @@ const ApiPublicPaymentsWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/privacy': typeof PrivacyRoute
@@ -255,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/favorite': typeof AuthenticatedFavoriteRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/rides': typeof AuthenticatedRidesRouteWithChildren
   '/wallet': typeof AuthenticatedWalletRoute
@@ -273,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/driver/inbox': typeof AuthenticatedDriverInboxRoute
   '/driver/menu': typeof AuthenticatedDriverMenuRoute
   '/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
+  '/driver/private-clients': typeof AuthenticatedDriverPrivateClientsRoute
   '/driver/profile': typeof AuthenticatedDriverProfileRoute
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
@@ -285,6 +307,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/privacy': typeof PrivacyRoute
@@ -292,6 +315,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/favorite': typeof AuthenticatedFavoriteRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/rides': typeof AuthenticatedRidesRouteWithChildren
   '/wallet': typeof AuthenticatedWalletRoute
@@ -310,6 +334,7 @@ export interface FileRoutesByTo {
   '/driver/inbox': typeof AuthenticatedDriverInboxRoute
   '/driver/menu': typeof AuthenticatedDriverMenuRoute
   '/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
+  '/driver/private-clients': typeof AuthenticatedDriverPrivateClientsRoute
   '/driver/profile': typeof AuthenticatedDriverProfileRoute
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
@@ -324,6 +349,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/contact': typeof ContactRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/mentions-legales': typeof MentionsLegalesRoute
   '/privacy': typeof PrivacyRoute
@@ -331,6 +357,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/favorite': typeof AuthenticatedFavoriteRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/rides': typeof AuthenticatedRidesRouteWithChildren
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
@@ -349,6 +376,7 @@ export interface FileRoutesById {
   '/_authenticated/driver/inbox': typeof AuthenticatedDriverInboxRoute
   '/_authenticated/driver/menu': typeof AuthenticatedDriverMenuRoute
   '/_authenticated/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
+  '/_authenticated/driver/private-clients': typeof AuthenticatedDriverPrivateClientsRoute
   '/_authenticated/driver/profile': typeof AuthenticatedDriverProfileRoute
   '/_authenticated/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/_authenticated/driver/wallet': typeof AuthenticatedDriverWalletRoute
@@ -363,6 +391,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/contact'
+    | '/join'
     | '/login'
     | '/mentions-legales'
     | '/privacy'
@@ -370,6 +399,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/dashboard'
+    | '/favorite'
     | '/profile'
     | '/rides'
     | '/wallet'
@@ -388,6 +418,7 @@ export interface FileRouteTypes {
     | '/driver/inbox'
     | '/driver/menu'
     | '/driver/preferences'
+    | '/driver/private-clients'
     | '/driver/profile'
     | '/driver/trips'
     | '/driver/wallet'
@@ -400,6 +431,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/contact'
+    | '/join'
     | '/login'
     | '/mentions-legales'
     | '/privacy'
@@ -407,6 +439,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/dashboard'
+    | '/favorite'
     | '/profile'
     | '/rides'
     | '/wallet'
@@ -425,6 +458,7 @@ export interface FileRouteTypes {
     | '/driver/inbox'
     | '/driver/menu'
     | '/driver/preferences'
+    | '/driver/private-clients'
     | '/driver/profile'
     | '/driver/trips'
     | '/driver/wallet'
@@ -438,6 +472,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/contact'
+    | '/join'
     | '/login'
     | '/mentions-legales'
     | '/privacy'
@@ -445,6 +480,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/_authenticated/dashboard'
+    | '/_authenticated/favorite'
     | '/_authenticated/profile'
     | '/_authenticated/rides'
     | '/_authenticated/wallet'
@@ -463,6 +499,7 @@ export interface FileRouteTypes {
     | '/_authenticated/driver/inbox'
     | '/_authenticated/driver/menu'
     | '/_authenticated/driver/preferences'
+    | '/_authenticated/driver/private-clients'
     | '/_authenticated/driver/profile'
     | '/_authenticated/driver/trips'
     | '/_authenticated/driver/wallet'
@@ -477,6 +514,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   ContactRoute: typeof ContactRoute
+  JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
   MentionsLegalesRoute: typeof MentionsLegalesRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -510,6 +548,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -559,6 +604,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/favorite': {
+      id: '/_authenticated/favorite'
+      path: '/favorite'
+      fullPath: '/favorite'
+      preLoaderRoute: typeof AuthenticatedFavoriteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/profile': {
@@ -687,6 +739,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDriverPreferencesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/driver/private-clients': {
+      id: '/_authenticated/driver/private-clients'
+      path: '/driver/private-clients'
+      fullPath: '/driver/private-clients'
+      preLoaderRoute: typeof AuthenticatedDriverPrivateClientsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/driver/profile': {
       id: '/_authenticated/driver/profile'
       path: '/driver/profile'
@@ -759,6 +818,7 @@ const AuthenticatedRidesRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFavoriteRoute: typeof AuthenticatedFavoriteRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedRidesRoute: typeof AuthenticatedRidesRouteWithChildren
   AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
@@ -777,6 +837,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDriverInboxRoute: typeof AuthenticatedDriverInboxRoute
   AuthenticatedDriverMenuRoute: typeof AuthenticatedDriverMenuRoute
   AuthenticatedDriverPreferencesRoute: typeof AuthenticatedDriverPreferencesRoute
+  AuthenticatedDriverPrivateClientsRoute: typeof AuthenticatedDriverPrivateClientsRoute
   AuthenticatedDriverProfileRoute: typeof AuthenticatedDriverProfileRoute
   AuthenticatedDriverTripsRoute: typeof AuthenticatedDriverTripsRoute
   AuthenticatedDriverWalletRoute: typeof AuthenticatedDriverWalletRoute
@@ -784,6 +845,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFavoriteRoute: AuthenticatedFavoriteRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedRidesRoute: AuthenticatedRidesRouteWithChildren,
   AuthenticatedWalletRoute: AuthenticatedWalletRoute,
@@ -802,6 +864,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDriverInboxRoute: AuthenticatedDriverInboxRoute,
   AuthenticatedDriverMenuRoute: AuthenticatedDriverMenuRoute,
   AuthenticatedDriverPreferencesRoute: AuthenticatedDriverPreferencesRoute,
+  AuthenticatedDriverPrivateClientsRoute:
+    AuthenticatedDriverPrivateClientsRoute,
   AuthenticatedDriverProfileRoute: AuthenticatedDriverProfileRoute,
   AuthenticatedDriverTripsRoute: AuthenticatedDriverTripsRoute,
   AuthenticatedDriverWalletRoute: AuthenticatedDriverWalletRoute,
@@ -814,6 +878,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   ContactRoute: ContactRoute,
+  JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   MentionsLegalesRoute: MentionsLegalesRoute,
   PrivacyRoute: PrivacyRoute,

@@ -92,12 +92,14 @@ function SignupForm() {
         redirect: false,
       });
 
+      const callbackUrl = searchParams.get('callbackUrl');
+      const safeCallback = callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : null;
       if (login?.error) {
-        await router.push('/login');
+        await router.push(safeCallback ? `/login?callbackUrl=${encodeURIComponent(safeCallback)}` : '/login');
         return;
       }
       await update();
-      await router.push(form.role === 'driver' ? '/driver/dashboard' : '/dashboard');
+      await router.push(safeCallback || (form.role === 'driver' ? '/driver/dashboard' : '/dashboard'));
     } catch {
       setError('Une erreur est survenue — veuillez réessayer');
       setLoading(false);

@@ -1,7 +1,7 @@
 import {LEGAL_VERSION} from './legal';
 import {vtcRequest,contactRequest,publicVtcRequest} from './vtc.functions';
 import {supabase} from '@/integrations/supabase/client';
-const PUBLIC_PAGES=['/','/login','/signup','/recover-account','/contact','/privacy','/terms','/mentions-legales'];
+const PUBLIC_PAGES=['/','/login','/signup','/recover-account','/contact','/privacy','/terms','/mentions-legales','/join'];
 let redirecting=false;
 function sessionExpired(){
  if(typeof window!=='undefined'&&!redirecting&&!PUBLIC_PAGES.includes(window.location.pathname)){redirecting=true;const back=window.location.pathname+window.location.search;window.location.href=`/login?expired=1&callbackUrl=${encodeURIComponent(back)}`;}
@@ -17,6 +17,8 @@ export async function apiFetch(path,options={}) {
   }else if(path==='/api/contact')data=await contactRequest({data:body});
   // Address search is a public map service: never tied to the session, so an expired token cannot break it.
   else if(String(path).startsWith('/api/geo/search'))data=await publicVtcRequest({data:{path,body}});
+  // Scanning a driver's QR code works before signing up; the server only accepts a valid, unexpired code.
+  else if(path==='/api/private-clients/scan')data=await publicVtcRequest({data:{path,body}});
   else{
    // Without a session the request would be refused: send the user back to sign in with a clear message.
    const {data:{session}}=await supabase.auth.getSession();if(!session)throw sessionExpired();

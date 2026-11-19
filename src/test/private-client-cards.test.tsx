@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -5,7 +6,7 @@ import FavoriteDriverCard from '../components/private-clients/FavoriteDriverCard
 import PrivateClientsPanel from '../components/private-clients/PrivateClientsPanel';
 import FavoriteRideChoice from '../components/private-clients/FavoriteRideChoice';
 
-vi.mock('@/components/ui/bits', () => ({ Avatar: ({ name }) => <span>{name}</span> }));
+vi.mock('@/components/ui/bits', () => ({ Avatar: ({ name }) => <span>{name}</span>, VEHICLE_LABELS: { economy: 'StrasDrive Go' }, money: (n) => String(n) }));
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('clients privés', () => {
@@ -39,5 +40,25 @@ describe('clients privés', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirmer le changement' }));
     expect(await screen.findByRole('status')).toBeTruthy();
     expect(save).toHaveBeenLastCalledWith('nouveau', { confirmReplacement: true, expectedDriverId: 'ancien' });
+  });
+});
+
+describe('chauffeur favori en tête du comparateur', () => {
+  it('affiche le temps d’arrivée du favori disponible et permet de le choisir', async () => {
+    const { default: FavoriteQuoteRow } = await import('../components/private-clients/FavoriteQuoteRow');
+    const select = vi.fn();
+    render(<FavoriteQuoteRow favorite={{ name: 'Alex', status: 'available', etaMinutes: 6, vehicleType: 'economy', fare: { total: 18.5 } }} selected={false} onSelect={select} />);
+    expect(screen.getByText('Arrive dans 6 min')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button'));
+    expect(select).toHaveBeenCalledTimes(1);
+  });
+
+  it('un favori en course ne peut pas être choisi', async () => {
+    const { default: FavoriteQuoteRow } = await import('../components/private-clients/FavoriteQuoteRow');
+    const select = vi.fn();
+    render(<FavoriteQuoteRow favorite={{ name: 'Alex', status: 'busy', etaMinutes: null, vehicleType: 'economy', fare: { total: 18.5 } }} selected={false} onSelect={select} />);
+    expect(screen.getByText('En course en ce moment')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button'));
+    expect(select).not.toHaveBeenCalled();
   });
 });

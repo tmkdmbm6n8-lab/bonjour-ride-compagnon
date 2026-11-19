@@ -53,7 +53,7 @@ function embeddedSession(stripe, { uid, customer, amount, name, returnUrl, metad
  * Card payments: wallet top-up (free amount) and ride paid by card at booking.
  * A card ride credits the exact fare to the wallet, then the ride is booked with that fare and settled from the wallet.
  */
-export async function handleCheckout({ admin, uid, role, email, p, q, method, body, createRide, quoteRide, serializeRide, cardBookingProblem, preparePassenger }) {
+export async function handleCheckout({ admin, uid, role, email, p, q, method, body, createRide, quoteRide, resolveFavorite, serializeRide, cardBookingProblem, preparePassenger }) {
   const env = method === "GET" ? q.get("env") : body.environment;
   if (!isStripeEnv(env)) throw new Error("Paiement par carte indisponible pour le moment");
   let stripe;
@@ -88,12 +88,15 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
       await preparePassenger();
       const origin = safeOrigin(body.origin);
       if (!origin) return { error: "Adresse de retour invalide" };
-      const { fare, route } = await quoteRide(body);
+      // The favorite choice is kept with the paid booking so the ride never changes circuit after payment.
+      const favorite = body.favorite === true ? await resolveFavorite() : null;
+      const vehicleType = favorite ? favorite.vehicleType : body.vehicleType;
+      const { fare, route } = await quoteRide({ ...body, vehicleType });
       const payProblem = cardBookingProblem(fare);
       if (payProblem) return { error: payProblem };
       const { data: booking, error } = await admin
         .from("card_bookings")
-        .insert({ rider_id: uid, vehicle_type: body.vehicleType, pickup: body.pickup, dropoff: body.dropoff, route, fare, environment: env })
+        .insert({ rider_id: uid, vehicle_type: vehicleType, pickup: body.pickup, dropoff: body.dropoff, route, fare, environment: env, favorite_driver_id: favorite?.driverId || null })
         .select("id")
         .single();
       if (error) return { error: "La réservation n’a pas pu être préparée" };
@@ -101,7 +104,7 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
       const metadata = { userId: uid, kind: "ride", bookingId: booking.id };
       const session = await embeddedSession(stripe, {
         uid, customer, amount: fare.total, metadata,
-        name: `Course StrasDrive ${VEHICLE_CLASS_LABELS[body.vehicleType] || ""}`.trim(),
+        name: `Course StrasDrive ${VEHICLE_CLASS_LABELS[vehicleType] || ""}`.trim(),
         returnUrl: `${origin}/dashboard?card_session={CHECKOUT_SESSION_ID}`,
       });
       await admin.from("card_bookings").update({ stripe_session_id: session.id }).eq("id", booking.id);
@@ -129,6 +132,7 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
         const ride = await createRide({
           vehicleType: booking.vehicle_type, pickup: booking.pickup, dropoff: booking.dropoff,
           route: booking.route, fare: booking.fare, payment: { method: "card", stripeSessionId: session.id },
+          favoriteDriverId: booking.favorite_driver_id || null,
         });
         await admin.from("card_bookings").update({ status: "booked", ride_id: ride.id }).eq("id", booking.id);
         return { paid: true, booked: true, ride };
