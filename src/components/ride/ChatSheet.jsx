@@ -86,6 +86,12 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
       </div>
 
       <p className="chat-retention-notice">{CHAT_NOTICE}</p>
+      <p className="tiny muted" style={{ padding: '0 14px 8px' }}>
+        Message abusif, menace ou harcèlement ?{' '}
+        <a href={`/contact?topic=safety&ride=${encodeURIComponent(rideId)}`}>
+          Signaler cette discussion à l’assistance
+        </a>.
+      </p>
       <div ref={listRef} className="flex-1" style={{ overflowY: 'auto', padding: 14 }}>
         {messages.length === 0 && (
           <p className="tiny muted text-center" style={{ paddingTop: 40 }}> Dites bonjour à votre interlocuteur. </p>
