@@ -2025,60 +2025,38 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
   }
   throw new Error("Route introuvable");
 }
+// Public landing card: one random real completed ride. Visitors are anonymous,
+// so only non-identifying fields leave the server (first name, car make/model/color,
+// duration, distance, fare) — never the plate, rider, addresses or route geometry.
 export async function getRandomRealRide() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  // Récupère les courses réelles terminées avec un chauffeur
   const { data: rides, error } = await supabaseAdmin
     .from("rides")
-    .select(
-      `
-      id,
-      route,
-      fare,
-      driver:profiles!rides_driver_id_fkey(name),
-      driver_info:drivers!drivers_user_id_fkey(vehicle)
-    `,
-    )
+    .select("driver_id, distance:route->distanceMeters, duration:route->durationSeconds, total:fare->total")
     .eq("status", "completed")
     .eq("is_test", false)
     .not("driver_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(20);
-
-  if (error || !rides || rides.length === 0) {
-    // Secours si aucune course n'est disponible
-    return {
-      driverName: "Tata",
-      vehicleText: "Honda Jazz grise · CG762ZM",
-      approachMin: 3,
-      durationMin: 14,
-      distanceKm: "5,8",
-      fareTotal: "10,84",
-    };
-  }
-
-  // Tirage au sort parmi les courses réelles
-  const randomRide = rides[Math.floor(Math.random() * rides.length)];
-  const v = randomRide.driver_info?.vehicle || {};
-  const vehicleText = [v.make, v.model, v.color].filter(Boolean).join(" ") + (v.plate ? ` · ${v.plate}` : "");
-
-  const distanceKm = randomRide.route?.distanceMeters
-    ? (randomRide.route.distanceMeters / 1000).toFixed(1).replace(".", ",")
-    : "5,2";
-
-  const durationMin = randomRide.route?.durationSeconds
-    ? Math.max(1, Math.round(randomRide.route.durationSeconds / 60))
-    : 12;
-
-  const fareTotal = randomRide.fare?.total ? Number(randomRide.fare.total).toFixed(2).replace(".", ",") : "11,20";
-
+  if (error || !rides?.length) return null;
+  const ride = rides[Math.floor(Math.random() * rides.length)];
+  const [{ data: driver }, { data: profile }] = await Promise.all([
+    supabaseAdmin.from("drivers").select("vehicle").eq("user_id", ride.driver_id).maybeSingle(),
+    supabaseAdmin.from("profiles").select("name").eq("id", ride.driver_id).maybeSingle(),
+  ]);
+  const v = driver?.vehicle || {};
+  const clean = (x) => (typeof x === "string" ? x.trim() : "");
+  const vehicleText = [clean(v.make), clean(v.model), clean(v.color).toLowerCase()].filter(Boolean).join(" ");
+  const firstName = clean(profile?.name).split(/\s+/)[0] || "Chauffeur";
+  const distance = Number(ride.distance);
+  const duration = Number(ride.duration);
+  const total = Number(ride.total);
   return {
-    driverName: randomRide.driver?.name || "Chauffeur",
+    driverName: firstName,
     vehicleText: vehicleText || "Véhicule StrasDrive",
-    approachMin: Math.floor(Math.random() * 3) + 2, // 2 à 4 min d'approche
-    durationMin,
-    distanceKm,
-    fareTotal,
+    approachMin: Math.floor(Math.random() * 3) + 2,
+    durationMin: duration > 0 ? Math.max(1, Math.round(duration / 60)) : 12,
+    distanceKm: distance > 0 ? (distance / 1000).toFixed(1).replace(".", ",") : "4,8",
+    fareTotal: total > 0 ? total.toFixed(2).replace(".", ",") : "11,20",
   };
 }
