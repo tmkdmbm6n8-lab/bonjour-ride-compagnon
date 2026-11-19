@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHAT_RETENTION_MS, chatRetention, visibleChatMessages, newChatMessage, decodeChatAttachment } from '@/lib/ride-chat';
+import { CHAT_RETENTION_MS, chatRetention, visibleChatMessages, newChatMessage, rejectUnsafeChatText, decodeChatAttachment } from '@/lib/ride-chat';
 import { assertRideActionMethod } from '@/lib/vtc-access';
 describe('contenus de discussion', () => {
  it('cache les marqueurs de conservation aux participants', () => {
@@ -11,6 +11,12 @@ describe('contenus de discussion', () => {
   expect(newChatMessage({ type:'location',lat:48.5,lng:7.7,from:'admin' },'rider')).toMatchObject({from:'rider',type:'location',lat:48.5,lng:7.7});
   expect(()=>newChatMessage({type:'location',lat:91,lng:0},'rider')).toThrow();
   expect(()=>newChatMessage({type:'location',lat:'48',lng:7},'rider')).toThrow();
+ });
+ it('bloque les menaces explicites sans bloquer les messages courants', () => {
+  expect(() => rejectUnsafeChatText('Je vais te tuer')).toThrow(/menace explicite/);
+  expect(() => newChatMessage({ text: 'Je te frappe' }, 'rider')).toThrow(/menace explicite/);
+  expect(() => rejectUnsafeChatText('I will kill you')).toThrow(/menace explicite/);
+  expect(() => newChatMessage({ text: 'Bonjour, je suis devant la gare' }, 'driver')).not.toThrow();
  });
  it('valide les fichiers et limite les vocaux à une minute', () => {
   const webm = Buffer.from('1a45dfa3000000000000','hex').toString('base64');
