@@ -126,9 +126,10 @@ function LandingPage() {
         <div
           className="card"
           style={{
-            marginTop: 64,
-            padding: 28,
+            margin: "48px auto 0",
+            width: "100%",
             maxWidth: 720,
+            padding: 28,
             boxShadow: "var(--shadow-lg)",
             borderRadius: "var(--radius-xl)",
           }}
