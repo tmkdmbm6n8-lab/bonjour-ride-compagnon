@@ -17,19 +17,33 @@ function SignupCloseLink() {
   return <CloseControl href="/" className="signup-close" label="Fermer l’inscription" title="Retour à l’accueil" />;
 }
 
+// Génération automatique d'un identifiant à partir du nom complet
+function generateUsername(fullName) {
+  if (!fullName || typeof fullName !== "string") {
+    return `user_${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+  const clean = fullName
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // retire les accents (é -> e, etc.)
+    .replace(/[^a-z0-9]/g, ""); // ne garde que les lettres et chiffres
+
+  return clean ? clean.slice(0, 24) : `user_${Math.floor(1000 + Math.random() * 9000)}`;
+}
+
 function SignupForm() {
   const router = useRouter();
   const { update, data: session } = useSession();
   const searchParams = useSearchParams();
   const [form, setForm] = useState({
     name: "",
-    username: "",
     email: "",
     password: "",
     confirmPassword: "",
     role: searchParams.get("role") === "driver" ? "driver" : "rider",
     acceptTerms: false,
   });
+
   const [confirmationEmail, setConfirmationEmail] = useState("");
   const confirmationTitle = useRef(null);
 
