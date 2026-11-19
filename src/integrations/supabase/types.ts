@@ -163,6 +163,56 @@ export type Database = {
           },
         ]
       }
+      driver_gold_subscriptions: {
+        Row: {
+          can_manage: boolean
+          cancel_at_period_end: boolean
+          driver_id: string
+          environment: string
+          gold_current_period_end: string | null
+          gold_status: string
+          gold_trial_ends_at: string | null
+          revision: number
+          stripe_customer_id: string
+          stripe_subscription_id: string | null
+          trial_used: boolean
+        }
+        Insert: {
+          can_manage?: boolean
+          cancel_at_period_end?: boolean
+          driver_id: string
+          environment: string
+          gold_current_period_end?: string | null
+          gold_status?: string
+          gold_trial_ends_at?: string | null
+          revision?: number
+          stripe_customer_id: string
+          stripe_subscription_id?: string | null
+          trial_used?: boolean
+        }
+        Update: {
+          can_manage?: boolean
+          cancel_at_period_end?: boolean
+          driver_id?: string
+          environment?: string
+          gold_current_period_end?: string | null
+          gold_status?: string
+          gold_trial_ends_at?: string | null
+          revision?: number
+          stripe_customer_id?: string
+          stripe_subscription_id?: string | null
+          trial_used?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_gold_subscriptions_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       driver_invitation_claims: {
         Row: {
           claim_expires_at: string
