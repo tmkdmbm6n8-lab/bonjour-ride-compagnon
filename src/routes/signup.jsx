@@ -185,9 +185,10 @@ function SignupForm() {
       "wanadoo.fr": "https://mail.orange.fr/",
     }[domain];
     return (
-      <div className="auth-page brand-theme">
-        <div className="auth-card animate-in signup-confirmation signup-dismissible">
+      <div className="auth-page login-page brand-theme">
+        <div className="auth-card login-card animate-in signup-dismissible">
           <SignupCloseLink />
+
           <Link href="/" aria-label="Accueil StrasDrive">
             <KovaLogo size={38} />
           </Link>
