@@ -3929,6 +3929,9 @@ a.activity-pill:hover {
     color: var(--drv-accent);
     fill: none;
   }
+  .shell-driver .nav-item {
+    padding-inline: 4px;
+  }
   .shell-dark .nav-item.active::before {
     content: "";
     position: absolute;

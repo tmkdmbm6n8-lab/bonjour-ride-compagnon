@@ -1,6 +1,6 @@
 "use client";
 
-import { Gauge, Route as RouteIcon, Wallet, MessagesSquare, Menu, ShieldAlert, LogOut } from "lucide-react";
+import { Gauge, Route as RouteIcon, Wallet, MessagesSquare, Menu, QrCode, ShieldAlert, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "@/lib/archive-navigation";
 import AppShell from "@/components/shell/AppShell";
@@ -10,6 +10,7 @@ import { signOut } from "@/lib/archive-auth";
 
 const NAV = [
   { href: "/driver/dashboard", label: "Accueil", icon: Gauge },
+  { href: "/driver/private-clients", label: "Clients", icon: QrCode },
   { href: "/driver/discover", label: "Trafic", icon: RouteIcon },
   { href: "/driver/earnings", label: "Revenus", icon: Wallet },
   { href: "/driver/inbox", label: "Inbox", icon: MessagesSquare },
@@ -92,5 +93,5 @@ export default function DriverLayout({ children }) {
     );
   }
 
-  return <AppShell nav={NAV}>{children}</AppShell>;
+  return <AppShell nav={NAV} variant="driver">{children}</AppShell>;
 }

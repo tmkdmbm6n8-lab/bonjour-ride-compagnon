@@ -43,7 +43,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
     variant === "rider" ? "/dashboard" : user?.role === "driver" ? "/driver/dashboard" : user?.role === "admin" ? "/admin/dashboard" : "/dashboard";
 
   return (
-    <div ref={shellRef} className={`shell ${variant === "rider" ? "shell-rider" : variant === "admin" ? "shell-admin" : ""} shell-dark`}>
+    <div ref={shellRef} className={`shell ${variant === "rider" ? "shell-rider" : variant === "admin" ? "shell-admin" : variant === "driver" ? "shell-driver" : ""} shell-dark`}>
       <aside ref={sidebarRef} className="sidebar">
         <div className="sidebar-brand">
           <Link href={homeHref} aria-label="Accueil StrasDrive">

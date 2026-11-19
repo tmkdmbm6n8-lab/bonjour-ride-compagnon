@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import DriverLayout from "@/components/DriverLayout";
-import DriverPageClose from "@/components/driver/DriverPageClose";
 import PrivateClientsPanel from "@/components/private-clients/PrivateClientsPanel";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 
@@ -48,7 +47,6 @@ function PrivateClientsPage() {
           <span className="sd-settings-brand">StrasDrive · Votre clientèle</span>
           <h1>Clients privés</h1>
         </div>
-        <DriverPageClose label="Fermer les clients privés" />
       </header>
       <PrivateClientsPanel clients={clients} loadQr={loadQr} />
     </div>
