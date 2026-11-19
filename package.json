@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check:pricing": "node scripts/verify-pricing-unchanged.mjs"
+    "check:pricing": "node scripts/verify-pricing-unchanged.mjs",
+    "ios:prepare-appstore": "node scripts/prepare-ios-appstore.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"
