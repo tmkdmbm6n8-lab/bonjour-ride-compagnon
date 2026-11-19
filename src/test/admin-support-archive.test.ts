@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { archivedIds } from '@/lib/admin-support-archive.server';

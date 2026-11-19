@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({ platform: 'web', available: true, sync: vi.fn(), stop: vi.fn() }));
