@@ -15,7 +15,8 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
   started = true;
   try {
     const { PushNotifications } = await import("@capacitor/push-notifications");
-    // Android-only notification channels; iOS uses APNs notification categories.\n    if (window.Capacitor?.getPlatform?.() === "android") await PushNotifications.createChannel({
+    // Android-only notification channels; iOS uses APNs notification categories.
+    if (window.Capacitor?.getPlatform?.() === "android") await PushNotifications.createChannel({
       id: OFFER_CHANNEL_ID,
       name: audience === "admin" ? "Alertes StrasDrive" : "Nouvelles courses",
       description: "Alerte quand une course vous est proposée",
@@ -44,7 +45,10 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
     let perm = await PushNotifications.checkPermissions();
     if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale")
       perm = await PushNotifications.requestPermissions();
-    if (perm.receive !== "granted") {\n      started = false; // Allow another attempt if the user changes notification permissions.\n      return;\n    }
+    if (perm.receive !== "granted") {
+      started = false; // Allow another attempt if the user changes notification permissions.
+      return;
+    }
     await PushNotifications.register();
   } catch (e) {
     started = false;
