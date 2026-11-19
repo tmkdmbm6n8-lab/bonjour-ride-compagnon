@@ -544,7 +544,31 @@ export async function handleVtc(input, context) {
   }
   if (p === "/api/users/me/deletion-request" && method === "POST") {
     // Suppression immédiate et autonome du compte (exigence Apple 5.1.1(v) et RGPD)
-    const files = (await admin.storage.from(DOCUMENTS_BUCKET).list(uid, { limit: 1000 })).data || [];
+    // Fail closed before any irreversible Stripe operation. The database RPC
+    // must enforce the same rules transactionally (see Supabase migration).
+    const linkedChecks = [
+      ["rides", "rider_id", ["accepted", "arrived", "in_progress"]],
+      ["rides", "driver_id", ["accepted", "arrived", "in_progress"]],
+    ];
+    for (const [table, column, statuses] of linkedChecks) {
+      const { data, error } = await admin.from(table).select("id").eq(column, uid).in("status", statuses).eq("is_test", false).limit(1);
+      if (error) throw new Error(error.message);
+      if (data.length) throw new Error("Une course est en cours. Terminez-la avant de supprimer le compte.");
+    }
+    // Financial records must be reviewed/archived before erasure, not silently
+    // deleted with wallet transactions or profile CASCADE relationships.
+    for (const [table, column] of [
+      ["wallet_transactions", "user_id"],
+      ["payouts", "driver_id"],
+      ["withdrawal_requests", "driver_id"],
+    ]) {
+      const { data, error } = await admin.from(table).select("id").eq(column, uid).limit(1);
+      if (error) throw new Error(error.message);
+      if (data.length) throw new Error("Ce compte comporte des opérations financières à conserver. Contactez l'assistance pour finaliser la suppression.");
+    }
+    const { data: files, error: listError } = await admin.storage.from(DOCUMENTS_BUCKET).list(uid, { limit: 1000 });
+    if (listError) throw new Error(listError.message);
+    if ((files || []).length === 1000) throw new Error("Trop de documents à effacer automatiquement. Contactez l'assistance.");
     const { closeGoldBillingForDeletedAccount } = await import("./driver-gold.server");
     await closeGoldBillingForDeletedAccount(admin, uid);
     const removed = required(await admin.rpc("admin_delete_account", { _user: uid }));
@@ -556,7 +580,10 @@ export async function handleVtc(input, context) {
         .eq("topic", "driver_conversation")
         .like("message", '%"userId":"' + uid + '"%'),
     );
-    if (files.length) await admin.storage.from(DOCUMENTS_BUCKET).remove(files.map((f) => `${uid}/${f.name}`));
+    if ((files || []).length) {
+      const { error: removeError } = await admin.storage.from(DOCUMENTS_BUCKET).remove(files.map((f) => `${uid}/${f.name}`));
+      if (removeError) throw new Error(removeError.message);
+    }
     const { error } = await admin.auth.admin.deleteUser(uid);
     if (error && !/not.?found/i.test(error.message))
       throw new Error(`Données effacées, mais l'accès au compte n'a pas pu être supprimé : ${error.message}`);
