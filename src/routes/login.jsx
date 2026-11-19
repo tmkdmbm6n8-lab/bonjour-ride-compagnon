@@ -118,15 +118,14 @@ function LoginForm() {
             continuer.
           </p>
         )}
-
         {/* Boutons de connexion sociale : Google & Apple */}
-        <div className="flex flex-col gap-2.5 mb-5">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
           <button
             type="button"
             className="btn btn-secondary btn-full flex items-center justify-center gap-3"
             onClick={() => handleOAuth("google")}
             disabled={loading || Boolean(oauthLoading)}
-            style={{ minHeight: 46, fontSize: "0.92rem", fontWeight: 600 }}
+            style={{ minHeight: 46, fontSize: "0.92rem", fontWeight: 600, borderRadius: 12 }}
           >
             {oauthLoading === "google" ? (
               <span className="spinner" />
@@ -167,6 +166,7 @@ function LoginForm() {
               border: "none",
               fontSize: "0.92rem",
               fontWeight: 600,
+              borderRadius: 12,
             }}
           >
             {oauthLoading === "apple" ? (
