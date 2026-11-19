@@ -56,7 +56,7 @@ async function syncBilling(admin, stripe, owner) {
     const latest = current || subscriptions[0];
     const item = latest?.items?.data?.find(({ price }) =>
       price.unit_amount === GOLD_MONTHLY_CENTS && price.currency === "eur" &&
-      price.tax_behavior === "inclusive" && price.recurring?.interval === "month" && price.recurring.interval_count === 1);
+      ["inclusive", "unspecified"].includes(price.tax_behavior) && price.recurring?.interval === "month" && price.recurring.interval_count === 1);
     const invoice = latest?.latest_invoice;
     const failedCollection = invoice?.collection_method === "charge_automatically" &&
       invoice.status === "open" && invoice.attempt_count > 0 && invoice.amount_remaining > 0;
@@ -97,7 +97,7 @@ export async function openGoldBilling(admin, driverId, manage = false) {
   if (!driver.is_approved && !manage) throw new Error("Votre compte chauffeur doit être approuvé.");
   const env = billingEnv();
   const base = process.env.APP_URL;
-  const priceId = process.env.GOLD_STRIPE_PRICE_ID;
+  const priceId = process.env.GOLD_STRIPE_PRICE_ID || "strasdrive_gold_monthly";
   if (!env || !base || !priceId) throw new Error("Les abonnements StrasDrive Gold ne sont pas encore disponibles.");
   const returnUrl = new URL("/driver/private-clients", base).href;
   const stripe = createStripeClient(env);
@@ -127,9 +127,12 @@ export async function openGoldBilling(admin, driverId, manage = false) {
   }
 
   if (lastSession?.status === "open" && lastSession.url) return { url: lastSession.url };
-  const price = await stripe.prices.retrieve(priceId);
+  const price = priceId.startsWith("price_")
+    ? await stripe.prices.retrieve(priceId)
+    : (await stripe.prices.list({ lookup_keys: [priceId], active: true, limit: 1 })).data[0];
+  if (!price) throw new Error("Le tarif StrasDrive Gold n’est pas correctement configuré.");
   if (!price.active || price.unit_amount !== GOLD_MONTHLY_CENTS || price.currency !== "eur" ||
-      price.tax_behavior !== "inclusive" || price.recurring?.interval !== "month" || price.recurring.interval_count !== 1) {
+      !["inclusive", "unspecified"].includes(price.tax_behavior) || price.recurring?.interval !== "month" || price.recurring.interval_count !== 1) {
     throw new Error("Le tarif StrasDrive Gold n’est pas correctement configuré.");
   }
   const metadata = { kind: KIND, driverId };

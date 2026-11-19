@@ -36,7 +36,7 @@ function billingStore() {
             row = { ...row, revision: row.revision + 1 };
             return { data: null, error: null };
           }
-          if (filters.revision != null && filters.revision !== row.revision) return { data: null, error: null };
+          if (filters["revision"] != null && filters["revision"] !== row["revision"]) return { data: null, error: null };
           if (patch) row = { ...row, ...patch };
           return { data: { ...row }, error: null };
         },
