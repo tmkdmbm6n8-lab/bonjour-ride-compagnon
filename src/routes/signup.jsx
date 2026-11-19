@@ -370,23 +370,6 @@ function SignupForm() {
           )}
 
           <div className="field">
-            <label htmlFor="name">Nom complet</label>
-            <div className="input-wrap">
-              <User size={17} />
-              <input
-                id="name"
-                className="input"
-                value={form.name}
-                onChange={set("name")}
-                placeholder="Alex Morgan"
-                autoComplete="name"
-                required
-                minLength={2}
-              />
-            </div>
-          </div>
-
-          <div className="field">
             <label htmlFor="username">Nom d’utilisateur</label>
             <div className="input-wrap">
               <AtSign size={17} />
