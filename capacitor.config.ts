@@ -1,8 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// The app runs server functions (SSR, payments, dispatch), so the Android
-// shell loads the published site instead of a static bundle. `dist` has no
-// index.html with TanStack Start, which caused the blank "test" screen.
+// L'application tourne avec TanStack Start (SSR, fonctions serveur, dispatch),
+// le conteneur mobile charge le site publié avec support complet iOS et Android.
 const config: CapacitorConfig = {
   appId: 'fr.strasdrive.app',
   appName: 'StrasDrive',
@@ -15,6 +14,12 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: false,
+  },
+  ios: {
+    contentInset: 'always',
+    scheme: 'StrasDrive',
+    allowsLinkPreview: false,
+    scrollEnabled: true,
   },
 };
 
