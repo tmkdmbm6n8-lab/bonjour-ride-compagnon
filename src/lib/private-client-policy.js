@@ -14,11 +14,7 @@ export function privateDriverWaitMinutes(remainingCurrentSeconds, approachSecond
   return Math.ceil((remainingCurrentSeconds + approachSeconds) / 60);
 }
 
-// The server must load the ride and identities itself; never trust browser-provided fields.
-export function favoriteCancellationIsFree(ride, riderId) {
-  return Boolean(
-    ride && riderId && ride.rider_id === riderId &&
-    ['accepted', 'arrived'].includes(ride.status) &&
-    ride.favorite_driver_id && ride.driver_id === ride.favorite_driver_id,
-  );
+// The regular cancellation rules decide whether a fee applies.
+export function favoriteCancellationIsFree() {
+  return false;
 }

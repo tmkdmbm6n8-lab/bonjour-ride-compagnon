@@ -23,10 +23,10 @@ test('an expired private offer falls back and estimates require both legs', () =
   assert.equal(privateDriverWaitMinutes(1200, -1), null);
 });
 
-test('free cancellation is restricted to the rider and an accepted favorite before the trip', () => {
+test('favorite status does not override the standard cancellation rules', () => {
   const ride = { rider_id: 'rider', driver_id: 'favorite', favorite_driver_id: 'favorite', status: 'accepted' };
-  assert.equal(favoriteCancellationIsFree(ride, 'rider'), true);
-  assert.equal(favoriteCancellationIsFree({ ...ride, status: 'arrived' }, 'rider'), true);
+  assert.equal(favoriteCancellationIsFree(ride, 'rider'), false);
+  assert.equal(favoriteCancellationIsFree({ ...ride, status: 'arrived' }, 'rider'), false);
   assert.equal(favoriteCancellationIsFree({ ...ride, status: 'in_progress' }, 'rider'), false);
   assert.equal(favoriteCancellationIsFree({ ...ride, driver_id: 'other' }, 'rider'), false);
   assert.equal(favoriteCancellationIsFree(ride, 'other'), false);
