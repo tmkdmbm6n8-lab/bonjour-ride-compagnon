@@ -1,0 +1,102 @@
+/* Espace client mobile : mêmes surfaces et accents que l'espace chauffeur. */
+@media (max-width: 900px) {
+  .shell-rider.shell-dark {
+    --rider-surface: #10131b;
+    --rider-raised: #1a1d26;
+    --rider-border: rgba(226, 183, 75, .22);
+    --rider-gold: #e9bd50;
+    background: #0b0d12;
+    color: #f1f5f9;
+  }
+
+  .shell-rider.shell-dark .content,
+  .shell-rider.shell-dark .content-pad,
+  .shell-rider .activity-page {
+    background: #0b0d12;
+    color: #f1f5f9;
+  }
+
+  .shell-rider.shell-dark .sidebar {
+    background: #10131b;
+    border-top: 1px solid rgba(226, 183, 75, .22);
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, .24);
+  }
+  .shell-rider.shell-dark .sidebar-nav { gap: 4px; }
+  .shell-rider.shell-dark .nav-item {
+    min-width: 0;
+    min-height: 54px;
+    justify-content: center;
+    color: #a8b2c3;
+    font-size: 11px;
+  }
+  .shell-rider.shell-dark .nav-item.active {
+    background: rgba(226, 183, 75, .10);
+    color: #f6d47c;
+  }
+  .shell-rider.shell-dark .nav-item.active svg { color: var(--rider-gold); }
+  .shell-rider .nav-item:focus-visible,
+  .shell-rider .activity-page :is(a, button, select):focus-visible {
+    outline: 2px solid var(--rider-gold);
+    outline-offset: 2px;
+  }
+
+  .shell-rider .content-pad { padding: 24px 16px; }
+  .shell-rider .page-title { color: #f8fafc; letter-spacing: -.025em; }
+  .shell-rider .page-sub { color: #aebaca; }
+  .shell-rider .content-pad .card,
+  .shell-rider .rider-trip-panel > .card,
+  .shell-rider .activity-upcoming-card,
+  .shell-rider .activity-ride-card,
+  .shell-rider .activity-empty {
+    background: var(--rider-surface) !important;
+    border: 1px solid var(--rider-border) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 0 18px rgba(201, 162, 39, .06) !important;
+    color: #f1f5f9;
+  }
+  .shell-rider .content-pad .card-pad,
+  .shell-rider .rider-booking-card { padding: 20px; }
+  .shell-rider .rider-booking-card h2 { color: #f8fafc; letter-spacing: -.02em; }
+  .shell-rider .rider-booking-card .input { min-height: 48px; }
+  .shell-rider .rider-booking-card .input-wrap > svg { color: var(--rider-gold); }
+  .shell-rider .rider-locate-btn { width: 48px; height: 48px; border-radius: 14px; }
+  .shell-rider .vehicle-row { min-height: 64px; }
+  .shell-rider .rider-payment-options .rider-payment-option {
+    color: #e8edf6;
+    border-color: rgba(255, 255, 255, .12);
+  }
+  .shell-rider .btn-primary:disabled { opacity: .55; box-shadow: none !important; }
+
+  .shell-rider .activity-page { padding: 26px 16px 40px; }
+  .shell-rider .activity-main h1,
+  .shell-rider .activity-section-heading h2 { color: #f8fafc; letter-spacing: -.025em; }
+  .shell-rider .activity-past { margin-top: 32px; }
+  .shell-rider .activity-upcoming-body { padding: 18px; }
+  .shell-rider .activity-ride-card { gap: 14px; padding: 12px; }
+  .shell-rider .activity-map { background: #1a1d26; color: var(--rider-gold); border-radius: 13px; }
+  .shell-rider .activity-destination { color: #f8fafc; }
+  .shell-rider .activity-empty p,
+  .shell-rider .activity-ride-info p { color: #b4c0d1; }
+  .shell-rider .activity-empty > svg,
+  .shell-rider .activity-pill svg { color: var(--rider-gold); }
+  .shell-rider .activity-pill {
+    min-height: 40px;
+    background: var(--rider-raised);
+    border: 1px solid rgba(255, 255, 255, .10);
+    color: #f1f5f9;
+  }
+  .shell-rider .activity-filters select { color: #f1f5f9; }
+  .shell-rider .activity-filters option { background: #1a1d26; color: #f1f5f9; }
+  .shell-rider .activity-banner { background: #171a20; }
+  .shell-rider .activity-banner > rect { fill: #171a20; }
+  .shell-rider .activity-banner > path:nth-of-type(1) { fill: #302b1c; }
+  .shell-rider .activity-banner > path:nth-of-type(2) { fill: #665020; }
+  .shell-rider .activity-banner > path:nth-of-type(3) { fill: #b78a2a; }
+  .shell-rider .activity-banner > path:nth-of-type(4) { fill: #171a20; }
+}
+
+@media (max-width: 360px) {
+  .shell-rider .nav-item { padding-inline: 4px; font-size: 10px; }
+  .shell-rider .content-pad .card-pad,
+  .shell-rider .rider-booking-card { padding: 16px; }
+}

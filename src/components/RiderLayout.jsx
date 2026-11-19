@@ -3,6 +3,7 @@
 import { Navigation, Clock, Wallet, Menu } from "lucide-react";
 
 import AppShell from "@/components/shell/AppShell";
+import "@/styles/rider-mobile.css";
 
 const NAV = [
   { href: "/dashboard", label: "Voyager", icon: Navigation },
