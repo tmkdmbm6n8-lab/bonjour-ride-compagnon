@@ -546,11 +546,7 @@ export async function handleVtc(input, context) {
     // Suppression immédiate et autonome du compte (exigence Apple 5.1.1(v) et RGPD)
     const files = (await admin.storage.from(DOCUMENTS_BUCKET).list(uid, { limit: 1000 })).data || [];
     const { closeGoldBillingForDeletedAccount } = await import("./driver-gold.server");
-    try {
-      await closeGoldBillingForDeletedAccount(admin, uid);
-    } catch {
-      // Clôture silencieuse si pas d'abonnement actif
-    }
+    await closeGoldBillingForDeletedAccount(admin, uid);
     const removed = required(await admin.rpc("admin_delete_account", { _user: uid }));
     required(await admin.from("push_tokens").delete().eq("user_id", uid));
     required(
