@@ -1086,27 +1086,36 @@ export async function handleVtc(input, context) {
     const rs = required(
       await admin.from("rides").select("*").eq("status", "searching").eq("is_test", false).limit(100),
     );
-    if (me && rs.some((ride) => (ride.dispatch_phase === "private" && ride.offer_driver_id === uid) ||
-      (!ride.dispatch_phase && ride.favorite_driver_id === uid))) {
+    if (
+      me &&
+      rs.some(
+        (ride) =>
+          (ride.dispatch_phase === "private" && ride.offer_driver_id === uid) ||
+          (!ride.dispatch_phase && ride.favorite_driver_id === uid),
+      )
+    ) {
       me = await withDriverGold(admin, me);
     }
     const fresh = [];
     for (const r of rs) fresh.push(await assignOffer(admin, r, pool));
     const goldPool = fresh.some((ride) => ride.route?.goldReturn && ride.status === "searching")
-      ? await goldDispatchPool(admin, pool) : pool;
+      ? await goldDispatchPool(admin, pool)
+      : pool;
     const goldMe = goldPool.find((driver) => driver.user_id === uid);
     let r = fresh
-      .filter((ride) => ride.route?.goldReturn
-        ? canSeeOffer(ride, goldMe, Date.now(), goldPool)
-        : canSeeOffer(ride, me, Date.now(), pool))
+      .filter((ride) =>
+        ride.route?.goldReturn
+          ? canSeeOffer(ride, goldMe, Date.now(), goldPool)
+          : canSeeOffer(ride, me, Date.now(), pool),
+      )
       .sort((a, b) => distanceToPickupKm(a, me) - distanceToPickupKm(b, me))[0];
     if (test) {
       r = test.ride;
       me = me || test.driver;
     }
     if (!r) return { offer: null };
-    const offerFare = !r.is_test && await hasPaidDriverGold(admin, uid).catch(() => false)
-      ? waiveGoldCommission(r.fare) : r.fare;
+    const offerFare =
+      !r.is_test && (await hasPaidDriverGold(admin, uid).catch(() => false)) ? waiveGoldCommission(r.fare) : r.fare;
     const approachKm = distanceToPickupKm(r, me),
       approachMeters = Number.isFinite(approachKm) ? Math.round(approachKm * 1350) : null;
     let profit = null;
@@ -1216,10 +1225,11 @@ export async function handleVtc(input, context) {
         const available = await dispatchPool(admin);
         const pool = r.route?.goldReturn ? await goldDispatchPool(admin, available) : available;
         const candidate = pool.find((d) => d.user_id === uid) || null;
-        const me = r.dispatch_phase === "private" && !r.route?.goldReturn ? await withDriverGold(admin, candidate) : candidate;
+        const me =
+          r.dispatch_phase === "private" && !r.route?.goldReturn ? await withDriverGold(admin, candidate) : candidate;
         if (!canSeeOffer(r, me, Date.now(), pool)) throw new Error("Cette demande n’est plus disponible");
       }
-      const fare = !r.is_test && await hasPaidDriverGold(admin, uid) ? waiveGoldCommission(r.fare) : r.fare;
+      const fare = !r.is_test && (await hasPaidDriverGold(admin, uid)) ? waiveGoldCommission(r.fare) : r.fare;
       const claim = admin
         .from("rides")
         .update({
@@ -1822,11 +1832,15 @@ async function assignOffer(db, r, pool) {
   const target = targetId && drivers.find((driver) => driver.user_id === targetId);
   if (target && !route?.goldReturn) {
     const checked = await withDriverGold(db, target);
-    drivers = drivers.map((driver) => driver === target ? checked : driver);
+    drivers = drivers.map((driver) => (driver === target ? checked : driver));
   }
   const patch = planDispatch({ ...r, route }, drivers);
   if (!patch) return r;
-  let q = db.from("rides").update(route === r.route ? patch : { ...patch, route }).eq("id", r.id).eq("status", "searching");
+  let q = db
+    .from("rides")
+    .update(route === r.route ? patch : { ...patch, route })
+    .eq("id", r.id)
+    .eq("status", "searching");
   q = r.dispatch_phase ? q.eq("dispatch_phase", r.dispatch_phase) : q.is("dispatch_phase", null);
   const won = required(await q.select("*"))[0];
   // Only the request whose phase-guarded update succeeded sends the pushes, so each step notifies once.
@@ -2010,4 +2024,61 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
     return { ok: true };
   }
   throw new Error("Route introuvable");
+}
+export async function getRandomRealRide() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  // Récupère les courses réelles terminées avec un chauffeur
+  const { data: rides, error } = await supabaseAdmin
+    .from("rides")
+    .select(
+      `
+      id,
+      route,
+      fare,
+      driver:profiles!rides_driver_id_fkey(name),
+      driver_info:drivers!drivers_user_id_fkey(vehicle)
+    `,
+    )
+    .eq("status", "completed")
+    .eq("is_test", false)
+    .not("driver_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error || !rides || rides.length === 0) {
+    // Secours si aucune course n'est disponible
+    return {
+      driverName: "Tata",
+      vehicleText: "Honda Jazz grise · CG762ZM",
+      approachMin: 3,
+      durationMin: 14,
+      distanceKm: "5,8",
+      fareTotal: "10,84",
+    };
+  }
+
+  // Tirage au sort parmi les courses réelles
+  const randomRide = rides[Math.floor(Math.random() * rides.length)];
+  const v = randomRide.driver_info?.vehicle || {};
+  const vehicleText = [v.make, v.model, v.color].filter(Boolean).join(" ") + (v.plate ? ` · ${v.plate}` : "");
+
+  const distanceKm = randomRide.route?.distanceMeters
+    ? (randomRide.route.distanceMeters / 1000).toFixed(1).replace(".", ",")
+    : "5,2";
+
+  const durationMin = randomRide.route?.durationSeconds
+    ? Math.max(1, Math.round(randomRide.route.durationSeconds / 60))
+    : 12;
+
+  const fareTotal = randomRide.fare?.total ? Number(randomRide.fare.total).toFixed(2).replace(".", ",") : "11,20";
+
+  return {
+    driverName: randomRide.driver?.name || "Chauffeur",
+    vehicleText: vehicleText || "Véhicule StrasDrive",
+    approachMin: Math.floor(Math.random() * 3) + 2, // 2 à 4 min d'approche
+    durationMin,
+    distanceKm,
+    fareTotal,
+  };
 }
