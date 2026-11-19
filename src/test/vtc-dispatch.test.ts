@@ -15,6 +15,16 @@ describe('attribution des courses', () => {
   const other = driver('autre', 4);
   const all = [far, prio2, near, other];
 
+  it('réserve une offre privée au chauffeur ciblé jusqu’à son expiration', () => {
+    const r = ride({ dispatch_phase: 'private', offer_driver_id: far.user_id, offer_expires_at: new Date(NOW + 60000).toISOString() });
+    expect(planDispatch(r, all, NOW)).toBeNull();
+    expect(canSeeOffer(r, far, NOW, all)).toBe(true);
+    expect(canSeeOffer(r, near, NOW, all)).toBe(false);
+    const next = planDispatch(r, all, NOW + 60000);
+    expect(next?.dispatch_phase).toBeNull();
+    expect(planDispatch(apply(r, next), all, NOW + 60000)?.dispatch_phase).toBe('priority');
+  });
+
   it('tous les chauffeurs prioritaires reçoivent la course en même temps, même loin', () => {
     const r = apply(ride(), planDispatch(ride(), all, NOW));
     expect(r.dispatch_phase).toBe('priority');

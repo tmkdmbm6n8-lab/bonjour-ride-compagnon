@@ -52,6 +52,10 @@ export function planDispatch(ride, drivers, now = Date.now()) {
   const running = now < until;
   const phase = ride.dispatch_phase || null;
 
+  if (phase === "private" && running && pool.some((d) => d.user_id === ride.offer_driver_id)) return null;
+  if (phase === "private") {
+    return { dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
+  }
   if (phase === "priority" && running && pool.some((d) => d.is_priority)) return null;
   if (phase === "nearest" && running && pool.some((d) => d.user_id === ride.offer_driver_id)) return null;
   if (phase === "broadcast") {
@@ -101,6 +105,8 @@ export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
   if (!ride.offer_expires_at || new Date(ride.offer_expires_at).getTime() <= now) return false;
   const all = pool && pool.some((d) => d.user_id === driver.user_id) ? pool : [driver];
   if (!availableFor(ride, all).some((d) => d.user_id === driver.user_id)) return false;
+
+  if (ride.dispatch_phase === "private") return ride.offer_driver_id === driver.user_id;
 
   // Phase prioritaires (chauffeurs VIP)
   if (ride.dispatch_phase === "priority") return Boolean(driver.is_priority);
