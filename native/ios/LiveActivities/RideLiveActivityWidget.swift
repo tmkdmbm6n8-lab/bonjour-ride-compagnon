@@ -60,17 +60,9 @@ struct RideLiveActivityWidget: Widget {
                     }
                 }
             } compactLeading: {
-                if state.kind == "driver_offer" {
-                    Text(duration(state.pickupMinutes))
-                        .font(.caption2.bold())
-                        .foregroundStyle(.yellow)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                } else {
-                    Image(systemName: "location.fill").foregroundStyle(.yellow)
-                }
+                Image(systemName: state.kind == "driver_offer" ? "car.fill" : "location.fill").foregroundStyle(.yellow)
             } compactTrailing: {
-                if state.kind == "driver_offer" { Text(amount(state.amountCents)).font(.caption2.bold()).lineLimit(1).minimumScaleFactor(0.7) }
+                if state.kind == "driver_offer" { Text(amount(state.amountCents)).font(.caption2.bold()) }
                 else if state.phase != "arrived" { Text(duration(state.remainingMinutes)).font(.caption2.bold()) }
                 else { Image(systemName: "checkmark") }
             } minimal: {
