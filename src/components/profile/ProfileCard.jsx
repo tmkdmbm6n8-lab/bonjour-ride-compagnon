@@ -277,9 +277,13 @@ function PersonalDataCard() {
       const res = await fetch('/api/users/me/deletion-request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erreur lors de la suppression');
-      toast('Votre compte a été supprimé avec succès', 'success');
-      await signOut();
-      window.location.href = '/';
+      // Account deletion succeeded server-side; local logout errors must not imply the account still exists.
+      try {
+        await signOut();
+      } catch (logoutError) {
+        console.warn('Session cleanup after account deletion:', logoutError);
+      }
+      window.location.replace('/');
     } catch (err) {
       toast(err.message || 'La suppression du compte a échoué', 'error');
       setRequesting(false);
