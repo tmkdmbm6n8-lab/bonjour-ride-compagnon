@@ -24,6 +24,7 @@ import { getRandomRideSummary } from "@/lib/vtc.functions";
 
 type RideSummary = {
   driverName: string;
+  driverAvatar?: string | null;
   vehicleText: string;
   approachMin: number;
   durationMin: number;
