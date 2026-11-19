@@ -1,5 +1,6 @@
-// Informations légales de l'éditeur. Les valeurs entre crochets doivent être remplacées
-// par les informations réelles de la société avant la mise en ligne.
+// ATTENTION : coordonnées et immatriculations fictives / incomplètes.
+// Compléter avec les informations légales vérifiées avant toute soumission App Store.
+// Ne jamais remplacer les crochets par des données inventées.
 export const LEGAL_VERSION = '2026-11-17';
 export const LEGAL_UPDATED_LABEL = '17 novembre 2026';
 
