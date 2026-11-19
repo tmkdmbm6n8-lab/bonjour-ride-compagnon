@@ -1,3 +1,4 @@
+import { useDriverGold } from "@/components/DriverLayout";
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { apiFetch } from "@/lib/archive-fetch";
@@ -35,6 +36,7 @@ export default function DriverHome({
   onToggleCash,
   onWaybill,
 }) {
+  const gold = useDriverGold();
   const [today, setToday] = useState(null);
   const [lastRide, setLastRide] = useState(null);
   const [earningsView, setEarningsView] = useState("today"); // "today" | "last"
@@ -133,7 +135,7 @@ export default function DriverHome({
         <div className="drv-island-left">
           <KovaIcon size={24} />
           <div className="drv-island-brand">
-            <strong>StrasDrive</strong>
+            <strong className="drv-island-brand-name">StrasDrive {gold?.active && <span className="drv-island-gold">Gold</span>}</strong>
             <span className={`drv-island-badge ${online ? "active" : ""}`}>
               <i /> {online ? "EN LIGNE" : "HORS LIGNE"}
             </span>

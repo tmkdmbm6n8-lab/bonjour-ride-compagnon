@@ -37,14 +37,16 @@ function PrivateClientsPage() {
     <div className="driver-tab-page drv-cockpit-page">
       <header className="driver-account-heading">
         <div>
-          <span className="sd-settings-brand">StrasDrive · Votre clientèle</span>
-          <h1>Clients privés</h1>
+          <span className="sd-settings-brand">Espace chauffeur</span>
+          <h1>{gold?.active ? "Votre clientèle privée" : "SDGold"}</h1>
         </div>
       </header>
       {error && <p role="alert">{error} <button type="button" className="btn btn-secondary" onClick={reload}>Réessayer</button></p>}
       <div className="flex-col gap-4">
         <DriverGoldCard gold={gold} waitingForStripe={waitingForStripe} />
-        <PrivateClientsPanel clients={clients} loadQr={loadQr} goldActive={gold?.active === true && !error} />
+        {(gold?.active || clients?.length > 0) && (
+          <PrivateClientsPanel clients={clients} loadQr={loadQr} goldActive={gold?.active === true && !error} />
+        )}
       </div>
     </div>
   );

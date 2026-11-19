@@ -3,6 +3,7 @@ import { GOLD_MONTHLY_CENTS, GOLD_TRIAL_DAYS, goldEntitlement } from "./driver-g
 
 const KIND = "strasdrive_gold";
 const TABLE = "driver_gold_subscriptions";
+const paidInvoiceCache = new Map();
 const allowedStatuses = new Set(["trialing", "active", "past_due", "canceled"]);
 const terminal = new Set(["canceled", "incomplete_expired"]);
 const objectId = (object) => typeof object === "string" ? object : object?.id;
@@ -29,6 +30,38 @@ export async function driverGold(admin, driver) {
   const result = await billingRow(admin, driver.user_id, env).maybeSingle();
   if (result.error) return { ...goldEntitlement(driver, null), unavailable: !driver.is_priority };
   return goldEntitlement(driver, result.data);
+}
+
+export async function goldDispatchPool(admin, drivers) {
+  const env = billingEnv();
+  const ids = drivers.filter((driver) => !driver.is_priority).map((driver) => driver.user_id);
+  if (!env || !ids.length) return drivers;
+  const { data } = await admin.from(TABLE)
+    .select("driver_id,gold_status,gold_trial_ends_at,gold_current_period_end")
+    .eq("environment", env).in("driver_id", ids);
+  const billing = new Map((data || []).map((row) => [row.driver_id, row]));
+  return drivers.map((driver) => ({ ...driver, gold_active: goldEntitlement(driver, billing.get(driver.user_id)).active }));
+}
+
+export async function hasPaidDriverGold(admin, driverId) {
+  const env = billingEnv();
+  if (!env) return false;
+  const { data, error } = await billingRow(admin, driverId, env).maybeSingle();
+  if (["42P01", "PGRST205"].includes(error?.code)) return false;
+  if (error) throw new Error("La facturation StrasDrive Gold est temporairement indisponible.");
+  if (data?.gold_status !== "active" || !goldEntitlement(null, data).active || !data.stripe_subscription_id) return false;
+  const key = `${env}:${data.stripe_subscription_id}`;
+  if (paidInvoiceCache.get(key) > Date.now()) return true;
+  const stripe = createStripeClient(env);
+  for await (const invoice of stripe.invoices.list({
+    subscription: data.stripe_subscription_id, status: "paid",
+  })) {
+    if (invoice.amount_paid <= 0) continue;
+    if (paidInvoiceCache.size >= 256) paidInvoiceCache.delete(paidInvoiceCache.keys().next().value);
+    paidInvoiceCache.set(key, Date.now() + 60000);
+    return true;
+  }
+  return false;
 }
 
 export async function loadDriverGold(admin, driverId) {

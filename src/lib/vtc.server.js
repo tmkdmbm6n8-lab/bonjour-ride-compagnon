@@ -1,3 +1,5 @@
+import { goldDispatchPool, hasPaidDriverGold, loadDriverGold } from "./driver-gold.server";
+import { restoreGoldCommission, waiveGoldCommission } from "./driver-gold-fare";
 import { accountRating } from "./account-ratings.server";
 import { recordOnlineTime } from "./driver-online-time.server";
 import { driverReportMessage } from "./driver-reports";
@@ -18,7 +20,7 @@ import { preparePassengerBooking, hasPassengerRide, switchAccountMode } from "./
 import { supportOwnedBy } from "./vtc-support";
 import { exportPageOptions, PERSONAL_DATA_PAGE_SIZE } from "./personal-data-export";
 import { assertRideActionMethod, privateDocumentPath, validLocation, invoiceRequestMessage } from "./vtc-access";
-import { discoverBoard, returnHintForRide } from "./vtc-transport.server";
+import { discoverBoard, goldReturnHintForRide } from "./vtc-transport.server";
 import { driverWeekSummary } from "./vtc-driver-stats";
 import { parisDay, validDay } from "./vtc-dates";
 import {
@@ -92,6 +94,7 @@ import {
 } from "./vtc-documents";
 import {
   planDispatch,
+  availableFor,
   canSeeOffer,
   distanceToPickupKm,
   approachSecondsFor,
@@ -597,7 +600,6 @@ export async function handleVtc(input, context) {
     return redeemClaim(admin, db, uid, body.claimToken, body.confirmReplacement);
   }
   if (p === "/api/drivers/me/gold" && method === "GET") {
-    const { loadDriverGold } = await import("./driver-gold.server");
     return { gold: await loadDriverGold(admin, uid) };
   }
   if (p === "/api/drivers/me/gold" && method === "POST") {
@@ -616,7 +618,10 @@ export async function handleVtc(input, context) {
     const { createInvitation } = await import("./private-clients.server");
     return createInvitation(admin, uid);
   }
-  if (p === "/api/drivers/me/discover" && method === "GET") return discoverBoard(q.get("day") || parisDay());
+  if (p === "/api/drivers/me/discover" && method === "GET") {
+    if (!(await loadDriverGold(admin, uid)).active) throw new Error("Le trafic est réservé à StrasDrive Gold.");
+    return discoverBoard(q.get("day") || parisDay());
+  }
   if (p === "/api/drivers/me/inbox" && method === "GET")
     return inboxForDriver(admin, uid, context.claims?.email, q.get("page"));
   if (p === "/api/drivers/me/inbox/support" && method === "DELETE")
@@ -1087,14 +1092,21 @@ export async function handleVtc(input, context) {
     }
     const fresh = [];
     for (const r of rs) fresh.push(await assignOffer(admin, r, pool));
+    const goldPool = fresh.some((ride) => ride.route?.goldReturn && ride.status === "searching")
+      ? await goldDispatchPool(admin, pool) : pool;
+    const goldMe = goldPool.find((driver) => driver.user_id === uid);
     let r = fresh
-      .filter((x) => canSeeOffer(x, me, Date.now(), pool))
+      .filter((ride) => ride.route?.goldReturn
+        ? canSeeOffer(ride, goldMe, Date.now(), goldPool)
+        : canSeeOffer(ride, me, Date.now(), pool))
       .sort((a, b) => distanceToPickupKm(a, me) - distanceToPickupKm(b, me))[0];
     if (test) {
       r = test.ride;
       me = me || test.driver;
     }
     if (!r) return { offer: null };
+    const offerFare = !r.is_test && await hasPaidDriverGold(admin, uid).catch(() => false)
+      ? waiveGoldCommission(r.fare) : r.fare;
     const approachKm = distanceToPickupKm(r, me),
       approachMeters = Number.isFinite(approachKm) ? Math.round(approachKm * 1350) : null;
     let profit = null;
@@ -1102,7 +1114,7 @@ export async function handleVtc(input, context) {
       const approachSeconds = approachSecondsFor(approachMeters),
         tripSeconds = r.route.durationSeconds || 0;
       const expected = settleDriverEarnings(
-        r.fare,
+        offerFare,
         r.route.distanceMeters,
         approachSeconds + tripSeconds,
       ).driverEarnings;
@@ -1115,12 +1127,12 @@ export async function handleVtc(input, context) {
     const rider = required(await admin.from("profiles").select("name").eq("id", r.rider_id).single());
     return {
       offer: {
-        airportReturn: await returnHintForRide(r, approachSecondsFor(approachMeters || 0), routeBetween),
+        airportReturn: r.route.goldReturn || null,
         rideId: r.id,
         pickup: r.pickup,
         dropoff: r.dropoff,
         rider: { ...rider, name: passengerDisplayName(rider.name) },
-        earnings: r.fare.driverEarnings,
+        earnings: offerFare.driverEarnings,
         distanceMeters: r.route.distanceMeters,
         durationSeconds: r.route.durationSeconds,
         routeQuality: routeQualityLabel(r.route),
@@ -1201,14 +1213,17 @@ export async function handleVtc(input, context) {
         )
           throw new Error("Cette demande n’est plus disponible");
       } else {
-        const pool = canDrive ? await dispatchPool(admin) : [];
+        const available = await dispatchPool(admin);
+        const pool = r.route?.goldReturn ? await goldDispatchPool(admin, available) : available;
         const candidate = pool.find((d) => d.user_id === uid) || null;
-        const me = r.dispatch_phase === "private" ? await withDriverGold(admin, candidate) : candidate;
+        const me = r.dispatch_phase === "private" && !r.route?.goldReturn ? await withDriverGold(admin, candidate) : candidate;
         if (!canSeeOffer(r, me, Date.now(), pool)) throw new Error("Cette demande n’est plus disponible");
       }
-      let claim = admin
+      const fare = !r.is_test && await hasPaidDriverGold(admin, uid) ? waiveGoldCommission(r.fare) : r.fare;
+      const claim = admin
         .from("rides")
         .update({
+          fare,
           driver_id: uid,
           status: "accepted",
           accepted_at: new Date().toISOString(),
@@ -1217,7 +1232,9 @@ export async function handleVtc(input, context) {
         })
         .eq("id", id)
         .eq("status", "searching")
-        .eq("dispatch_phase", r.dispatch_phase);
+        .eq("dispatch_phase", r.dispatch_phase)
+        .eq("offer_expires_at", r.offer_expires_at)
+        .gt("offer_expires_at", new Date().toISOString());
       // En phase nearest, le plus proche peut accepter tout de suite ;
       // les autres peuvent accepter si le délai de priorité de 4 s est écoulé
 
@@ -1345,6 +1362,7 @@ export async function handleVtc(input, context) {
               offer_expires_at: null,
               dispatch_phase: null,
               accepted_at: null,
+              fare: restoreGoldCommission(r.fare),
               declined: [...r.declined, uid],
             })
             .eq("id", id)
@@ -1791,15 +1809,24 @@ async function assignOffer(db, r, pool) {
     );
   }
   let drivers = pool || (await dispatchPool(db));
+  let route = r.route;
+  if (!r.dispatch_phase && !route?.goldReturn) {
+    const candidates = availableFor(r, drivers);
+    const approachKm = candidates.reduce((best, driver) => Math.min(best, distanceToPickupKm(r, driver)), Infinity);
+    const approachSeconds = Number.isFinite(approachKm) ? approachSecondsFor(approachKm * 1350) : 0;
+    const goldReturn = await goldReturnHintForRide(r, approachSeconds, routeBetween);
+    if (goldReturn) route = { ...route, goldReturn };
+  }
+  if (route?.goldReturn) drivers = await goldDispatchPool(db, drivers);
   const targetId = r.dispatch_phase === "private" ? r.offer_driver_id : !r.dispatch_phase ? r.favorite_driver_id : null;
   const target = targetId && drivers.find((driver) => driver.user_id === targetId);
-  if (target) {
+  if (target && !route?.goldReturn) {
     const checked = await withDriverGold(db, target);
     drivers = drivers.map((driver) => driver === target ? checked : driver);
   }
-  const patch = planDispatch(r, drivers);
+  const patch = planDispatch({ ...r, route }, drivers);
   if (!patch) return r;
-  let q = db.from("rides").update(patch).eq("id", r.id).eq("status", "searching");
+  let q = db.from("rides").update(route === r.route ? patch : { ...patch, route }).eq("id", r.id).eq("status", "searching");
   q = r.dispatch_phase ? q.eq("dispatch_phase", r.dispatch_phase) : q.is("dispatch_phase", null);
   const won = required(await q.select("*"))[0];
   // Only the request whose phase-guarded update succeeded sends the pushes, so each step notifies once.

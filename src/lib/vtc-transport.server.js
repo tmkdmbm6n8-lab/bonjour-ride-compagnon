@@ -1,7 +1,7 @@
 import { parisDay, validDay, shiftDay } from './vtc-dates';
-import { parseAirportBoard, parseTrainSchedule, mergeTrainRealtime, AIRPORT } from './vtc-transport';
+import { parseAirportBoard, parseTrainSchedule, mergeTrainRealtime, AIRPORT, STATION } from './vtc-transport';
 import { haversineDistance } from './utils/geo';
-import { airportReturnHint } from './vtc-opportunities';
+import { airportReturnHint, stationReturnHint } from './vtc-opportunities';
 const cache = new Map();
 async function cached(key, ttl, load) {
   const old = cache.get(key);
@@ -54,19 +54,40 @@ export async function discoverBoard(day = parisDay()) {
   const feeds = results.map((result, i) => result.status === 'fulfilled' ? { kind: i ? 'train' : 'flight', available: true, ...result.value } : { kind: i ? 'train' : 'flight', items: [], available: false, warning: i ? 'Source ferroviaire indisponible. Réessayez dans un instant.' : 'Source aérienne indisponible. Réessayez dans un instant.' });
   return { day, fetchedAt: new Date().toISOString(), items: feeds.flatMap((feed) => feed.items).sort((a, b) => Date.parse(a.estimated || a.scheduled) - Date.parse(b.estimated || b.scheduled)), feeds: feeds.map(({ items, ...metadata }) => metadata) };
 }
-export async function returnHintForRide(ride, approachSeconds, routeBetween) {
+async function returnHintNear(ride, approachSeconds, routeBetween, hub, getArrivals, matchArrival, { timeout = 1200, estimateLocalTravel = false } = {}) {
   if (ride.is_test || !Number.isFinite(ride.dropoff?.lat) || !Number.isFinite(ride.dropoff?.lng)) return null;
-  const distance = haversineDistance(ride.dropoff.lat, ride.dropoff.lng, AIRPORT.lat, AIRPORT.lng);
+  const distance = haversineDistance(ride.dropoff.lat, ride.dropoff.lng, hub.lat, hub.lng);
   if (distance > 20) return null;
   const request = (async () => {
-  try {
-    let road = null;
-    if (distance > 5) road = await cached(`airport-road:${ride.dropoff.lat.toFixed(4)},${ride.dropoff.lng.toFixed(4)}`, 600000, () => routeBetween(ride.dropoff, AIRPORT));
-    if (distance > 5 && (!road || road.approximate || road.durationSeconds > 300)) return null;
-    const flights = await flightsForDay(parisDay());
-    return airportReturnHint(ride, flights.items, { approachSeconds, airportTravelSeconds: road?.durationSeconds || 0, nearAirport: distance <= 5 || Boolean(road && !road.approximate && road.durationSeconds <= 300) });
-  } catch { return null; }
+    try {
+      const road = distance > 5
+        ? await cached(`transport-road:${hub.lat},${hub.lng}:${ride.dropoff.lat.toFixed(4)},${ride.dropoff.lng.toFixed(4)}`, 600000, () => routeBetween(ride.dropoff, hub))
+        : null;
+      const near = distance <= 5 || Boolean(road && !road.approximate && road.durationSeconds <= 300);
+      if (!near) return null;
+      const arrivals = await getArrivals(parisDay());
+      return matchArrival(ride, arrivals.items, {
+        approachSeconds,
+        airportTravelSeconds: road?.durationSeconds || (estimateLocalTravel ? distance * 120 : 0),
+        nearAirport: near,
+      });
+    } catch {
+      return null;
+    }
   })();
   let timer;
-  try { return await Promise.race([request, new Promise((resolve) => { timer = setTimeout(() => resolve(null), 1200); })]); } finally { clearTimeout(timer); }
+  try { return await Promise.race([request, new Promise((resolve) => { timer = setTimeout(() => resolve(null), timeout); })]); } finally { clearTimeout(timer); }
+}
+
+export function returnHintForRide(ride, approachSeconds, routeBetween) {
+  return returnHintNear(ride, approachSeconds, routeBetween, AIRPORT, flightsForDay, airportReturnHint);
+}
+
+export async function goldReturnHintForRide(ride, approachSeconds, routeBetween) {
+  const options = { timeout: 2500, estimateLocalTravel: true };
+  const hints = await Promise.all([
+    returnHintNear(ride, approachSeconds, routeBetween, AIRPORT, flightsForDay, airportReturnHint, options),
+    returnHintNear(ride, approachSeconds, routeBetween, STATION, trainsForDay, stationReturnHint, options),
+  ]);
+  return hints.filter(Boolean).sort((a, b) => Date.parse(a.arrivalAt) - Date.parse(b.arrivalAt))[0] || null;
 }

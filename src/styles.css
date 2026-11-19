@@ -3227,6 +3227,32 @@ a.activity-pill:hover {
   color: var(--gold-card-accent);
 }
 
+.driver-gold-benefits strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.driver-gold-benefits p {
+  color: var(--gold-card-muted);
+  font-size: 0.85rem;
+}
+
+.drv-island-brand-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.drv-island-brand .drv-island-gold {
+  padding: 1px 4px;
+  border: 1px solid #b9955470;
+  border-radius: 4px;
+  color: #e6cb91;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
 .driver-gold-action {
   display: flex;
   align-items: center;

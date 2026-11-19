@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseAirportBoard, parseTrainSchedule, mergeTrainRealtime, transportChanges } from '@/lib/vtc-transport';
-import { airportReturnHint } from '@/lib/vtc-opportunities';
+import { airportReturnHint, stationReturnHint } from '@/lib/vtc-opportunities';
 const fetched = '2026-11-15T10:00:00Z';
 const airport = `<div class="depart all_vols"><div class="vol " data-date="2026-11-15 12:00:00"><div class="destination"><p>PARIS</p></div><p id='numvol'>V7 1</p><span id='status'>ANNULÉ</span></div></div><div class="arrivee all_vols show"><div class="vol " data-date="2026-11-15 11:30:00"><div class="destination"><p>NICE</p></div><p id='numvol'>V7 2</p><span id='status'>PRÉVU 11:50</span></div><div class="vol " data-date="2026-11-15 11:00:00"><div class="destination"><p>LYON</p></div><p id='numvol'>V7 3</p><span id='status'>ARRIVÉ À 11:05</span></div></div>`;
 const schedule = { du: '2026-11-15', au: '2026-11-28', produits: ['TER', 'Car TER'], familles: ['TER', 'CAR'], trains: [['123', 0, 'Colmar', 'Strasbourg', 660, null, 1], ['456', 0, 'Strasbourg', 'Paris', null, 720, 2], ['999', 1, 'Kehl', 'Strasbourg', 600, null, 1]] };
@@ -59,5 +59,16 @@ describe('retour potentiel près de SXB', () => {
   });
   it('tient compte de la nouvelle estimation après un retard', () => {
     expect(airportReturnHint(ride, [{ ...flight, estimated: '2026-11-15T15:00:00Z' }], { now, nearAirport: true })).toBeNull();
+  });
+});
+
+describe("opportunité Gold d’un retour en gare", () => {
+  it("utilise une arrivée de train en direct et exclut les horaires théoriques", () => {
+    const now = Date.parse("2026-11-15T12:00:00Z");
+    const ride = { route: { durationSeconds: 600 } };
+    const train = { kind: "train", direction: "arrival", number: "9591", live: true,
+      updatedAt: new Date(now).toISOString(), estimated: "2026-11-15T12:20:00Z", status: "published" };
+    expect(stationReturnHint(ride, [train], { nearAirport: true, now })).toMatchObject({ kind: "train", flightNumber: "9591" });
+    expect(stationReturnHint(ride, [{ ...train, live: false }], { nearAirport: true, now })).toBeNull();
   });
 });

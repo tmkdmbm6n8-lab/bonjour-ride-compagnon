@@ -88,7 +88,7 @@ function DriverDashboard() {
     (type, data) => {
       if ((type === "offer" || type === "offer-updated") && data?.airportReturn)
         toast(
-          `Retour potentiel possible · vol ${data.airportReturn.flightNumber} à ${transportClock(data.airportReturn.arrivalAt)}`,
+          `Course Gold · ${data.airportReturn.kind === "train" ? "train" : "vol"} ${data.airportReturn.flightNumber} à ${transportClock(data.airportReturn.arrivalAt)}`,
           "info",
           7000,
         );
@@ -671,7 +671,7 @@ function DriverDashboard() {
                 }}
               >
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#facc15" }} />
-                <span>{VEHICLE_LABELS[offer.rideClass] || "StrasDrive Go"}</span>
+                <span>{offer.airportReturn ? "Course Gold" : (VEHICLE_LABELS[offer.rideClass] || "StrasDrive Go")}</span>
               </div>
 
               <CloseControl onClick={decline} disabled={actionBusy} label="Ignorer la course" />

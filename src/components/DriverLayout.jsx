@@ -1,8 +1,9 @@
 "use client";
 
-import { Gauge, Route as RouteIcon, Wallet, MessagesSquare, Menu, QrCode, ShieldAlert, LogOut } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Gauge, Route as RouteIcon, Wallet, MessagesSquare, Menu, QrCode, Gem, ShieldAlert, LogOut } from "lucide-react";
+import { useEffect, useState, createContext, useContext } from "react";
 import Link from "@/lib/archive-navigation";
+import useDriverData from "@/hooks/useDriverData";
 import AppShell from "@/components/shell/AppShell";
 import { registerDriverPush } from "@/lib/native-push";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
@@ -17,7 +18,13 @@ const NAV = [
   { href: "/driver/menu", label: "Menu", icon: Menu },
 ];
 
+const GoldContext = createContext(null);
+export const useDriverGold = () => useContext(GoldContext);
+const STANDARD_NAV = [NAV[0], { href: "/driver/private-clients", label: "SDGold", icon: Gem }, ...NAV.slice(3)];
+
 export default function DriverLayout({ children }) {
+  const { data: goldData } = useDriverData("/api/drivers/me/gold", 15000);
+  const gold = goldData?.gold;
   const [isSuspended, setIsSuspended] = useState(false);
   const [checked, setChecked] = useState(false);
 
@@ -93,5 +100,9 @@ export default function DriverLayout({ children }) {
     );
   }
 
-  return <AppShell nav={NAV} variant="driver">{children}</AppShell>;
+  return (
+    <GoldContext.Provider value={gold}>
+      <AppShell nav={gold?.active ? NAV : STANDARD_NAV} variant="driver">{children}</AppShell>
+    </GoldContext.Provider>
+  );
 }

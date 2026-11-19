@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Heart, QrCode } from "lucide-react";
+import { ArrowRight, Plane, QrCode, Percent } from "lucide-react";
 import { apiFetch } from "@/lib/archive-fetch";
 import { GOLD_MONTHLY_CENTS, GOLD_TRIAL_DAYS } from "@/lib/driver-gold";
 
@@ -71,8 +71,9 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
           </div>
 
           <ul className="driver-gold-benefits">
-            <li><QrCode size={18} aria-hidden="true" /><span>Invitez vos clients avec votre QR code personnel</span></li>
-            <li><Heart size={18} aria-hidden="true" /><span>Apparaissez en tête du comparateur de vos clients privés</span></li>
+            <li><Percent size={18} aria-hidden="true" /><div><strong>0 % de commission plateforme</strong><p>À partir du premier paiement et tant que l’abonnement payant est actif. Pendant l’essai, la commission reste de 5 %.</p></div></li>
+            <li><QrCode size={18} aria-hidden="true" /><div><strong>Développez votre propre clientèle privée</strong><p>Partagez votre QR code. Les passagers qui vous choisissent en favori vous retrouvent en tête de leur comparateur.</p></div></li>
+            <li><Plane size={18} aria-hidden="true" /><div><strong>Des courses Gold avec un potentiel de retour</strong><p>Les arrivées d’avions et de trains en direct font ressortir les courses qui se terminent à moins de 5 km ou à 5 minutes de la gare ou de l’aéroport au bon moment. Ces courses aller sont réservées à Gold. Le retour dépend des réservations.</p></div></li>
           </ul>
         </>
       )}

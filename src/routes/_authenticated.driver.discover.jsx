@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Plane, TrainFront, Bookmark, RefreshCw, BellRing, Clock } from "lucide-react";
-import DriverLayout from "@/components/DriverLayout";
+import DriverLayout, { useDriverGold } from "@/components/DriverLayout";
+import Link from "@/lib/archive-navigation";
 import Modal from "@/components/ui/Modal";
 import { Loading } from "@/components/ui/bits";
 import useDriverData from "@/hooks/useDriverData";
@@ -228,11 +229,24 @@ function DiscoverPage() {
   );
 }
 
+function GoldTraffic() {
+  const gold = useDriverGold();
+  if (!gold) return <Loading />;
+  if (gold.active) return <DiscoverPage />;
+  return (
+    <div className="driver-tab-page drv-cockpit-page">
+      <h1>Trafic</h1>
+      <p>Les arrivées en gare et à l’aéroport sont incluses dans StrasDrive Gold.</p>
+      <Link href="/driver/private-clients" className="btn btn-primary mt-4">Découvrir SDGold</Link>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated/driver/discover")({
   head: () => ({ meta: [{ title: "Trafic · StrasDrive" }] }),
   component: () => (
     <DriverLayout>
-      <DiscoverPage />
+      <GoldTraffic />
     </DriverLayout>
   ),
 });

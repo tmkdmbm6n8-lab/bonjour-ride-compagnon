@@ -55,6 +55,19 @@ describe('attribution des courses', () => {
     expect(planDispatch(offered, pool, NOW)?.dispatch_phase).toBe('priority');
   });
 
+  it('réserve les courses à potentiel de retour à Gold, y compris en diffusion générale', () => {
+    const gold = { ...other, gold_active: true };
+    const exclusive = ride({ route: { goldReturn: { kind: 'train' } } });
+    const pool = [near, gold];
+    const initial = planDispatch(exclusive, pool, NOW);
+    expect(initial?.offer_driver_id).toBe(gold.user_id);
+    const broadcast = apply(exclusive, { ...initial, dispatch_phase: 'broadcast' });
+    expect(canSeeOffer(broadcast, near, NOW, pool)).toBe(false);
+    expect(canSeeOffer(broadcast, gold, NOW, pool)).toBe(true);
+    expect(canSeeOffer(broadcast, far, NOW, [...pool, far])).toBe(true);
+    expect(planDispatch(exclusive, [near], NOW)?.status).toBe('no_drivers');
+  });
+
   it('sans choix du favori, le favori reste dans le dispatch normal comme les autres', () => {
     const fav = driver('favori', 0.1);
     const pool = [near, other, fav];

@@ -38,10 +38,14 @@ export function isThrottled(driver, pool) {
 }
 
 /** Drivers (already online, approved and free) who can still receive this ride: its class, or a higher class that opted into it, minus drivers whose trip preferences (cash, rider rating, pay per km) refuse it and fair-share throttled drivers when someone else can take it. */
+function allowsGoldRide(ride, driver) {
+  return !ride.route?.goldReturn || driver?.is_priority === true || driver?.gold_active === true;
+}
+
 export function availableFor(ride, drivers) {
   const declined = ride.declined || [];
   const pool = drivers.filter(
-    (d) => d.user_id !== ride.rider_id && canServe(d, ride.vehicle_type) && !declined.includes(d.user_id) && tripPrefsAllow(d, ride),
+    (d) => allowsGoldRide(ride, d) && d.user_id !== ride.rider_id && canServe(d, ride.vehicle_type) && !declined.includes(d.user_id) && tripPrefsAllow(d, ride),
   );
   const fair = pool.filter((d) => !isThrottled(d, pool));
   return fair.length ? fair : pool;
@@ -86,6 +90,9 @@ export function planDispatch(ride, drivers, now = Date.now()) {
         offer_expires_at: iso(now + PRIVATE_OFFER_SECONDS * 1000),
       };
     }
+  }
+  if (ride.route?.goldReturn && !pool.length) {
+    return { status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
   }
   if (phase === "priority" && running && pool.some((d) => d.is_priority)) return null;
   if (phase === "nearest" && running && pool.some((d) => d.user_id === ride.offer_driver_id)) return null;
@@ -133,7 +140,7 @@ export function isDriverInCloseZone(ride, driver) {
 /** Whether this driver (online, approved, free) may see and accept the ride right now. */
 /** @param {any} ride @param {any} driver @param {number} [now] @param {any[] | null} [pool] */
 export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
-  if (!driver || ride.status !== "searching" || !ride.dispatch_phase) return false;
+  if (!driver || !allowsGoldRide(ride, driver) || ride.status !== "searching" || !ride.dispatch_phase) return false;
   if (!ride.offer_expires_at || new Date(ride.offer_expires_at).getTime() <= now) return false;
   if (ride.dispatch_phase === "private") return ride.offer_driver_id === driver.user_id && favoriteCanTake(ride, driver);
   const all = pool && pool.some((d) => d.user_id === driver.user_id) ? pool : [driver];
@@ -144,7 +151,7 @@ export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
 
   // Phase zone proche (10 secondes) : seuls les chauffeurs à ≤ 3 km ou ≤ 5 min la reçoivent
   if (ride.dispatch_phase === "nearest") {
-    const candidates = pool || [driver];
+    const candidates = pool?.filter((candidate) => allowsGoldRide(ride, candidate)) || [driver];
     const hasCloseDrivers = candidates.some((d) => isDriverInCloseZone(ride, d));
     if (hasCloseDrivers) {
       return isDriverInCloseZone(ride, driver);
