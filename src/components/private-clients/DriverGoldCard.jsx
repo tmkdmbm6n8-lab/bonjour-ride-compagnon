@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArrowRight, Heart, QrCode } from "lucide-react";
 import { apiFetch } from "@/lib/archive-fetch";
 import { GOLD_MONTHLY_CENTS, GOLD_TRIAL_DAYS } from "@/lib/driver-gold";
 
@@ -44,30 +45,49 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
     }
   }
 
+  const trial = !gold.active && !manage && gold.trialAvailable && !gold.unavailable;
+  const canOpenBilling = !gold.unavailable && (manage || (!gold.included && !gold.active));
+
   return (
-    <section className="card card-pad driver-notice" aria-labelledby="driver-gold-status">
-      <h2 id="driver-gold-status">{goldStatusLabel(gold)}</h2>
-      {gold.active ? (
-        <p className="small mt-2">{goldPeriodText(gold)}</p>
-      ) : (
-        <div className="small mt-2">
-          <p>Invitez vos clients par QR code et apparaissez en tête de leur comparateur lorsqu’ils préparent une course.</p>
-          <p className="mt-2">
-            {gold.trialAvailable && !gold.unavailable ? `${GOLD_TRIAL_DAYS} jours d’essai gratuit à la première souscription, puis ` : ""}
-            {monthlyPrice} TTC par mois.
-          </p>
-          {gold.trialAvailable && !gold.unavailable && <p>Sans carte enregistrée, l’accès prend fin à l’expiration de l’essai.</p>}
+    <section className="driver-gold-card" aria-labelledby="driver-gold-status">
+      <header className="driver-gold-header">
+        <div className="driver-gold-meta">
+          <span className="driver-gold-eyebrow">Abonnement chauffeur</span>
+          {!gold.active && !gold.unavailable && <span className="driver-gold-inactive">Inactif</span>}
         </div>
+        <h2 id="driver-gold-status">StrasDrive <span>Gold</span></h2>
+      </header>
+
+      {gold.active ? (
+        <div className="driver-gold-current">
+          <strong>{gold.included ? "Accès inclus" : gold.status === "trialing" ? "Essai en cours" : "Abonnement actif"}</strong>
+          <p>{goldPeriodText(gold)}</p>
+        </div>
+      ) : (
+        <>
+          <div className="driver-gold-pricing">
+            <p className="driver-gold-price"><strong>{monthlyPrice}</strong> <span>TTC par mois</span></p>
+            {trial && <p className="driver-gold-trial">{GOLD_TRIAL_DAYS} jours offerts à la première souscription</p>}
+          </div>
+
+          <ul className="driver-gold-benefits">
+            <li><QrCode size={18} aria-hidden="true" /><span>Invitez vos clients avec votre QR code personnel</span></li>
+            <li><Heart size={18} aria-hidden="true" /><span>Apparaissez en tête du comparateur de vos clients privés</span></li>
+          </ul>
+        </>
       )}
-      {!gold.unavailable && (manage || (!gold.included && !gold.active)) && (
-        <button type="button" className="btn btn-primary mt-4" onClick={openBilling} disabled={busy}>
+
+      {canOpenBilling && (
+        <button type="button" className="driver-gold-action" onClick={openBilling} disabled={busy}>
           {busy ? "Ouverture de Stripe…" : gold.active ? "Gérer mon abonnement" :
-            gold.trialAvailable && !manage ? "Commencer mon essai" : "Réactiver StrasDrive Gold"}
+            trial ? "Commencer mon essai gratuit" : "Réactiver StrasDrive Gold"}
+          <ArrowRight size={18} aria-hidden="true" />
         </button>
       )}
-      {waitingForStripe && !gold.active && <p className="small mt-2" role="status">Vérification de votre abonnement auprès de Stripe…</p>}
-      {gold.unavailable && <p className="small mt-2" role="status">Le statut de votre abonnement est temporairement indisponible.</p>}
-      {error && <p className="small mt-2" role="alert">{error}</p>}
+      {trial && <p className="driver-gold-note">Sans carte enregistrée, l’essai se termine sans prélèvement.</p>}
+      {waitingForStripe && !gold.active && <p className="driver-gold-note" role="status">Vérification de votre abonnement auprès de Stripe…</p>}
+      {gold.unavailable && <p className="driver-gold-note" role="status">Le statut de votre abonnement est temporairement indisponible.</p>}
+      {error && <p className="driver-gold-error" role="alert">{error}</p>}
     </section>
   );
 }
