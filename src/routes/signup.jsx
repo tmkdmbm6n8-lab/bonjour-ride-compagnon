@@ -120,10 +120,14 @@ function SignupForm() {
     setLoading(true);
 
     try {
+      const autoUsername = generateUsername(form.name);
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          username: autoUsername,
+        }),
       });
       const data = await res.json();
 
