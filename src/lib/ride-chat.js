@@ -8,9 +8,9 @@ export const chatRetention = messages => (Array.isArray(messages) ? messages : [
 export function rejectUnsafeChatText(value) {
   const text = String(value || '').normalize('NFKC').toLocaleLowerCase('fr');
   const threats = [
-    /\\bje\\s+vais\\s+te\\s+(?:tuer|violer|frapper)\\b/u,
-    /\\bje\\s+te\\s+(?:tue|viole|frappe)\\b/u,
-    /\\bi\\s+will\\s+(?:kill|rape)\\s+you\\b/u,
+    /\bje\s+vais\s+te\s+(?:tuer|violer|frapper)\b/u,
+    /\bje\s+te\s+(?:tue|viole|frappe)\b/u,
+    /\bi\s+will\s+(?:kill|rape)\s+you\b/u,
   ];
   if (threats.some((pattern) => pattern.test(text)))
     throw new Error('Message bloqué pour menace explicite. Vous pouvez contacter l’assistance.');
@@ -22,7 +22,8 @@ export function newChatMessage(body, from, now = new Date().toISOString()) {
     return { ...common, type: 'location', lat: body.lat, lng: body.lng, text: 'Position partagée' };
   }
   if (typeof body.text !== 'string' || !body.text.trim() || body.text.length > 500) throw new Error('Message invalide');
-  rejectUnsafeChatText(body.text);\n  return { ...common, type: 'text', text: body.text.trim() };
+  rejectUnsafeChatText(body.text);
+  return { ...common, type: 'text', text: body.text.trim() };
 }
 export function decodeChatAttachment(body) {
   const formats = { 'audio/webm': ['audio', 'webm'], 'audio/ogg': ['audio', 'ogg'], 'audio/mp4': ['audio', 'm4a'], 'image/jpeg': ['image', 'jpg'], 'image/png': ['image', 'png'], 'image/webp': ['image', 'webp'] };
