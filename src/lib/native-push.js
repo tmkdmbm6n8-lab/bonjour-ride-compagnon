@@ -1,4 +1,4 @@
-// Ride-offer notifications on the Android app (Capacitor). Does nothing in a normal browser.
+// Ride-offer notifications in the native iOS/Android app (Capacitor). No-op in a browser.
 import { apiFetch } from "./archive-fetch";
 import { OFFER_CHANNEL_ID, OFFER_PATH } from "./vtc-push";
 
@@ -15,7 +15,7 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
   started = true;
   try {
     const { PushNotifications } = await import("@capacitor/push-notifications");
-    await PushNotifications.createChannel({
+    // Android-only notification channels; iOS uses APNs notification categories.\n    if (window.Capacitor?.getPlatform?.() === "android") await PushNotifications.createChannel({
       id: OFFER_CHANNEL_ID,
       name: audience === "admin" ? "Alertes StrasDrive" : "Nouvelles courses",
       description: "Alerte quand une course vous est proposée",
@@ -32,7 +32,7 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
       await apiFetch("/api/notifications/push-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: value, platform: "android" }),
+        body: JSON.stringify({ token: value, platform: window.Capacitor?.getPlatform?.() === "ios" ? "ios" : "android" }),
       });
     });
     await PushNotifications.addListener("registrationError", (e) => console.error("Push registration:", e?.error));
@@ -44,7 +44,7 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
     let perm = await PushNotifications.checkPermissions();
     if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale")
       perm = await PushNotifications.requestPermissions();
-    if (perm.receive !== "granted") return;
+    if (perm.receive !== "granted") {\n      started = false; // Allow another attempt if the user changes notification permissions.\n      return;\n    }
     await PushNotifications.register();
   } catch (e) {
     started = false;
