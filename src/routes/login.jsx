@@ -9,7 +9,7 @@ import { signIn, useSession } from "@/lib/archive-auth";
 import { User, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { KovaLogo } from "@/components/brand/KovaLogo";
 import LegalFooter from "@/components/shell/LegalFooter";
-import { supabase } from "@/integrations/supabase/client";
+import { lovable } from '@/integrations/lovable/index';
 
 function LoginForm() {
   const router = useRouter();
@@ -44,12 +44,9 @@ function LoginForm() {
     setError("");
     setOauthLoading(provider);
     try {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/login`,
-        },
-      });
+      const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: `${window.location.origin}/login` });
+      const oauthError = result.error;
+      if (result.redirected) return;
       if (oauthError) {
         setError(oauthError.message || `Erreur de connexion avec ${provider}`);
         setOauthLoading("");
