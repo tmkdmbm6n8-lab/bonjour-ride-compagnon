@@ -2061,4 +2061,4 @@ export async function getRandomRealRide() {
     distanceKm: distance > 0 ? (distance / 1000).toFixed(1).replace(".", ",") : "4,8",
     fareTotal: total > 0 ? total.toFixed(2).replace(".", ",") : "11,20",
   };
-
+}
