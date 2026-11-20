@@ -34,11 +34,9 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
     // Never start a Stripe checkout inside native iOS. Apple purchases must be
     // verified by the App Store server before granting a Gold entitlement.
     if (isIosNative) {
-      if (gold.active && gold.canManage) {
-        window.location.assign("https://apps.apple.com/account/subscriptions");
-      } else {
-        setError("Les achats Gold sur iPhone seront disponibles après l’activation et la vérification sécurisée des achats intégrés Apple.");
-      }
+      setError(gold.active
+        ? "Pour gérer un abonnement Gold existant souscrit sur le Web, ouvrez votre compte StrasDrive depuis un navigateur. Les abonnements Apple ne sont pas encore activés."
+        : "Les achats Gold sur iPhone seront disponibles après l’activation et la vérification sécurisée des achats intégrés Apple.");
       return;
     }
     setBusy(true);
@@ -92,7 +90,7 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
 
       {canOpenBilling && (
         <button type="button" className="driver-gold-action" onClick={openBilling} disabled={busy}>
-          {busy ? "Ouverture de Stripe…" : isIosNative ? (gold.active ? "Gérer mon abonnement Apple" : "Achats Apple bientôt disponibles") : gold.active ? "Gérer mon abonnement" :
+          {busy ? "Ouverture de Stripe…" : isIosNative ? (gold.active ? "Informations sur mon abonnement" : "Achats Apple bientôt disponibles") : gold.active ? "Gérer mon abonnement" :
             trial ? "Commencer mon essai gratuit" : "Réactiver StrasDrive Gold"}
           <ArrowRight size={18} aria-hidden="true" />
         </button>
