@@ -76,7 +76,7 @@ function AdminPricingPage() {
       });
       if (!res.ok) throw new Error("Impossible d'enregistrer");
       const data = await res.json();
-      setAiConfig({ enabled: data.enabled, radiusKm: data.radiusKm });
+      setAiConfig({ enabled: data.enabled, radiusKm: data.radiusKm, testsPerSecond: data.testsPerSecond });
       if (data.enabled) setAiResult(null);
       toast(data.enabled ? "Collecte activée" : "Collecte arrêtée", "success");
     } catch {
@@ -139,9 +139,9 @@ function AdminPricingPage() {
     if (document.visibilityState === "visible") sampleAi();
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") sampleAi();
-    }, 5000);
+    }, Math.round(1000 / (Number(aiConfig.testsPerSecond) || 0.2)));
     return () => clearInterval(timer);
-  }, [aiConfig.enabled]);
+  }, [aiConfig.enabled, aiConfig.testsPerSecond]);
 
   async function updateHourlyChecks(enabled) {
     setCheckingUber(true);
@@ -462,9 +462,23 @@ function AdminPricingPage() {
           <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy}
             onClick={() => saveAiConfig(aiConfig)}>Enregistrer le rayon</button>
         </div>
+        <label className="small font-semibold" htmlFor="ai-rate">Cadence des simulations automatiques</label>
+        <div className="flex items-center gap-3 mt-2 mb-3">
+          <select id="ai-rate" className="input" style={{maxWidth:260}}
+            value={aiConfig.testsPerSecond ?? 0.2}
+            onChange={(e) => setAiConfig(v => ({...v, testsPerSecond: Number(e.target.value)}))}>
+            <option value={0.1}>0,1 simulation/seconde (1 / 10 s)</option>
+            <option value={0.2}>0,2 simulation/seconde (1 / 5 s)</option>
+            <option value={0.5}>0,5 simulation/seconde (1 / 2 s)</option>
+            <option value={1}>1 simulation/seconde</option>
+          </select>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy}
+            onClick={() => saveAiConfig(aiConfig)}>Enregistrer la cadence</button>
+        </div>
+        <p className="tiny muted mb-3">Cadence maximale : 1 requête par seconde, sans requêtes simultanées. Le débit réel dépend du temps de réponse d'Uber.</p>
         <div className="flex gap-2 flex-wrap mb-3">
           <button type="button" className="btn btn-primary btn-sm" disabled={aiBusy || aiConfig.enabled}
-            onClick={() => saveAiConfig({ ...aiConfig, enabled: true })}>Démarrer · 1 test / 5 s</button>
+            onClick={() => saveAiConfig({ ...aiConfig, enabled: true })}>Démarrer la collecte</button>
           <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy || !aiConfig.enabled}
             onClick={() => saveAiConfig({ ...aiConfig, enabled: false })}>Arrêter</button>
           <button type="button" className="btn btn-secondary btn-sm" disabled={aiInFlight.current || !aiConfig.enabled}
