@@ -42,7 +42,7 @@ function AdminPricingPage() {
   const [aiStats, setAiStats] = useState({ count: 0, recent: [] });
   const [aiBusy, setAiBusy] = useState(false);
   const [aiResult, setAiResult] = useState(null);
-  const [aiPredictionDistance, setAiPredictionDistance] = useState(10);
+  const [aiPredictionDistance, setAiPredictionDistance] = useState(9);
   const [aiPrediction, setAiPrediction] = useState(null);
   const aiInFlight = useRef(false);
   const [priceComparison, setPriceComparison] = useState(null);
@@ -567,11 +567,11 @@ function AdminPricingPage() {
       <UberAnalytics observations={aiStats.recent || []} total={aiStats.count || 0} onRefresh={() => Promise.all([loadAiStatus(), loadAllAiObservations()]).catch(() => toast("Actualisation impossible", "error"))} />
       <div className="card card-pad mb-5">
         <h3 style={{fontSize:"1.15rem",marginBottom:8}}>Comparer Uber et l’algorithme IA en temps réel</h3>
-        <p className="small muted mb-3">Un trajet aléatoire entre deux adresses numérotées réelles est recherché à chaque clic. Choisis un petit trajet (maximum 10 km) ou un grand trajet (maximum 100 km). Comparaison par catégorie, sans appliquer la remise StrasDrive. Ce test ne réserve pas les adresses et ne crée aucune réservation.</p>
+        <p className="small muted mb-3">Un trajet aléatoire entre deux adresses numérotées réelles est recherché à chaque clic. Choisis un petit trajet (maximum 9 km) ou un grand trajet (maximum 100 km). Comparaison par catégorie, sans appliquer la remise StrasDrive. Ce test ne réserve pas les adresses et ne crée aucune réservation.</p>
         <div className="flex items-center gap-3 flex-wrap mb-3">
           <span className="small font-semibold">Distance maximale :</span>
-          <button type="button" className={`btn btn-sm ${comparisonMaxKm===10?"btn-primary":"btn-secondary"}`} disabled={comparisonBusy} onClick={()=>setComparisonMaxKm(10)}>Petit trajet · 10 km</button>
-          <button type="button" className={`btn btn-sm ${comparisonMaxKm===100?"btn-primary":"btn-secondary"}`} disabled={comparisonBusy} onClick={()=>setComparisonMaxKm(100)}>Grand trajet · 100 km</button>
+          <button type="button" className={`btn btn-sm ${comparisonMaxKm===9?"btn-primary":"btn-secondary"}`} disabled={comparisonBusy} onClick={()=>setComparisonMaxKm(9)}>Petit trajet · 9 km</button>
+          <button type="button" className={`btn btn-sm ${comparisonMaxKm===90?"btn-primary":"btn-secondary"}`} disabled={comparisonBusy} onClick={()=>setComparisonMaxKm(100)}>Grand trajet · 100 km</button>
         </div>
         <button type="button" className="btn btn-primary btn-sm" disabled={comparisonBusy} onClick={comparePrices}>
           {comparisonBusy ? "Comparaison en cours…" : "Tester un trajet aléatoire"}
