@@ -21,3 +21,18 @@ jobs:
             --request POST \
             --header "Authorization: Bearer $UBER_CHECK_CRON_SECRET" \
             "${APP_BASE_URL%/}/api/uber-hourly-check"
+
+      - name: Recheck the same 100 benchmark routes (50 batches of 2)
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          UBER_CHECK_CRON_SECRET: ${{ secrets.UBER_CHECK_CRON_SECRET }}
+        run: |
+          for batch in $(seq 0 49); do
+            echo "Benchmark batch $batch/49"
+            curl --fail-with-body --silent --show-error --max-time 60 \
+              --retry 0 --request POST \
+              --header "Authorization: Bearer $UBER_CHECK_CRON_SECRET" \
+              "${APP_BASE_URL%/}/api/uber-hourly-check?benchmarkBatch=$batch"
+            echo
+            sleep 2
+          done
