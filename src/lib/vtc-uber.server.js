@@ -6,8 +6,8 @@ const QUERY = `query Products($destinations: [InputCoordinate!]!, $pickup: Input
   }
 }`;
 
-export async function uberProducts(pickup, dropoff) {
-  const cookie = process.env.UBER_COOKIE;
+export async function uberProducts(pickup, dropoff, customCookie = null) {
+  const cookie = customCookie || process.env.UBER_COOKIE;
   if (!cookie) return null;
   try {
     const res = await fetch("https://m.uber.com/go/graphql", {
@@ -55,4 +55,19 @@ export async function uberProducts(pickup, dropoff) {
   } catch {
     return null;
   }
+}
+
+export async function testUberCookie(cookie) {
+  if (!cookie || typeof cookie !== "string" || cookie.trim().length < 20) {
+    return { ok: false, error: "Le cookie est vide ou trop court." };
+  }
+  const products = await uberProducts(
+    { lat: 48.5734, lng: 7.7521 },
+    { lat: 48.5839, lng: 7.7455 },
+    cookie.trim(),
+  );
+  if (Array.isArray(products) && products.length > 0) {
+    return { ok: true, count: products.length, products: products.map((p) => p.name) };
+  }
+  return { ok: false, error: "Session refusée ou expirée par Uber." };
 }
