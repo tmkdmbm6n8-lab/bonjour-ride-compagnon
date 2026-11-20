@@ -3,7 +3,7 @@ import AdminLayout from "@/components/AdminLayout";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 ("use client");
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Check, Sparkles } from "lucide-react";
 import { Loading, VEHICLE_LABELS } from "@/components/ui/bits";
 import { useToast } from "@/components/ui/Toast";
@@ -34,6 +34,79 @@ function AdminPricingPage() {
   const [cookieStatus, setCookieStatus] = useState(null);
   const [hourlyChecks, setHourlyChecks] = useState({ enabled: false });
   const [checkingUber, setCheckingUber] = useState(false);
+  const [aiConfig, setAiConfig] = useState({ enabled: false, radiusKm: 100 });
+  const [aiStats, setAiStats] = useState({ count: 0, recent: [] });
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
+  const [aiPredictionDistance, setAiPredictionDistance] = useState(10);
+  const [aiPrediction, setAiPrediction] = useState(null);
+  const aiInFlight = useRef(false);
+
+  async function loadAiStatus() {
+    const res = await fetch("/api/admin/pricing-ai");
+    if (!res.ok) return;
+    const data = await res.json();
+    setAiConfig(data.config);
+    setAiStats({ count: data.count, recent: data.recent });
+  }
+
+  async function saveAiConfig(next) {
+    setAiBusy(true);
+    try {
+      const res = await fetch("/api/admin/pricing-ai", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      if (!res.ok) throw new Error("Impossible d'enregistrer");
+      const data = await res.json();
+      setAiConfig({ enabled: data.enabled, radiusKm: data.radiusKm });
+      toast(data.enabled ? "Collecte activée" : "Collecte arrêtée", "success");
+    } catch {
+      toast("Erreur de configuration IA", "error");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function sampleAi() {
+    if (aiInFlight.current) return;
+    aiInFlight.current = true;
+    try {
+      const res = await fetch("/api/admin/pricing-ai", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sample" }),
+      });
+      const data = await res.json();
+      setAiResult(data);
+      if (data.ok) setAiStats((prev) => ({ ...prev, count: prev.count + data.saved }));
+      if (res.status === 429) setAiConfig((prev) => ({ ...prev, enabled: false }));
+    } catch {
+      setAiResult({ ok: false, error: "Erreur réseau" });
+    } finally {
+      aiInFlight.current = false;
+    }
+  }
+
+  async function predictAi() {
+    const res = await fetch("/api/admin/pricing-ai", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "predict", distanceKm: Number(aiPredictionDistance), productName: "UberX" }),
+    });
+    if (res.ok) setAiPrediction(await res.json());
+  }
+
+  useEffect(() => {
+    loadAiStatus().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!aiConfig.enabled) return;
+    // This intensive mode runs only while the admin page remains open.
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") sampleAi();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [aiConfig.enabled]);
 
   async function updateHourlyChecks(enabled) {
     setCheckingUber(true);
@@ -334,6 +407,57 @@ function AdminPricingPage() {
         <button type="button" className="btn btn-secondary btn-sm mt-3" disabled={checkingUber} onClick={testHourlyCheck}>
           {checkingUber ? "Vérification…" : "Tester maintenant"}
         </button>
+      </div>
+
+      <div className="card card-pad mb-5">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <h3 style={{ fontSize: "1.1rem" }}>IA Tarification · Laboratoire</h3>
+            <p className="tiny muted">Apprentissage continu sur des estimations, sans commander de courses.</p>
+          </div>
+          <span className={`badge ${aiConfig.enabled ? "badge-success" : "badge-neutral"}`}>
+            {aiConfig.enabled ? "Collecte active" : "À l'arrêt"}
+          </span>
+        </div>
+        <label className="small font-semibold" htmlFor="ai-radius">Rayon de recherche autour de Strasbourg (km)</label>
+        <div className="flex items-center gap-3 mt-2 mb-3">
+          <input id="ai-radius" className="input" type="number" min="1" max="200" step="1"
+            style={{ width: 110 }} value={aiConfig.radiusKm}
+            onChange={(e) => setAiConfig((v) => ({ ...v, radiusKm: e.target.value }))} />
+          <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy}
+            onClick={() => saveAiConfig(aiConfig)}>Enregistrer le rayon</button>
+        </div>
+        <div className="flex gap-2 flex-wrap mb-3">
+          <button type="button" className="btn btn-primary btn-sm" disabled={aiBusy || aiConfig.enabled}
+            onClick={() => saveAiConfig({ ...aiConfig, enabled: true })}>Démarrer · 1 test / 5 s</button>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy || !aiConfig.enabled}
+            onClick={() => saveAiConfig({ ...aiConfig, enabled: false })}>Arrêter</button>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={aiInFlight.current || !aiConfig.enabled}
+            onClick={sampleAi}>Tester une fois</button>
+        </div>
+        <p className="small">Observations enregistrées : <strong>{aiStats.count}</strong></p>
+        {aiResult && <p className="tiny muted mt-2">
+          {aiResult.ok ? `${aiResult.saved} prix enregistrés · ${aiResult.pickup} → ${aiResult.dropoff}` :
+            `Dernier test : ${aiResult.error || aiResult.skipped || "échec"}`}
+        </p>}
+        <p className="tiny muted mt-2">
+          Le mode intensif fonctionne tant que cette page admin reste ouverte et visible. Les trajets sont choisis
+          dans une liste de lieux réels connus du secteur, pas encore parmi toutes les adresses possibles.
+          Les refus et limitations du fournisseur peuvent interrompre les tests.
+        </p>
+        <div className="mt-4" style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+          <strong className="small">Prévision expérimentale UberX</strong>
+          <div className="flex items-center gap-2 mt-2">
+            <input className="input" type="number" min="1" max="500" value={aiPredictionDistance}
+              style={{ width: 100 }} onChange={(e) => setAiPredictionDistance(e.target.value)} />
+            <span className="small">km</span>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={predictAi}>Prévoir</button>
+          </div>
+          {aiPrediction && <p className="small mt-2">
+            {aiPrediction.ready ? `Estimation : ${aiPrediction.price.toFixed(2)} € (${aiPrediction.samples} observations proches)` :
+              `Données insuffisantes : ${aiPrediction.samples} observations proches (minimum 10)`}
+          </p>}
+        </div>
       </div>
 
       <h2 style={{ fontSize: "1.15rem", marginBottom: 12 }}>Grille tarifaire de secours (StrasDrive)</h2>
