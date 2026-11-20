@@ -243,28 +243,32 @@ export async function predictLearnedPrice(admin,{distanceKm,productName="UberX",
     return {...x,weekday:context.dayOfWeek,minute:minuteOfDay(observed),
       gap:clockGap(minuteOfDay(observed),targetMinute)};
   });
-  // Priority: same weekday and +/-30 minutes; then same clock window
-  // on another day; then same weekday +/-90 minutes.
-  const groups=[
-    {name:"same-weekday-30min",items:candidates.filter(x=>x.weekday===target.dayOfWeek&&x.gap<=30)},
-    {name:"same-time-30min",items:candidates.filter(x=>x.gap<=30)},
-    {name:"same-weekday-90min",items:candidates.filter(x=>x.weekday===target.dayOfWeek&&x.gap<=90)}
-  ];
-  const selected=groups.find(g=>g.items.length>=3);
-  if(!selected)return {ready:false,samples:groups[0].items.length,
-    reason:"Pas assez de courses Uber comparables (distance, jour et heure)",
+  // Always prioritize the nearest clock time, irrespective of weekday.
+  // Prefer the same weekday only when two observations have comparable time gaps.
+  // Do not widen the distance tolerance to manufacture a fare.
+  const ranked=candidates.sort((a,b)=>
+    a.gap-b.gap ||
+    Number(b.weekday===target.dayOfWeek)-Number(a.weekday===target.dayOfWeek) ||
+    Math.abs(a.distance_km-targetKm)-Math.abs(b.distance_km-targetKm)
+  );
+  if(ranked.length<3)return {ready:false,samples:ranked.length,
+    reason:"Pas assez de courses Uber comparables pour cette distance et catégorie",
     matchingDistanceKm:distanceTolerance,requiredSamples:3};
-  const ordered=selected.items.sort((a,b)=>
-    (Math.abs(a.distance_km-targetKm)/Math.max(1,targetKm)*4+a.gap/30)-
-    (Math.abs(b.distance_km-targetKm)/Math.max(1,targetKm)*4+b.gap/30)
-  ).slice(0,40);
+  // Choose a local time neighborhood around the closest available observation,
+  // rather than mixing prices from very different hours.
+  const nearestGap=ranked[0].gap;
+  const selected=ranked.filter(x=>x.gap<=nearestGap+30).slice(0,40);
+  if(selected.length<3)return {ready:false,samples:selected.length,
+    reason:"Moins de trois tarifs Uber dans les 30 minutes autour de l'heure de référence la plus proche",
+    nearestTimeGapMinutes:nearestGap,requiredSamples:3};
+  const ordered=selected;
   // Median protects against anomalously low/high fares. Do not scale prices
   // from very different distances; only narrow distance matches are accepted.
   const prices=ordered.map(x=>Number(x.price_eur)).sort((a,b)=>a-b);
   const mid=Math.floor(prices.length/2);
   const median=prices.length%2?prices[mid]:(prices[mid-1]+prices[mid])/2;
   return {ready:true,price:Math.round(median*100)/100,samples:ordered.length,
-    method:"matched-uber-median",matchLevel:selected.name,
+    method:"closest-time-uber-median",nearestTimeGapMinutes:nearestGap,
     matchingDistanceKm:distanceTolerance};
 }
 
