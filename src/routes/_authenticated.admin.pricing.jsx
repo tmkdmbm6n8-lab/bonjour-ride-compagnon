@@ -9,6 +9,7 @@ import { Loading, VEHICLE_LABELS } from "@/components/ui/bits";
 import { useToast } from "@/components/ui/Toast";
 import { Switch } from "@/components/ui/switch";
 import { DEFAULT_PRICING } from "@/lib/vtc-pricing";
+import UberAnalytics from "@/components/admin/UberAnalytics";
 
 const FIELDS = [
   ["baseFare", "Prise en charge (€)"],
@@ -83,7 +84,7 @@ function AdminPricingPage() {
         return;
       }
       setAiResult(data);
-      if (data.ok) setAiStats((prev) => ({ ...prev, count: prev.count + data.saved }));
+      if (data.ok) loadAiStatus().catch(() => {});
       if (data.stopped) {
         setAiConfig((prev) => ({ ...prev, enabled: false, stopReason: data.reason }));
         toast(data.reason || "Prix Uber indisponibles : IA arrêtée automatiquement", "error", 6000);
@@ -472,6 +473,8 @@ function AdminPricingPage() {
           </p>}
         </div>
       </div>
+
+      <UberAnalytics observations={aiStats.recent || []} total={aiStats.count || 0} onRefresh={() => loadAiStatus().catch(() => toast("Actualisation impossible", "error"))} />
 
       <h2 style={{ fontSize: "1.15rem", marginBottom: 12 }}>Grille tarifaire de secours (StrasDrive)</h2>
       <p className="small muted mb-6">
