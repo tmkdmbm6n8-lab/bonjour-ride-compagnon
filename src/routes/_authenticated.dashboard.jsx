@@ -616,6 +616,20 @@ function RiderDashboard() {
             <p className="rider-desktop-intro">Indiquez votre départ et votre destination pour découvrir votre trajet.</p>
 
 
+            {estimate && !searchFocused ? (
+              <div className="rider-route-summary-compact" aria-label="Itinéraire sélectionné">
+                <div className="rider-route-summary-addresses">
+                  <span className="rider-route-summary-pickup" title={pickupText}>{pickupText || "Départ"}</span>
+                  <span className="rider-route-summary-dropoff" title={dropoffText}>➜ {dropoffText || "Destination"}</span>
+                </div>
+                <button type="button" className="rider-route-summary-edit" onClick={() => {
+                  setEstimate(null);
+                  setEstimating(false);
+                  setFavoriteSelected(false);
+                }}>Modifier</button>
+              </div>
+            ) : (
+              <>
             <div className="flex-col gap-3">
               <div className="rider-pickup-row">
               <div className="rider-pickup-field">
@@ -672,27 +686,18 @@ function RiderDashboard() {
                 bias={geo || undefined}
               />
             </div>
-
-            <div className="rider-booking-context">
-              <div className="rider-pickup-time">
-                <Clock size={18} />
-                <span>Prise en charge immédiate</span>
-              </div>
-              <div className="rider-passenger">
-                <UserRound size={15} /> Pour moi
-              </div>
-              {!estimate && (
-                <button
-                  className="btn rider-search-button"
-                  onClick={() => {
+              <div className="rider-booking-context">
+                <div className="rider-pickup-time"><Clock size={18} /><span>Prise en charge immédiate</span></div>
+                <div className="rider-passenger"><UserRound size={15} /> Pour moi</div>
+                {!estimate && (
+                  <button className="btn rider-search-button" onClick={() => {
                     const inputs = bookingPanelRef.current?.querySelectorAll("input");
                     inputs?.[pickup ? 1 : 0]?.focus();
-                  }}
-                >
-                  {estimating ? "Recherche…" : "Rechercher"}
-                </button>
-              )}
-            </div>
+                  }}>{estimating ? "Recherche…" : "Rechercher"}</button>
+                )}
+              </div>
+              </>
+            )}
             {estimating && (
               <div className="flex items-center gap-2 mt-4 muted small">
                 <span className="spinner" /> Calcul des tarifs…{" "}
@@ -821,7 +826,7 @@ function RiderDashboard() {
                       role="radio"
                       aria-checked={paymentMethod === id}
                       onClick={() => setPaymentMethod(id)}
-                      className="rider-payment-option"
+                      className={`rider-payment-option rider-payment-option--${id}`}
                     >
                       <span className="rider-payment-option-title">
                         <Icon size={18} /> {label}
@@ -830,16 +835,8 @@ function RiderDashboard() {
                     </button>
                   ))}
                 </div>
-                {paymentMethod === "cash" && selectedFare && (
-                  <p className="tiny muted mt-2">
-                    Vous réglerez {money(selectedFare.total)} en espèces directement au chauffeur à la fin de la course.
-                  </p>
-                )}
-
-                {paymentMethod === "card" && selectedFare && !insufficientWallet && (
-                  <p className="tiny muted mt-2">
-                    Paiement sécurisé par carte bancaire, Google Pay ou Apple Pay, selon les moyens disponibles sur votre appareil. La réservation est lancée dès la validation du paiement.
-                  </p>
+                {paymentMethod === "cash" && (
+                  <p className="tiny muted text-center mt-1">Règlement direct en espèces au chauffeur</p>
                 )}
 
                 {insufficientWallet && paymentMethod === "card" && (
@@ -883,7 +880,7 @@ function RiderDashboard() {
                     </>
                   )}
                 </button>
-                <p className="tiny muted mt-3">Prix TTC annoncé avant commande. Consultez les <Link href="/terms" style={{textDecoration:'underline'}}>conditions de réservation et d’annulation</Link>. Le mode de paiement sélectionné s’applique à cette course.</p>
+                <p className="tiny muted text-center mt-2">Prix TTC garanti avant commande · <Link href="/terms" style={{ textDecoration: "underline" }}>Conditions d’annulation applicables</Link></p>
               </>
             )}
           </div>
