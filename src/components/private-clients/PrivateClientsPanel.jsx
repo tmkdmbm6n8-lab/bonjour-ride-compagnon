@@ -78,7 +78,7 @@ export default function PrivateClientsPanel({ clients, loadQr, goldActive, onRem
           <p className="small muted">Les coordonnées personnelles du passager ne sont pas divulguées depuis cette liste.</p>
           <div className="flex gap-2 flex-wrap">
             <button type="button" className="btn btn-secondary" disabled={busy === client.id} onClick={() => perform(client, 'block')}>{client.blocked ? 'Débloquer' : 'Bloquer'}</button>
-            <button type="button" className="btn btn-secondary" disabled={busy === client.id} onClick={() => perform(client, 'remove')}>Supprimer de ma liste</button>
+            <button type="button" className="btn btn-secondary" disabled={busy === client.id} onClick={() => perform(client, 'remove')}>Supprimer</button>
           </div>
         </div>}
       </li>)}</ul>}
