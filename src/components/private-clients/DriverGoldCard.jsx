@@ -94,7 +94,7 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
               </div>
               <div className={`driver-gold-plan driver-gold-plan-single ${selected.badge ? "featured" : ""}`} aria-live="polite">
                 {selected.badge && <span className="driver-gold-plan-badge">{selected.badge}</span>}
-                <span className="driver-gold-plan-term"><CalendarDays size={17} aria-hidden="true" />{selected.id === "monthly" ? "Mensuel" : selected.id === "halfyear" ? "6 mois" : "Annuel"}</span>
+                <span className="driver-gold-plan-term"><CalendarDays size={17} aria-hidden="true" />{selected.id === "monthly" ? "Mensuel" : selected.id === "halfyear" ? "6 mois" : "12 mois"}</span>
                 <strong className="driver-gold-plan-total">{euro(selected.cents)}</strong>
                 <span className="driver-gold-plan-monthly">{selected.months === 1 ? "TTC / mois" : `TTC / ${selected.months} mois`}</span>
                 {selected.months > 1 && <span className="driver-gold-plan-saving">soit {euro(Math.round(selected.cents / selected.months))} / mois · Économisez {saving} %</span>}
