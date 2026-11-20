@@ -55,6 +55,28 @@ async function stopLearning(admin, settings, reason) {
   if (updated.error) throw updated.error;
   return { ok: false, stopped: true, reason, error: reason };
 }
+// Record only original, direct Uber offers; never client discounts or fallback fares.
+export async function recordClientUberQuote(admin, pickup, dropoff, products, route) {
+  if (!Array.isArray(products) || !products.length) return { saved: 0 };
+  const setting = await admin.from("pricing_rules").select("rule").eq("vehicle_type", "uber_ai_learning").maybeSingle();
+  if (setting.error) throw setting.error;
+  if (setting.data?.rule?.enabled !== true) return { saved: 0 };
+  if (![pickup?.lat,pickup?.lng,dropoff?.lat,dropoff?.lng].every(Number.isFinite)) return { saved: 0 };
+  const distanceKm = Number(route?.distanceMeters) > 0 ? Number(route.distanceMeters)/1000 : km(pickup,dropoff);
+  const context = features(new Date());
+  const rows = products.filter(p => p.currency === "EUR" && Number.isFinite(p.price) && p.price > 0).map(p => ({
+    pickup_name: "Recherche client", dropoff_name: "Recherche client",
+    pickup_lat: pickup.lat, pickup_lng: pickup.lng,
+    dropoff_lat: dropoff.lat, dropoff_lng: dropoff.lng,
+    distance_km: distanceKm, product_name: p.name || "Uber",
+    price_eur: p.price, trip_seconds: p.tripSeconds || null,
+    context: { ...context, source: "uber_live_client" },
+  }));
+  if (!rows.length) return { saved: 0 };
+  const result = await admin.from("uber_price_observations").insert(rows);
+  if (result.error) throw result.error;
+  return { saved: rows.length };
+}
 export async function runLearningSample(admin) {
   const config=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_ai_learning").maybeSingle();
   if(config.error)throw config.error;
