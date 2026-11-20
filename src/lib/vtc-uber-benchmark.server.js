@@ -26,6 +26,7 @@ export async function benchmarkBatch(admin,{batch=0,batchSize=2}={}) {
   await ensureBenchmarkRoutes(admin);
   const offset=Math.max(0,Math.min(49,Number(batch)||0))*2;
   const routes=must(await admin.from("uber_benchmark_routes").select("*").order("id").range(offset,offset+1));
+  if(routes.some(r=>Date.now()-new Date(r.created_at).getTime()>=365*86400000)) return {ok:true,expired:true,saved:0,message:"Période de suivi de 365 jours terminée"};
   const hourBucket=new Date(Math.floor(Date.now()/3600000)*3600000).toISOString();
   const cookieRow=must(await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_cookie").maybeSingle());
   const cookie=cookieRow?.rule?.cookie||null;
