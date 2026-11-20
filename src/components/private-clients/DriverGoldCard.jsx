@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Capacitor } from "@capacitor/core";
-import { ArrowRight, ArrowLeft, Plane, QrCode, Percent } from "lucide-react";
+import { ArrowRight, ArrowLeft, Plane, QrCode, Percent, Crown, CalendarDays, Check, Gift } from "lucide-react";
 import { apiFetch } from "@/lib/archive-fetch";
 import { GOLD_MONTHLY_CENTS, GOLD_TRIAL_DAYS } from "@/lib/driver-gold";
 
@@ -76,7 +76,7 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
           <span className="driver-gold-eyebrow">Abonnement chauffeur</span>
           {!gold.active && !gold.unavailable && <span className="driver-gold-inactive">Inactif</span>}
         </div>
-        <h2 id="driver-gold-status">StrasDrive <span>Gold</span></h2>
+        <h2 id="driver-gold-status">StrasDrive <span>Gold <Crown className="driver-gold-crown" size={27} aria-hidden="true" /></span></h2>
       </header>
 
       {gold.active ? (
@@ -94,11 +94,19 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
               </div>
               <div className={`driver-gold-plan driver-gold-plan-single ${selected.badge ? "featured" : ""}`} aria-live="polite">
                 {selected.badge && <span className="driver-gold-plan-badge">{selected.badge}</span>}
-                <span className="driver-gold-plan-term">{selected.label}</span>
+                <span className="driver-gold-plan-term"><CalendarDays size={17} aria-hidden="true" />{selected.id === "monthly" ? "Mensuel" : selected.id === "halfyear" ? "6 mois" : "Annuel"}</span>
                 <strong className="driver-gold-plan-total">{euro(selected.cents)}</strong>
-                <span className="driver-gold-plan-monthly">soit {euro(Math.round(selected.cents / selected.months))}/mois</span>
-                <span className="driver-gold-plan-saving">{saving > 0 ? `Économisez ${saving} %` : "Tarif standard"}</span>
-                <span className="driver-gold-plan-availability">{selected.available ? "Disponible" : "Bientôt disponible"}</span>
+                <span className="driver-gold-plan-monthly">{selected.months === 1 ? "TTC / mois" : `TTC / ${selected.months} mois`}</span>
+                {selected.months > 1 && <span className="driver-gold-plan-saving">soit {euro(Math.round(selected.cents / selected.months))} / mois · Économisez {saving} %</span>}
+                <div className="driver-gold-plan-divider" />
+                <ul className="driver-gold-plan-features">
+                  <li><Check size={16} aria-hidden="true" />Sans engagement</li>
+                  <li><Check size={16} aria-hidden="true" />Résiliable à tout moment</li>
+                  <li><Check size={16} aria-hidden="true" />{selected.months === 1 ? "Renouvellement automatique" : `Paiement unique (${selected.months} mois)`}</li>
+                </ul>
+                {canOpenBilling && <button type="button" className="driver-gold-plan-choose" onClick={openBilling} disabled={busy}>
+                  {busy ? "Ouverture…" : !manage && !selected.available ? "Bientôt disponible" : isIosNative ? "Achats Apple bientôt disponibles" : manage ? "Gérer mon abonnement" : "Choisir cette formule"} <ArrowRight size={20} aria-hidden="true" />
+                </button>}
               </div>
               <div className="driver-gold-plan-nav-slot">
                 {selectedIndex < goldPlans.length - 1 && <button type="button" className="driver-gold-plan-arrow" aria-label="Formule suivante" onClick={() => { setSelectedIndex((index) => Math.min(goldPlans.length - 1, index + 1)); setError(""); }}><ArrowRight size={22} aria-hidden="true" /></button>}
@@ -108,7 +116,7 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
               {goldPlans.map((plan, index) => <button key={plan.id} type="button" className={index === selectedIndex ? "active" : ""} aria-label={`Afficher la formule ${plan.label}`} aria-current={index === selectedIndex ? "step" : undefined} onClick={() => { setSelectedIndex(index); setError(""); }} />)}
             </div>
             <p className="driver-gold-plan-hint">{selected.available ? "Paiement et renouvellement mensuels." : `Paiement de ${euro(selected.cents)} pour ${selected.months} mois, après activation de cette formule.`}</p>
-            {trial && selected.available && <p className="driver-gold-trial">{GOLD_TRIAL_DAYS} jours offerts à la première souscription</p>}
+            {trial && selected.available && <p className="driver-gold-trial"><Gift size={19} aria-hidden="true" /> {GOLD_TRIAL_DAYS} jours offerts à la première souscription</p>}
           </div>
 
           <ul className="driver-gold-benefits">
@@ -119,7 +127,7 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
         </>
       )}
 
-      {canOpenBilling && (
+      {canOpenBilling && gold.active && (
         <button type="button" className="driver-gold-action" onClick={openBilling} disabled={busy}>
           {busy ? "Ouverture de Stripe…" : !manage && !selected.available ? "Formule bientôt disponible" : isIosNative ? (gold.active ? "Informations sur mon abonnement" : "Achats Apple bientôt disponibles") : gold.active ? "Gérer mon abonnement" :
             trial ? "Commencer mon essai gratuit" : "Réactiver StrasDrive Gold"}
