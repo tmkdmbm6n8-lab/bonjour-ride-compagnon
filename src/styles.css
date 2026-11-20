@@ -11256,3 +11256,36 @@ a.activity-pill:hover {
   font-size: 12px;
   color: #94a3b8;
 }
+
+
+/* Keep the full booking form reachable on short phones, tablets and desktops. */
+.shell-rider .rider-trip-panel {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+}
+.shell-rider .rider-trip-panel > .rider-booking-card {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  .shell-rider .rider-workspace > .rider-trip-panel {
+    box-sizing: border-box;
+    max-height: max(120px, calc(100dvh - 118px - env(safe-area-inset-bottom)));
+    padding-bottom: 2px;
+  }
+  .shell-rider .rider-trip-panel .rider-booking-card {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+@media (max-height: 680px) and (max-width: 900px) {
+  .shell-rider .rider-trip-panel .rider-booking-card {
+    padding: 14px;
+  }
+  .shell-rider .rider-vehicle-carousel-card {
+    padding: 10px 8px;
+  }
+}
