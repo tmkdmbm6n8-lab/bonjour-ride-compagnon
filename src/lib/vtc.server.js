@@ -318,7 +318,7 @@ async function estimates(db, a, b) {
   const rows = required(await db.from("pricing_rules").select("*"));
   const rules = { ...DEFAULT_PRICING };
   for (const row of rows) {
-    if (row.vehicle_type !== "uber_discount" && row.vehicle_type !== "uber_cookie") {
+    if (row.vehicle_type !== "uber_discount" && row.vehicle_type !== "uber_cookie" && row.vehicle_type !== "uber_hourly_checks") {
       rules[row.vehicle_type] = row.rule;
     }
   }
@@ -1658,6 +1658,19 @@ export async function handleVtc(input, context) {
         }, { onConflict: "vehicle_type" }));
         return { ok: true, count: check.count, products: check.products };
       }
+      if (body.vehicleType === "uber_hourly_checks") {
+        const enabled = body.enabled === true;
+        required(await admin.from("pricing_rules").upsert({
+          vehicle_type: "uber_hourly_checks",
+          is_active: false,
+          rule: { enabled, updatedAt: new Date().toISOString() },
+        }, { onConflict: "vehicle_type" }));
+        return { ok: true, enabled };
+      }
+      if (body.vehicleType === "uber_hourly_check_now") {
+        const { runUberFareCheck } = await import("./vtc-uber-check.server");
+        return runUberFareCheck(admin, { force: true });
+      }
       // Configuration spéciale pour la réduction Uber
       if (body.vehicleType === "uber_discount") {
         const enabled = Boolean(body.enabled);
@@ -1682,12 +1695,14 @@ export async function handleVtc(input, context) {
     }
     const allRows = required(await admin.from("pricing_rules").select("*"));
     const cookieRow = allRows.find((r) => r.vehicle_type === "uber_cookie");
+    const hourlyRow = allRows.find((r) => r.vehicle_type === "uber_hourly_checks");
     return {
-      rules: allRows.filter((r) => r.vehicle_type !== "uber_cookie").map((r) => ({
+      rules: allRows.filter((r) => r.vehicle_type !== "uber_cookie" && r.vehicle_type !== "uber_hourly_checks").map((r) => ({
         ...r.rule,
         vehicleType: r.vehicle_type,
         city: r.city,
       })),
+      uberHourlyChecks: hourlyRow?.rule || { enabled: false },
       uberCookieStatus: {
         hasCustomCookie: Boolean(cookieRow?.rule?.cookie),
         updatedAt: cookieRow?.rule?.updatedAt || null,
