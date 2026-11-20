@@ -29,6 +29,8 @@ import {
   Hand,
   ChevronUp,
   ChevronDown,
+  CreditCard,
+  Banknote,
 } from "lucide-react";
 import useGeolocation from "@/hooks/useGeolocation";
 
@@ -483,6 +485,15 @@ function DriverDashboard() {
                         : "Course en cours"}
                   </span>
                   <strong className="drv-sheet-earnings mono-nums">{money(ride.fare?.driverEarnings)}</strong>
+                  {ride.payment?.method === "cash" ? (
+                    <span className="drv-payment-badge drv-payment-badge--cash">
+                      <Banknote size={14} /> Espèces ({money(ride.fare?.total)})
+                    </span>
+                  ) : (
+                    <span className="drv-payment-badge drv-payment-badge--card">
+                      <CreditCard size={14} /> CB
+                    </span>
+                  )}
                 </div>
                 <button
                   className="drv-sheet-toggle"
@@ -536,6 +547,18 @@ function DriverDashboard() {
                   <div className="flex justify-between items-center mb-2 text-sm text-muted">
                     <span>Destination :</span>
                     <span className="text-white truncate max-w-[220px]">{ride.dropoff.address}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2 text-sm text-muted">
+                    <span>Mode de règlement :</span>
+                    {ride.payment?.method === "cash" ? (
+                      <span className="drv-payment-badge drv-payment-badge--cash">
+                        <Banknote size={14} /> Espèces ({money(ride.fare?.total)})
+                      </span>
+                    ) : (
+                      <span className="drv-payment-badge drv-payment-badge--card">
+                        <CreditCard size={14} /> Carte bancaire (CB)
+                      </span>
+                    )}
                   </div>
                   {ride.payment?.method === "cash" && (
                     <div className="drv-cash-alert mb-3">
@@ -705,19 +728,15 @@ function DriverDashboard() {
 
             {/* 3. Badges d'infos (Paiement, Note passager) */}
             <div className="flex justify-center gap-2 mb-5">
-              <span
-                style={{
-                  background: offer.paymentMethod === "cash" ? "rgba(234, 179, 8, 0.15)" : "rgba(255, 255, 255, 0.05)",
-                  color: offer.paymentMethod === "cash" ? "#facc15" : "#e5e7eb",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  padding: "4px 12px",
-                  borderRadius: 10,
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                }}
-              >
-                {offer.paymentMethod === "cash" ? `Espèces (${money(offer.total)})` : "Portefeuille"}
-              </span>
+              {offer.paymentMethod === "cash" ? (
+                <span className="drv-payment-badge drv-payment-badge--cash">
+                  <Banknote size={15} /> Espèces ({money(offer.total)})
+                </span>
+              ) : (
+                <span className="drv-payment-badge drv-payment-badge--card">
+                  <CreditCard size={15} /> CB
+                </span>
+              )}
 
               <span
                 style={{
