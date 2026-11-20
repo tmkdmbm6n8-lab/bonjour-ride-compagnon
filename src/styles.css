@@ -11470,3 +11470,23 @@ a.activity-pill:hover {
 .drv-payment-icon svg { width: 40px; height: 40px; stroke-width: 2; }
 .drv-payment-icon--card { color: #20c6ff; filter: drop-shadow(0 0 3px #20c6ff55); }
 .drv-payment-icon--cash { color: #31ef93; filter: drop-shadow(0 0 3px #31ef9355); }
+
+/* Driver offer: dismiss at upper-right, payment symbol in former dismiss position. */
+.drv-offer-top-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+}
+.drv-offer-top-close > button {
+  background: #15171e;
+}
+.drv-payment-icon--card,
+.drv-payment-icon--cash {
+  filter: none !important;
+  text-shadow: none !important;
+}
+.drv-payment-icon svg {
+  filter: none !important;
+  box-shadow: none !important;
+}
