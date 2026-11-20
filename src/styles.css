@@ -11182,3 +11182,17 @@ a.activity-pill:hover {
 .sd-become-driver-footnote { color: #a9a397; font-size: .78rem; line-height: 1.45; margin-top: 20px; }
 .sd-driver-application-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 13px 0; border-top: 1px solid #ffffff20; }
 .sd-driver-application-row p { margin-top: 3px; }
+
+
+/* Required VTC document acknowledgments before driver application. */
+.sd-become-driver-checklist { margin: 0 0 24px; text-align: left; }
+.sd-become-driver-checklist h2 { color: #f4d78f; font-size: 1.15rem; font-weight: 800; margin-bottom: 8px; }
+.sd-become-driver-checklist-intro { color: #c9c1b1; font-size: .89rem; line-height: 1.5; margin-bottom: 12px; }
+.sd-become-driver-checklist-progress { color: #f1ce80; font-size: .85rem; font-weight: 700; margin: 0 0 12px; }
+.sd-become-driver-check-row { display: flex; gap: 13px; align-items: flex-start; padding: 13px 12px; border: 1px solid #5c4c32; border-radius: 13px; margin-bottom: 9px; background: #ffffff08; cursor: pointer; }
+.sd-become-driver-check-row:has(input:checked) { border-color: #bb934b; background: #d6a94d14; }
+.sd-become-driver-check-row input { flex-shrink: 0; width: 20px; height: 20px; margin-top: 2px; accent-color: #e6bb65; }
+.sd-become-driver-check-row span { display: block; flex: 1; min-width: 0; }
+.sd-become-driver-check-row strong { display: block; color: #f5f0e7; font-size: .94rem; }
+.sd-become-driver-check-row small { display: block; color: #bdb6a9; font-size: .79rem; line-height: 1.4; margin-top: 5px; }
+.sd-become-driver-submit:disabled { box-shadow: none; opacity: .5; cursor: not-allowed; }
