@@ -41,7 +41,7 @@ export async function learningStatus(admin) {
   if(config.error)throw config.error;
   const count=await admin.from("uber_price_observations").select("id",{count:"exact",head:true});
   if(count.error)throw count.error;
-  const recent=await admin.from("uber_price_observations").select("observed_at,price_eur,product_name,pickup_name,dropoff_name").order("observed_at",{ascending:false}).limit(8);
+  const recent=await admin.from("uber_price_observations").select("id,observed_at,price_eur,product_name,pickup_name,dropoff_name,distance_km,trip_seconds,context,pickup_lat,pickup_lng,dropoff_lat,dropoff_lng").order("observed_at",{ascending:false}).limit(1000);
   if(recent.error)throw recent.error;
   return {config:config.data?.rule||{enabled:false,radiusKm:100},count:count.count||0,recent:recent.data||[]};
 }
