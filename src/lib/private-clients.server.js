@@ -150,6 +150,14 @@ export async function privateClients(admin, driverId) {
       ),
   );
   const byId = new Map(profiles.map((p) => [p.id, p]));
+  const rideRows = required(await admin.from("rides").select("rider_id")
+    .eq("driver_id", driverId).eq("status", "completed").eq("is_test", false)
+    .in("rider_id", links.map((l) => l.rider_id)).limit(1000));
+  const counts = new Map();
+  for (const ride of rideRows) counts.set(ride.rider_id, (counts.get(ride.rider_id) || 0) + 1);
+  const blocksResult = await admin.from("user_blocks").select("blocked_id").eq("blocker_id", driverId);
+  if (blocksResult.error && !["42P01", "PGRST205"].includes(blocksResult.error.code)) throw new Error(blocksResult.error.message);
+  const blockedIds = new Set((blocksResult.data || []).map((b) => b.blocked_id));
   return {
     gold,
     clients: links.map((l) => ({
@@ -157,6 +165,8 @@ export async function privateClients(admin, driverId) {
       name: shortName(byId.get(l.rider_id)?.name, "Client StrasDrive"),
       avatar: byId.get(l.rider_id)?.avatar || "",
       since: l.created_at,
+      completedTogether: counts.get(l.rider_id) || 0,
+      blocked: blockedIds.has(l.rider_id),
     })),
   };
 }
@@ -243,4 +253,14 @@ export async function setFavorite(admin, db, uid, { driverId, confirmReplacement
 
 export async function removeFavorite(db) {
   return required(await db.rpc("manage_favorite_driver", { p_driver_id: null, p_action: "remove" }));
+}
+
+/** Driver may remove only their own private-client link; this also removes the rider's favorite. */
+export async function removePrivateClient(admin, driverId, riderId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(riderId)) || driverId === riderId) throw new Error("Client invalide");
+  const link = required(await admin.from("rider_favorite_drivers").select("rider_id")
+    .eq("driver_id", driverId).eq("rider_id", riderId).maybeSingle());
+  if (!link) throw new Error("Ce client ne figure pas dans votre clientèle privée");
+  required(await admin.from("rider_favorite_drivers").delete().eq("driver_id", driverId).eq("rider_id", riderId));
+  return { ok: true };
 }
