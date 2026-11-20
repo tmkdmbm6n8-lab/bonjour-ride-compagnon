@@ -511,8 +511,7 @@ function AdminPricingPage() {
             `Dernier test : ${aiResult.error || aiResult.skipped || "échec"}`}
         </p>}
         <p className="tiny muted mt-2">
-          Le mode intensif fonctionne tant que cette page admin reste ouverte et visible. Les trajets sont choisis
-          dans une liste de lieux réels connus du secteur, pas encore parmi toutes les adresses possibles.
+          Le mode intensif fonctionne tant que cette page admin reste ouverte et visible. Les trajets utilisent des adresses françaises réelles avec numéro de rue, dans le rayon choisi. Chaque adresse aléatoire est réservée une seule fois en base. La cohorte horaire reste indépendante.
           Les refus et limitations du fournisseur peuvent interrompre les tests.
         </p>
         <div className="mt-4" style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
