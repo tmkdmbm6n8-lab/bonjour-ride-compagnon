@@ -11408,7 +11408,8 @@ a.activity-pill:hover {
 
 /* Center the floating booking sheet exactly within the viewport on mobile. */
 @media (max-width: 900px) {
-  .shell-rider .rider-workspace > .rider-trip-panel {
+  .shell-rider .rider-workspace > .rider-trip-panel,
+  .shell-rider .rider-workspace > .rider-trip-panel.has-estimate:not(.is-editing) {
     box-sizing: border-box;
     left: 50% !important;
     right: auto !important;
