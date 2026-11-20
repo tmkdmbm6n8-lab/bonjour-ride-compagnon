@@ -177,17 +177,14 @@ export async function compareRandomUberAi(admin,{maxDistanceKm=9}={}) {
     });
   }
   if(!comparisons.length)throw new Error("Uber ne fournit aucun prix valide en euros");
-  // Learn exclusively from authentic Uber prices when the model underestimates
-  // by at least 50 cents. The AI estimate itself is NEVER a training label.
-  // This also applies to manual comparisons, keeping the endpoint independent
-  // from any client-provided training flags.
-  const matched=offers.filter(offer=>comparisons.some(c=>c.category===offer.name&&c.ready&&Math.round((c.uberPrice-c.aiPrice)*100)>=50));
-  const observations=matched.map(offer=>({
+  // Every genuine Uber quote for short journeys is a training observation.
+  // Never train on the model's own prediction.
+  const observations=offers.filter(offer=>offer.currency==="EUR"&&Number.isFinite(offer.price)&&offer.price>0).map(offer=>({
     observed_at:at.toISOString(),pickup_name:pickup.name,dropoff_name:dropoff.name,
     pickup_lat:pickup.lat,pickup_lng:pickup.lng,dropoff_lat:dropoff.lat,dropoff_lng:dropoff.lng,
     distance_km:distanceKm,product_name:offer.name,price_eur:offer.price,
     trip_seconds:offer.tripSeconds||null,
-    context:{...features(at),source:"uber_ai_underestimate_correction"}
+    context:{...features(at),source:"uber_ai_random_comparison"}
   }));
   if(observations.length&&distanceKm<=9){
     const saved=await admin.from("uber_price_observations").insert(observations);
