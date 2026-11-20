@@ -11411,10 +11411,10 @@ a.activity-pill:hover {
   .shell-rider .rider-workspace > .rider-trip-panel,
   .shell-rider .rider-workspace > .rider-trip-panel.has-estimate:not(.is-editing) {
     box-sizing: border-box;
-    left: 50% !important;
+    left: 50vw !important;
     right: auto !important;
     transform: translateX(-50%);
-    width: calc(100% - 24px) !important;
+    width: calc(100vw - 24px) !important;
     max-width: 560px !important;
     margin-inline: 0 !important;
   }
