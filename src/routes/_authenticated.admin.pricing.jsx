@@ -49,7 +49,22 @@ function AdminPricingPage() {
     if (!res.ok) return;
     const data = await res.json();
     setAiConfig(data.config);
-    setAiStats({ count: data.count, recent: data.recent });
+    setAiStats(prev => ({ ...prev, count: data.count }));
+  }
+
+  async function loadAllAiObservations() {
+    const all = [];
+    let offset = 0;
+    // Retrieve every page; the database has no artificial 1000-observation cutoff.
+    while (true) {
+      const res = await fetch(`/api/admin/pricing-ai-observations?offset=${offset}&limit=500`);
+      if (!res.ok) throw new Error("Historique Uber indisponible");
+      const page = await res.json();
+      all.push(...(page.observations || []));
+      if (!page.hasMore) break;
+      offset = page.nextOffset;
+    }
+    setAiStats(prev => ({ ...prev, recent: all }));
   }
 
   async function saveAiConfig(next) {
@@ -85,7 +100,7 @@ function AdminPricingPage() {
         return;
       }
       setAiResult(data);
-      if (data.ok) loadAiStatus().catch(() => {});
+      if (data.ok) { loadAiStatus().catch(() => {}); loadAllAiObservations().catch(() => {}); }
       if (data.stopped) {
         setAiConfig((prev) => ({ ...prev, enabled: false, stopReason: data.reason }));
         toast(data.reason || "Prix Uber indisponibles : IA arrêtée automatiquement", "error", 6000);
@@ -109,6 +124,7 @@ function AdminPricingPage() {
 
   useEffect(() => {
     loadAiStatus().catch(() => {});
+    loadAllAiObservations().catch(() => {});
     // Keep the observation count current when clients request prices elsewhere.
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") loadAiStatus().catch(() => {});
@@ -481,7 +497,7 @@ function AdminPricingPage() {
       </div>
 
       <UberBenchmarkChart />
-      <UberAnalytics observations={aiStats.recent || []} total={aiStats.count || 0} onRefresh={() => loadAiStatus().catch(() => toast("Actualisation impossible", "error"))} />
+      <UberAnalytics observations={aiStats.recent || []} total={aiStats.count || 0} onRefresh={() => Promise.all([loadAiStatus(), loadAllAiObservations()]).catch(() => toast("Actualisation impossible", "error"))} />
 
       <h2 style={{ fontSize: "1.15rem", marginBottom: 12 }}>Grille tarifaire de secours (StrasDrive)</h2>
       <p className="small muted mb-6">
