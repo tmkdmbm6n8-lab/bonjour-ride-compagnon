@@ -9247,19 +9247,12 @@ a.activity-pill:hover {
 .landing-hero {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 28px 24px 72px;
-}
-
-/* Plein écran sur PC : la section suivante n'apparaît qu'au premier scroll */
-@media (min-width: 1024px) {
-  .landing-hero {
-    min-height: calc(100vh - 70px);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 20px 24px 40px;
-    box-sizing: border-box;
-  }
+  padding: 24px 20px 60px;
+  min-height: calc(100dvh - 64px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
 }
 .strasbourg-skyline {
   width: 100%;
