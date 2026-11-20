@@ -36,12 +36,19 @@ export default function UberAnalytics({observations=[],total=0,onRefresh}) {
   const [period,setPeriod]=useState("30");
   const [product,setProduct]=useState("all");
   const [search,setSearch]=useState("");
+  const [departureSearch,setDepartureSearch]=useState("");
+  const [arrivalSearch,setArrivalSearch]=useState("");
   const [page,setPage]=useState(0);
   const rows=useMemo(()=>{
     const min=period==="all"?0:Date.now()-Number(period)*86400000;
     return observations.filter(x=>(distanceTab==="all"||(Number(x.distance_km)>0&&Number(x.distance_km)<=9))&&new Date(x.observed_at).getTime()>=min&&(product==="all"||x.product_name===product)&&
       (!search||[x.pickup_name,x.dropoff_name,x.product_name].some(t=>String(t||"").toLowerCase().includes(search.toLowerCase()))));
   },[observations,period,product,search,distanceTab]);
+  const normalizeAddress=(value)=>String(value||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLocaleLowerCase("fr-FR").replace(/[^a-z0-9]+/g," ").trim();
+  const historyRows=useMemo(()=>{
+    const from=normalizeAddress(departureSearch),to=normalizeAddress(arrivalSearch);
+    return rows.filter(x=>(!from||normalizeAddress(x.pickup_name).includes(from))&&(!to||normalizeAddress(x.dropoff_name).includes(to)));
+  },[rows,departureSearch,arrivalSearch]);
   const prices=rows.map(x=>Number(x.price_eur)).filter(Number.isFinite);
   const distances=rows.map(x=>Number(x.distance_km)).filter(x=>Number.isFinite(x)&&x>0);
   const days=group(rows,x=>new Date(x.observed_at).toISOString().slice(0,10)).sort((a,b)=>a.label.localeCompare(b.label)).map(x=>({...x,label:x.label.slice(5)}));
@@ -106,12 +113,19 @@ export default function UberAnalytics({observations=[],total=0,onRefresh}) {
         <div style={{border:"1px solid var(--border)",borderRadius:12,padding:16}}><strong>Origine des observations</strong><div className="mt-3">{sources.map(x=><p className="small" key={x.label}>{x.label} : <strong>{x.count}</strong> observations</p>)}</div></div>
       </div>
       <div className="mt-5" style={{overflowX:"auto"}}>
-        <div className="flex items-center justify-between mb-3"><strong>Historique détaillé</strong><span className="tiny muted">{rows.length} résultats</span></div>
+        <div className="flex items-center justify-between mb-3"><strong>Historique détaillé</strong><span className="tiny muted">{historyRows.length} résultat(s) sur {rows.length}</span></div>
+        <div className="flex flex-wrap gap-2 mb-3">
+          <input className="input" type="search" aria-label="Rechercher par adresse de départ" placeholder="Adresse de départ (ex. Jean Monnet)" value={departureSearch} onChange={e=>{setDepartureSearch(e.target.value);setPage(0)}} style={{flex:"1 1 210px"}}/>
+          <input className="input" type="search" aria-label="Rechercher par adresse d'arrivée" placeholder="Adresse d'arrivée (ex. République)" value={arrivalSearch} onChange={e=>{setArrivalSearch(e.target.value);setPage(0)}} style={{flex:"1 1 210px"}}/>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={!departureSearch&&!arrivalSearch} onClick={()=>{setDepartureSearch("");setArrivalSearch("");setPage(0)}}>Effacer</button>
+        </div>
+        <p className="tiny muted mb-3">Recherche dans les observations de l'onglet et de la période sélectionnés. Les adresses anonymisées « Recherche client » ne sont pas retrouvables par leur nom.</p>
+        {!historyRows.length&&<p className="small muted mb-3">Aucune course enregistrée ne correspond à ces adresses et filtres.</p>}
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:700}}>
           <thead><tr>{["Date","Gamme","Départ","Arrivée","Distance","Durée","Prix Uber","Origine"].map(x=><th key={x} style={{textAlign:"left",padding:9,borderBottom:"1px solid var(--border)"}}>{x}</th>)}</tr></thead>
-          <tbody>{rows.slice(page*20,(page+1)*20).map((x,i)=><tr key={x.id??i}>{[stamp(x.observed_at),x.product_name,x.pickup_name,x.dropoff_name,Number(x.distance_km).toFixed(1)+" km",x.trip_seconds?Math.round(x.trip_seconds/60)+" min":"—",euro(Number(x.price_eur)),x.context?.source==="uber_live_client"?"Client":"Simulation"].map((v,j)=><td key={j} style={{padding:9,borderBottom:"1px solid var(--border)"}}>{v}</td>)}</tr>)}</tbody>
+          <tbody>{historyRows.slice(page*20,(page+1)*20).map((x,i)=><tr key={x.id??i}>{[stamp(x.observed_at),x.product_name,x.pickup_name,x.dropoff_name,Number(x.distance_km).toFixed(1)+" km",x.trip_seconds?Math.round(x.trip_seconds/60)+" min":"—",euro(Number(x.price_eur)),x.context?.source==="uber_live_client"?"Client":"Simulation"].map((v,j)=><td key={j} style={{padding:9,borderBottom:"1px solid var(--border)"}}>{v}</td>)}</tr>)}</tbody>
         </table>
-        <div className="flex gap-2 items-center mt-3"><button className="btn btn-secondary btn-sm" disabled={page===0} onClick={()=>setPage(x=>x-1)}>Précédent</button><span className="tiny">Page {page+1} / {Math.max(1,Math.ceil(rows.length/20))}</span><button className="btn btn-secondary btn-sm" disabled={(page+1)*20>=rows.length} onClick={()=>setPage(x=>x+1)}>Suivant</button></div>
+        <div className="flex gap-2 items-center mt-3"><button className="btn btn-secondary btn-sm" disabled={page===0} onClick={()=>setPage(x=>x-1)}>Précédent</button><span className="tiny">Page {page+1} / {Math.max(1,Math.ceil(historyRows.length/20))}</span><button className="btn btn-secondary btn-sm" disabled={(page+1)*20>=historyRows.length} onClick={()=>setPage(x=>x+1)}>Suivant</button></div>
       </div>
     </>}
   </section>;
