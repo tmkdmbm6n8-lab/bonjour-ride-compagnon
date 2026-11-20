@@ -1687,6 +1687,12 @@ export async function handleVtc(input, context) {
     const { benchmarkStatus } = await import("./vtc-uber-benchmark.server");
     return benchmarkStatus(admin);
   }
+  if (p === "/api/admin/pricing-ai-road-pool") {
+    const { roadPoolStatus, buildRoadPoolBatch } = await import("./vtc-ai-road-pool.server");
+    if (method === "GET") return roadPoolStatus(admin);
+    if (method === "POST") return buildRoadPoolBatch(admin,{limit:Number(body.limit)||5});
+    throw new Error("Méthode non autorisée");
+  }
   if (p === "/api/admin/pricing-ai-compare") {
     if (method !== "POST") throw new Error("Méthode non autorisée");
     const { compareRandomUberAi } = await import("./vtc-pricing-learning.server");
