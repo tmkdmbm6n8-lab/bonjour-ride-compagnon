@@ -25,6 +25,8 @@ const FIELDS = [
 function AdminPricingPage() {
   const toast = useToast();
   const [rules, setRules] = useState(null);
+  const [pricingSource, setPricingSource] = useState("auto");
+  const [sourceSaving, setSourceSaving] = useState(false);
   const [savingType, setSavingType] = useState(null);
 
   // État de la réduction Uber
@@ -43,6 +45,28 @@ function AdminPricingPage() {
   const [aiPredictionDistance, setAiPredictionDistance] = useState(10);
   const [aiPrediction, setAiPrediction] = useState(null);
   const aiInFlight = useRef(false);
+
+  async function savePricingSource(mode) {
+    setSourceSaving(true);
+    try {
+      const res = await fetch("/api/admin/pricing-source", {
+        method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode})
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Enregistrement impossible");
+      setPricingSource(data.mode);
+      toast("Mode de tarification enregistré", "success");
+    } catch (e) { toast(e.message || "Erreur de tarification", "error"); }
+    finally { setSourceSaving(false); }
+  }
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/admin/pricing-source").then(r=>r.json()).then(data=>{
+      if(active && ["auto","uber","ai"].includes(data.mode))setPricingSource(data.mode);
+    }).catch(()=>{});
+    return ()=>{active=false};
+  }, []);
 
   async function loadAiStatus() {
     const res = await fetch("/api/admin/pricing-ai");
@@ -510,54 +534,28 @@ function AdminPricingPage() {
         </div>
       </div>
 
+      <div className="card card-pad mb-5">
+        <h3 style={{fontSize:"1.15rem",marginBottom:8}}>Source des prix proposés aux clients</h3>
+        <p className="small muted mb-3">Choisis la source utilisée pour calculer les tarifs. Le mode automatique privilégie Uber puis bascule sur ton modèle IA si une catégorie Uber n'est plus disponible.</p>
+        <div className="flex gap-2 flex-wrap mb-3">
+          {[["auto","Automatique · Uber → IA"],["uber","Uber uniquement"],["ai","IA uniquement"]].map(([mode,label])=>(
+            <button type="button" key={mode}
+              className={`btn btn-sm ${pricingSource===mode?"btn-primary":"btn-secondary"}`}
+              disabled={sourceSaving} onClick={()=>savePricingSource(mode)}>{label}</button>
+          ))}
+        </div>
+        <p className="tiny muted">
+          {pricingSource==="auto"?"Uber est prioritaire. Si le cookie expire ou si Uber ne fournit plus de prix, le modèle IA prend le relais par catégorie.":
+           pricingSource==="uber"?"Seuls les tarifs Uber sont utilisés. Sans prix Uber, aucun tarif n'est inventé.":
+           "Les tarifs sont calculés uniquement à partir des observations Uber enregistrées, sans nouvelle requête Uber pour le devis."}
+        </p>
+        <p className="tiny muted mt-2">Si l'IA manque de données pour une catégorie, cette catégorie ne peut pas être tarifée. La grille fixe de secours a été retirée.</p>
+      </div>
+
       <UberBenchmarkChart />
       <UberAnalytics observations={aiStats.recent || []} total={aiStats.count || 0} onRefresh={() => Promise.all([loadAiStatus(), loadAllAiObservations()]).catch(() => toast("Actualisation impossible", "error"))} />
 
-      <h2 style={{ fontSize: "1.15rem", marginBottom: 12 }}>Grille tarifaire de secours (StrasDrive)</h2>
-      <p className="small muted mb-6">
-        Appliquée automatiquement si l'API Uber est momentanément injoignable. Aucun tarif ne descend sous le plancher
-        ARPE (9 € nets par course, 30 € nets/h, 1 € net/km).
-      </p>
 
-      {/* ── Cartes par gamme ── */}
-      <div className="grid-2">
-        {Object.keys(DEFAULT_PRICING).map((type) => (
-          <div key={type} className="card card-pad">
-            <div className="flex items-center justify-between mb-4">
-              <h3 style={{ fontSize: "1.05rem" }}>{VEHICLE_LABELS[type] || type}</h3>
-              {rules[type]._unsaved && <span className="badge badge-warning">Valeurs par défaut utilisées</span>}
-            </div>
-            <div className="grid-2" style={{ gap: 12 }}>
-              {FIELDS.map(([field, label]) => (
-                <div key={field} className="field">
-                  <label htmlFor={`${type}-${field}`} className="tiny">
-                    {label}
-                  </label>
-                  <input
-                    id={`${type}-${field}`}
-                    className="input"
-                    style={{ minHeight: 40 }}
-                    type="number"
-                    step="0.05"
-                    min="0"
-                    value={rules[type][field]}
-                    onChange={setField(type, field)}
-                  />
-                </div>
-              ))}
-            </div>
-            <button className="btn btn-primary btn-sm mt-4" onClick={() => save(type)} disabled={savingType === type}>
-              {savingType === type ? (
-                <span className="spinner" />
-              ) : (
-                <>
-                  <Check size={14} /> Enregistrer
-                </>
-              )}
-            </button>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
