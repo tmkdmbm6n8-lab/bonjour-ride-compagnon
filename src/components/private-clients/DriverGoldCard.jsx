@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { ArrowRight, Plane, QrCode, Percent } from "lucide-react";
 import { apiFetch } from "@/lib/archive-fetch";
 import { GOLD_MONTHLY_CENTS, GOLD_TRIAL_DAYS } from "@/lib/driver-gold";
@@ -24,11 +25,20 @@ export function goldPeriodText(gold) {
 export default function DriverGoldCard({ gold, waitingForStripe }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const isIosNative = typeof window !== "undefined" && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
   if (!gold) return null;
   const manage = gold.canManage;
 
   async function openBilling() {
+    // Never start a Stripe checkout inside native iOS. Apple purchases must be
+    // verified by the App Store server before granting a Gold entitlement.
+    if (isIosNative) {
+      setError(gold.active
+        ? "Pour gérer un abonnement Gold existant souscrit sur le Web, ouvrez votre compte StrasDrive depuis un navigateur. Les abonnements Apple ne sont pas encore activés."
+        : "Les achats Gold sur iPhone seront disponibles après l’activation et la vérification sécurisée des achats intégrés Apple.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -80,12 +90,12 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
 
       {canOpenBilling && (
         <button type="button" className="driver-gold-action" onClick={openBilling} disabled={busy}>
-          {busy ? "Ouverture de Stripe…" : gold.active ? "Gérer mon abonnement" :
+          {busy ? "Ouverture de Stripe…" : isIosNative ? (gold.active ? "Informations sur mon abonnement" : "Achats Apple bientôt disponibles") : gold.active ? "Gérer mon abonnement" :
             trial ? "Commencer mon essai gratuit" : "Réactiver StrasDrive Gold"}
           <ArrowRight size={18} aria-hidden="true" />
         </button>
       )}
-      {trial && <p className="driver-gold-note">Sans carte enregistrée, l’essai se termine sans prélèvement.</p>}
+      {trial && <p className="driver-gold-note">{isIosNative ? "L’essai Apple sera proposé après activation des achats intégrés." : "Sans carte enregistrée, l’essai se termine sans prélèvement."}</p>}
       {waitingForStripe && !gold.active && <p className="driver-gold-note" role="status">Vérification de votre abonnement auprès de Stripe…</p>}
       {gold.unavailable && <p className="driver-gold-note" role="status">Le statut de votre abonnement est temporairement indisponible.</p>}
       {error && <p className="driver-gold-error" role="alert">{error}</p>}
