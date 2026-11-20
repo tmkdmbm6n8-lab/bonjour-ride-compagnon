@@ -799,11 +799,21 @@ function RiderDashboard() {
                   </div>
                 )}
 
-                {/* Mode de paiement — Carte ou Espèces */}
+                {/* Mode de paiement — Symétrie parfaite Carte & Espèces */}
                 <div className="rider-payment-options mt-4" role="radiogroup" aria-label="Mode de paiement">
                   {[
-                    { id: "card", icon: CreditCard, label: "Carte / Google Pay", detail: "CB, GPay, Apple Pay" },
-                    { id: "cash", icon: Banknote, label: "Espèces", detail: "Au chauffeur" },
+                    {
+                      id: "card",
+                      icon: CreditCard,
+                      label: "Carte bancaire",
+                      detail: "Apple Pay · Google Pay"
+                    },
+                    {
+                      id: "cash",
+                      icon: Banknote,
+                      label: "Espèces",
+                      detail: "Règlement au chauffeur"
+                    },
                   ].map(({ id, icon: Icon, label, detail }) => (
                     <button
                       key={id}
@@ -813,10 +823,10 @@ function RiderDashboard() {
                       onClick={() => setPaymentMethod(id)}
                       className="rider-payment-option"
                     >
-                      <span className="flex items-center gap-2 tiny" style={{ fontWeight: 600 }}>
-                        <Icon size={16} /> {label}
+                      <span className="flex items-center justify-center gap-2" style={{ fontWeight: 600, fontSize: "0.9rem" }}>
+                        <Icon size={18} /> {label}
                       </span>
-                      <span className="tiny mono-nums rider-payment-detail">{detail}</span>
+                      <span className="rider-payment-detail">{detail}</span>
                     </button>
                   ))}
                 </div>
