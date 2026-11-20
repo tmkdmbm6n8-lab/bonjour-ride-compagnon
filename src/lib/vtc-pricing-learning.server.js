@@ -45,6 +45,16 @@ export async function learningStatus(admin) {
   if(recent.error)throw recent.error;
   return {config:config.data?.rule||{enabled:false,radiusKm:100},count:count.count||0,recent:recent.data||[]};
 }
+async function stopLearning(admin, settings, reason) {
+  const stoppedAt = new Date().toISOString();
+  const updated = await admin.from("pricing_rules").upsert({
+    vehicle_type: "uber_ai_learning",
+    is_active: false,
+    rule: { ...settings, enabled: false, stoppedAt, stopReason: reason },
+  }, { onConflict: "vehicle_type" });
+  if (updated.error) throw updated.error;
+  return { ok: false, stopped: true, reason, error: reason };
+}
 export async function runLearningSample(admin) {
   const config=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_ai_learning").maybeSingle();
   if(config.error)throw config.error;
@@ -59,7 +69,7 @@ export async function runLearningSample(admin) {
   const cookie=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_cookie").maybeSingle();
   if(cookie.error)throw cookie.error;
   const products=await uberProducts({lat:latA,lng:lngA},{lat:latB,lng:lngB},cookie.data?.rule?.cookie||null);
-  if(!products?.length)return {ok:false,error:"Aucun tarif reçu : session ou service indisponible"};
+  if(!products?.length)return stopLearning(admin, settings, "Aucun tarif direct Uber reçu : collecte arrêtée automatiquement.");
   const now=new Date();
   const context=features(now);
   const observations=products.filter(p=>p.currency==="EUR"&&Number.isFinite(p.price)&&p.price>0).map(p=>({
@@ -69,7 +79,7 @@ export async function runLearningSample(admin) {
     product_name:p.name||"Uber",price_eur:p.price,trip_seconds:p.tripSeconds||null,
     context,
   }));
-  if(!observations.length)return {ok:false,error:"Aucun prix en euros exploitable"};
+  if(!observations.length)return stopLearning(admin, settings, "Aucun prix Uber valide en euros : collecte arrêtée automatiquement.");
   const insert=await admin.from("uber_price_observations").insert(observations);
   if(insert.error)throw insert.error;
   return {ok:true,saved:observations.length,pickup:nameA,dropoff:nameB};
