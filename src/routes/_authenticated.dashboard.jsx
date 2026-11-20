@@ -84,7 +84,7 @@ function RiderDashboard() {
   // Booking form state
   const [pickup, setPickup] = useState(null); // {address, lat, lng}
   const [dropoff, setDropoff] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("wallet"); // 'wallet' | 'cash' | 'card'
+  const [paymentMethod, setPaymentMethod] = useState("card"); // 'card' | 'cash'
   const [cardKey, setCardKey] = useState(0); // >0 while Stripe's card form is shown
   const cardRef = useRef({ booking: null, sessionId: null });
   const [pickupText, setPickupText] = useState("");
@@ -799,17 +799,11 @@ function RiderDashboard() {
                   </div>
                 )}
 
-                {/* Payment — wallet or cash */}
+                {/* Mode de paiement — Carte ou Espèces */}
                 <div className="rider-payment-options mt-4" role="radiogroup" aria-label="Mode de paiement">
                   {[
-                    {
-                      id: "wallet",
-                      icon: Wallet,
-                      label: "Portefeuille",
-                      detail: walletBalance != null ? money(walletBalance) : "—",
-                    },
-                    { id: "card", icon: CreditCard, label: "Carte", detail: "" },
-                    { id: "cash", icon: Banknote, label: "Espèces", detail: "" },
+                    { id: "card", icon: CreditCard, label: "Carte / Google Pay", detail: "CB, GPay, Apple Pay" },
+                    { id: "cash", icon: Banknote, label: "Espèces", detail: "Au chauffeur" },
                   ].map(({ id, icon: Icon, label, detail }) => (
                     <button
                       key={id}
@@ -834,8 +828,7 @@ function RiderDashboard() {
 
                 {paymentMethod === "card" && selectedFare && !insufficientWallet && (
                   <p className="tiny muted mt-2">
-                    Vous payez {money(selectedFare.total)} par carte maintenant ; la course est lancée dès le paiement
-                    validé. En cas d’annulation, le montant reste sur votre portefeuille.
+                    Paiement sécurisé par carte bancaire, Google Pay ou Apple Pay, selon les moyens disponibles sur votre appareil. La réservation est lancée dès la validation du paiement.
                   </p>
                 )}
 
