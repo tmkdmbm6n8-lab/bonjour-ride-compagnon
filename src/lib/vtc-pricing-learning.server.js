@@ -74,6 +74,72 @@ export async function recordClientUberQuote(admin, pickup, dropoff, products, ro
   if (result.error) throw result.error;
   return { saved: rows.length };
 }
+async function randomAddress(radius) {
+  for (let attempt=0;attempt<12;attempt++) {
+    const angle=Math.random()*2*Math.PI;
+    const radiusKm=Math.sqrt(Math.random())*radius;
+    const lat=CENTER.lat+(radiusKm*Math.cos(angle))/111.2;
+    const lng=CENTER.lng+(radiusKm*Math.sin(angle))/(111.2*Math.cos(radians(CENTER.lat)));
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),4500);
+    try {
+      const response=await fetch(`https://api-adresse.data.gouv.fr/reverse/?lat=${lat}&lon=${lng}&type=housenumber&limit=1`,{signal:controller.signal});
+      if(!response.ok)continue;
+      const result=await response.json();
+      const feature=result.features?.[0];
+      const props=feature?.properties||{};
+      const coords=feature?.geometry?.coordinates;
+      if(!props.housenumber||!props.street||!props.city||!Array.isArray(coords))continue;
+      const address={name:props.label||`${props.housenumber} ${props.street}, ${props.city}`,lat:Number(coords[1]),lng:Number(coords[0]),id:String(props.id||`${coords[1]}:${coords[0]}`)};
+      if(![address.lat,address.lng].every(Number.isFinite))continue;
+      if(km(CENTER,address)>radius)continue;
+      if(km({lat,lng},address)>1.5)continue;
+      return address;
+    } catch(error) {
+      console.warn("[pricing-ai] Address lookup failed:",error?.message||error);
+    } finally {clearTimeout(timer);}
+  }
+  return null;
+}
+
+export async function compareRandomUberAi(admin) {
+  const config=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_ai_learning").maybeSingle();
+  if(config.error)throw config.error;
+  const radius=Math.max(1,Math.min(200,Number(config.data?.rule?.radiusKm)||100));
+  let pickup=null,dropoff=null;
+  for(let attempt=0;attempt<8;attempt++){
+    pickup=await randomAddress(radius);
+    dropoff=await randomAddress(radius);
+    if(pickup&&dropoff&&pickup.id!==dropoff.id&&km(pickup,dropoff)>=1)break;
+  }
+  if(!pickup||!dropoff||pickup.id===dropoff.id||km(pickup,dropoff)<1)
+    throw new Error("Impossible de trouver deux adresses numérotées distinctes");
+  const cookie=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_cookie").maybeSingle();
+  if(cookie.error)throw cookie.error;
+  const offers=await uberProducts(pickup,dropoff,cookie.data?.rule?.cookie||null);
+  if(!Array.isArray(offers)||!offers.length)throw new Error("Uber ne fournit aucun tarif pour ce trajet");
+  const distanceKm=km(pickup,dropoff);
+  const at=new Date();
+  const comparisons=[];
+  for(const offer of offers){
+    if(offer.currency!=="EUR"||!Number.isFinite(offer.price)||offer.price<=0)continue;
+    const ai=await predictLearnedPrice(admin,{distanceKm,productName:offer.name,date:at});
+    comparisons.push({
+      category:offer.name,
+      uberPrice:offer.price,
+      aiPrice:ai.ready?ai.price:null,
+      differenceEur:ai.ready?Math.round((ai.price-offer.price)*100)/100:null,
+      differencePct:ai.ready?Math.round(((ai.price-offer.price)/offer.price)*10000)/100:null,
+      samples:ai.samples,
+      ready:ai.ready
+    });
+  }
+  if(!comparisons.length)throw new Error("Uber ne fournit aucun prix valide en euros");
+  return {pickup:pickup.name,dropoff:dropoff.name,distanceKm:Math.round(distanceKm*100)/100,
+    comparedAt:at.toISOString(),comparisons,
+    distanceMethod:"à vol d'oiseau",note:"Comparaison expérimentale des prix Uber bruts et des prédictions IA, sans remise ni minimum tarifaire. La distance utilisée est à vol d'oiseau."};
+}
+
 export async function runLearningSample(admin) {
   const config=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_ai_learning").maybeSingle();
   if(config.error)throw config.error;
@@ -82,36 +148,9 @@ export async function runLearningSample(admin) {
   const radius=Math.max(1,Math.min(200,Number(settings.radiusKm)||100));
   // Sample genuine numbered street addresses from the French national address API.
   // Every address is claimed permanently and atomically before it is tested.
-  async function randomAddress() {
-    for (let attempt=0;attempt<12;attempt++) {
-      const angle=Math.random()*2*Math.PI;
-      const radiusKm=Math.sqrt(Math.random())*radius;
-      const lat=CENTER.lat+(radiusKm*Math.cos(angle))/111.2;
-      const lng=CENTER.lng+(radiusKm*Math.sin(angle))/(111.2*Math.cos(radians(CENTER.lat)));
-      const controller=new AbortController();
-      const timer=setTimeout(()=>controller.abort(),4500);
-      try {
-        const response=await fetch(`https://api-adresse.data.gouv.fr/reverse/?lat=${lat}&lon=${lng}&type=housenumber&limit=1`,{signal:controller.signal});
-        if(!response.ok)continue;
-        const result=await response.json();
-        const feature=result.features?.[0];
-        const props=feature?.properties||{};
-        const coords=feature?.geometry?.coordinates;
-        if(!props.housenumber||!props.street||!props.city||!Array.isArray(coords))continue;
-        const address={name:props.label||`${props.housenumber} ${props.street}, ${props.city}`,lat:Number(coords[1]),lng:Number(coords[0]),id:String(props.id||`${coords[1]}:${coords[0]}`)};
-        if(![address.lat,address.lng].every(Number.isFinite))continue;
-        if(km(CENTER,address)>radius)continue;
-        if(km({lat,lng},address)>1.5)continue;
-        return address;
-      } catch(error) {
-        console.warn("[pricing-ai] Address lookup failed:",error?.message||error);
-      } finally {clearTimeout(timer);}
-    }
-    return null;
-  }
   let selected=null;
   for(let attempt=0;attempt<15;attempt++){
-    const pickup=await randomAddress(),dropoff=await randomAddress();
+    const pickup=await randomAddress(radius),dropoff=await randomAddress(radius);
     if(!pickup||!dropoff||pickup.id===dropoff.id)continue;
     const claim=await admin.rpc("claim_uber_random_addresses",{
       p_pickup_key:pickup.id,p_dropoff_key:dropoff.id,
