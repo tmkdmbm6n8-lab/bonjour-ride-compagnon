@@ -823,7 +823,7 @@ function RiderDashboard() {
                       onClick={() => setPaymentMethod(id)}
                       className="rider-payment-option"
                     >
-                      <span className="flex items-center justify-center gap-2" style={{ fontWeight: 600, fontSize: "0.9rem" }}>
+                      <span className="rider-payment-option-title">
                         <Icon size={18} /> {label}
                       </span>
                       <span className="rider-payment-detail">{detail}</span>
