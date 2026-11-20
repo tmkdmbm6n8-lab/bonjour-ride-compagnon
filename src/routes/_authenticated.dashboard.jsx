@@ -66,7 +66,7 @@ const VEHICLE_META = {
   economy: { icon: Car, blurb: "Des courses au quotidien à prix avantageux" },
   comfort: { icon: Car, blurb: "Voitures récentes, plus d’espace pour les jambes" },
   pet: { icon: PawPrint, blurb: "Voyagez sereinement avec votre animal de compagnie" },
-  xl: { icon: Users, blurb: "Jusqu’à 6 places" },
+  xl: { icon: Users, blurb: "Jusqu’à 8 passagers" },
 };
 const CANCEL_REASONS = [
   "Le chauffeur met trop de temps",
