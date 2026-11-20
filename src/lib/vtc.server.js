@@ -1808,7 +1808,6 @@ export async function handleVtc(input, context) {
       uberCookieStatus: {
         hasCustomCookie: Boolean(cookieRow?.rule?.cookie),
         updatedAt: cookieRow?.rule?.updatedAt || null,
-        session: (await import("./vtc-uber-session.server")).inspectUberSession(cookieRow?.rule?.cookie || process.env.UBER_COOKIE || null),
       },
     };
   }
