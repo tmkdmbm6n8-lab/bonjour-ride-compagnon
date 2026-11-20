@@ -82,9 +82,24 @@ export async function runLearningSample(admin) {
   const radius=Math.max(1,Math.min(200,Number(settings.radiusKm)||100));
   const pool=PLACES.filter(p=>km(CENTER,{lat:p[1],lng:p[2]})<=radius);
   if(pool.length<2)return {skipped:"insufficient_addresses"};
-  const first=Math.floor(Math.random()*pool.length);
-  const second=(first+1+Math.floor(Math.random()*(pool.length-1)))%pool.length;
-  const [nameA,latA,lngA]=pool[first],[nameB,latB,lngB]=pool[second];
+  // Avoid repeating a route during a sampling cycle. Keep the fixed hourly benchmark separate.
+  // Track ordered pickup/dropoff pairs (A→B is distinct from B→A).
+  const candidates=[];
+  for(let i=0;i<pool.length;i++)for(let j=0;j<pool.length;j++){
+    if(i!==j)candidates.push([pool[i],pool[j]]);
+  }
+  const history=await admin.from("uber_price_observations")
+    .select("pickup_lat,pickup_lng,dropoff_lat,dropoff_lng,context")
+    .order("observed_at",{ascending:false}).limit(1000);
+  if(history.error)throw history.error;
+  const key=(a,b,c,d)=>[a,b,c,d].map(n=>Number(n).toFixed(5)).join(":");
+  const used=new Set((history.data||[]).filter(x=>x.context?.source!=="uber_live_client")
+    .map(x=>key(x.pickup_lat,x.pickup_lng,x.dropoff_lat,x.dropoff_lng)));
+  const fresh=candidates.filter(([a,b])=>!used.has(key(a[1],a[2],b[1],b[2])));
+  // Once every possible route has been visited, start a new cycle.
+  const choices=fresh.length?fresh:candidates;
+  const selected=choices[Math.floor(Math.random()*choices.length)];
+  const [nameA,latA,lngA]=selected[0],[nameB,latB,lngB]=selected[1];
   const cookie=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_cookie").maybeSingle();
   if(cookie.error)throw cookie.error;
   const products=await uberProducts({lat:latA,lng:lngA},{lat:latB,lng:lngB},cookie.data?.rule?.cookie||null);
