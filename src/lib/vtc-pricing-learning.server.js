@@ -41,9 +41,7 @@ export async function learningStatus(admin) {
   if(config.error)throw config.error;
   const count=await admin.from("uber_price_observations").select("id",{count:"exact",head:true});
   if(count.error)throw count.error;
-  const recent=await admin.from("uber_price_observations").select("id,observed_at,price_eur,product_name,pickup_name,dropoff_name,distance_km,trip_seconds,context,pickup_lat,pickup_lng,dropoff_lat,dropoff_lng").order("observed_at",{ascending:false}).limit(1000);
-  if(recent.error)throw recent.error;
-  return {config:config.data?.rule||{enabled:false,radiusKm:100},count:count.count||0,recent:recent.data||[]};
+  return {config:config.data?.rule||{enabled:false,radiusKm:100},count:count.count||0};
 }
 async function stopLearning(admin, settings, reason) {
   const stoppedAt = new Date().toISOString();
@@ -123,4 +121,15 @@ export async function predictLearnedPrice(admin,{distanceKm,productName="UberX",
   const total=weights.reduce((a,b)=>a+b,0);
   const price=ranked.reduce((a,x,i)=>a+weights[i]*x.price_eur*Math.max(.4,Math.min(2.5,distanceKm/x.distance_km)),0)/total;
   return {ready:true,price:Math.round(price*100)/100,samples:ranked.length,method:"weighted-neighbors"};
+}
+
+export async function learningObservationsPage(admin, { offset=0, limit=500 }={}) {
+  const start=Math.max(0,Math.floor(Number(offset)||0));
+  const size=Math.max(1,Math.min(500,Math.floor(Number(limit)||500)));
+  const res=await admin.from("uber_price_observations")
+    .select("id,observed_at,price_eur,product_name,pickup_name,dropoff_name,distance_km,trip_seconds,context,pickup_lat,pickup_lng,dropoff_lat,dropoff_lng")
+    .order("observed_at",{ascending:false}).order("id",{ascending:false})
+    .range(start,start+size-1);
+  if(res.error)throw res.error;
+  return {observations:res.data||[],offset:start,nextOffset:start+(res.data||[]).length,hasMore:(res.data||[]).length===size};
 }
