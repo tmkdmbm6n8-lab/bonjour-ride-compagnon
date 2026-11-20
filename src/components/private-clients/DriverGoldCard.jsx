@@ -95,6 +95,7 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
           <ArrowRight size={18} aria-hidden="true" />
         </button>
       )}
+      {!gold.included && !gold.unavailable && <p className="driver-gold-note">Abonnement sans engagement, résiliable à tout moment depuis la plateforme de souscription. En cas de résiliation, l’accès Gold reste actif jusqu’à la fin de la période payée, sans remboursement automatique de cette période ni nouveau renouvellement. Sous réserve des remboursements accordés par le prestataire de paiement et des droits prévus par la loi.</p>}
       {trial && <p className="driver-gold-note">{isIosNative ? "L’essai Apple sera proposé après activation des achats intégrés." : "Sans carte enregistrée, l’essai se termine sans prélèvement."}</p>}
       {waitingForStripe && !gold.active && <p className="driver-gold-note" role="status">Vérification de votre abonnement auprès de Stripe…</p>}
       {gold.unavailable && <p className="driver-gold-note" role="status">Le statut de votre abonnement est temporairement indisponible.</p>}
