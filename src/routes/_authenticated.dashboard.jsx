@@ -27,6 +27,8 @@ import {
   TrendingUp,
   LocateFixed,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Link from "@/lib/archive-navigation";
 import MapView from "@/components/ArchiveMap";
@@ -728,59 +730,57 @@ function RiderDashboard() {
                     selected={Boolean(favoriteChosen)}
                     onSelect={() => setFavoriteSelected(true)}
                   />
-                  {Object.entries(estimate.estimates).map(([type, fare]) => {
+                  {(() => {
+                    const types = ["economy", "comfort", "pet", "xl"].filter((type) => estimate.estimates[type]);
+                    const index = Math.max(0, types.indexOf(vehicleType));
+                    const type = types[index];
+                    if (!type) return null;
+                    const fare = estimate.estimates[type];
                     const Meta = VEHICLE_META[type];
                     const avail = availability?.[type];
+                    const changeType = (nextIndex) => {
+                      setFavoriteSelected(false);
+                      setVehicleType(types[nextIndex]);
+                    };
                     return (
-                      <button
-                        key={type}
-                        className={`vehicle-row ${!favoriteChosen && vehicleType === type ? "selected" : ""}`}
-                        onClick={() => {
-                          setFavoriteSelected(false);
-                          setVehicleType(type);
-                        }}
-                        aria-pressed={!favoriteChosen && vehicleType === type}
-                      >
-                        <Meta.icon
-                          size={22}
-                          style={{ color: !favoriteChosen && vehicleType === type ? "var(--gold-600)" : "var(--ink-400)", flexShrink: 0 }}
-                        />
-                        {/* Remplacer l'intérieur du bouton vehicle-row, vers la ligne 381 */}
-                        <span className="flex-1" style={{ minWidth: 0 }}>
-                          <span className="small" style={{ display: "block", fontWeight: 700 }}>
-                            {VEHICLE_LABELS[type]}
-                          </span>
-                          <span className="tiny muted truncate" style={{ display: "block" }}>
-                            {Meta.blurb}
-                          </span>
-                          {avail && (
-                            <span
-                              className="tiny vehicle-availability"
-                              style={{
-                                display: "block",
-                                fontWeight: 600,
+                      <div className="rider-vehicle-carousel" aria-label="Choisir une catégorie de course">
+                        <button type="button" className="rider-vehicle-arrow" aria-label="Catégorie précédente"
+                          disabled={index === 0} onClick={() => changeType(index - 1)}>
+                          <ChevronLeft size={22} />
+                        </button>
+                        <div className="vehicle-row selected rider-vehicle-carousel-card" aria-live="polite">
+                          <Meta.icon size={25} style={{ color: "var(--gold-600)", flexShrink: 0 }} />
+                          <span className="flex-1" style={{ minWidth: 0 }}>
+                            <span className="small" style={{ display: "block", fontWeight: 700 }}>{VEHICLE_LABELS[type]}</span>
+                            <span className="tiny muted" style={{ display: "block" }}>{Meta.blurb}</span>
+                            {avail && (
+                              <span className="tiny vehicle-availability" style={{
+                                display: "block", fontWeight: 600,
                                 color: avail.count ? "var(--success)" : "var(--text-2)",
-                              }}
-                            >
-                              {avail.count
-                                ? `${avail.count} chauffeur${avail.count > 1 ? "s" : ""} disponible${avail.count > 1 ? "s" : ""}${avail.etaMinutes ? ` · ${avail.etaMinutes} min` : ""}`
-                                : "Aucun chauffeur disponible"}
-                            </span>
-                          )}
-                        </span>
-                        <span className="flex-col" style={{ alignItems: "flex-end" }}>
-                          <span className="small mono-nums" style={{ fontWeight: 700 }}>
-                            {money(fare.total)}
+                              }}>
+                                {avail.count
+                                  ? `${avail.count} chauffeur${avail.count > 1 ? "s" : ""} disponible${avail.count > 1 ? "s" : ""}${avail.etaMinutes ? ` · ${avail.etaMinutes} min` : ""}`
+                                  : "Aucun chauffeur disponible"}
+                              </span>
+                            )}
                           </span>
-                          {fare.discount > 0 && (
-                            <span className="tiny muted mono-nums" style={{ textDecoration: "line-through" }}>
-                              {money(fare.originalTotal)}
-                            </span>
-                          )}
-                        </span>
-                      </button>
+                          <span className="flex-col" style={{ alignItems: "flex-end", flexShrink: 0 }}>
+                            <span className="small mono-nums" style={{ fontWeight: 700 }}>{money(fare.total)}</span>
+                            {fare.discount > 0 && (
+                              <span className="tiny muted mono-nums" style={{ textDecoration: "line-through" }}>
+                                {money(fare.originalTotal)}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <button type="button" className="rider-vehicle-arrow" aria-label="Catégorie suivante"
+                          disabled={index === types.length - 1} onClick={() => changeType(index + 1)}>
+                          <ChevronRight size={22} />
+                        </button>
+                        <span className="rider-vehicle-carousel-count">{index + 1} / {types.length}</span>
+                      </div>
                     );
-                  })}
+                  })()}
                 </div>
 
                 {selectedFare?.discount > 0 && (
