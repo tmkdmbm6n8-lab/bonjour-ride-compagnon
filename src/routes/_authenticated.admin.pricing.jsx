@@ -47,20 +47,36 @@ function AdminPricingPage() {
   const aiInFlight = useRef(false);
   const [priceComparison, setPriceComparison] = useState(null);
   const [comparisonBusy, setComparisonBusy] = useState(false);
-  const [comparisonMaxKm, setComparisonMaxKm] = useState(10);
-  async function comparePrices() {
-    if (comparisonBusy) return;
+  const [comparisonMaxKm, setComparisonMaxKm] = useState(9);
+  const [autoCompare, setAutoCompare] = useState(false);
+  const [autoStats, setAutoStats] = useState({tested:0,saved:0,errors:0});
+  const autoBusy = useRef(false);
+  async function comparePrices(automatic = false) {
+    if (autoBusy.current) return;
+    autoBusy.current = true;
     setComparisonBusy(true);
-    setPriceComparison(null);
+    if (!automatic) setPriceComparison(null);
     try {
       const res = await fetch("/api/admin/pricing-ai-compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({maxDistanceKm:comparisonMaxKm}) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Comparaison impossible");
       setPriceComparison(data);
+      if (automatic) setAutoStats(prev=>({...prev,tested:prev.tested+1,saved:prev.saved+(Number(data.savedCount)||0)}));
     } catch (error) {
       setPriceComparison({ error: error.message || "Comparaison impossible" });
-    } finally { setComparisonBusy(false); }
+      if (automatic) setAutoStats(prev=>({...prev,errors:prev.errors+1}));
+    } finally { autoBusy.current = false; setComparisonBusy(false); }
   }
+
+  useEffect(() => {
+    if (!autoCompare) return;
+    // Serial requests: aim for 10 starts/second, but never overlap or
+    // promise a throughput the address/Uber services cannot sustain.
+    const timer=setInterval(()=>{
+      if(document.visibilityState==="visible"&&!autoBusy.current) comparePrices(true);
+    },100);
+    return ()=>clearInterval(timer);
+  },[autoCompare,comparisonMaxKm]);
 
   async function savePricingSource(mode) {
     setSourceSaving(true);
@@ -573,9 +589,14 @@ function AdminPricingPage() {
           <button type="button" className={`btn btn-sm ${comparisonMaxKm===9?"btn-primary":"btn-secondary"}`} disabled={comparisonBusy} onClick={()=>setComparisonMaxKm(9)}>Petit trajet · 9 km</button>
           <button type="button" className={`btn btn-sm ${comparisonMaxKm===100?"btn-primary":"btn-secondary"}`} disabled={comparisonBusy} onClick={()=>setComparisonMaxKm(100)}>Grand trajet · 100 km</button>
         </div>
-        <button type="button" className="btn btn-primary btn-sm" disabled={comparisonBusy} onClick={comparePrices}>
+        <button type="button" className="btn btn-primary btn-sm" disabled={comparisonBusy || autoCompare} onClick={()=>comparePrices(false)}>
           {comparisonBusy ? "Comparaison en cours…" : "Tester un trajet aléatoire"}
         </button>
+        <button type="button" className={`btn btn-sm ${autoCompare?"btn-secondary":"btn-primary"}`} style={{marginLeft:8}} onClick={()=>{setAutoCompare(v=>!v);setComparisonMaxKm(9);}}>
+          {autoCompare?"Arrêter le test automatique":"Démarrer le test automatique"}
+        </button>
+        <p className="small muted mt-2">Mode automatique : trajets de 9 km maximum, jusqu'à 10 lancements par seconde selon les délais réseau, sans requêtes simultanées. Seuls les vrais prix Uber supérieurs d'au moins 0,50 € aux prédictions IA sont enregistrés. Fonctionne uniquement pendant que cette page est ouverte et visible.</p>
+        <p className="small mt-2">Tests terminés : <strong>{autoStats.tested}</strong> · Tarifs Uber enregistrés : <strong>{autoStats.saved}</strong> · Erreurs : <strong>{autoStats.errors}</strong></p>
         {priceComparison?.error && <p role="alert" className="small mt-3" style={{color:"#ef4444"}}>{priceComparison.error}</p>}
         {priceComparison?.comparisons && (
           <div className="mt-4">
