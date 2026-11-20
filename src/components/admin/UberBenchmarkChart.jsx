@@ -1,3 +1,4 @@
+import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { useEffect, useMemo, useState } from "react";
 const money=n=>Number(n).toLocaleString("fr-FR",{style:"currency",currency:"EUR"});
 export default function UberBenchmarkChart(){
@@ -7,6 +8,8 @@ export default function UberBenchmarkChart(){
   let active=true;
   const load=async()=>{try{
    const res=await fetch("/api/admin/uber-benchmark");
+   const type=res.headers.get("content-type")||"";
+   if(!type.includes("application/json"))throw new Error(`Le serveur a renvoyé une page au lieu de données (HTTP ${res.status}). Vérifier le déploiement.`);
    const body=await res.json();
    if(!res.ok)throw new Error(body.error||"Historique indisponible : vérifier la migration SQL 0011");
    if(active){setData(body);setError("");}
