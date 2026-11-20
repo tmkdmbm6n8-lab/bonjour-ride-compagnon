@@ -12,7 +12,6 @@ const dateFormat = new Intl.DateTimeFormat("fr-FR", {
   dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris",
 });
 const euro = (cents) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(cents / 100);
-const monthlyPrice = euro(GOLD_MONTHLY_CENTS);
 const goldPlans = [
   { id: "monthly", label: "1 mois", cents: GOLD_MONTHLY_CENTS, months: 1, available: true },
   { id: "halfyear", label: "6 mois", cents: 9999, months: 6, badge: "Meilleur rapport qualité-prix", available: false },
