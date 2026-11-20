@@ -4,6 +4,7 @@ import { accountRating } from "./account-ratings.server";
 import { recordOnlineTime } from "./driver-online-time.server";
 import { driverReportMessage } from "./driver-reports";
 import { visibleChatMessages, CHAT_ACTIVE_STATUSES } from "./ride-chat";
+import { isPairBlocked, setUserBlock, listUserBlocks } from "./user-blocks.server";
 import {
   closeRideChat,
   preserveRideChat,
@@ -441,10 +442,38 @@ export async function handleVtc(input, context) {
     throw new Error("Méthode non autorisée");
   }
 
+  if (p === "/api/admin/content-reports") {
+    if (method === "GET") {
+      const rows = required(await admin.from("contact_messages").select("id,topic,name,message,created_at,status")
+        .in("topic", ["safety", "safety_reviewed"]).order("created_at", { ascending: false }).limit(200));
+      return { reports: rows.flatMap((row) => {
+        try {
+          const item = JSON.parse(row.message);
+          return item.type === "ride_chat_report_v1" ? [{ ...item, id: row.id, status: row.topic === "safety_reviewed" ? "reviewed" : "pending" }] : [];
+        } catch { return []; }
+      }) };
+    }
+    if (method === "POST") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Signalement invalide");
+      const rows = required(await admin.from("contact_messages").select("id,message").eq("id", id).eq("topic", "safety").limit(1));
+      if (!rows.length) throw new Error("Signalement introuvable");
+      let parsed;
+      try { parsed = JSON.parse(rows[0].message); } catch { throw new Error("Signalement invalide"); }
+      if (parsed.type !== "ride_chat_report_v1") throw new Error("Signalement invalide");
+      required(await admin.from("contact_messages").update({ topic: "safety_reviewed" }).eq("id", id).eq("topic", "safety"));
+      return { ok: true };
+    }
+    throw new Error("Méthode non autorisée");
+  }
   if (p === "/api/admin/monitoring") {
     if (method !== "GET") throw new Error("Méthode non autorisée");
     const { readSiteActivity } = await import("./site-monitoring.server");
     return readSiteActivity(admin);
+  }
+  if (p === "/api/users/me/blocks") {
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    return { blocks: await listUserBlocks(admin, uid) };
   }
   if (p === "/api/users/me/export") {
     if (method !== "GET") throw new Error("Méthode non autorisée");
@@ -1143,6 +1172,7 @@ export async function handleVtc(input, context) {
           : canSeeOffer(ride, me, Date.now(), pool),
       )
       .sort((a, b) => distanceToPickupKm(a, me) - distanceToPickupKm(b, me))[0];
+    if (r && await isPairBlocked(admin, r.rider_id, uid)) r = null;
     if (test) {
       r = test.ride;
       me = me || test.driver;
@@ -1237,6 +1267,7 @@ export async function handleVtc(input, context) {
     const r = required(await admin.from("rides").select("*").eq("id", id).single());
     const participant = r.rider_id === uid || r.driver_id === uid;
     if (action === "accept") {
+      if (!r.is_test && await isPairBlocked(admin, r.rider_id, uid)) throw new Error("Cette mise en relation est indisponible.");
       if (r.status === "searching" && (r.messages || []).length)
         await closeRideChat(admin, id, { allowSearching: true });
       const approval = required(await admin.from("drivers").select("is_approved").eq("user_id", uid).single());
@@ -1441,6 +1472,21 @@ export async function handleVtc(input, context) {
         }
         required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
       }
+    } else if (action === "block" || action === "unblock") {
+      if (!participant || !r.driver_id) throw new Error("Accès refusé");
+      const otherId = r.rider_id === uid ? r.driver_id : r.rider_id;
+      return setUserBlock(admin, uid, otherId, action === "block");
+    } else if (action === "report-message") {
+      if (!participant || !r.driver_id) throw new Error("Accès refusé");
+      const msg = visibleChatMessages(r.messages).find((m) => m.id === body.messageId);
+      if (!msg || msg.from === (r.rider_id === uid ? "rider" : "driver")) throw new Error("Message introuvable");
+      const reason = String(body.reason || "Contenu abusif").trim().slice(0, 200);
+      if (!reason) throw new Error("Motif nécessaire");
+      const reporter = r.rider_id === uid ? "passager" : "chauffeur";
+      const report = JSON.stringify({ type: "ride_chat_report_v1", rideId: r.id, messageId: msg.id, messageType: msg.type, reporterId: uid, reportedUserId: r.rider_id === uid ? r.driver_id : r.rider_id, reason, createdAt: new Date().toISOString() });
+      if (CHAT_ACTIVE_STATUSES.includes(r.status)) await preserveRideChat(admin, r.id, uid);
+      required(await admin.from("contact_messages").insert({ topic: "safety", name: `Signalement chat ${r.id}`, email: context.claims.email || profile.email || "support@strasdrive.invalid", message: report }));
+      return { ok: true };
     } else if (action === "attachment") {
       if (!participant) throw new Error("Accès refusé");
       await sendChatAttachment(admin, r, uid, body);
@@ -1667,7 +1713,16 @@ export async function handleVtc(input, context) {
     const target = String(body.userId || "");
     if (!/^[0-9a-f-]{36}$/i.test(target)) throw new Error("Compte invalide");
     if (target === uid) throw new Error("Vous ne pouvez pas supprimer votre propre compte");
-    const files = (await admin.storage.from(DOCUMENTS_BUCKET).list(target, { limit: 1000 })).data || [];
+    // Do not erase payment/accounting records or cancel Gold before checking
+    // whether the account can actually be deleted safely.
+    for (const [table, column] of [["wallet_transactions", "user_id"], ["payouts", "driver_id"], ["withdrawal_requests", "driver_id"]]) {
+      const { data, error } = await admin.from(table).select("id").eq(column, target).limit(1);
+      if (error) throw new Error(error.message);
+      if (data.length) throw new Error("Ce compte contient des opérations financières à archiver avant suppression. Contactez le responsable des données.");
+    }
+    const { data: files, error: fileListError } = await admin.storage.from(DOCUMENTS_BUCKET).list(target, { limit: 1000 });
+    if (fileListError) throw new Error(fileListError.message);
+    if ((files || []).length === 1000) throw new Error("Trop de documents à effacer automatiquement.");
     const { closeGoldBillingForDeletedAccount } = await import("./driver-gold.server");
     try {
       await closeGoldBillingForDeletedAccount(admin, target);
@@ -1684,7 +1739,7 @@ export async function handleVtc(input, context) {
         .eq("topic", "driver_conversation")
         .like("message", '%"userId":"' + target + '"%'),
     );
-    if (files.length) await admin.storage.from(DOCUMENTS_BUCKET).remove(files.map((f) => `${target}/${f.name}`));
+    if (files?.length) required(await admin.storage.from(DOCUMENTS_BUCKET).remove(files.map((f) => `${target}/${f.name}`)));
     const { error } = await admin.auth.admin.deleteUser(target);
     if (error && !/not.?found/i.test(error.message))
       throw new Error(`Données effacées, mais l’accès au compte n’a pas pu être supprimé : ${error.message}`);
@@ -1853,6 +1908,11 @@ async function assignOffer(db, r, pool) {
     );
   }
   let drivers = pool || (await dispatchPool(db));
+  const blockResult = await db.from("user_blocks").select("blocker_id,blocked_id")
+    .or(`blocker_id.eq.${r.rider_id},blocked_id.eq.${r.rider_id}`);
+  const blocked = ["42P01", "PGRST205"].includes(blockResult.error?.code) ? [] : required(blockResult);
+  const excluded = new Set(blocked.map((b) => b.blocker_id === r.rider_id ? b.blocked_id : b.blocker_id));
+  drivers = drivers.filter((d) => !excluded.has(d.user_id));
   let route = r.route;
   if (!r.dispatch_phase && !route?.goldReturn) {
     const candidates = availableFor(r, drivers);

@@ -15,6 +15,7 @@ const NAV = [
   { href: '/admin/pricing', label: 'Tarification', icon: DollarSign },
   { href: '/admin/support', label: 'Assistance', icon: Inbox },
   { href: '/admin/chat-evidence', label: 'Échanges signalés', icon: MessagesSquare },
+  { href: '/admin/content-reports', label: 'Modération', icon: MessagesSquare },
   { href: '/admin/support?archive=1', label: 'Archives', icon: Archive },
 ];
 

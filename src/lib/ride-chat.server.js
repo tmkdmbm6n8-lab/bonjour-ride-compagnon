@@ -84,7 +84,7 @@ async function saveEvidence(admin, ride, marker) {
 export async function preserveRideChat(admin, rideId, uid, now = Date.now()) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const ride = await loadRide(admin, rideId);
-    if (ride.rider_id !== uid || !ride.driver_id || !CHAT_ACTIVE_STATUSES.includes(ride.status))
+    if (![ride.rider_id, ride.driver_id].includes(uid) || !ride.driver_id || !CHAT_ACTIVE_STATUSES.includes(ride.status))
       throw new Error("Signalez la course avant sa clôture pour conserver les échanges");
     const previous = ride.messages || [];
     const marker = chatRetention(previous) || {
