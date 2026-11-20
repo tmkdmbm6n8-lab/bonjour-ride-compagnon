@@ -28,10 +28,13 @@ async function drivingDistanceKm(a,b){
 }
 
 export async function roadPoolStatus(admin){
- const result=must(await admin.from("uber_ai_road_routes").select("distance_band,compared_at").limit(10000));
- const bands=ROAD_BANDS.map(b=>({...b,target:TARGET,count:0,compared:0}));
- const byKey=new Map(bands.map(b=>[b.key,b]));
- for(const row of result){const b=byKey.get(row.distance_band);if(b){b.count++;if(row.compared_at)b.compared++;}}
+ const bands=await Promise.all(ROAD_BANDS.map(async b=>{
+  const total=await admin.from("uber_ai_road_routes").select("id",{count:"exact",head:true}).eq("distance_band",b.key);
+  if(total.error)throw total.error;
+  const compared=await admin.from("uber_ai_road_routes").select("id",{count:"exact",head:true}).eq("distance_band",b.key).not("compared_at","is",null);
+  if(compared.error)throw compared.error;
+  return {...b,target:TARGET,count:total.count||0,compared:compared.count||0};
+ }));
  return {bands,total:bands.reduce((n,b)=>n+b.count,0),target:9000,compared:bands.reduce((n,b)=>n+b.compared,0)};
 }
 
@@ -41,7 +44,7 @@ export async function buildRoadPoolBatch(admin,{limit=5}={}){
  const added=Object.fromEntries(ROAD_BANDS.map(b=>[b.key,0]));
  let attempts=0,duplicates=0,unroutable=0;
  // Bounded requests; client repeats batches while admin page is open.
- while(attempts<max*12 && Object.values(added).reduce((a,b)=>a+b,0)<max){
+ while(attempts<max*5 && Object.values(added).reduce((a,b)=>a+b,0)<max){
   const band=ROAD_BANDS.find(b=>b.count+added[b.key]<TARGET);
   if(!band)break;
   attempts++;
