@@ -561,6 +561,52 @@ export async function handleVtc(input, context) {
       },
     };
   }
+  if (p === "/api/users/me/driver-application") {
+    if (method === "GET") {
+      const { data, error } = await admin.from("driver_applications").select("status,created_at,reviewed_at").eq("user_id", uid).maybeSingle();
+      if (error) throw new Error("Impossible de charger votre candidature.");
+      return { application: data || null, canDrive };
+    }
+    if (method === "POST") {
+      if (canDrive) throw new Error("Votre compte possède déjà un espace chauffeur.");
+      const { data: existing, error: readError } = await admin.from("driver_applications").select("status").eq("user_id", uid).maybeSingle();
+      if (readError) throw new Error("Impossible de vérifier votre candidature.");
+      if (existing) return { application: existing, alreadySubmitted: true };
+      const { data, error } = await admin.from("driver_applications").insert({ user_id: uid, status: "pending" }).select("status,created_at").single();
+      if (error?.code === "23505") return { application: { status: "pending" }, alreadySubmitted: true };
+      if (error) throw new Error("Impossible d'envoyer la candidature.");
+      return { application: data };
+    }
+    throw new Error("Méthode non autorisée");
+  }
+  if (p === "/api/admin/driver-applications") {
+    if (method === "GET") {
+      const { data, error } = await admin.from("driver_applications").select("user_id,status,created_at,reviewed_at").order("created_at", { ascending: false }).limit(200);
+      if (error) throw new Error("Impossible de charger les candidatures.");
+      const users = await Promise.all((data || []).map(async (application) => {
+        const { data: person } = await admin.from("profiles").select("name,username,phone").eq("id", application.user_id).maybeSingle();
+        const { data: auth } = await admin.auth.admin.getUserById(application.user_id);
+        return { ...application, name: person?.name || "Client", username: person?.username || "", phone: person?.phone || "", email: auth?.user?.email || "" };
+      }));
+      return { applications: users };
+    }
+    if (method === "POST") {
+      const target = String(body.userId || "");
+      if (!/^[0-9a-f-]{36}$/i.test(target)) throw new Error("Client invalide");
+      if (body.action === "accept") {
+        const { error } = await admin.rpc("accept_driver_application", { p_user_id: target, p_admin_id: uid });
+        if (error) throw new Error("Impossible d'accepter la candidature. Vérifiez que la migration et le profil chauffeur sont configurés.");
+        return { ok: true };
+      }
+      if (body.action === "reject") {
+        const { data, error } = await admin.from("driver_applications").update({ status: "rejected", reviewed_at: new Date().toISOString(), reviewed_by: uid }).eq("user_id", target).eq("status", "pending").select("user_id");
+        if (error || !data?.length) throw new Error("Candidature déjà traitée ou introuvable");
+        return { ok: true };
+      }
+      throw new Error("Action invalide");
+    }
+    throw new Error("Méthode non autorisée");
+  }
   if (p === "/api/users/me/mode") {
     if (method !== "POST") throw new Error("Méthode non autorisée");
     return switchAccountMode(admin, { uid, canDrive, mode: body.mode });

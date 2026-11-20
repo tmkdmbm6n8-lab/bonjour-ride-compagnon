@@ -11158,3 +11158,27 @@ a.activity-pill:hover {
 .drv-menu-gold-badge.is-inactive { color: #ff666d; border-color: #fa3847; background: #ff30451b; box-shadow: 0 0 12px #ff304578, inset 0 0 8px #ff304529; text-shadow: 0 0 8px #ff3045aa; }
 .drv-menu-gold-badge.is-active { color: #61ff9a; border-color: #27d86a; background: #25e56b1a; box-shadow: 0 0 12px #20ed7178, inset 0 0 8px #20ed7129; text-shadow: 0 0 8px #20ed71aa; }
 .drv-menu-gold-badge.is-unknown { color: #c7c7c7; border-color: #686868; background: #ffffff0b; }
+
+
+/* Passenger -> driver application, matching StrasDrive's black and gold theme. */
+.sd-become-driver-menu-link { display: flex; align-items: center; gap: 12px; padding: 17px 18px; margin: 0 0 18px; border: 1px solid #8c6a33; border-radius: 18px; background: linear-gradient(125deg,#252019,#101115); color: #f5d78e; text-decoration: none; box-shadow: 0 0 14px #c18e321b; }
+.sd-become-driver-menu-link > span { flex: 1; color: #f9f3e7; font-weight: 750; }
+.sd-become-driver-menu-link small { display: block; color: #bcb6a9; font-weight: 400; margin-top: 3px; }
+.sd-become-driver-page { max-width: 680px; margin-inline: auto; padding-bottom: 110px; }
+.sd-become-driver-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.sd-become-driver-kicker { color: #d6b76d; font-size: .75rem; letter-spacing: .12em; font-weight: 750; }
+.sd-become-driver-panel { border: 1px solid #8b6937; border-radius: 28px; padding: clamp(22px,6vw,38px); text-align: center; background: radial-gradient(ellipse at 90% 8%,#3a2b1d 0%,transparent 57%),#101116; box-shadow: 0 0 20px #c99c3926; }
+.sd-become-driver-icon { width: 72px; height: 72px; display: grid; place-items: center; margin: 0 auto 20px; color: #f2d18b; border: 1px solid #b48b46; border-radius: 21px; background: #30251a; box-shadow: 0 0 20px #e1ac4940; }
+.sd-become-driver-panel h1 { font-size: clamp(1.7rem,6vw,2.3rem); line-height: 1.15; color: #fff; font-weight: 800; }
+.sd-become-driver-panel h1 span { color: #edc66e; }
+.sd-become-driver-lead { color: #d1c9bb; line-height: 1.6; margin: 15px 0 24px; }
+.sd-become-driver-features { text-align: left; display: grid; gap: 17px; padding: 22px 0; border-block: 1px solid #ffffff20; margin-bottom: 22px; }
+.sd-become-driver-features p { display: flex; align-items: center; gap: 12px; color: #f0ede6; font-size: .93rem; }
+.sd-become-driver-features svg { color: #edc66e; flex-shrink: 0; }
+.sd-become-driver-submit { display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; min-height: 53px; border: 1px solid #f8db96; border-radius: 999px; background: linear-gradient(110deg,#ffe29c,#dcae4c); color: #241a0b; text-decoration: none; font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 0 16px #d7a74480; }
+.sd-become-driver-submit:disabled { opacity: .65; cursor: wait; }
+.sd-become-driver-status { padding: 18px; border-radius: 16px; background: #252017; border: 1px solid #86683a; color: #f4dfaa; }
+.sd-become-driver-status p { color: #ded5c4; line-height: 1.5; margin: 9px 0 15px; }
+.sd-become-driver-footnote { color: #a9a397; font-size: .78rem; line-height: 1.45; margin-top: 20px; }
+.sd-driver-application-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 13px 0; border-top: 1px solid #ffffff20; }
+.sd-driver-application-row p { margin-top: 3px; }
