@@ -112,21 +112,24 @@ export default function UberAnalytics({observations=[],total=0,onRefresh}) {
         <div style={{border:"1px solid var(--border)",borderRadius:12,padding:16}}><strong>Semaine et week-end</strong><div className="mt-3"><Bars data={week}/></div></div>
         <div style={{border:"1px solid var(--border)",borderRadius:12,padding:16}}><strong>Origine des observations</strong><div className="mt-3">{sources.map(x=><p className="small" key={x.label}>{x.label} : <strong>{x.count}</strong> observations</p>)}</div></div>
       </div>
-      <div className="mt-5" style={{overflowX:"auto"}}>
+
+    </>}
+      <div className="mt-5" id="uber-detailed-history" style={{minWidth:0}}>
         <div className="flex items-center justify-between mb-3"><strong>Historique détaillé</strong><span className="tiny muted">{historyRows.length} résultat(s) sur {rows.length}</span></div>
-        <div className="flex flex-wrap gap-2 mb-3">
-          <input className="input" type="search" aria-label="Rechercher par adresse de départ" placeholder="Adresse de départ (ex. Jean Monnet)" value={departureSearch} onChange={e=>{setDepartureSearch(e.target.value);setPage(0)}} style={{flex:"1 1 210px"}}/>
+        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+          <input className="input" type="search" aria-label="Rechercher par adresse de départ" placeholder="Adresse de départ (ex. Jean Monnet)" value={departureSearch} onChange={e=>{setDepartureSearch(e.target.value);setPage(0)}} style={{width:"100%",minWidth:0,flex:"1 1 210px"}}/>
           <input className="input" type="search" aria-label="Rechercher par adresse d'arrivée" placeholder="Adresse d'arrivée (ex. République)" value={arrivalSearch} onChange={e=>{setArrivalSearch(e.target.value);setPage(0)}} style={{flex:"1 1 210px"}}/>
           <button type="button" className="btn btn-secondary btn-sm" disabled={!departureSearch&&!arrivalSearch} onClick={()=>{setDepartureSearch("");setArrivalSearch("");setPage(0)}}>Effacer</button>
         </div>
         <p className="tiny muted mb-3">Recherche dans les observations de l'onglet et de la période sélectionnés. Les adresses anonymisées « Recherche client » ne sont pas retrouvables par leur nom.</p>
         {!historyRows.length&&<p className="small muted mb-3">Aucune course enregistrée ne correspond à ces adresses et filtres.</p>}
+        <div style={{overflowX:"auto",maxWidth:"100%"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:700}}>
           <thead><tr>{["Date","Gamme","Départ","Arrivée","Distance","Durée","Prix Uber","Origine"].map(x=><th key={x} style={{textAlign:"left",padding:9,borderBottom:"1px solid var(--border)"}}>{x}</th>)}</tr></thead>
           <tbody>{historyRows.slice(page*20,(page+1)*20).map((x,i)=><tr key={x.id??i}>{[stamp(x.observed_at),x.product_name,x.pickup_name,x.dropoff_name,Number(x.distance_km).toFixed(1)+" km",x.trip_seconds?Math.round(x.trip_seconds/60)+" min":"—",euro(Number(x.price_eur)),x.context?.source==="uber_live_client"?"Client":"Simulation"].map((v,j)=><td key={j} style={{padding:9,borderBottom:"1px solid var(--border)"}}>{v}</td>)}</tr>)}</tbody>
         </table>
+        </div>
         <div className="flex gap-2 items-center mt-3"><button className="btn btn-secondary btn-sm" disabled={page===0} onClick={()=>setPage(x=>x-1)}>Précédent</button><span className="tiny">Page {page+1} / {Math.max(1,Math.ceil(historyRows.length/20))}</span><button className="btn btn-secondary btn-sm" disabled={(page+1)*20>=historyRows.length} onClick={()=>setPage(x=>x+1)}>Suivant</button></div>
       </div>
-    </>}
   </section>;
 }
