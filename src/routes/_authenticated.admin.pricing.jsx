@@ -49,6 +49,9 @@ function AdminPricingPage() {
   const [comparisonBusy, setComparisonBusy] = useState(false);
   const [comparisonMaxKm, setComparisonMaxKm] = useState(9);
   const [autoCompare, setAutoCompare] = useState(false);
+  const [bulkTarget, setBulkTarget] = useState(false);
+  const [bulkDeadline, setBulkDeadline] = useState(null);
+  const [bulkMessage, setBulkMessage] = useState("");
   const [autoStats, setAutoStats] = useState({tested:0,saved:0,errors:0});
   const autoBusy = useRef(false);
   async function comparePrices(automatic = false) {
@@ -69,14 +72,27 @@ function AdminPricingPage() {
   }
 
   useEffect(() => {
+    if (!bulkTarget || !autoCompare) return;
+    if (autoStats.saved >= 100000) {
+      setAutoCompare(false);
+      setBulkTarget(false);
+      setBulkMessage("Objectif de 100 000 estimations atteint.");
+    } else if (bulkDeadline && Date.now() >= bulkDeadline) {
+      setAutoCompare(false);
+      setBulkTarget(false);
+      setBulkMessage(`10 minutes écoulées : ${autoStats.saved.toLocaleString("fr-FR")} estimations enregistrées.`);
+    }
+  }, [bulkTarget, autoCompare, autoStats.saved, bulkDeadline]);
+
+  useEffect(() => {
     if (!autoCompare) return;
     // Serial requests: aim for 10 starts/second, but never overlap or
     // promise a throughput the address/Uber services cannot sustain.
     const timer=setInterval(()=>{
-      if(document.visibilityState==="visible"&&!autoBusy.current) comparePrices(true);
+      if(document.visibilityState==="visible"&&!autoBusy.current && (!bulkTarget || (Date.now() < bulkDeadline && autoStats.saved < 100000))) comparePrices(true);
     },100);
     return ()=>clearInterval(timer);
-  },[autoCompare,comparisonMaxKm]);
+  },[autoCompare,comparisonMaxKm,bulkTarget,bulkDeadline,autoStats.saved]);
 
   async function savePricingSource(mode) {
     setSourceSaving(true);
@@ -592,9 +608,29 @@ function AdminPricingPage() {
         <button type="button" className="btn btn-primary btn-sm" disabled={comparisonBusy || autoCompare} onClick={()=>comparePrices(false)}>
           {comparisonBusy ? "Comparaison en cours…" : "Tester un trajet aléatoire"}
         </button>
-        <button type="button" className={`btn btn-sm ${autoCompare?"btn-secondary":"btn-primary"}`} style={{marginLeft:8}} onClick={()=>{setAutoCompare(v=>!v);setComparisonMaxKm(9);}}>
+        <button type="button" className={`btn btn-sm ${autoCompare?"btn-secondary":"btn-primary"}`} style={{marginLeft:8}} onClick={()=>{setAutoCompare(v=>!v);setBulkTarget(false);setBulkDeadline(null);setComparisonMaxKm(9);}}>
           {autoCompare?"Arrêter le test automatique":"Démarrer le test automatique"}
         </button>
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <button type="button" className="btn btn-primary btn-sm"
+            disabled={autoCompare || comparisonBusy}
+            onClick={() => {
+              setComparisonMaxKm(9);
+              setAutoStats({tested:0,saved:0,errors:0});
+              setBulkMessage("");
+              setBulkDeadline(Date.now()+10*60*1000);
+              setBulkTarget(true);
+              setAutoCompare(true);
+            }}>Collecter 100 000 estimations Uber (10 min)</button>
+          {bulkTarget && <button type="button" className="btn btn-secondary btn-sm"
+            onClick={() => {setAutoCompare(false);setBulkTarget(false);setBulkMessage("Collecte arrêtée manuellement.");}}>Arrêter les 100 000</button>}
+        </div>
+        {bulkTarget && <div className="mt-2">
+          <p className="small">Objectif : <strong>{autoStats.saved.toLocaleString("fr-FR")} / 100 000</strong> estimations enregistrées</p>
+          <progress value={Math.min(100000,autoStats.saved)} max={100000} style={{width:"100%"}} />
+          <p className="tiny muted">Fenêtre de 10 minutes, collecte séquentielle et limitée par la disponibilité d'Uber. Le total atteint peut être inférieur à l'objectif.</p>
+        </div>}
+        {bulkMessage && <p role="status" className="small mt-2">{bulkMessage}</p>}
         <p className="small muted mt-2">Mode automatique : trajets de 9 km maximum, jusqu'à 10 lancements par seconde selon les délais réseau, sans requêtes simultanées. Tous les prix Uber réels des trajets de 9 km maximum sont enregistrés, quel que soit l’écart avec l’IA. Les prédictions IA ne sont jamais enregistrées comme prix d’apprentissage. Fonctionne uniquement pendant que cette page est ouverte et visible.</p>
         <p className="small mt-2">Tests terminés : <strong>{autoStats.tested}</strong> · Tarifs Uber enregistrés : <strong>{autoStats.saved}</strong> · Erreurs : <strong>{autoStats.errors}</strong></p>
         {priceComparison?.error && <p role="alert" className="small mt-3" style={{color:"#ef4444"}}>{priceComparison.error}</p>}
