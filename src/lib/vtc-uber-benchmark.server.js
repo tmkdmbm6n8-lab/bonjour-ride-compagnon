@@ -20,7 +20,17 @@ export async function ensureBenchmarkRoutes(admin) {
       dropoff_name:POINTS[j][0],dropoff_lat:POINTS[j][1],dropoff_lng:POINTS[j][2]});
   }
   for(let i=candidates.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
-  must(await admin.from("uber_benchmark_routes").upsert(candidates.slice(0,100),{onConflict:"pickup_lat,pickup_lng,dropoff_lat,dropoff_lng",ignoreDuplicates:true}));
+  // Prioritize previously observed real customer/test routes, then complete to 100.
+  const observed=must(await admin.from("uber_price_observations").select("pickup_name,dropoff_name,pickup_lat,pickup_lng,dropoff_lat,dropoff_lng").order("observed_at",{ascending:false}).limit(1000));
+  const seen=new Set(), selected=[];
+  for(const route of [...observed.sort(()=>Math.random()-.5),...candidates]){
+    if(![route.pickup_lat,route.pickup_lng,route.dropoff_lat,route.dropoff_lng].every(Number.isFinite))continue;
+    const key=[route.pickup_lat,route.pickup_lng,route.dropoff_lat,route.dropoff_lng].join(":");
+    if(seen.has(key))continue;
+    seen.add(key);selected.push(route);
+    if(selected.length===100)break;
+  }
+  must(await admin.from("uber_benchmark_routes").upsert(selected,{onConflict:"pickup_lat,pickup_lng,dropoff_lat,dropoff_lng",ignoreDuplicates:true}));
 }
 export async function benchmarkBatch(admin,{batch=0,batchSize=2}={}) {
   await ensureBenchmarkRoutes(admin);
