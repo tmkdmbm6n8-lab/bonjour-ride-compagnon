@@ -1717,9 +1717,8 @@ export async function handleVtc(input, context) {
     if (method === "PUT") {
       const radiusKm = Math.max(1, Math.min(200, Number(body.radiusKm) || 100));
       const enabled = body.enabled === true;
-      const allowedRates = [0.1, 0.2, 0.5, 1];
       const requestedRate = Number(body.testsPerSecond ?? 0.2);
-      if (!allowedRates.includes(requestedRate)) throw new Error("Cadence invalide : 0,1 à 1 simulation par seconde");
+      if (!Number.isFinite(requestedRate) || requestedRate <= 0) throw new Error("La cadence doit être un nombre positif");
       required(await admin.from("pricing_rules").upsert({
         vehicle_type: "uber_ai_learning", is_active: false,
         rule: { enabled, radiusKm, testsPerSecond: requestedRate, updatedAt: new Date().toISOString() },
