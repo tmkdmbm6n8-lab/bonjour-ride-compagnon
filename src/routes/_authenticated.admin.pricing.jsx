@@ -281,6 +281,20 @@ function AdminPricingPage() {
     }
   }
 
+  useEffect(() => {
+    const refresh = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const response = await fetch("/api/admin/pricing", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.uberCookieStatus) setCookieStatus(data.uberCookieStatus);
+      } catch { /* Keep last known status. */ }
+    };
+    const timer = setInterval(refresh, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   async function saveCookie() {
     if (!cookieInput.trim()) {
       toast("Veuillez coller le cookie Uber avant de valider", "error");
@@ -510,6 +524,21 @@ function AdminPricingPage() {
             ? `Session enregistrée le ${cookieStatus.updatedAt ? new Date(cookieStatus.updatedAt).toLocaleString("fr-FR") : "—"} (validité non garantie).`
             : "Aucun cookie personnalisé enregistré. Repli sur UBER_COOKIE si configuré."}
         </p>
+        {cookieStatus?.session && (
+          <div className="tiny mb-3" role="status" aria-live="polite">
+            {cookieStatus.session.status === "expired" ? (
+              <span style={{ color: "#dc2626", fontWeight: 700 }}>Session Uber : JWT expiré. Remplacez le cookie.</span>
+            ) : cookieStatus.session.status === "expiring_soon" ? (
+              <span style={{ color: "#b45309", fontWeight: 700 }}>Session Uber : expiration prévue dans moins de 2 heures.</span>
+            ) : cookieStatus.session.status === "valid_until" ? (
+              <span>JWT Uber : expiration théorique le {new Date(cookieStatus.session.expiresAt).toLocaleString("fr-FR")} (révocation anticipée possible).</span>
+            ) : cookieStatus.session.status === "missing" ? (
+              <span>Session Uber non configurée.</span>
+            ) : (
+              <span>Expiration Uber inconnue : vérifiez la session avec un test de tarif.</span>
+            )}
+          </div>
+        )}
         {showCookieBox && (
           <div className="flex-col gap-2">
             <textarea
