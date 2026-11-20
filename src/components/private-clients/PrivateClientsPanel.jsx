@@ -46,12 +46,42 @@ function PrivateClientsQr({ loadQr }) {
   </section>;
 }
 
-export default function PrivateClientsPanel({ clients, loadQr, goldActive }) {
+export default function PrivateClientsPanel({ clients, loadQr, goldActive, onRemove, onBlock }) {
+  const [expanded, setExpanded] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [error, setError] = useState('');
+  async function perform(client, action) {
+    const label = action === 'remove' ? 'retirer de vos clients privés' : client.blocked ? 'débloquer' : 'bloquer';
+    if (!window.confirm(`Voulez-vous ${label} ${client.name || 'ce client'} ?`)) return;
+    setBusy(client.id);
+    setError('');
+    try {
+      if (action === 'remove') await onRemove(client.id);
+      else await onBlock(client.id, !client.blocked);
+    } catch (e) { setError(e.message || 'Action impossible'); }
+    finally { setBusy(null); }
+  }
   return <div className="flex-col gap-4">
     {goldActive && <PrivateClientsQr loadQr={loadQr} />}
     <section className="card card-pad" aria-labelledby="private-clients-list-title">
       <h2 id="private-clients-list-title">Vos clients privés</h2>
-      {clients === null ? <p className="small muted mt-3">Chargement…</p> : clients.length === 0 ? <p className="small muted mt-3">Vous n’avez pas encore de client privé.</p> : <ul className={`flex-col gap-3 mt-4${goldActive ? "" : " private-clients-list-inactive"}`}>{clients.map((client) => <li className="flex items-center gap-3" key={client.id}><Avatar name={client.name || ''} src={client.avatar || ''} size="sm" /><span>{client.name || 'Client StrasDrive'}</span></li>)}</ul>}
+      {error && <p role="alert" className="small" style={{ color: 'var(--danger)' }}>{error}</p>}
+      {clients === null ? <p className="small muted mt-3">Chargement…</p> : clients.length === 0 ? <p className="small muted mt-3">Vous n’avez pas encore de client privé.</p> : <ul className={`flex-col gap-3 mt-4${goldActive ? "" : " private-clients-list-inactive"}`}>{clients.map((client) => <li className="card card-pad" key={client.id}>
+        <div className="flex items-center gap-3">
+          <Avatar name={client.name || ''} src={client.avatar || ''} size="sm" />
+          <strong style={{ flex: 1 }}>{client.name || 'Client StrasDrive'} {client.blocked ? '· Bloqué' : ''}</strong>
+          <button type="button" className="btn btn-secondary" onClick={() => setExpanded(expanded === client.id ? null : client.id)} aria-expanded={expanded === client.id}>Infos</button>
+        </div>
+        {expanded === client.id && <div className="mt-3 flex-col gap-2">
+          <p className="small">Client privé depuis : {client.since ? new Date(client.since).toLocaleDateString('fr-FR') : 'Date inconnue'}</p>
+          <p className="small">Courses terminées ensemble : {client.completedTogether ?? 0}</p>
+          <p className="small muted">Les coordonnées personnelles du passager ne sont pas divulguées depuis cette liste.</p>
+          <div className="flex gap-2 flex-wrap">
+            <button type="button" className="btn btn-secondary" disabled={busy === client.id} onClick={() => perform(client, 'block')}>{client.blocked ? 'Débloquer' : 'Bloquer'}</button>
+            <button type="button" className="btn btn-secondary" disabled={busy === client.id} onClick={() => perform(client, 'remove')}>Supprimer de ma liste</button>
+          </div>
+        </div>}
+      </li>)}</ul>}
     </section>
   </div>;
 }

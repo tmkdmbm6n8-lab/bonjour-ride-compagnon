@@ -12,6 +12,16 @@ function PrivateClientsPage() {
   const { data, error, reload } = useDriverData("/api/drivers/me/private-clients", waitingForStripe ? 5000 : 15000);
   const { clients = null, gold } = data || {};
 
+  const changeClient = useCallback(async (clientId, action, blocked) => {
+    const res = await fetch(`/api/drivers/me/private-clients/${encodeURIComponent(clientId)}`, {
+      method: action === 'remove' ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      ...(action === 'block' ? { body: JSON.stringify({ blocked }) } : {}),
+    });
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok || result.error) throw new Error(result.error || 'Impossible de modifier ce client');
+    await reload();
+  }, [reload]);
   const loadQr = useCallback(async () => {
     const res = await fetch("/api/drivers/me/private-clients/qr", { method: "POST" });
     const data = await res.json();
@@ -45,7 +55,7 @@ function PrivateClientsPage() {
       <div className="flex-col gap-4">
         <DriverGoldCard gold={gold} waitingForStripe={waitingForStripe} />
         {(gold?.active || clients?.length > 0) && (
-          <PrivateClientsPanel clients={clients} loadQr={loadQr} goldActive={gold?.active === true && !error} />
+          <PrivateClientsPanel clients={clients} loadQr={loadQr} goldActive={gold?.active === true && !error} onRemove={(id) => changeClient(id, 'remove')} onBlock={(id, blocked) => changeClient(id, 'block', blocked)} />
         )}
       </div>
     </div>
