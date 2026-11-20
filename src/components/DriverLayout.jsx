@@ -30,7 +30,7 @@ const NAV = [
 
 const GoldContext = createContext(null);
 export const useDriverGold = () => useContext(GoldContext);
-const STANDARD_NAV = [NAV[0], { href: "/driver/private-clients", label: "SDGold", icon: Gem }, ...NAV.slice(3)];
+const STANDARD_NAV = [NAV[0], ...NAV.slice(3, 5), { href: "/driver/private-clients", label: "SDGold", icon: Gem }, NAV[5]];
 
 // Cache persistant pour conserver le statut Gold entre les changements d'onglets
 let cachedGold = null;
