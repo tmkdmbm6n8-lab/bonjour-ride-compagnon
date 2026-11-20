@@ -318,7 +318,7 @@ async function estimates(db, a, b) {
   const rows = required(await db.from("pricing_rules").select("*"));
   const rules = { ...DEFAULT_PRICING };
   for (const row of rows) {
-    if (row.vehicle_type !== "uber_discount" && row.vehicle_type !== "uber_cookie" && row.vehicle_type !== "uber_hourly_checks") {
+    if (row.vehicle_type !== "uber_discount" && row.vehicle_type !== "uber_cookie" && row.vehicle_type !== "uber_hourly_checks" && row.vehicle_type !== "uber_ai_learning") {
       rules[row.vehicle_type] = row.rule;
     }
   }
