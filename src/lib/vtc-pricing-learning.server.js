@@ -58,9 +58,8 @@ async function stopLearning(admin, settings, reason) {
 // Record only original, direct Uber offers; never client discounts or fallback fares.
 export async function recordClientUberQuote(admin, pickup, dropoff, products, route) {
   if (!Array.isArray(products) || !products.length) return { saved: 0 };
-  const setting = await admin.from("pricing_rules").select("rule").eq("vehicle_type", "uber_ai_learning").maybeSingle();
-  if (setting.error) throw setting.error;
-  if (setting.data?.rule?.enabled !== true) return { saved: 0 };
+  // Client-originated genuine Uber fares are always useful training observations.
+  // The admin toggle only controls automated 5-second sampling.
   if (![pickup?.lat,pickup?.lng,dropoff?.lat,dropoff?.lng].every(Number.isFinite)) return { saved: 0 };
   const distanceKm = Number(route?.distanceMeters) > 0 ? Number(route.distanceMeters)/1000 : km(pickup,dropoff);
   const context = features(new Date());
