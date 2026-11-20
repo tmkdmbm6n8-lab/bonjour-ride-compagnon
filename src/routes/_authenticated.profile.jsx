@@ -1,9 +1,32 @@
 import DriverReturnBar from '@/components/shell/DriverReturnBar';
+import { useEffect, useState } from 'react';
+import { CarFront, ChevronRight } from 'lucide-react';
+import Link from '@/lib/archive-navigation';
+import { apiFetch } from '@/lib/archive-fetch';
 import {createFileRoute} from '@tanstack/react-router';
 import RiderLayout from '@/components/RiderLayout';
 'use client';
 
 import ProfileCard from '@/components/profile/ProfileCard';
+
+function DriverApplicationLink() {
+  const [canDrive, setCanDrive] = useState(null);
+  useEffect(() => {
+    let ignore = false;
+    apiFetch("/api/users/me").then(async (res) => {
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!ignore) setCanDrive(data.user?.canDrive === true || data.user?.role === "driver");
+    }).catch(() => {});
+    return () => { ignore = true; };
+  }, []);
+  if (canDrive !== false) return null;
+  return <Link href="/become-driver" className="sd-become-driver-menu-link">
+    <CarFront size={21} aria-hidden="true" />
+    <span>Devenir chauffeur <small>Rejoindre StrasDrive</small></span>
+    <ChevronRight size={20} aria-hidden="true" />
+  </Link>;
+}
 
 function RiderProfilePage() {
   return (
@@ -11,6 +34,7 @@ function RiderProfilePage() {
       <h1 className="page-title">Menu</h1>
       <p className="page-sub mb-6">Les informations de votre compte</p>
       <DriverReturnBar/>
+      <DriverApplicationLink />
       <ProfileCard />
     </div>
   );
