@@ -11145,3 +11145,7 @@ a.activity-pill:hover {
 .driver-gold-benefits p { font-size: .79rem; }
 .driver-gold-plan-hint { text-align: center; }
 @media (min-width: 600px) { .driver-gold-plan-navigation { grid-template-columns: 45px minmax(0,1fr) 45px; gap: 12px; } .driver-gold-plan-arrow { width: 42px; height: 42px; } .driver-gold-plan-single { max-width: 420px; margin-inline: auto; padding: 25px; } }
+
+/* Align Gold crown with the word baseline/visual center on all screen sizes. */
+.driver-gold-header h2 span { display: inline-flex; align-items: center; vertical-align: baseline; gap: 5px; }
+.driver-gold-header h2 .driver-gold-crown { display: block; flex: none; width: .72em; height: .72em; vertical-align: unset; transform: translateY(-.10em); }
