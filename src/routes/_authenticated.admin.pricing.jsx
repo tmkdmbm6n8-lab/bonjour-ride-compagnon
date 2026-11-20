@@ -79,7 +79,12 @@ function AdminPricingPage() {
       const data = await res.json();
       setAiResult(data);
       if (data.ok) setAiStats((prev) => ({ ...prev, count: prev.count + data.saved }));
-      if (res.status === 429) setAiConfig((prev) => ({ ...prev, enabled: false }));
+      if (data.stopped) {
+        setAiConfig((prev) => ({ ...prev, enabled: false, stopReason: data.reason }));
+        toast(data.reason || "Prix Uber indisponibles : IA arrêtée automatiquement", "error", 6000);
+      } else if (res.status === 429) {
+        setAiConfig((prev) => ({ ...prev, enabled: false }));
+      }
     } catch {
       setAiResult({ ok: false, error: "Erreur réseau" });
     } finally {
@@ -436,6 +441,7 @@ function AdminPricingPage() {
             onClick={sampleAi}>Tester une fois</button>
         </div>
         <p className="small">Observations enregistrées : <strong>{aiStats.count}</strong></p>
+        {aiConfig.stopReason && !aiConfig.enabled && <p role="alert" className="small mt-2" style={{ color: "#ef4444" }}>Arrêt automatique : {aiConfig.stopReason}</p>}
         {aiResult && <p className="tiny muted mt-2">
           {aiResult.ok ? `${aiResult.saved} prix enregistrés · ${aiResult.pickup} → ${aiResult.dropoff}` :
             `Dernier test : ${aiResult.error || aiResult.skipped || "échec"}`}
