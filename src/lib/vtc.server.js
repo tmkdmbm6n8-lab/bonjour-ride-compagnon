@@ -318,7 +318,7 @@ async function estimates(db, a, b) {
   const rows = required(await db.from("pricing_rules").select("*"));
   const rules = { ...DEFAULT_PRICING };
   for (const row of rows) {
-    if (row.vehicle_type !== "uber_discount" && row.vehicle_type !== "uber_cookie" && row.vehicle_type !== "uber_hourly_checks" && row.vehicle_type !== "uber_ai_learning") {
+    if (row.vehicle_type !== "uber_discount" && row.vehicle_type !== "uber_cookie" && row.vehicle_type !== "uber_hourly_checks" && row.vehicle_type !== "uber_ai_learning" && row.vehicle_type !== "pricing_source_mode") {
       rules[row.vehicle_type] = row.rule;
     }
   }
@@ -328,30 +328,28 @@ async function estimates(db, a, b) {
   const isDiscountActive = discountSetting ? Boolean(discountSetting.enabled) : true;
   const discountRate = discountSetting && Number.isFinite(discountSetting.rate) ? discountSetting.rate : 0.2; // 20 %
 
-  // 1. Appel en direct de l'API Uber
-  let uberList = null;
-  try {
-    const { uberProducts } = await import("./vtc-uber.server");
-    const cookieRow = rows.find((r) => r.vehicle_type === "uber_cookie");
-    uberList = await uberProducts(a, b, cookieRow?.rule?.cookie || null);
-  } catch {
-    uberList = null;
-  }
-
-  // Learn from original Uber fares returned during real client price searches.
-  // This is best-effort: a logging failure must never block the client quote.
-  if (Array.isArray(uberList) && uberList.length > 0) {
+  // Explicit source policy: automatic (Uber first), Uber only, or learned AI only.
+  const sourceMode = rows.find(r => r.vehicle_type === "pricing_source_mode")?.rule?.mode || "auto";
+  const mode = ["auto", "uber", "ai"].includes(sourceMode) ? sourceMode : "auto";
+  let uberList = [];
+  if (mode !== "ai") {
     try {
-      const { recordClientUberQuote } = await import("./vtc-pricing-learning.server");
-      await recordClientUberQuote(db, a, b, uberList, route);
+      const { uberProducts } = await import("./vtc-uber.server");
+      const cookieRow = rows.find(r => r.vehicle_type === "uber_cookie");
+      const result = await uberProducts(a, b, cookieRow?.rule?.cookie || null);
+      if (Array.isArray(result)) uberList = result.filter(p => Number.isFinite(Number(p.price)) && Number(p.price) > 0);
     } catch (error) {
-      console.error("[pricing-ai] Failed to record live Uber client quote:", error?.message || error);
+      console.warn("[pricing] Uber unavailable:", error?.message || error);
+    }
+    if (uberList.length) {
+      try {
+        const { recordClientUberQuote } = await import("./vtc-pricing-learning.server");
+        await recordClientUberQuote(db, a, b, uberList, route);
+      } catch (error) {
+        console.error("[pricing-ai] Failed to record live Uber client quote:", error?.message || error);
+      }
     }
   }
-
-  // 2. Si Uber ne répond pas (cookie expiré, lenteur, erreur) : on ne bloque jamais le client,
-  //    chaque gamme sans prix Uber retombe sur la grille StrasDrive (plancher ARPE inclus).
-  if (!Array.isArray(uberList)) uberList = [];
 
   // 3. Correspondance avec les gammes StrasDrive (Go, Comfort, Pet, XL)
   const findProduct = (keywords) => {
@@ -415,18 +413,47 @@ async function estimates(db, a, b) {
   applyUberPrice("pet", uberPet);
   applyUberPrice("xl", uberXL);
 
-  // 4. Repli : toute gamme non tarifée par Uber utilise la grille StrasDrive
-  let fallback = false;
-  for (const type of Object.keys(DEFAULT_PRICING)) {
-    if (finalEstimates[type] || !rules[type]) continue;
-    fallback = true;
-    finalEstimates[type] = {
-      ...calculateFare(rules[type], route.distanceMeters, route.durationSeconds),
-      isUberPrice: false,
-    };
+  // In AI mode, or for missing Uber categories in automatic mode, predict each
+  // category independently. Never present an untrained model as a valid fare.
+  const aiNames = { economy: "UberX", comfort: "Comfort", pet: "Uber Pet", xl: "UberXL" };
+  let aiUsed = false;
+  if (mode !== "uber") {
+    const { predictLearnedPrice } = await import("./vtc-pricing-learning.server");
+    const distanceKm = Number(route.distanceMeters) / 1000;
+    for (const type of Object.keys(DEFAULT_PRICING)) {
+      if (mode === "auto" && finalEstimates[type]) continue;
+      // AI-only mode must not retain Uber-derived estimates.
+      if (mode === "ai") delete finalEstimates[type];
+      let prediction;
+      try {
+        prediction = await predictLearnedPrice(db, { distanceKm, productName: aiNames[type] });
+      } catch (error) {
+        console.error("[pricing-ai] Prediction failed:", type, error?.message || error);
+      }
+      if (!prediction?.ready || !Number.isFinite(prediction.price) || prediction.price <= 0) continue;
+      const commRate = Number(rules[type]?.platformCommission ?? 5);
+      const commission = Math.min(95, Math.max(0, commRate));
+      const rawPrice = prediction.price;
+      let price = isDiscountActive ? rawPrice * (1 - discountRate) : rawPrice;
+      const minLegalPrice = 9 / (1 - commission / 100);
+      price = Math.round(Math.max(price, minLegalPrice) * 100) / 100;
+      const platformFee = Math.round(price * commission) / 100;
+      finalEstimates[type] = {
+        total: price, estimatedTotal: price, originalTotal: rawPrice,
+        platformFee, driverEarnings: Math.round((price-platformFee)*100)/100,
+        uberProduct: aiNames[type], isUberPrice: false, isAiPrice: true,
+        priceSource: "ai", predictionSamples: prediction.samples,
+        discountRate: isDiscountActive ? discountRate : 0,
+      };
+      aiUsed = true;
+    }
   }
+  // Fail closed: no invented fixed-grid fares if Uber and AI cannot price a category.
+  if (!Object.keys(finalEstimates).length) {
+    throw new Error("Tarifs indisponibles : Uber ne répond pas et le modèle IA ne dispose pas encore de données suffisantes pour cette catégorie.");
+  }
+  return { route, estimates: finalEstimates, source: aiUsed ? (Object.values(finalEstimates).some(x=>x.isUberPrice) ? "mixed" : "ai") : "uber", pricingMode: mode };
 
-  return { route, estimates: finalEstimates, source: fallback ? (uberList.length ? "mixed" : "strasdrive") : "uber" };
 }
 
 export async function handleVtc(input, context) {
@@ -1667,6 +1694,22 @@ export async function handleVtc(input, context) {
       offset: Number(q.get("offset") || 0),
       limit: Number(q.get("limit") || 500),
     });
+  }
+  if (p === "/api/admin/pricing-source") {
+    if (method === "GET") {
+      const row = required(await admin.from("pricing_rules").select("rule").eq("vehicle_type","pricing_source_mode").maybeSingle());
+      return { mode: row?.rule?.mode || "auto" };
+    }
+    if (method === "PUT") {
+      const mode = String(body.mode || "");
+      if (!["auto","uber","ai"].includes(mode)) throw new Error("Mode de tarification invalide");
+      required(await admin.from("pricing_rules").upsert({
+        vehicle_type:"pricing_source_mode", is_active:false,
+        rule:{mode,updatedAt:new Date().toISOString()}
+      },{onConflict:"vehicle_type"}));
+      return {ok:true,mode};
+    }
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/admin/pricing-ai") {
     const { learningStatus, runLearningSample, predictLearnedPrice } = await import("./vtc-pricing-learning.server");
