@@ -563,7 +563,7 @@ function RiderDashboard() {
       </div>
 
       <div
-        className={`ride-panel rider-trip-panel ${searchFocused ? "is-editing" : ""}`}
+        className={`ride-panel rider-trip-panel ${searchFocused ? "is-editing" : ""} ${phase === "idle" && estimate && !estimating ? "has-estimate" : ""}`}
         ref={bookingPanelRef}
         style={
           phase === "active" && vv ? {
