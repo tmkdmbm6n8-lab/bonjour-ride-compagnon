@@ -11404,3 +11404,17 @@ a.activity-pill:hover {
     box-shadow: none;
   }
 }
+
+
+/* Center the floating booking sheet exactly within the viewport on mobile. */
+@media (max-width: 900px) {
+  .shell-rider .rider-workspace > .rider-trip-panel {
+    box-sizing: border-box;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    width: calc(100% - 24px) !important;
+    max-width: 560px !important;
+    margin-inline: 0 !important;
+  }
+}
