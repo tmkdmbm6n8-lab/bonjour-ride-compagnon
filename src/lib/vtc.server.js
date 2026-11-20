@@ -338,6 +338,17 @@ async function estimates(db, a, b) {
     uberList = null;
   }
 
+  // Learn from original Uber fares returned during real client price searches.
+  // This is best-effort: a logging failure must never block the client quote.
+  if (Array.isArray(uberList) && uberList.length > 0) {
+    try {
+      const { recordClientUberQuote } = await import("./vtc-pricing-learning.server");
+      await recordClientUberQuote(db, a, b, uberList, route);
+    } catch (error) {
+      console.error("[pricing-ai] Failed to record live Uber client quote:", error?.message || error);
+    }
+  }
+
   // 2. Si Uber ne répond pas (cookie expiré, lenteur, erreur) : on ne bloque jamais le client,
   //    chaque gamme sans prix Uber retombe sur la grille StrasDrive (plancher ARPE inclus).
   if (!Array.isArray(uberList)) uberList = [];
