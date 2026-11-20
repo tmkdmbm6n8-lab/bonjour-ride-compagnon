@@ -159,11 +159,11 @@ function AdminPricingPage() {
   useEffect(() => {
     if (!aiConfig.enabled) return;
     // This intensive mode runs only while the admin page remains open.
-    // Run immediately on activation, then at most one request every five seconds.
+    // Run immediately on activation, then serialize requests with a minimum 1-second interval.
     if (document.visibilityState === "visible") sampleAi();
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") sampleAi();
-    }, Math.round(1000 / (Number(aiConfig.testsPerSecond) || 0.2)));
+    }, Math.max(1000, Math.round(1000 / (Number(aiConfig.testsPerSecond) || 0.2))));
     return () => clearInterval(timer);
   }, [aiConfig.enabled, aiConfig.testsPerSecond]);
 
@@ -488,18 +488,14 @@ function AdminPricingPage() {
         </div>
         <label className="small font-semibold" htmlFor="ai-rate">Cadence des simulations automatiques</label>
         <div className="flex items-center gap-3 mt-2 mb-3">
-          <select id="ai-rate" className="input" style={{maxWidth:260}}
-            value={aiConfig.testsPerSecond ?? 0.2}
-            onChange={(e) => setAiConfig(v => ({...v, testsPerSecond: Number(e.target.value)}))}>
-            <option value={0.1}>0,1 simulation/seconde (1 / 10 s)</option>
-            <option value={0.2}>0,2 simulation/seconde (1 / 5 s)</option>
-            <option value={0.5}>0,5 simulation/seconde (1 / 2 s)</option>
-            <option value={1}>1 simulation/seconde</option>
-          </select>
+          <input id="ai-rate" className="input" type="number" min="0.001" step="any"
+            style={{maxWidth:260}} value={aiConfig.testsPerSecond ?? 0.2}
+            onChange={(e) => setAiConfig(v => ({...v, testsPerSecond: e.target.value}))} />
+          <span className="small muted">simulations / seconde demandées</span>
           <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy}
             onClick={() => saveAiConfig(aiConfig)}>Enregistrer la cadence</button>
         </div>
-        <p className="tiny muted mb-3">Cadence maximale : 1 requête par seconde, sans requêtes simultanées. Le débit réel dépend du temps de réponse d'Uber.</p>
+        <p className="tiny muted mb-3">Objectif libre (ex. 1000/s), mais le moteur actuel exécute au maximum 1 requête à la fois, avec un intervalle minimal de 1 seconde. Un objectif de 1000/s ne signifie pas 1000 requêtes réellement envoyées.</p>
         <div className="flex gap-2 flex-wrap mb-3">
           <button type="button" className="btn btn-primary btn-sm" disabled={aiBusy || aiConfig.enabled}
             onClick={() => saveAiConfig({ ...aiConfig, enabled: true })}>Démarrer la collecte</button>
