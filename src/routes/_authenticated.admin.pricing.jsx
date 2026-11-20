@@ -28,6 +28,38 @@ function AdminPricingPage() {
   // État de la réduction Uber
   const [uberDiscount, setUberDiscount] = useState({ enabled: true, ratePct: 20 });
   const [savingUber, setSavingUber] = useState(false);
+  const [cookieInput, setCookieInput] = useState("");
+  const [showCookieBox, setShowCookieBox] = useState(false);
+  const [savingCookie, setSavingCookie] = useState(false);
+  const [cookieStatus, setCookieStatus] = useState(null);
+
+  async function saveCookie() {
+    if (!cookieInput.trim()) {
+      toast("Veuillez coller le cookie Uber avant de valider", "error");
+      return;
+    }
+    setSavingCookie(true);
+    try {
+      const res = await fetch("/api/admin/pricing", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehicleType: "uber_cookie", cookie: cookieInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Session refusée par Uber", "error", 6000);
+      } else {
+        toast(`Connexion Uber validée (${data.count} gammes détectées)`, "success", 5000);
+        setCookieStatus({ hasCustomCookie: true, updatedAt: new Date().toISOString() });
+        setCookieInput("");
+        setShowCookieBox(false);
+      }
+    } catch {
+      toast("Erreur lors de la validation du cookie", "error");
+    } finally {
+      setSavingCookie(false);
+    }
+  }
 
   useEffect(() => {
     let ignore = false;
@@ -36,6 +68,8 @@ function AdminPricingPage() {
         const res = await fetch("/api/admin/pricing");
         const data = await res.json();
         if (ignore || !res.ok) return;
+
+        if (data.uberCookieStatus) setCookieStatus(data.uberCookieStatus);
 
         // Récupérer la règle Uber
         const dbUber = data.rules?.find((r) => r.vehicleType === "uber_discount");
@@ -213,6 +247,36 @@ function AdminPricingPage() {
             </>
           )}
         </button>
+      </div>
+
+      <div className="card card-pad mb-5">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <strong>Session Uber (cookie)</strong>
+          <button type="button" className="btn btn-secondary btn-xs" onClick={() => setShowCookieBox(!showCookieBox)}>
+            {showCookieBox ? "Fermer" : "Modifier le cookie Uber"}
+          </button>
+        </div>
+        <p className="tiny muted mb-3">
+          {cookieStatus?.hasCustomCookie
+            ? `Session enregistrée le ${cookieStatus.updatedAt ? new Date(cookieStatus.updatedAt).toLocaleString("fr-FR") : "—"} (validité non garantie).`
+            : "Aucun cookie personnalisé enregistré. Repli sur UBER_COOKIE si configuré."}
+        </p>
+        {showCookieBox && (
+          <div className="flex-col gap-2">
+            <textarea
+              className="input"
+              rows={3}
+              style={{ fontSize: "0.8rem", fontFamily: "monospace" }}
+              placeholder="Coller ici le cookie de votre propre session Uber"
+              value={cookieInput}
+              onChange={(e) => setCookieInput(e.target.value)}
+              autoComplete="off"
+            />
+            <button type="button" className="btn btn-primary btn-sm" onClick={saveCookie} disabled={savingCookie}>
+              {savingCookie ? "Validation…" : "Tester et enregistrer le cookie"}
+            </button>
+          </div>
+        )}
       </div>
 
       <h2 style={{ fontSize: "1.15rem", marginBottom: 12 }}>Grille tarifaire de secours (StrasDrive)</h2>
