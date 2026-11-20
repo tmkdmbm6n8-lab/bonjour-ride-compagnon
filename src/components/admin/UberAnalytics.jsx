@@ -48,8 +48,14 @@ export default function UberAnalytics({observations=[],total=0,onRefresh}) {
   const products=group(rows,x=>x.product_name||"Inconnu").sort((a,b)=>b.count-a.count);
   const week=group(rows,x=>x.context?.weekend?"Week-end":"Semaine");
   const sources=group(rows,x=>x.context?.source==="uber_live_client"?"Recherche client":"Simulation");
+  const pricePerKmByCategory=[...new Set(rows.map(x=>x.product_name||"Inconnu"))].map(name=>{
+    const valid=rows.filter(x=>(x.product_name||"Inconnu")===name && Number(x.distance_km)>0 && Number.isFinite(Number(x.price_eur)) && Number(x.price_eur)>0);
+    const totalKm=valid.reduce((sum,x)=>sum+Number(x.distance_km),0);
+    const totalFare=valid.reduce((sum,x)=>sum+Number(x.price_eur),0);
+    return {name,count:valid.length,pricePerKm:totalKm>0?totalFare/totalKm:null};
+  }).sort((a,b)=>a.name.localeCompare(b.name,"fr"));
   const unique=[...new Set(observations.map(x=>x.product_name))].sort();
-  const stats=[["Observations",rows.length.toLocaleString("fr-FR")],["Prix moyen",euro(avg(prices))],["Prix minimum",euro(Math.min(...prices))],["Prix maximum",euro(Math.max(...prices))],["Distance moyenne",distances.length?avg(distances).toFixed(1)+" km":"—"],["Prix moyen/km",distances.length?euro(avg(rows.filter(x=>Number(x.distance_km)>0).map(x=>Number(x.price_eur)/Number(x.distance_km)))):"—"]];
+  const stats=[["Observations",rows.length.toLocaleString("fr-FR")],["Prix moyen",euro(avg(prices))],["Prix minimum",euro(Math.min(...prices))],["Prix maximum",euro(Math.max(...prices))],["Distance moyenne",distances.length?avg(distances).toFixed(1)+" km":"—"],["Catégories suivies",new Set(rows.map(x=>x.product_name).filter(Boolean)).size.toLocaleString("fr-FR")]];
   if(!prices.length){stats[2][1]="—";stats[3][1]="—";}
   const download=()=>{
     const cols=["observed_at","product_name","price_eur","distance_km","trip_seconds","pickup_name","dropoff_name"];
@@ -69,6 +75,20 @@ export default function UberAnalytics({observations=[],total=0,onRefresh}) {
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))",gap:10}} className="mb-5">
       {stats.map(([k,v])=><div key={k} style={{padding:14,border:"1px solid var(--border)",borderRadius:12}}><div className="tiny muted">{k}</div><div style={{fontWeight:750,fontSize:"1.25rem",marginTop:5}}>{v}</div></div>)}
+    </div>
+    <div className="mb-5" style={{border:"1px solid var(--border)",borderRadius:12,padding:16}}>
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+        <strong>Prix moyen au kilomètre par catégorie Uber</strong>
+        <span className="tiny muted">Catégories calculées séparément · filtres actuels</span>
+      </div>
+      <p className="tiny muted mb-3">Pour chaque gamme : somme des tarifs Uber ÷ somme des kilomètres correspondants. Aucun mélange entre UberX, Comfort, UberXL ou les autres gammes.</p>
+      {pricePerKmByCategory.length ? <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10}}>
+        {pricePerKmByCategory.map(x=><div key={x.name} style={{padding:14,border:"1px solid var(--border)",borderRadius:10}}>
+          <div className="small font-semibold">{x.name}</div>
+          <div style={{fontSize:"1.35rem",fontWeight:750,marginTop:5}}>{x.pricePerKm==null?"—":euro(x.pricePerKm)+"/km"}</div>
+          <div className="tiny muted mt-1">{x.count.toLocaleString("fr-FR")} tarifs analysés</div>
+        </div>)}
+      </div>:<p className="small muted">Aucune observation pour les filtres sélectionnés.</p>}
     </div>
     {!rows.length?<div style={{padding:30,textAlign:"center",border:"1px dashed var(--border)",borderRadius:12}}><strong>Aucun test enregistré sur cette période</strong><p className="small muted mt-2">Vérifie la connexion Uber, la table Supabase et l'activation de la collecte. Aucun graphique fictif n'est affiché.</p></div>:<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:16}}>
