@@ -486,7 +486,7 @@ function DriverDashboard() {
                   </span>
                   <strong className="drv-sheet-earnings mono-nums">{money(ride.fare?.driverEarnings)}</strong>
                   {ride.payment?.method === "cash" ? (
-                    <span className="drv-payment-icon drv-payment-icon--cash" role="img" aria-label="Paiement en espèces" title="Espèces ${money(ride.fare?.total)}"><Banknote size={20} aria-hidden="true" /></span>
+                    <span className="drv-payment-icon drv-payment-icon--cash" role="img" aria-label="Paiement en espèces" title="Espèces"><Banknote size={20} aria-hidden="true" /></span>
                   ) : (
                     <span className="drv-payment-icon drv-payment-icon--card" role="img" aria-label="Paiement par carte" title="Carte bancaire"><CreditCard size={20} aria-hidden="true" /></span>
                   )}
@@ -547,7 +547,7 @@ function DriverDashboard() {
                   <div className="flex justify-between items-center mb-2 text-sm text-muted">
                     <span>Mode de règlement :</span>
                     {ride.payment?.method === "cash" ? (
-                      <span className="drv-payment-icon drv-payment-icon--cash" role="img" aria-label="Paiement en espèces" title="Espèces ${money(ride.fare?.total)}"><Banknote size={20} aria-hidden="true" /></span>
+                      <span className="drv-payment-icon drv-payment-icon--cash" role="img" aria-label="Paiement en espèces" title="Espèces"><Banknote size={20} aria-hidden="true" /></span>
                     ) : (
                       <span className="drv-payment-icon drv-payment-icon--card" role="img" aria-label="Paiement par carte" title="Carte bancaire"><CreditCard size={20} aria-hidden="true" /></span>
                     )}
@@ -721,7 +721,7 @@ function DriverDashboard() {
             {/* 3. Badges d'infos (Paiement, Note passager) */}
             <div className="flex justify-center gap-2 mb-5">
               {offer.paymentMethod === "cash" ? (
-                <span className="drv-payment-icon drv-payment-icon--cash" role="img" aria-label="Paiement en espèces" title="Espèces ${money(offer.total)}"><Banknote size={20} aria-hidden="true" /></span>
+                <span className="drv-payment-icon drv-payment-icon--cash" role="img" aria-label="Paiement en espèces" title="Espèces"><Banknote size={20} aria-hidden="true" /></span>
               ) : (
                 <span className="drv-payment-icon drv-payment-icon--card" role="img" aria-label="Paiement par carte" title="Carte bancaire"><CreditCard size={20} aria-hidden="true" /></span>
               )}
