@@ -133,17 +133,29 @@ export async function compareRandomUberAi(admin,{maxDistanceKm=9}={}) {
   const config=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_ai_learning").maybeSingle();
   if(config.error)throw config.error;
   const radius=Math.max(1,Math.min(200,Number(config.data?.rule?.radiusKm)||100));
-  let pickup=null,dropoff=null;
+  let pickup=null,dropoff=null,claimed=false;
   for(let attempt=0;attempt<24;attempt++){
-    pickup=await randomAddress(radius);
-    if(!pickup)continue;
-    // Draw destination close enough to pickup for the requested trip length.
+    const candidatePickup=await randomAddress(radius);
+    if(!candidatePickup)continue;
     const destinationRadius=Math.min(radius,maxKm/2);
-    dropoff=await randomAddressNear(pickup,destinationRadius,radius);
-    if(pickup&&dropoff&&pickup.id!==dropoff.id&&km(pickup,dropoff)>=1&&km(pickup,dropoff)<=maxKm)break;
+    const candidateDropoff=await randomAddressNear(candidatePickup,destinationRadius,radius);
+    if(!candidateDropoff||candidatePickup.id===candidateDropoff.id)continue;
+    const distance=km(candidatePickup,candidateDropoff);
+    if(distance<1||distance>maxKm)continue;
+    // Atomically claim BOTH addresses across comparison and automatic learning.
+    // The SQL function also excludes addresses used by the fixed hourly cohort.
+    const claim=await admin.rpc("claim_uber_random_addresses",{
+      p_pickup_key:candidatePickup.id,p_dropoff_key:candidateDropoff.id,
+      p_pickup_name:candidatePickup.name,p_dropoff_name:candidateDropoff.name,
+      p_pickup_lat:candidatePickup.lat,p_pickup_lng:candidatePickup.lng,
+      p_dropoff_lat:candidateDropoff.lat,p_dropoff_lng:candidateDropoff.lng
+    });
+    if(claim.error)throw new Error("Migration SQL 0012 nécessaire : "+claim.error.message);
+    if(claim.data===true){
+      pickup=candidatePickup;dropoff=candidateDropoff;claimed=true;break;
+    }
   }
-  if(!pickup||!dropoff||pickup.id===dropoff.id||km(pickup,dropoff)<1||km(pickup,dropoff)>maxKm)
-    throw new Error("Impossible de trouver un trajet numéroté dans la limite de "+maxKm+" km");
+  if(!claimed)throw new Error("Aucune nouvelle paire d'adresses jamais utilisées trouvée dans la limite de "+maxKm+" km");
   const cookie=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_cookie").maybeSingle();
   if(cookie.error)throw cookie.error;
   const offers=await uberProducts(pickup,dropoff,cookie.data?.rule?.cookie||null);
