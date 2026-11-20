@@ -677,6 +677,19 @@ export async function handleVtc(input, context) {
     const { privateClients } = await import("./private-clients.server");
     return privateClients(admin, uid);
   }
+  const privateClientAction = p.match(/^\\/api\\/drivers\\/me\\/private-clients\\/([0-9a-f-]{36})$/i);
+  if (privateClientAction) {
+    if (!canDrive) throw new Error("Accès chauffeur requis");
+    const riderId = privateClientAction[1];
+    const { removePrivateClient, privateClients } = await import("./private-clients.server");
+    if (method === "DELETE") return removePrivateClient(admin, uid, riderId);
+    if (method === "POST") {
+      const links = await privateClients(admin, uid);
+      if (!links.clients.some((client) => client.id === riderId)) throw new Error("Client privé introuvable");
+      return setUserBlock(admin, uid, riderId, body.blocked === true);
+    }
+    throw new Error("Méthode non autorisée");
+  }
   if (p === "/api/drivers/me/private-clients/qr" && method === "POST") {
     const { createInvitation } = await import("./private-clients.server");
     return createInvitation(admin, uid);
