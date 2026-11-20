@@ -68,8 +68,8 @@ export default function DriverLayout({ children }) {
         if (res.ok) {
           const data = await res.json();
           const d = data.driver;
-          // Un chauffeur est suspendu si isApproved est faux (ou s'il a été suspendu par signalement / modération)
-          if (d && (d.isApproved === false || d.isReportSuspended)) {
+          // Seule une suspension par signalement/modération bloque l'accès ; l'approbation en attente n'est pas une suspension.
+          if (d && d.isReportSuspended) {
             if (!ignore) setIsSuspended(true);
           }
         }
