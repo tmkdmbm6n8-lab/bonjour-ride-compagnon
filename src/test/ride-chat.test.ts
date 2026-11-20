@@ -28,5 +28,9 @@ describe('contenus de discussion', () => {
  it('protège les méthodes des routes de pièces jointes',()=>{
   expect(()=>assertRideActionMethod('attachment','GET')).toThrow();
   expect(()=>assertRideActionMethod('media','POST')).toThrow();
+  expect(()=>assertRideActionMethod('block','GET')).toThrow();
+  expect(()=>assertRideActionMethod('unblock','GET')).toThrow();
+  expect(()=>assertRideActionMethod('report-message','GET')).toThrow();
+  expect(()=>assertRideActionMethod('report-message','POST')).not.toThrow();
  });
 });
