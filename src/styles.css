@@ -11289,3 +11289,30 @@ a.activity-pill:hover {
     padding: 10px 8px;
   }
 }
+
+
+/* Expanded fare sheet: reserve a real scrollable viewport above bottom navigation.
+   The dashboard also sets inline top:auto/maxHeight, hence explicit overrides here. */
+@media (max-width: 900px) {
+  .shell-rider .rider-workspace > .rider-trip-panel.has-estimate:not(.is-editing) {
+    position: fixed !important;
+    top: max(8px, env(safe-area-inset-top)) !important;
+    bottom: calc(86px + env(safe-area-inset-bottom)) !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    z-index: 45;
+  }
+  .shell-rider .rider-trip-panel.has-estimate > .rider-booking-card {
+    flex-shrink: 0;
+    height: max-content;
+    overflow: visible;
+  }
+}
