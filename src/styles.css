@@ -7398,32 +7398,37 @@ a.activity-pill:hover {
 }
 .shell-rider .rider-payment-options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
 }
 .shell-rider .rider-payment-options .rider-payment-option {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
+  text-align: center;
   gap: 6px;
   min-width: 0;
-  min-height: 68px;
-  padding: 10px;
+  min-height: 76px;
+  padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid #3b4656;
   background: #1c2532;
   color: #f1f5f9;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 .shell-rider .rider-payment-options .rider-payment-option[aria-checked="true"] {
   background: #30291b;
   color: #ffe0a3;
   border-color: #e9be70;
-  box-shadow: inset 0 0 0 1px #e9be70;
+  box-shadow: inset 0 0 0 1.5px #e9be70, 0 4px 12px rgba(233, 190, 112, 0.15);
 }
 .rider-payment-detail {
-  color: #bac6d5;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 .rider-payment-option:focus-visible,
 .rider-cancel-button:focus-visible {
