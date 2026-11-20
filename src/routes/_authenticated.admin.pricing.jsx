@@ -45,6 +45,21 @@ function AdminPricingPage() {
   const [aiPredictionDistance, setAiPredictionDistance] = useState(10);
   const [aiPrediction, setAiPrediction] = useState(null);
   const aiInFlight = useRef(false);
+  const [priceComparison, setPriceComparison] = useState(null);
+  const [comparisonBusy, setComparisonBusy] = useState(false);
+  async function comparePrices() {
+    if (comparisonBusy) return;
+    setComparisonBusy(true);
+    setPriceComparison(null);
+    try {
+      const res = await fetch("/api/admin/pricing-ai-compare", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Comparaison impossible");
+      setPriceComparison(data);
+    } catch (error) {
+      setPriceComparison({ error: error.message || "Comparaison impossible" });
+    } finally { setComparisonBusy(false); }
+  }
 
   async function savePricingSource(mode) {
     setSourceSaving(true);
@@ -549,6 +564,37 @@ function AdminPricingPage() {
 
       <UberBenchmarkChart />
       <UberAnalytics observations={aiStats.recent || []} total={aiStats.count || 0} onRefresh={() => Promise.all([loadAiStatus(), loadAllAiObservations()]).catch(() => toast("Actualisation impossible", "error"))} />
+      <div className="card card-pad mb-5">
+        <h3 style={{fontSize:"1.15rem",marginBottom:8}}>Comparer Uber et l’algorithme IA en temps réel</h3>
+        <p className="small muted mb-3">Un trajet aléatoire entre deux adresses numérotées réelles est recherché à chaque clic. Comparaison par catégorie, sans appliquer la remise StrasDrive. Ce test ne réserve pas les adresses et ne crée aucune réservation.</p>
+        <button type="button" className="btn btn-primary btn-sm" disabled={comparisonBusy} onClick={comparePrices}>
+          {comparisonBusy ? "Comparaison en cours…" : "Tester un trajet aléatoire"}
+        </button>
+        {priceComparison?.error && <p role="alert" className="small mt-3" style={{color:"#ef4444"}}>{priceComparison.error}</p>}
+        {priceComparison?.comparisons && (
+          <div className="mt-4">
+            <p className="small"><strong>Départ :</strong> {priceComparison.pickup}</p>
+            <p className="small"><strong>Arrivée :</strong> {priceComparison.dropoff}</p>
+            <p className="small muted">{priceComparison.distanceKm} km à vol d'oiseau · {new Date(priceComparison.comparedAt).toLocaleString("fr-FR")}</p>
+            <div style={{overflowX:"auto",marginTop:12}}>
+              <table style={{width:"100%",textAlign:"left",borderCollapse:"collapse"}}>
+                <thead><tr><th>Catégorie</th><th>Uber</th><th>Algorithme IA</th><th>Écart IA − Uber</th></tr></thead>
+                <tbody>
+                  {priceComparison.comparisons.map((item,i)=>(
+                    <tr key={item.category+"-"+i} style={{borderTop:"1px solid var(--border)"}}>
+                      <td>{item.category}</td>
+                      <td>{item.uberPrice.toFixed(2)} €</td>
+                      <td>{item.ready ? item.aiPrice.toFixed(2)+" €" : "Données insuffisantes"}</td>
+                      <td>{item.ready ? `${item.differenceEur>0?"+":""}${item.differenceEur.toFixed(2)} € (${item.differencePct>0?"+":""}${item.differencePct.toFixed(2)} %)` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="tiny muted mt-3">{priceComparison.note}</p>
+          </div>
+        )}
+      </div>
 
 
     </div>
