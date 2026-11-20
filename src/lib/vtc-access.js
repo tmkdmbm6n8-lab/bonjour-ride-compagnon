@@ -12,6 +12,9 @@ export function assertRideActionMethod(action, method) {
     "invoice",
     "report",
     "attachment",
+    "block",
+    "unblock",
+    "report-message",
   ];
   if (
     (readOnly.includes(action) && method !== "GET") ||
