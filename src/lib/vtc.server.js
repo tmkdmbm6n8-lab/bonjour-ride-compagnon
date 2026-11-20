@@ -1655,6 +1655,11 @@ export async function handleVtc(input, context) {
     await pushRideOffer(admin, testRide, [d.user_id]);
     return { ok: true, rideId: r.id, expiresInSeconds: TEST_OFFER_SECONDS, driverOnline: Boolean(d.is_online) };
   }
+  if (p === "/api/admin/uber-benchmark") {
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    const { benchmarkStatus } = await import("./vtc-uber-benchmark.server");
+    return benchmarkStatus(admin);
+  }
   if (p === "/api/admin/pricing-ai") {
     const { learningStatus, runLearningSample, predictLearnedPrice } = await import("./vtc-pricing-learning.server");
     if (method === "GET") return learningStatus(admin);
