@@ -569,6 +569,12 @@ export async function handleVtc(input, context) {
     }
     if (method === "POST") {
       if (canDrive) throw new Error("Votre compte possède déjà un espace chauffeur.");
+      // Enforce the same complete document acknowledgment on the server.
+      const { REQUIRED_DOCUMENTS } = await import("./vtc-documents");
+      const confirmed = Array.isArray(body.confirmedDocuments) ? body.confirmedDocuments : [];
+      if (!REQUIRED_DOCUMENTS.every((spec) => confirmed.includes(spec.type)))
+        throw new Error("Confirmez que vous possédez tous les documents obligatoires avant de candidater.");
+
       const { data: existing, error: readError } = await admin.from("driver_applications").select("status").eq("user_id", uid).maybeSingle();
       if (readError) throw new Error("Impossible de vérifier votre candidature.");
       if (existing) return { application: existing, alreadySubmitted: true };
