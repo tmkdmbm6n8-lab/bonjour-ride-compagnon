@@ -1148,6 +1148,7 @@ export async function handleVtc(input, context) {
           : canSeeOffer(ride, me, Date.now(), pool),
       )
       .sort((a, b) => distanceToPickupKm(a, me) - distanceToPickupKm(b, me))[0];
+    if (r && await isPairBlocked(admin, r.rider_id, uid)) r = null;
     if (test) {
       r = test.ride;
       me = me || test.driver;
@@ -1874,6 +1875,10 @@ async function assignOffer(db, r, pool) {
     );
   }
   let drivers = pool || (await dispatchPool(db));
+  const blocked = required(await db.from("user_blocks").select("blocker_id,blocked_id")
+    .or(`blocker_id.eq.${r.rider_id},blocked_id.eq.${r.rider_id}`));
+  const excluded = new Set(blocked.map((b) => b.blocker_id === r.rider_id ? b.blocked_id : b.blocker_id));
+  drivers = drivers.filter((d) => !excluded.has(d.user_id));
   let route = r.route;
   if (!r.dispatch_phase && !route?.goldReturn) {
     const candidates = availableFor(r, drivers);
