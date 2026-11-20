@@ -135,7 +135,7 @@ function DriverMenuPage() {
       {/* ── Déconnexion ── */}
       <div className="drv-logout-wrap">
         <button className="drv-logout-btn" onClick={() => signOut({ callbackUrl: "/" })}>
-          <LogOut size={16} /> Se déconnecter ({user.email || ""})
+          <LogOut size={16} /> Se déconnecter
         </button>
       </div>
 
