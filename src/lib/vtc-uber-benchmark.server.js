@@ -1,5 +1,4 @@
 import { uberProducts } from "./vtc-uber.server";
-import { features } from "./vtc-pricing-learning.server";
 
 const POINTS=[
 ["Place Kléber",48.5839,7.7455],["Gare Strasbourg",48.5851,7.7345],["Aéroport Strasbourg",48.5445,7.6282],
@@ -11,7 +10,7 @@ const POINTS=[
 ];
 const must=(r)=>{if(r.error)throw r.error;return r.data;};
 export async function ensureBenchmarkRoutes(admin) {
-  const existing=must(await admin.from("uber_benchmark_routes").select("id").limit(1));
+  const existing=must(await admin.from("uber_benchmark_routes").select("id,created_at").order("id").limit(1));
   if(existing.length)return;
   // Select 100 distinct real, fixed point-to-point routes once and retain them for a year.
   const candidates=[];
@@ -47,14 +46,7 @@ export async function benchmarkBatch(admin,{batch=0,batchSize=2}={}) {
 export async function benchmarkStatus(admin) {
   const routes=await admin.from("uber_benchmark_routes").select("id",{count:"exact",head:true});
   if(routes.error)throw routes.error;
-  // Daily/hourly chart is based exclusively on the fixed benchmark cohort.
-  const res=await admin.from("uber_benchmark_prices").select("hour_bucket,price_eur,product_name,route_id").order("hour_bucket",{ascending:false}).limit(1000);
-  if(res.error)throw res.error;
-  const grouped=new Map();
-  for(const row of res.data||[]){
-    const key=row.hour_bucket+"|"+row.product_name;
-    const item=grouped.get(key)||{hour:row.hour_bucket,product:row.product_name,sum:0,count:0};
-    item.sum+=Number(row.price_eur);item.count++;grouped.set(key,item);
-  }
-  return {routeCount:routes.count||0,hourly:[...grouped.values()].map(x=>({hour:x.hour,product:x.product,average:x.sum/x.count,count:x.count})).sort((a,b)=>a.hour.localeCompare(b.hour))};
+  const summary=await admin.rpc("uber_benchmark_hourly_summary");
+  if(summary.error)throw summary.error;
+  return {routeCount:routes.count||0,hourly:summary.data||[]};
 }
