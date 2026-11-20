@@ -11451,3 +11451,22 @@ a.activity-pill:hover {
   border: 1px solid #31ef93;
   box-shadow: inset 0 0 0 1px #31ef93, 0 0 14px #31ef9330;
 }
+
+
+/* Driver payment method: icon only, no oversized pill. */
+.drv-payment-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  vertical-align: middle;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.drv-payment-icon svg { width: 20px; height: 20px; stroke-width: 2; }
+.drv-payment-icon--card { color: #20c6ff; filter: drop-shadow(0 0 3px #20c6ff55); }
+.drv-payment-icon--cash { color: #31ef93; filter: drop-shadow(0 0 3px #31ef9355); }
