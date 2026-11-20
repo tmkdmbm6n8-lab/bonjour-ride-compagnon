@@ -22,3 +22,22 @@ ALTER TABLE public.uber_benchmark_routes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.uber_benchmark_prices ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.uber_benchmark_routes, public.uber_benchmark_prices FROM anon,authenticated;
 NOTIFY pgrst, 'reload schema';
+
+-- Return one JSON object so PostgREST's default 1,000-row limit cannot truncate a year's chart.
+CREATE OR REPLACE FUNCTION public.uber_benchmark_hourly_summary()
+RETURNS jsonb LANGUAGE sql STABLE SECURITY INVOKER AS $$
+ SELECT COALESCE(jsonb_agg(jsonb_build_object(
+  'hour', hour_bucket, 'product', product_name,
+  'average', average_price, 'count', route_count
+ ) ORDER BY hour_bucket), '[]'::jsonb)
+ FROM (
+  SELECT hour_bucket, product_name,
+   AVG(price_eur)::numeric(12,2) AS average_price,
+   COUNT(DISTINCT route_id) AS route_count
+  FROM public.uber_benchmark_prices
+  WHERE hour_bucket >= now() - interval '365 days'
+  GROUP BY hour_bucket, product_name
+ ) summary;
+$$;
+REVOKE ALL ON FUNCTION public.uber_benchmark_hourly_summary() FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.uber_benchmark_hourly_summary() TO service_role;
