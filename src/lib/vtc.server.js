@@ -1713,7 +1713,16 @@ export async function handleVtc(input, context) {
     const target = String(body.userId || "");
     if (!/^[0-9a-f-]{36}$/i.test(target)) throw new Error("Compte invalide");
     if (target === uid) throw new Error("Vous ne pouvez pas supprimer votre propre compte");
-    const files = (await admin.storage.from(DOCUMENTS_BUCKET).list(target, { limit: 1000 })).data || [];
+    // Do not erase payment/accounting records or cancel Gold before checking
+    // whether the account can actually be deleted safely.
+    for (const [table, column] of [["wallet_transactions", "user_id"], ["payouts", "driver_id"], ["withdrawal_requests", "driver_id"]]) {
+      const { data, error } = await admin.from(table).select("id").eq(column, target).limit(1);
+      if (error) throw new Error(error.message);
+      if (data.length) throw new Error("Ce compte contient des opérations financières à archiver avant suppression. Contactez le responsable des données.");
+    }
+    const { data: files, error: fileListError } = await admin.storage.from(DOCUMENTS_BUCKET).list(target, { limit: 1000 });
+    if (fileListError) throw new Error(fileListError.message);
+    if ((files || []).length === 1000) throw new Error("Trop de documents à effacer automatiquement.");
     const { closeGoldBillingForDeletedAccount } = await import("./driver-gold.server");
     try {
       await closeGoldBillingForDeletedAccount(admin, target);
@@ -1730,7 +1739,7 @@ export async function handleVtc(input, context) {
         .eq("topic", "driver_conversation")
         .like("message", '%"userId":"' + target + '"%'),
     );
-    if (files.length) await admin.storage.from(DOCUMENTS_BUCKET).remove(files.map((f) => `${target}/${f.name}`));
+    if (files?.length) required(await admin.storage.from(DOCUMENTS_BUCKET).remove(files.map((f) => `${target}/${f.name}`)));
     const { error } = await admin.auth.admin.deleteUser(target);
     if (error && !/not.?found/i.test(error.message))
       throw new Error(`Données effacées, mais l’accès au compte n’a pas pu être supprimé : ${error.message}`);
