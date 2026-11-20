@@ -75,10 +75,21 @@ function LoginForm() {
     });
 
     if (res?.error) {
+      // Do not label every server/configuration failure as a wrong password.
+      // Keep credential errors generic to avoid disclosing account existence.
+      const status = Number(res.status || 0);
+      const rawMessage = typeof res.error === "string" ? res.error : res.error?.message || "";
+      console.error("[login] Authentication failed", { status, message: rawMessage });
       setError(
-        res.status === 429
+        status === 429
           ? "Trop de tentatives de connexion — veuillez patienter quelques minutes et réessayer."
-          : "E-mail ou mot de passe incorrect",
+          : status === 401 || status === 403
+            ? "Connexion refusée. Vérifiez vos identifiants et l'état de votre compte."
+            : status >= 500
+              ? "Le service de connexion rencontre un problème technique. Réessayez plus tard."
+              : status === 0
+                ? "Connexion impossible : vérifiez le réseau ou la configuration du service d'authentification."
+                : "Connexion impossible (erreur " + status + "). Veuillez réessayer.",
       );
       setLoading(false);
       return;
