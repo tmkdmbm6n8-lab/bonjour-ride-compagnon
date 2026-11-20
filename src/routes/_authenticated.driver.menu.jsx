@@ -1,4 +1,4 @@
-import { goldPeriodText, goldStatusLabel } from "@/components/private-clients/DriverGoldCard";
+
 import DriverProfileOverview from "@/components/driver/DriverProfileOverview";
 import AccountModeSwitch from '@/components/shell/AccountModeSwitch';
 import { createFileRoute } from "@tanstack/react-router";
@@ -58,14 +58,11 @@ function DriverMenuPage() {
       <AccountModeSwitch mode="rider"/>
 
       {goldData?.gold && (
-        <div className="card card-pad driver-notice">
-          <strong>{goldStatusLabel(goldData.gold)}</strong>
-          {goldData.gold.active && <p className="small mt-2">{goldPeriodText(goldData.gold)}</p>}
-          {!goldData.gold.active && !goldData.gold.unavailable && (
-            <Link href="/driver/private-clients" className="btn btn-secondary mt-2">
-              {goldData.gold.trialAvailable ? "Découvrir StrasDrive Gold" : "Réactiver StrasDrive Gold"}
-            </Link>
-          )}
+        <div className="card card-pad driver-notice drv-menu-gold-status">
+          <strong>Statut StrasDrive Gold</strong>
+          <span className={`drv-menu-gold-badge ${goldData.gold.unavailable ? "is-unknown" : goldData.gold.active ? "is-active" : "is-inactive"}`} role="status">
+            {goldData.gold.unavailable ? "Indisponible" : goldData.gold.active ? "Actif" : "Inactif"}
+          </span>
         </div>
       )}
 
