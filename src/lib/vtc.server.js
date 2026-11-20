@@ -4,6 +4,7 @@ import { accountRating } from "./account-ratings.server";
 import { recordOnlineTime } from "./driver-online-time.server";
 import { driverReportMessage } from "./driver-reports";
 import { visibleChatMessages, CHAT_ACTIVE_STATUSES } from "./ride-chat";
+import { isPairBlocked, setUserBlock, listUserBlocks } from "./user-blocks.server";
 import {
   closeRideChat,
   preserveRideChat,
@@ -445,6 +446,10 @@ export async function handleVtc(input, context) {
     if (method !== "GET") throw new Error("Méthode non autorisée");
     const { readSiteActivity } = await import("./site-monitoring.server");
     return readSiteActivity(admin);
+  }
+  if (p === "/api/users/me/blocks") {
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    return { blocks: await listUserBlocks(admin, uid) };
   }
   if (p === "/api/users/me/export") {
     if (method !== "GET") throw new Error("Méthode non autorisée");
@@ -1237,6 +1242,7 @@ export async function handleVtc(input, context) {
     const r = required(await admin.from("rides").select("*").eq("id", id).single());
     const participant = r.rider_id === uid || r.driver_id === uid;
     if (action === "accept") {
+      if (!r.is_test && await isPairBlocked(admin, r.rider_id, uid)) throw new Error("Cette mise en relation est indisponible.");
       if (r.status === "searching" && (r.messages || []).length)
         await closeRideChat(admin, id, { allowSearching: true });
       const approval = required(await admin.from("drivers").select("is_approved").eq("user_id", uid).single());
@@ -1441,6 +1447,21 @@ export async function handleVtc(input, context) {
         }
         required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
       }
+    } else if (action === "block" || action === "unblock") {
+      if (!participant || !r.driver_id) throw new Error("Accès refusé");
+      const otherId = r.rider_id === uid ? r.driver_id : r.rider_id;
+      return setUserBlock(admin, uid, otherId, action === "block");
+    } else if (action === "report-message") {
+      if (!participant || !r.driver_id) throw new Error("Accès refusé");
+      const msg = visibleChatMessages(r.messages).find((m) => m.id === body.messageId);
+      if (!msg || msg.from === (r.rider_id === uid ? "rider" : "driver")) throw new Error("Message introuvable");
+      const reason = String(body.reason || "Contenu abusif").trim().slice(0, 200);
+      if (!reason) throw new Error("Motif nécessaire");
+      const reporter = r.rider_id === uid ? "passager" : "chauffeur";
+      const report = JSON.stringify({ type: "ride_chat_report_v1", rideId: r.id, messageId: msg.id, messageType: msg.type, reporterId: uid, reportedUserId: r.rider_id === uid ? r.driver_id : r.rider_id, reason, createdAt: new Date().toISOString() });
+      required(await admin.from("contact_messages").insert({ topic: "safety", name: `Signalement chat ${r.id}`, email: context.claims.email || profile.email || "support@strasdrive.invalid", message: report }));
+      if (CHAT_ACTIVE_STATUSES.includes(r.status) && r.rider_id === uid) await preserveRideChat(admin, r.id, uid);
+      return { ok: true };
     } else if (action === "attachment") {
       if (!participant) throw new Error("Accès refusé");
       await sendChatAttachment(admin, r, uid, body);
