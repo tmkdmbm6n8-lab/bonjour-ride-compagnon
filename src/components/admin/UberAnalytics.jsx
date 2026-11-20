@@ -58,9 +58,10 @@ export default function UberAnalytics({observations=[],total=0,onRefresh}) {
   };
   return <section className="card card-pad mb-5" aria-label="Tableau de bord des observations Uber">
     <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-      <div><h3 style={{fontSize:"1.15rem"}}>Analyse graphique des tests Uber</h3><p className="tiny muted">Données réelles uniquement · {total.toLocaleString("fr-FR")} observations au total · graphiques sur les 1 000 dernières observations</p></div>
+      <div><h3 style={{fontSize:"1.15rem"}}>Analyse graphique des tests Uber</h3><p className="tiny muted">Données réelles uniquement · historique complet sans limite fixe de 1 000 observations</p></div>
       <div className="flex gap-2 flex-wrap"><button className="btn btn-secondary btn-sm" onClick={onRefresh}>Actualiser</button><button className="btn btn-secondary btn-sm" onClick={download} disabled={!rows.length}>Exporter CSV</button></div>
     </div>
+    <div style={{padding:"16px 18px",border:"1px solid var(--border)",borderRadius:12,marginBottom:16}}><div className="small muted">Total des prix Uber enregistrés depuis le début</div><div style={{fontSize:"2rem",fontWeight:800}}>{total.toLocaleString("fr-FR")}</div><div className="tiny muted">Une recherche peut enregistrer plusieurs catégories Uber. Ce total compte les observations tarifaires, pas les réservations.</div></div>
     <div className="flex flex-wrap gap-2 mb-4">
       <select className="input" aria-label="Période" value={period} onChange={e=>{setPeriod(e.target.value);setPage(0)}} style={{width:150}}><option value="1">24 heures</option><option value="7">7 jours</option><option value="30">30 jours</option><option value="90">90 jours</option><option value="365">1 an</option><option value="all">Toutes les dates</option></select>
       <select className="input" aria-label="Catégorie Uber" value={product} onChange={e=>{setProduct(e.target.value);setPage(0)}} style={{width:170}}><option value="all">Toutes les gammes</option>{unique.map(x=><option key={x} value={x}>{x}</option>)}</select>
