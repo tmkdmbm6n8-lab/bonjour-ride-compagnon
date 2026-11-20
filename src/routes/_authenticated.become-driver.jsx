@@ -5,11 +5,14 @@ import RiderLayout from "@/components/RiderLayout";
 import CloseControl from "@/components/ui/CloseControl";
 import Link from "@/lib/archive-navigation";
 import { apiFetch } from "@/lib/archive-fetch";
+import { REQUIRED_DOCUMENTS } from "@/lib/vtc-documents";
 
 function BecomeDriverPage() {
   const [application, setApplication] = useState(undefined);
   const [canDrive, setCanDrive] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmedDocuments, setConfirmedDocuments] = useState([]);
+  const allConfirmed = REQUIRED_DOCUMENTS.every((doc) => confirmedDocuments.includes(doc.type));
   const [error, setError] = useState("");
   useEffect(() => {
     let ignore = false;
@@ -21,10 +24,10 @@ function BecomeDriverPage() {
     return () => { ignore = true; };
   }, []);
   async function submit() {
-    if (busy || application || canDrive) return;
+    if (busy || application || canDrive || !allConfirmed) return;
     setBusy(true); setError("");
     try {
-      const res = await apiFetch("/api/users/me/driver-application", { method: "POST", body: JSON.stringify({}) });
+      const res = await apiFetch("/api/users/me/driver-application", { method: "POST", body: JSON.stringify({ confirmedDocuments }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Envoi impossible");
       setApplication(data.application);
@@ -47,6 +50,22 @@ function BecomeDriverPage() {
           <p><ShieldCheck size={21} /> Candidature examinée par notre équipe</p>
           <p><FileCheck2 size={21} /> Documents VTC à transmettre après acceptation</p>
         </div>
+        {!accepted && !application && (
+          <div className="sd-become-driver-checklist">
+            <h2>Documents nécessaires pour devenir chauffeur</h2>
+            <p className="sd-become-driver-checklist-intro">Cochez chaque document que vous possédez. Les justificatifs seront demandés après acceptation de votre candidature.</p>
+            <div className="sd-become-driver-checklist-progress" role="status">{confirmedDocuments.length} / {REQUIRED_DOCUMENTS.length} documents confirmés</div>
+            {REQUIRED_DOCUMENTS.map((doc) => (
+              <label key={doc.type} className="sd-become-driver-check-row">
+                <input type="checkbox" checked={confirmedDocuments.includes(doc.type)}
+                  onChange={(event) => setConfirmedDocuments((current) => event.target.checked
+                    ? [...current, doc.type]
+                    : current.filter((type) => type !== doc.type))} />
+                <span><strong>{doc.label}</strong><small>{doc.hint}</small></span>
+              </label>
+            ))}
+          </div>
+        )}
         {accepted ? (
           <div className="sd-become-driver-status">
             <strong>Candidature acceptée !</strong>
@@ -64,8 +83,8 @@ function BecomeDriverPage() {
             <p>Votre demande n'a pas été acceptée. Contactez l'assistance si vous souhaitez en discuter.</p>
           </div>
         ) : application === undefined ? <p role="status">Chargement de votre candidature…</p> : (
-          <button className="sd-become-driver-submit" type="button" disabled={busy || Boolean(error)} onClick={submit}>
-            {busy ? "Envoi en cours…" : "Envoyer ma candidature"} <ArrowRight size={20} />
+          <button className="sd-become-driver-submit" type="button" disabled={busy || Boolean(error) || !allConfirmed} onClick={submit}>
+            {busy ? "Envoi en cours…" : allConfirmed ? "Envoyer ma candidature" : `Confirmez les ${REQUIRED_DOCUMENTS.length} documents`} <ArrowRight size={20} />
           </button>
         )}
         {error && <p className="input-error-msg" role="alert">{error}</p>}
