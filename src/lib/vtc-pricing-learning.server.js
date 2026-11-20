@@ -102,18 +102,46 @@ async function randomAddress(radius) {
   return null;
 }
 
-export async function compareRandomUberAi(admin) {
+async function randomAddressNear(center,nearRadius,globalRadius) {
+  for(let attempt=0;attempt<12;attempt++){
+    const angle=Math.random()*2*Math.PI;
+    const distance=Math.sqrt(Math.random())*nearRadius;
+    const lat=center.lat+distance*Math.cos(angle)/111.2;
+    const lng=center.lng+distance*Math.sin(angle)/(111.2*Math.cos(radians(center.lat)));
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),4500);
+    try {
+      const response=await fetch(`https://api-adresse.data.gouv.fr/reverse/?lat=${lat}&lon=${lng}&type=housenumber&limit=1`,{signal:controller.signal});
+      if(!response.ok)continue;
+      const feature=(await response.json()).features?.[0];
+      const props=feature?.properties||{},coords=feature?.geometry?.coordinates;
+      if(!props.housenumber||!props.street||!props.city||!Array.isArray(coords))continue;
+      const address={name:props.label||`${props.housenumber} ${props.street}, ${props.city}`,lat:Number(coords[1]),lng:Number(coords[0]),id:String(props.id||`${coords[1]}:${coords[0]}`)};
+      if(![address.lat,address.lng].every(Number.isFinite))continue;
+      if(km(CENTER,address)>globalRadius||km(center,address)>nearRadius*1.1)continue;
+      return address;
+    }catch(error){console.warn("[pricing-ai] Nearby address lookup failed:",error?.message||error);}
+    finally{clearTimeout(timer);}
+  }
+  return null;
+}
+export async function compareRandomUberAi(admin,{maxDistanceKm=10}={}) {
+  const maxKm=Number(maxDistanceKm);
+  if(![10,100].includes(maxKm))throw new Error("Distance maximale invalide");
   const config=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_ai_learning").maybeSingle();
   if(config.error)throw config.error;
   const radius=Math.max(1,Math.min(200,Number(config.data?.rule?.radiusKm)||100));
   let pickup=null,dropoff=null;
-  for(let attempt=0;attempt<8;attempt++){
+  for(let attempt=0;attempt<24;attempt++){
     pickup=await randomAddress(radius);
-    dropoff=await randomAddress(radius);
-    if(pickup&&dropoff&&pickup.id!==dropoff.id&&km(pickup,dropoff)>=1)break;
+    if(!pickup)continue;
+    // Draw destination close enough to pickup for the requested trip length.
+    const destinationRadius=Math.min(radius,maxKm/2);
+    dropoff=await randomAddressNear(pickup,destinationRadius,radius);
+    if(pickup&&dropoff&&pickup.id!==dropoff.id&&km(pickup,dropoff)>=1&&km(pickup,dropoff)<=maxKm)break;
   }
-  if(!pickup||!dropoff||pickup.id===dropoff.id||km(pickup,dropoff)<1)
-    throw new Error("Impossible de trouver deux adresses numérotées distinctes");
+  if(!pickup||!dropoff||pickup.id===dropoff.id||km(pickup,dropoff)<1||km(pickup,dropoff)>maxKm)
+    throw new Error("Impossible de trouver un trajet numéroté dans la limite de "+maxKm+" km");
   const cookie=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_cookie").maybeSingle();
   if(cookie.error)throw cookie.error;
   const offers=await uberProducts(pickup,dropoff,cookie.data?.rule?.cookie||null);
