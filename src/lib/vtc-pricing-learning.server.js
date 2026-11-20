@@ -125,9 +125,9 @@ async function randomAddressNear(center,nearRadius,globalRadius) {
   }
   return null;
 }
-export async function compareRandomUberAi(admin,{maxDistanceKm=10}={}) {
+export async function compareRandomUberAi(admin,{maxDistanceKm=9}={}) {
   const maxKm=Number(maxDistanceKm);
-  if(![10,100].includes(maxKm))throw new Error("Distance maximale invalide");
+  if(![9,100].includes(maxKm))throw new Error("Distance maximale invalide");
   const config=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_ai_learning").maybeSingle();
   if(config.error)throw config.error;
   const radius=Math.max(1,Math.min(200,Number(config.data?.rule?.radiusKm)||100));
@@ -178,8 +178,10 @@ export async function runLearningSample(admin) {
   // Every address is claimed permanently and atomically before it is tested.
   let selected=null;
   for(let attempt=0;attempt<15;attempt++){
-    const pickup=await randomAddress(radius),dropoff=await randomAddress(radius);
-    if(!pickup||!dropoff||pickup.id===dropoff.id)continue;
+    const pickup=await randomAddress(radius);
+    if(!pickup)continue;
+    const dropoff=await randomAddressNear(pickup,4.3,radius);
+    if(!dropoff||pickup.id===dropoff.id||km(pickup,dropoff)>9||km(pickup,dropoff)<0.1)continue;
     const claim=await admin.rpc("claim_uber_random_addresses",{
       p_pickup_key:pickup.id,p_dropoff_key:dropoff.id,
       p_pickup_name:pickup.name,p_dropoff_name:dropoff.name,
