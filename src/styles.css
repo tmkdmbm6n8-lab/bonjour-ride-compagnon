@@ -11219,3 +11219,40 @@ a.activity-pill:hover {
 .sd-become-driver-check-row strong { display: block; color: #f5f0e7; font-size: .94rem; }
 .sd-become-driver-check-row small { display: block; color: #bdb6a9; font-size: .79rem; line-height: 1.4; margin-top: 5px; }
 .sd-become-driver-submit:disabled { box-shadow: none; opacity: .5; cursor: not-allowed; }
+
+
+/* One-at-a-time ride category selector, with compact navigation arrows. */
+.shell-rider .rider-vehicle-carousel {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.shell-rider .rider-vehicle-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-height: 48px;
+  padding: 0;
+  color: #e9be70;
+  border: 1px solid #6b5733;
+  border-radius: 12px;
+  background: #30291b;
+  cursor: pointer;
+}
+.shell-rider .rider-vehicle-arrow:disabled { opacity: .25; cursor: default; }
+.shell-rider .rider-vehicle-arrow:focus-visible { outline: 2px solid #e9be70; outline-offset: 2px; }
+.shell-rider .rider-vehicle-carousel-card {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  cursor: default;
+}
+.shell-rider .rider-vehicle-carousel-count {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+}
