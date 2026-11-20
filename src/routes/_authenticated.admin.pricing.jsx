@@ -1,3 +1,4 @@
+import UberBenchmarkChart from "@/components/admin/UberBenchmarkChart";
 import { createFileRoute } from "@tanstack/react-router";
 import AdminLayout from "@/components/AdminLayout";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
@@ -479,6 +480,7 @@ function AdminPricingPage() {
         </div>
       </div>
 
+      <UberBenchmarkChart />
       <UberAnalytics observations={aiStats.recent || []} total={aiStats.count || 0} onRefresh={() => loadAiStatus().catch(() => toast("Actualisation impossible", "error"))} />
 
       <h2 style={{ fontSize: "1.15rem", marginBottom: 12 }}>Grille tarifaire de secours (StrasDrive)</h2>
