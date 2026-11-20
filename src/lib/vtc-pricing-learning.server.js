@@ -60,6 +60,8 @@ export async function recordClientUberQuote(admin, pickup, dropoff, products, ro
   // The admin toggle only controls automated 5-second sampling.
   if (![pickup?.lat,pickup?.lng,dropoff?.lat,dropoff?.lng].every(Number.isFinite)) return { saved: 0 };
   const distanceKm = Number(route?.distanceMeters) > 0 ? Number(route.distanceMeters)/1000 : km(pickup,dropoff);
+  // Keep the training dataset limited to short journeys; do not restrict client bookings.
+  if (!Number.isFinite(distanceKm) || distanceKm <= 0 || distanceKm > 9) return { saved: 0, skipped: "distance_over_9km" };
   const context = features(new Date());
   const rows = products.filter(p => p.currency === "EUR" && Number.isFinite(p.price) && p.price > 0).map(p => ({
     pickup_name: "Recherche client", dropoff_name: "Recherche client",
@@ -199,10 +201,12 @@ export async function runLearningSample(admin) {
   if(!products?.length)return stopLearning(admin, settings, "Aucun tarif direct Uber reçu : collecte arrêtée automatiquement.");
   const now=new Date();
   const context=features(now);
+  const sampledDistanceKm=km({lat:latA,lng:lngA},{lat:latB,lng:lngB});
+  if(sampledDistanceKm>9)return {skipped:"distance_over_9km"};
   const observations=products.filter(p=>p.currency==="EUR"&&Number.isFinite(p.price)&&p.price>0).map(p=>({
     observed_at:now.toISOString(),pickup_name:nameA,dropoff_name:nameB,
     pickup_lat:latA,pickup_lng:lngA,dropoff_lat:latB,dropoff_lng:lngB,
-    distance_km:km({lat:latA,lng:lngA},{lat:latB,lng:lngB}),
+    distance_km:sampledDistanceKm,
     product_name:p.name||"Uber",price_eur:p.price,trip_seconds:p.tripSeconds||null,
     context,
   }));
