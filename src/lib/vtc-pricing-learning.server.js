@@ -177,7 +177,24 @@ export async function compareRandomUberAi(admin,{maxDistanceKm=9}={}) {
     });
   }
   if(!comparisons.length)throw new Error("Uber ne fournit aucun prix valide en euros");
-  return {pickup:pickup.name,dropoff:dropoff.name,distanceKm:Math.round(distanceKm*100)/100,
+  // Learn exclusively from authentic Uber prices when the model underestimates
+  // by at least 50 cents. The AI estimate itself is NEVER a training label.
+  // This also applies to manual comparisons, keeping the endpoint independent
+  // from any client-provided training flags.
+  const matched=offers.filter(offer=>comparisons.some(c=>c.category===offer.name&&c.ready&&Math.round((c.uberPrice-c.aiPrice)*100)>=50));
+  const observations=matched.map(offer=>({
+    observed_at:at.toISOString(),pickup_name:pickup.name,dropoff_name:dropoff.name,
+    pickup_lat:pickup.lat,pickup_lng:pickup.lng,dropoff_lat:dropoff.lat,dropoff_lng:dropoff.lng,
+    distance_km:distanceKm,product_name:offer.name,price_eur:offer.price,
+    trip_seconds:offer.tripSeconds||null,
+    context:{...features(at),source:"uber_ai_underestimate_correction"}
+  }));
+  if(observations.length&&distanceKm<=9){
+    const saved=await admin.from("uber_price_observations").insert(observations);
+    if(saved.error)throw saved.error;
+  }
+  const savedCount=distanceKm<=9?observations.length:0;
+  return {savedCount,pickup:pickup.name,dropoff:dropoff.name,distanceKm:Math.round(distanceKm*100)/100,
     comparedAt:at.toISOString(),comparisons,
     distanceMethod:"à vol d'oiseau",note:"Comparaison expérimentale des prix Uber bruts et des prédictions IA, sans remise ni minimum tarifaire. La distance utilisée est à vol d'oiseau."};
 }
