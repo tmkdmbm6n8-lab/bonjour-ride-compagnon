@@ -1484,8 +1484,8 @@ export async function handleVtc(input, context) {
       if (!reason) throw new Error("Motif nécessaire");
       const reporter = r.rider_id === uid ? "passager" : "chauffeur";
       const report = JSON.stringify({ type: "ride_chat_report_v1", rideId: r.id, messageId: msg.id, messageType: msg.type, reporterId: uid, reportedUserId: r.rider_id === uid ? r.driver_id : r.rider_id, reason, createdAt: new Date().toISOString() });
-      required(await admin.from("contact_messages").insert({ topic: "safety", name: `Signalement chat ${r.id}`, email: context.claims.email || profile.email || "support@strasdrive.invalid", message: report }));
       if (CHAT_ACTIVE_STATUSES.includes(r.status)) await preserveRideChat(admin, r.id, uid);
+      required(await admin.from("contact_messages").insert({ topic: "safety", name: `Signalement chat ${r.id}`, email: context.claims.email || profile.email || "support@strasdrive.invalid", message: report }));
       return { ok: true };
     } else if (action === "attachment") {
       if (!participant) throw new Error("Accès refusé");
@@ -1908,8 +1908,9 @@ async function assignOffer(db, r, pool) {
     );
   }
   let drivers = pool || (await dispatchPool(db));
-  const blocked = required(await db.from("user_blocks").select("blocker_id,blocked_id")
-    .or(`blocker_id.eq.${r.rider_id},blocked_id.eq.${r.rider_id}`));
+  const blockResult = await db.from("user_blocks").select("blocker_id,blocked_id")
+    .or(`blocker_id.eq.${r.rider_id},blocked_id.eq.${r.rider_id}`);
+  const blocked = ["42P01", "PGRST205"].includes(blockResult.error?.code) ? [] : required(blockResult);
   const excluded = new Set(blocked.map((b) => b.blocker_id === r.rider_id ? b.blocked_id : b.blocker_id));
   drivers = drivers.filter((d) => !excluded.has(d.user_id));
   let route = r.route;
