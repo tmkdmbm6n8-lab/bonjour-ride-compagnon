@@ -32,15 +32,16 @@ function Bars({data,label="Prix moyen",unit="€",maxItems=12}) {
   </div>)}</div>;
 }
 export default function UberAnalytics({observations=[],total=0,onRefresh}) {
+  const [distanceTab,setDistanceTab]=useState("short");
   const [period,setPeriod]=useState("30");
   const [product,setProduct]=useState("all");
   const [search,setSearch]=useState("");
   const [page,setPage]=useState(0);
   const rows=useMemo(()=>{
     const min=period==="all"?0:Date.now()-Number(period)*86400000;
-    return observations.filter(x=>new Date(x.observed_at).getTime()>=min&&(product==="all"||x.product_name===product)&&
+    return observations.filter(x=>(distanceTab==="all"||(Number(x.distance_km)>0&&Number(x.distance_km)<=9))&&new Date(x.observed_at).getTime()>=min&&(product==="all"||x.product_name===product)&&
       (!search||[x.pickup_name,x.dropoff_name,x.product_name].some(t=>String(t||"").toLowerCase().includes(search.toLowerCase()))));
-  },[observations,period,product,search]);
+  },[observations,period,product,search,distanceTab]);
   const prices=rows.map(x=>Number(x.price_eur)).filter(Number.isFinite);
   const distances=rows.map(x=>Number(x.distance_km)).filter(x=>Number.isFinite(x)&&x>0);
   const days=group(rows,x=>new Date(x.observed_at).toISOString().slice(0,10)).sort((a,b)=>a.label.localeCompare(b.label)).map(x=>({...x,label:x.label.slice(5)}));
@@ -54,20 +55,26 @@ export default function UberAnalytics({observations=[],total=0,onRefresh}) {
     const totalFare=valid.reduce((sum,x)=>sum+Number(x.price_eur),0);
     return {name,count:valid.length,pricePerKm:totalKm>0?totalFare/totalKm:null};
   }).sort((a,b)=>a.name.localeCompare(b.name,"fr"));
-  const unique=[...new Set(observations.map(x=>x.product_name))].sort();
+  const scopedObservations=observations.filter(x=>distanceTab==="all"||(Number(x.distance_km)>0&&Number(x.distance_km)<=9));
+  const unique=[...new Set(scopedObservations.map(x=>x.product_name))].sort();
   const stats=[["Observations",rows.length.toLocaleString("fr-FR")],["Prix moyen",euro(avg(prices))],["Prix minimum",euro(Math.min(...prices))],["Prix maximum",euro(Math.max(...prices))],["Distance moyenne",distances.length?avg(distances).toFixed(1)+" km":"—"],["Catégories suivies",new Set(rows.map(x=>x.product_name).filter(Boolean)).size.toLocaleString("fr-FR")]];
   if(!prices.length){stats[2][1]="—";stats[3][1]="—";}
   const download=()=>{
     const cols=["observed_at","product_name","price_eur","distance_km","trip_seconds","pickup_name","dropoff_name"];
     const csv=[cols.join(";"),...rows.map(r=>cols.map(k=>'"'+String(r[k]??"").replaceAll('"','""')+'"').join(";"))].join("\n");
-    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}));a.download="strasdrive-tests-uber.csv";a.click();URL.revokeObjectURL(a.href);
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}));a.download=distanceTab==="short"?"strasdrive-tests-uber-max-9km.csv":"strasdrive-tests-uber.csv";a.click();URL.revokeObjectURL(a.href);
   };
   return <section className="card card-pad mb-5" aria-label="Tableau de bord des observations Uber">
     <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
       <div><h3 style={{fontSize:"1.15rem"}}>Analyse graphique des tests Uber</h3><p className="tiny muted">Données réelles uniquement · historique complet sans limite fixe de 1 000 observations</p></div>
       <div className="flex gap-2 flex-wrap"><button className="btn btn-secondary btn-sm" onClick={onRefresh}>Actualiser</button><button className="btn btn-secondary btn-sm" onClick={download} disabled={!rows.length}>Exporter CSV</button></div>
     </div>
-    <div style={{padding:"16px 18px",border:"1px solid var(--border)",borderRadius:12,marginBottom:16}}><div className="small muted">Total des prix Uber enregistrés depuis le début</div><div style={{fontSize:"2rem",fontWeight:800}}>{total.toLocaleString("fr-FR")}</div><div className="tiny muted">Une recherche peut enregistrer plusieurs catégories Uber. Ce total compte les observations tarifaires, pas les réservations.</div></div>
+    <div role="tablist" aria-label="Périmètre des analyses" className="flex flex-wrap gap-2 mb-4">
+      <button type="button" role="tab" aria-selected={distanceTab==="short"} className={`btn btn-sm ${distanceTab==="short"?"btn-primary":"btn-secondary"}`} onClick={()=>{setDistanceTab("short");setPage(0)}}>Analyse · 9 km maximum</button>
+      <button type="button" role="tab" aria-selected={distanceTab==="all"} className={`btn btn-sm ${distanceTab==="all"?"btn-primary":"btn-secondary"}`} onClick={()=>{setDistanceTab("all");setPage(0)}}>Toutes les distances</button>
+    </div>
+    {distanceTab==="short" && <p className="small muted mb-3">Cet onglet analyse uniquement les observations dont la distance enregistrée est supérieure à 0 et inférieure ou égale à 9 km. Les statistiques, graphiques, tableaux et exports CSV excluent les trajets plus longs. Attention : les anciennes simulations peuvent utiliser la distance à vol d'oiseau.</p>}
+    <div style={{padding:"16px 18px",border:"1px solid var(--border)",borderRadius:12,marginBottom:16}}><div className="small muted">Prix Uber enregistrés dans cet onglet (toutes dates)</div><div style={{fontSize:"2rem",fontWeight:800}}>{scopedObservations.length.toLocaleString("fr-FR")}</div><div className="tiny muted">Une recherche peut enregistrer plusieurs catégories Uber. Ce total compte les observations tarifaires, pas les réservations.</div></div>
     <div className="flex flex-wrap gap-2 mb-4">
       <select className="input" aria-label="Période" value={period} onChange={e=>{setPeriod(e.target.value);setPage(0)}} style={{width:150}}><option value="1">24 heures</option><option value="7">7 jours</option><option value="30">30 jours</option><option value="90">90 jours</option><option value="365">1 an</option><option value="all">Toutes les dates</option></select>
       <select className="input" aria-label="Catégorie Uber" value={product} onChange={e=>{setProduct(e.target.value);setPage(0)}} style={{width:170}}><option value="all">Toutes les gammes</option>{unique.map(x=><option key={x} value={x}>{x}</option>)}</select>
