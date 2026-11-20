@@ -172,6 +172,7 @@ export async function openGoldBilling(admin, driverId, manage = false) {
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer,
+    payment_method_types: ["card"],
     line_items: [{ price: price.id, quantity: 1 }],
     payment_method_collection: billing.trial_used ? "always" : "if_required",
     subscription_data: {
