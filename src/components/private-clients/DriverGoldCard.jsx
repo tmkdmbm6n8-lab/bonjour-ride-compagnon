@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Capacitor } from "@capacitor/core";
-import { ArrowRight, Plane, QrCode, Percent } from "lucide-react";
+import { ArrowRight, ArrowLeft, Plane, QrCode, Percent } from "lucide-react";
 import { apiFetch } from "@/lib/archive-fetch";
 import { GOLD_MONTHLY_CENTS, GOLD_TRIAL_DAYS } from "@/lib/driver-gold";
 
@@ -29,12 +29,13 @@ export function goldPeriodText(gold) {
 export default function DriverGoldCard({ gold, waitingForStripe }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [selectedPlan, setSelectedPlan] = useState("monthly");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const isIosNative = typeof window !== "undefined" && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
   if (!gold) return null;
   const manage = gold.canManage;
-  const selected = goldPlans.find((plan) => plan.id === selectedPlan) || goldPlans[0];
+  const selected = goldPlans[selectedIndex];
+  const saving = Math.round((1 - selected.cents / (GOLD_MONTHLY_CENTS * selected.months)) * 100);
 
   async function openBilling() {
     if (!manage && !selected.available) {
@@ -86,20 +87,25 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
       ) : (
         <>
           <div className="driver-gold-pricing">
-            <p className="driver-gold-plan-intro">Choisissez votre durée · Faites défiler les offres</p>
-            <div className="driver-gold-plan-scroll" role="group" aria-label="Durée de l’abonnement Gold">
-              {goldPlans.map((plan) => {
-                const saving = Math.round((1 - plan.cents / (GOLD_MONTHLY_CENTS * plan.months)) * 100);
-                return <button key={plan.id} type="button" className={`driver-gold-plan ${selectedPlan === plan.id ? "selected" : ""} ${plan.badge ? "featured" : ""}`}
-                  aria-pressed={selectedPlan === plan.id} onClick={() => { setSelectedPlan(plan.id); setError(""); }}>
-                  {plan.badge && <span className="driver-gold-plan-badge">{plan.badge}</span>}
-                  <span className="driver-gold-plan-term">{plan.label}</span>
-                  <strong className="driver-gold-plan-total">{euro(plan.cents)}</strong>
-                  <span className="driver-gold-plan-monthly">soit {euro(Math.round(plan.cents / plan.months))}/mois</span>
-                  <span className="driver-gold-plan-saving">{saving > 0 ? `Économisez ${saving} %` : "Tarif standard"}</span>
-                  <span className="driver-gold-plan-availability">{plan.available ? "Disponible" : "Bientôt disponible"}</span>
-                </button>;
-              })}
+            <p className="driver-gold-plan-intro">Choisissez la formule qui vous convient</p>
+            <div className="driver-gold-plan-navigation" role="group" aria-label="Choisir une durée d’abonnement">
+              <div className="driver-gold-plan-nav-slot">
+                {selectedIndex > 0 && <button type="button" className="driver-gold-plan-arrow" aria-label="Formule précédente" onClick={() => { setSelectedIndex((index) => Math.max(0, index - 1)); setError(""); }}><ArrowLeft size={22} aria-hidden="true" /></button>}
+              </div>
+              <div className={`driver-gold-plan driver-gold-plan-single ${selected.badge ? "featured" : ""}`} aria-live="polite">
+                {selected.badge && <span className="driver-gold-plan-badge">{selected.badge}</span>}
+                <span className="driver-gold-plan-term">{selected.label}</span>
+                <strong className="driver-gold-plan-total">{euro(selected.cents)}</strong>
+                <span className="driver-gold-plan-monthly">soit {euro(Math.round(selected.cents / selected.months))}/mois</span>
+                <span className="driver-gold-plan-saving">{saving > 0 ? `Économisez ${saving} %` : "Tarif standard"}</span>
+                <span className="driver-gold-plan-availability">{selected.available ? "Disponible" : "Bientôt disponible"}</span>
+              </div>
+              <div className="driver-gold-plan-nav-slot">
+                {selectedIndex < goldPlans.length - 1 && <button type="button" className="driver-gold-plan-arrow" aria-label="Formule suivante" onClick={() => { setSelectedIndex((index) => Math.min(goldPlans.length - 1, index + 1)); setError(""); }}><ArrowRight size={22} aria-hidden="true" /></button>}
+              </div>
+            </div>
+            <div className="driver-gold-plan-dots" role="group" aria-label="Navigation entre les trois formules">
+              {goldPlans.map((plan, index) => <button key={plan.id} type="button" className={index === selectedIndex ? "active" : ""} aria-label={`Afficher la formule ${plan.label}`} aria-current={index === selectedIndex ? "step" : undefined} onClick={() => { setSelectedIndex(index); setError(""); }} />)}
             </div>
             <p className="driver-gold-plan-hint">{selected.available ? "Paiement et renouvellement mensuels." : `Paiement de ${euro(selected.cents)} pour ${selected.months} mois, après activation de cette formule.`}</p>
             {trial && selected.available && <p className="driver-gold-trial">{GOLD_TRIAL_DAYS} jours offerts à la première souscription</p>}
