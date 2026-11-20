@@ -80,26 +80,50 @@ export async function runLearningSample(admin) {
   const settings=config.data?.rule||{};
   if(!settings.enabled)return {skipped:"disabled"};
   const radius=Math.max(1,Math.min(200,Number(settings.radiusKm)||100));
-  const pool=PLACES.filter(p=>km(CENTER,{lat:p[1],lng:p[2]})<=radius);
-  if(pool.length<2)return {skipped:"insufficient_addresses"};
-  // Avoid repeating a route during a sampling cycle. Keep the fixed hourly benchmark separate.
-  // Track ordered pickup/dropoff pairs (A→B is distinct from B→A).
-  const candidates=[];
-  for(let i=0;i<pool.length;i++)for(let j=0;j<pool.length;j++){
-    if(i!==j)candidates.push([pool[i],pool[j]]);
+  // Sample genuine numbered street addresses from the French national address API.
+  // Every address is claimed permanently and atomically before it is tested.
+  async function randomAddress() {
+    for (let attempt=0;attempt<12;attempt++) {
+      const angle=Math.random()*2*Math.PI;
+      const radiusKm=Math.sqrt(Math.random())*radius;
+      const lat=CENTER.lat+(radiusKm*Math.cos(angle))/111.2;
+      const lng=CENTER.lng+(radiusKm*Math.sin(angle))/(111.2*Math.cos(radians(CENTER.lat)));
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),4500);
+      try {
+        const response=await fetch(`https://api-adresse.data.gouv.fr/reverse/?lat=${lat}&lon=${lng}&type=housenumber&limit=1`,{signal:controller.signal});
+        if(!response.ok)continue;
+        const result=await response.json();
+        const feature=result.features?.[0];
+        const props=feature?.properties||{};
+        const coords=feature?.geometry?.coordinates;
+        if(!props.housenumber||!props.street||!props.city||!Array.isArray(coords))continue;
+        const address={name:props.label||`${props.housenumber} ${props.street}, ${props.city}`,lat:Number(coords[1]),lng:Number(coords[0]),id:String(props.id||`${coords[1]}:${coords[0]}`)};
+        if(![address.lat,address.lng].every(Number.isFinite))continue;
+        if(km(CENTER,address)>radius)continue;
+        if(km({lat,lng},address)>1.5)continue;
+        return address;
+      } catch(error) {
+        console.warn("[pricing-ai] Address lookup failed:",error?.message||error);
+      } finally {clearTimeout(timer);}
+    }
+    return null;
   }
-  const history=await admin.from("uber_price_observations")
-    .select("pickup_lat,pickup_lng,dropoff_lat,dropoff_lng,context")
-    .order("observed_at",{ascending:false}).limit(1000);
-  if(history.error)throw history.error;
-  const key=(a,b,c,d)=>[a,b,c,d].map(n=>Number(n).toFixed(5)).join(":");
-  const used=new Set((history.data||[]).filter(x=>x.context?.source!=="uber_live_client")
-    .map(x=>key(x.pickup_lat,x.pickup_lng,x.dropoff_lat,x.dropoff_lng)));
-  const fresh=candidates.filter(([a,b])=>!used.has(key(a[1],a[2],b[1],b[2])));
-  // Once every possible route has been visited, start a new cycle.
-  const choices=fresh.length?fresh:candidates;
-  const selected=choices[Math.floor(Math.random()*choices.length)];
-  const [nameA,latA,lngA]=selected[0],[nameB,latB,lngB]=selected[1];
+  let selected=null;
+  for(let attempt=0;attempt<15;attempt++){
+    const pickup=await randomAddress(),dropoff=await randomAddress();
+    if(!pickup||!dropoff||pickup.id===dropoff.id)continue;
+    const claim=await admin.rpc("claim_uber_random_addresses",{
+      p_pickup_key:pickup.id,p_dropoff_key:dropoff.id,
+      p_pickup_name:pickup.name,p_dropoff_name:dropoff.name,
+      p_pickup_lat:pickup.lat,p_pickup_lng:pickup.lng,
+      p_dropoff_lat:dropoff.lat,p_dropoff_lng:dropoff.lng
+    });
+    if(claim.error)throw new Error("Migration SQL 0012 nécessaire : "+claim.error.message);
+    if(claim.data===true){selected=[pickup,dropoff];break;}
+  }
+  if(!selected)return {skipped:"Aucune nouvelle paire d'adresses numérotées trouvée ; aucune adresse réutilisée"};
+  const [{name:nameA,lat:latA,lng:lngA},{name:nameB,lat:latB,lng:lngB}]=selected;
   const cookie=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_cookie").maybeSingle();
   if(cookie.error)throw cookie.error;
   const products=await uberProducts({lat:latA,lng:lngA},{lat:latB,lng:lngB},cookie.data?.rule?.cookie||null);
