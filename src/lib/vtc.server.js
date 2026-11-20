@@ -442,6 +442,30 @@ export async function handleVtc(input, context) {
     throw new Error("Méthode non autorisée");
   }
 
+  if (p === "/api/admin/content-reports") {
+    if (method === "GET") {
+      const rows = required(await admin.from("contact_messages").select("id,topic,name,message,created_at,status")
+        .in("topic", ["safety", "safety_reviewed"]).order("created_at", { ascending: false }).limit(200));
+      return { reports: rows.flatMap((row) => {
+        try {
+          const item = JSON.parse(row.message);
+          return item.type === "ride_chat_report_v1" ? [{ ...item, id: row.id, status: row.topic === "safety_reviewed" ? "reviewed" : "pending" }] : [];
+        } catch { return []; }
+      }) };
+    }
+    if (method === "POST") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Signalement invalide");
+      const rows = required(await admin.from("contact_messages").select("id,message").eq("id", id).eq("topic", "safety").limit(1));
+      if (!rows.length) throw new Error("Signalement introuvable");
+      let parsed;
+      try { parsed = JSON.parse(rows[0].message); } catch { throw new Error("Signalement invalide"); }
+      if (parsed.type !== "ride_chat_report_v1") throw new Error("Signalement invalide");
+      required(await admin.from("contact_messages").update({ topic: "safety_reviewed" }).eq("id", id).eq("topic", "safety"));
+      return { ok: true };
+    }
+    throw new Error("Méthode non autorisée");
+  }
   if (p === "/api/admin/monitoring") {
     if (method !== "GET") throw new Error("Méthode non autorisée");
     const { readSiteActivity } = await import("./site-monitoring.server");
@@ -1461,7 +1485,7 @@ export async function handleVtc(input, context) {
       const reporter = r.rider_id === uid ? "passager" : "chauffeur";
       const report = JSON.stringify({ type: "ride_chat_report_v1", rideId: r.id, messageId: msg.id, messageType: msg.type, reporterId: uid, reportedUserId: r.rider_id === uid ? r.driver_id : r.rider_id, reason, createdAt: new Date().toISOString() });
       required(await admin.from("contact_messages").insert({ topic: "safety", name: `Signalement chat ${r.id}`, email: context.claims.email || profile.email || "support@strasdrive.invalid", message: report }));
-      if (CHAT_ACTIVE_STATUSES.includes(r.status) && r.rider_id === uid) await preserveRideChat(admin, r.id, uid);
+      if (CHAT_ACTIVE_STATUSES.includes(r.status)) await preserveRideChat(admin, r.id, uid);
       return { ok: true };
     } else if (action === "attachment") {
       if (!participant) throw new Error("Accès refusé");
