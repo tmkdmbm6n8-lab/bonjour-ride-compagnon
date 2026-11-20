@@ -1644,6 +1644,28 @@ export async function handleVtc(input, context) {
     await pushRideOffer(admin, testRide, [d.user_id]);
     return { ok: true, rideId: r.id, expiresInSeconds: TEST_OFFER_SECONDS, driverOnline: Boolean(d.is_online) };
   }
+  if (p === "/api/admin/pricing-ai") {
+    const { learningStatus, runLearningSample, predictLearnedPrice } = await import("./vtc-pricing-learning.server");
+    if (method === "GET") return learningStatus(admin);
+    if (method === "PUT") {
+      const radiusKm = Math.max(1, Math.min(200, Number(body.radiusKm) || 100));
+      const enabled = body.enabled === true;
+      required(await admin.from("pricing_rules").upsert({
+        vehicle_type: "uber_ai_learning", is_active: false,
+        rule: { enabled, radiusKm, updatedAt: new Date().toISOString() },
+      }, { onConflict: "vehicle_type" }));
+      return { ok: true, enabled, radiusKm };
+    }
+    if (method === "POST") {
+      if (body.action === "sample") return runLearningSample(admin);
+      if (body.action === "predict") {
+        const distanceKm=Number(body.distanceKm);
+        if (!Number.isFinite(distanceKm)||distanceKm<=0||distanceKm>500) throw new Error("Distance invalide");
+        return predictLearnedPrice(admin,{distanceKm,productName:String(body.productName||"UberX")});
+      }
+    }
+    throw new Error("Méthode non autorisée");
+  }
   if (p === "/api/admin/pricing") {
     if (method === "PUT") {
       if (body.vehicleType === "uber_cookie") {
