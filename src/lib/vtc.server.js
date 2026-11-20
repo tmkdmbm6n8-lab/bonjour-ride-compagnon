@@ -1660,6 +1660,14 @@ export async function handleVtc(input, context) {
     const { benchmarkStatus } = await import("./vtc-uber-benchmark.server");
     return benchmarkStatus(admin);
   }
+  if (p === "/api/admin/pricing-ai-observations") {
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    const { learningObservationsPage } = await import("./vtc-pricing-learning.server");
+    return learningObservationsPage(admin, {
+      offset: Number(q.get("offset") || 0),
+      limit: Number(q.get("limit") || 500),
+    });
+  }
   if (p === "/api/admin/pricing-ai") {
     const { learningStatus, runLearningSample, predictLearnedPrice } = await import("./vtc-pricing-learning.server");
     if (method === "GET") return learningStatus(admin);
