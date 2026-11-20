@@ -19,11 +19,13 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RecoverAccountRouteImport } from './routes/recover-account'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AuthenticatedBecomeDriverRouteImport } from './routes/_authenticated.become-driver'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedFavoriteRouteImport } from './routes/_authenticated.favorite'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as AuthenticatedRidesRouteImport } from './routes/_authenticated.rides'
 import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated.wallet'
+import { Route as ApiUberHourlyCheckRouteImport } from './routes/api.uber-hourly-check'
 import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenticated.admin.alerts'
 import { Route as AuthenticatedAdminChatEvidenceRouteImport } from './routes/_authenticated.admin.chat-evidence'
 import { Route as AuthenticatedAdminContentReportsRouteImport } from './routes/_authenticated.admin.content-reports'
@@ -99,6 +101,12 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedBecomeDriverRoute =
+  AuthenticatedBecomeDriverRouteImport.update({
+    id: '/become-driver',
+    path: '/become-driver',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -123,6 +131,11 @@ const AuthenticatedWalletRoute = AuthenticatedWalletRouteImport.update({
   id: '/wallet',
   path: '/wallet',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiUberHourlyCheckRoute = ApiUberHourlyCheckRouteImport.update({
+  id: '/api/uber-hourly-check',
+  path: '/api/uber-hourly-check',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminAlertsRoute =
   AuthenticatedAdminAlertsRouteImport.update({
@@ -281,11 +294,13 @@ export interface FileRoutesByFullPath {
   '/recover-account': typeof RecoverAccountRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/become-driver': typeof AuthenticatedBecomeDriverRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/favorite': typeof AuthenticatedFavoriteRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/rides': typeof AuthenticatedRidesRouteWithChildren
   '/wallet': typeof AuthenticatedWalletRoute
+  '/api/uber-hourly-check': typeof ApiUberHourlyCheckRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
   '/admin/content-reports': typeof AuthenticatedAdminContentReportsRoute
@@ -322,11 +337,13 @@ export interface FileRoutesByTo {
   '/recover-account': typeof RecoverAccountRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/become-driver': typeof AuthenticatedBecomeDriverRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/favorite': typeof AuthenticatedFavoriteRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/rides': typeof AuthenticatedRidesRouteWithChildren
   '/wallet': typeof AuthenticatedWalletRoute
+  '/api/uber-hourly-check': typeof ApiUberHourlyCheckRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
   '/admin/content-reports': typeof AuthenticatedAdminContentReportsRoute
@@ -365,11 +382,13 @@ export interface FileRoutesById {
   '/recover-account': typeof RecoverAccountRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/become-driver': typeof AuthenticatedBecomeDriverRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/favorite': typeof AuthenticatedFavoriteRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/rides': typeof AuthenticatedRidesRouteWithChildren
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
+  '/api/uber-hourly-check': typeof ApiUberHourlyCheckRoute
   '/_authenticated/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/_authenticated/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
   '/_authenticated/admin/content-reports': typeof AuthenticatedAdminContentReportsRoute
@@ -408,11 +427,13 @@ export interface FileRouteTypes {
     | '/recover-account'
     | '/signup'
     | '/terms'
+    | '/become-driver'
     | '/dashboard'
     | '/favorite'
     | '/profile'
     | '/rides'
     | '/wallet'
+    | '/api/uber-hourly-check'
     | '/admin/alerts'
     | '/admin/chat-evidence'
     | '/admin/content-reports'
@@ -449,11 +470,13 @@ export interface FileRouteTypes {
     | '/recover-account'
     | '/signup'
     | '/terms'
+    | '/become-driver'
     | '/dashboard'
     | '/favorite'
     | '/profile'
     | '/rides'
     | '/wallet'
+    | '/api/uber-hourly-check'
     | '/admin/alerts'
     | '/admin/chat-evidence'
     | '/admin/content-reports'
@@ -491,11 +514,13 @@ export interface FileRouteTypes {
     | '/recover-account'
     | '/signup'
     | '/terms'
+    | '/_authenticated/become-driver'
     | '/_authenticated/dashboard'
     | '/_authenticated/favorite'
     | '/_authenticated/profile'
     | '/_authenticated/rides'
     | '/_authenticated/wallet'
+    | '/api/uber-hourly-check'
     | '/_authenticated/admin/alerts'
     | '/_authenticated/admin/chat-evidence'
     | '/_authenticated/admin/content-reports'
@@ -534,6 +559,7 @@ export interface RootRouteChildren {
   RecoverAccountRoute: typeof RecoverAccountRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  ApiUberHourlyCheckRoute: typeof ApiUberHourlyCheckRoute
   ApiPublicJobsChatRetentionRoute: typeof ApiPublicJobsChatRetentionRoute
   ApiPublicJobsWeeklyPayoutsRoute: typeof ApiPublicJobsWeeklyPayoutsRoute
   ApiPublicJobsWithdrawalNotificationsRoute: typeof ApiPublicJobsWithdrawalNotificationsRoute
@@ -612,6 +638,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/become-driver': {
+      id: '/_authenticated/become-driver'
+      path: '/become-driver'
+      fullPath: '/become-driver'
+      preLoaderRoute: typeof AuthenticatedBecomeDriverRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -646,6 +679,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/wallet'
       preLoaderRoute: typeof AuthenticatedWalletRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/uber-hourly-check': {
+      id: '/api/uber-hourly-check'
+      path: '/api/uber-hourly-check'
+      fullPath: '/api/uber-hourly-check'
+      preLoaderRoute: typeof ApiUberHourlyCheckRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/alerts': {
       id: '/_authenticated/admin/alerts'
@@ -837,6 +877,7 @@ const AuthenticatedRidesRouteWithChildren =
   AuthenticatedRidesRoute._addFileChildren(AuthenticatedRidesRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedBecomeDriverRoute: typeof AuthenticatedBecomeDriverRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFavoriteRoute: typeof AuthenticatedFavoriteRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
@@ -865,6 +906,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedBecomeDriverRoute: AuthenticatedBecomeDriverRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFavoriteRoute: AuthenticatedFavoriteRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
@@ -907,6 +949,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecoverAccountRoute: RecoverAccountRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  ApiUberHourlyCheckRoute: ApiUberHourlyCheckRoute,
   ApiPublicJobsChatRetentionRoute: ApiPublicJobsChatRetentionRoute,
   ApiPublicJobsWeeklyPayoutsRoute: ApiPublicJobsWeeklyPayoutsRoute,
   ApiPublicJobsWithdrawalNotificationsRoute:
