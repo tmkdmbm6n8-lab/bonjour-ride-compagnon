@@ -108,6 +108,11 @@ function AdminPricingPage() {
 
   useEffect(() => {
     loadAiStatus().catch(() => {});
+    // Keep the observation count current when clients request prices elsewhere.
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") loadAiStatus().catch(() => {});
+    }, 15000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
