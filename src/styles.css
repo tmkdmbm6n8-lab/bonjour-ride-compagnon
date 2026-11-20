@@ -3131,6 +3131,33 @@ a.activity-pill:hover {
   color: #f7f3ea;
 }
 
+
+/* Swipeable Gold duration cards; six months is intentionally the best monthly value. */
+.driver-gold-plan-intro { color: #e6cb91; font-size: .82rem; margin-bottom: 12px !important; }
+.driver-gold-plan-scroll {
+  display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+  overscroll-behavior-inline: contain; padding: 6px 2px 14px;
+  scrollbar-width: thin; scrollbar-color: #a88b55 transparent;
+}
+.driver-gold-plan {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start;
+  flex: 0 0 min(78%, 260px); min-height: 202px; gap: 9px; text-align: left;
+  padding: 20px 16px 14px; border-radius: 17px; border: 1px solid #5a4a31;
+  background: linear-gradient(145deg,#26221d,#17181b); color: #f7f3ea;
+  scroll-snap-align: center; cursor: pointer; font: inherit;
+}
+.driver-gold-plan.selected { border: 2px solid #e6cb91; padding: 19px 15px 13px; box-shadow: 0 0 0 1px #e6cb9140; }
+.driver-gold-plan.featured { background: linear-gradient(145deg,#40311e,#1c1b1b); }
+.driver-gold-plan-badge { align-self: flex-start; background: #e6cb91; color: #241b10; font-size: .67rem; font-weight: 750; padding: 5px 8px; border-radius: 20px; }
+.driver-gold-plan-term { font-size: .94rem; font-weight: 700; }
+.driver-gold-plan-total { font-size: 1.75rem; letter-spacing: -.045em; line-height: 1.1; }
+.driver-gold-plan-monthly { color: #d5cec1; font-size: .8rem; }
+.driver-gold-plan-saving { color: #e6cb91; font-weight: 650; font-size: .79rem; }
+.driver-gold-plan-availability { color: #bcb7ae; font-size: .71rem; margin-top: auto; }
+.driver-gold-plan-hint { color: #bcb7ae; font-size: .78rem; line-height: 1.45; margin-top: 5px !important; }
+.driver-gold-plan:focus-visible { outline: 2px solid #e6cb91; outline-offset: 3px; }
+@media (min-width: 850px) { .driver-gold-plan { flex-basis: calc((100% - 24px)/3); } }
+
 .driver-gold-meta {
   display: flex;
   flex-wrap: wrap;

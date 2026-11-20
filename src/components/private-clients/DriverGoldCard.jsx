@@ -11,8 +11,12 @@ export function goldStatusLabel(gold) {
 const dateFormat = new Intl.DateTimeFormat("fr-FR", {
   dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris",
 });
-const monthlyPrice = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
-  .format(GOLD_MONTHLY_CENTS / 100);
+const euro = (cents) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(cents / 100);
+const goldPlans = [
+  { id: "monthly", label: "1 mois", cents: GOLD_MONTHLY_CENTS, months: 1, available: true },
+  { id: "halfyear", label: "6 mois", cents: 9999, months: 6, badge: "Meilleur rapport qualité-prix", available: false },
+  { id: "yearly", label: "12 mois", cents: 20999, months: 12, available: false },
+];
 
 export function goldPeriodText(gold) {
   if (gold.included) return "Inclus avec votre statut de chauffeur prioritaire.";
@@ -25,12 +29,18 @@ export function goldPeriodText(gold) {
 export default function DriverGoldCard({ gold, waitingForStripe }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [selectedPlan, setSelectedPlan] = useState("monthly");
   const isIosNative = typeof window !== "undefined" && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
   if (!gold) return null;
   const manage = gold.canManage;
+  const selected = goldPlans.find((plan) => plan.id === selectedPlan) || goldPlans[0];
 
   async function openBilling() {
+    if (!manage && !selected.available) {
+      setError("Cette formule sera disponible après sa configuration et sa vérification dans le système de paiement.");
+      return;
+    }
     // Never start a Stripe checkout inside native iOS. Apple purchases must be
     // verified by the App Store server before granting a Gold entitlement.
     if (isIosNative) {
@@ -76,8 +86,23 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
       ) : (
         <>
           <div className="driver-gold-pricing">
-            <p className="driver-gold-price"><strong>{monthlyPrice}</strong> <span>TTC par mois</span></p>
-            {trial && <p className="driver-gold-trial">{GOLD_TRIAL_DAYS} jours offerts à la première souscription</p>}
+            <p className="driver-gold-plan-intro">Choisissez votre durée · Faites défiler les offres</p>
+            <div className="driver-gold-plan-scroll" role="group" aria-label="Durée de l’abonnement Gold">
+              {goldPlans.map((plan) => {
+                const saving = Math.round((1 - plan.cents / (GOLD_MONTHLY_CENTS * plan.months)) * 100);
+                return <button key={plan.id} type="button" className={`driver-gold-plan ${selectedPlan === plan.id ? "selected" : ""} ${plan.badge ? "featured" : ""}`}
+                  aria-pressed={selectedPlan === plan.id} onClick={() => { setSelectedPlan(plan.id); setError(""); }}>
+                  {plan.badge && <span className="driver-gold-plan-badge">{plan.badge}</span>}
+                  <span className="driver-gold-plan-term">{plan.label}</span>
+                  <strong className="driver-gold-plan-total">{euro(plan.cents)}</strong>
+                  <span className="driver-gold-plan-monthly">soit {euro(Math.round(plan.cents / plan.months))}/mois</span>
+                  <span className="driver-gold-plan-saving">{saving > 0 ? `Économisez ${saving} %` : "Tarif standard"}</span>
+                  <span className="driver-gold-plan-availability">{plan.available ? "Disponible" : "Bientôt disponible"}</span>
+                </button>;
+              })}
+            </div>
+            <p className="driver-gold-plan-hint">{selected.available ? "Paiement et renouvellement mensuels." : `Paiement de ${euro(selected.cents)} pour ${selected.months} mois, après activation de cette formule.`}</p>
+            {trial && selected.available && <p className="driver-gold-trial">{GOLD_TRIAL_DAYS} jours offerts à la première souscription</p>}
           </div>
 
           <ul className="driver-gold-benefits">
@@ -90,7 +115,7 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
 
       {canOpenBilling && (
         <button type="button" className="driver-gold-action" onClick={openBilling} disabled={busy}>
-          {busy ? "Ouverture de Stripe…" : isIosNative ? (gold.active ? "Informations sur mon abonnement" : "Achats Apple bientôt disponibles") : gold.active ? "Gérer mon abonnement" :
+          {busy ? "Ouverture de Stripe…" : !manage && !selected.available ? "Formule bientôt disponible" : isIosNative ? (gold.active ? "Informations sur mon abonnement" : "Achats Apple bientôt disponibles") : gold.active ? "Gérer mon abonnement" :
             trial ? "Commencer mon essai gratuit" : "Réactiver StrasDrive Gold"}
           <ArrowRight size={18} aria-hidden="true" />
         </button>
