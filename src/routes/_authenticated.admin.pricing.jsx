@@ -60,6 +60,7 @@ function AdminPricingPage() {
       if (!res.ok) throw new Error("Impossible d'enregistrer");
       const data = await res.json();
       setAiConfig({ enabled: data.enabled, radiusKm: data.radiusKm });
+      if (data.enabled) setAiResult(null);
       toast(data.enabled ? "Collecte activée" : "Collecte arrêtée", "success");
     } catch {
       toast("Erreur de configuration IA", "error");
@@ -77,6 +78,10 @@ function AdminPricingPage() {
         body: JSON.stringify({ action: "sample" }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        setAiResult({ ok: false, error: data?.error || `Erreur HTTP ${res.status}` });
+        return;
+      }
       setAiResult(data);
       if (data.ok) setAiStats((prev) => ({ ...prev, count: prev.count + data.saved }));
       if (data.stopped) {
@@ -85,8 +90,8 @@ function AdminPricingPage() {
       } else if (res.status === 429) {
         setAiConfig((prev) => ({ ...prev, enabled: false }));
       }
-    } catch {
-      setAiResult({ ok: false, error: "Erreur réseau" });
+    } catch (error) {
+      setAiResult({ ok: false, error: error?.message || "Erreur réseau" });
     } finally {
       aiInFlight.current = false;
     }
@@ -107,6 +112,8 @@ function AdminPricingPage() {
   useEffect(() => {
     if (!aiConfig.enabled) return;
     // This intensive mode runs only while the admin page remains open.
+    // Run immediately on activation, then at most one request every five seconds.
+    if (document.visibilityState === "visible") sampleAi();
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") sampleAi();
     }, 5000);
