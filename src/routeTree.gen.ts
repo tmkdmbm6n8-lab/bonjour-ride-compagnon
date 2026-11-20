@@ -26,6 +26,7 @@ import { Route as AuthenticatedRidesRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated.wallet'
 import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenticated.admin.alerts'
 import { Route as AuthenticatedAdminChatEvidenceRouteImport } from './routes/_authenticated.admin.chat-evidence'
+import { Route as AuthenticatedAdminContentReportsRouteImport } from './routes/_authenticated.admin.content-reports'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated.admin.dashboard'
 import { Route as AuthenticatedAdminDriversRouteImport } from './routes/_authenticated.admin.drivers'
 import { Route as AuthenticatedAdminMonitoringRouteImport } from './routes/_authenticated.admin.monitoring'
@@ -133,6 +134,12 @@ const AuthenticatedAdminChatEvidenceRoute =
   AuthenticatedAdminChatEvidenceRouteImport.update({
     id: '/admin/chat-evidence',
     path: '/admin/chat-evidence',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminContentReportsRoute =
+  AuthenticatedAdminContentReportsRouteImport.update({
+    id: '/admin/content-reports',
+    path: '/admin/content-reports',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminDashboardRoute =
@@ -281,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/wallet': typeof AuthenticatedWalletRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
+  '/admin/content-reports': typeof AuthenticatedAdminContentReportsRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/admin/monitoring': typeof AuthenticatedAdminMonitoringRoute
@@ -321,6 +329,7 @@ export interface FileRoutesByTo {
   '/wallet': typeof AuthenticatedWalletRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
+  '/admin/content-reports': typeof AuthenticatedAdminContentReportsRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/admin/monitoring': typeof AuthenticatedAdminMonitoringRoute
@@ -363,6 +372,7 @@ export interface FileRoutesById {
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
   '/_authenticated/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/_authenticated/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
+  '/_authenticated/admin/content-reports': typeof AuthenticatedAdminContentReportsRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/_authenticated/admin/monitoring': typeof AuthenticatedAdminMonitoringRoute
@@ -405,6 +415,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/admin/alerts'
     | '/admin/chat-evidence'
+    | '/admin/content-reports'
     | '/admin/dashboard'
     | '/admin/drivers'
     | '/admin/monitoring'
@@ -445,6 +456,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/admin/alerts'
     | '/admin/chat-evidence'
+    | '/admin/content-reports'
     | '/admin/dashboard'
     | '/admin/drivers'
     | '/admin/monitoring'
@@ -486,6 +498,7 @@ export interface FileRouteTypes {
     | '/_authenticated/wallet'
     | '/_authenticated/admin/alerts'
     | '/_authenticated/admin/chat-evidence'
+    | '/_authenticated/admin/content-reports'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/drivers'
     | '/_authenticated/admin/monitoring'
@@ -646,6 +659,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/chat-evidence'
       fullPath: '/admin/chat-evidence'
       preLoaderRoute: typeof AuthenticatedAdminChatEvidenceRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/content-reports': {
+      id: '/_authenticated/admin/content-reports'
+      path: '/admin/content-reports'
+      fullPath: '/admin/content-reports'
+      preLoaderRoute: typeof AuthenticatedAdminContentReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/dashboard': {
@@ -824,6 +844,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
   AuthenticatedAdminAlertsRoute: typeof AuthenticatedAdminAlertsRoute
   AuthenticatedAdminChatEvidenceRoute: typeof AuthenticatedAdminChatEvidenceRoute
+  AuthenticatedAdminContentReportsRoute: typeof AuthenticatedAdminContentReportsRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminDriversRoute: typeof AuthenticatedAdminDriversRoute
   AuthenticatedAdminMonitoringRoute: typeof AuthenticatedAdminMonitoringRoute
@@ -851,6 +872,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedWalletRoute: AuthenticatedWalletRoute,
   AuthenticatedAdminAlertsRoute: AuthenticatedAdminAlertsRoute,
   AuthenticatedAdminChatEvidenceRoute: AuthenticatedAdminChatEvidenceRoute,
+  AuthenticatedAdminContentReportsRoute: AuthenticatedAdminContentReportsRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
   AuthenticatedAdminDriversRoute: AuthenticatedAdminDriversRoute,
   AuthenticatedAdminMonitoringRoute: AuthenticatedAdminMonitoringRoute,
