@@ -318,7 +318,7 @@ async function estimates(db, a, b) {
   const rows = required(await db.from("pricing_rules").select("*"));
   const rules = { ...DEFAULT_PRICING };
   for (const row of rows) {
-    if (row.vehicle_type !== "uber_discount") {
+    if (row.vehicle_type !== "uber_discount" && row.vehicle_type !== "uber_cookie") {
       rules[row.vehicle_type] = row.rule;
     }
   }
@@ -332,7 +332,8 @@ async function estimates(db, a, b) {
   let uberList = null;
   try {
     const { uberProducts } = await import("./vtc-uber.server");
-    uberList = await uberProducts(a, b);
+    const cookieRow = rows.find((r) => r.vehicle_type === "uber_cookie");
+    uberList = await uberProducts(a, b, cookieRow?.rule?.cookie || null);
   } catch {
     uberList = null;
   }
@@ -1645,6 +1646,18 @@ export async function handleVtc(input, context) {
   }
   if (p === "/api/admin/pricing") {
     if (method === "PUT") {
+      if (body.vehicleType === "uber_cookie") {
+        const cookie = String(body.cookie || "").trim();
+        const { testUberCookie } = await import("./vtc-uber.server");
+        const check = await testUberCookie(cookie);
+        if (!check.ok) throw new Error(check.error || "Session refusée par Uber");
+        required(await admin.from("pricing_rules").upsert({
+          vehicle_type: "uber_cookie",
+          is_active: false,
+          rule: { cookie, updatedAt: new Date().toISOString() },
+        }, { onConflict: "vehicle_type" }));
+        return { ok: true, count: check.count, products: check.products };
+      }
       // Configuration spéciale pour la réduction Uber
       if (body.vehicleType === "uber_discount") {
         const enabled = Boolean(body.enabled);
@@ -1667,12 +1680,18 @@ export async function handleVtc(input, context) {
       required(await admin.from("pricing_rules").upsert({ vehicle_type: body.vehicleType, rule: body }));
       return { rule: body };
     }
+    const allRows = required(await admin.from("pricing_rules").select("*"));
+    const cookieRow = allRows.find((r) => r.vehicle_type === "uber_cookie");
     return {
-      rules: required(await admin.from("pricing_rules").select("*")).map((r) => ({
+      rules: allRows.filter((r) => r.vehicle_type !== "uber_cookie").map((r) => ({
         ...r.rule,
         vehicleType: r.vehicle_type,
         city: r.city,
       })),
+      uberCookieStatus: {
+        hasCustomCookie: Boolean(cookieRow?.rule?.cookie),
+        updatedAt: cookieRow?.rule?.updatedAt || null,
+      },
     };
   }
 
