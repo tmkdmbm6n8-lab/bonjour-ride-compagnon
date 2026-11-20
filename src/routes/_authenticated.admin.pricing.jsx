@@ -595,7 +595,7 @@ function AdminPricingPage() {
         <button type="button" className={`btn btn-sm ${autoCompare?"btn-secondary":"btn-primary"}`} style={{marginLeft:8}} onClick={()=>{setAutoCompare(v=>!v);setComparisonMaxKm(9);}}>
           {autoCompare?"Arrêter le test automatique":"Démarrer le test automatique"}
         </button>
-        <p className="small muted mt-2">Mode automatique : trajets de 9 km maximum, jusqu'à 10 lancements par seconde selon les délais réseau, sans requêtes simultanées. Seuls les vrais prix Uber supérieurs d'au moins 0,50 € aux prédictions IA sont enregistrés. Fonctionne uniquement pendant que cette page est ouverte et visible.</p>
+        <p className="small muted mt-2">Mode automatique : trajets de 9 km maximum, jusqu'à 10 lancements par seconde selon les délais réseau, sans requêtes simultanées. Tous les prix Uber réels des trajets de 9 km maximum sont enregistrés, quel que soit l’écart avec l’IA. Les prédictions IA ne sont jamais enregistrées comme prix d’apprentissage. Fonctionne uniquement pendant que cette page est ouverte et visible.</p>
         <p className="small mt-2">Tests terminés : <strong>{autoStats.tested}</strong> · Tarifs Uber enregistrés : <strong>{autoStats.saved}</strong> · Erreurs : <strong>{autoStats.errors}</strong></p>
         {priceComparison?.error && <p role="alert" className="small mt-3" style={{color:"#ef4444"}}>{priceComparison.error}</p>}
         {priceComparison?.comparisons && (
