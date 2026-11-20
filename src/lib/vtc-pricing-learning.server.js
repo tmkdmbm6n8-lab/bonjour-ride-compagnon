@@ -210,23 +210,62 @@ export async function runLearningSample(admin) {
   return {ok:true,saved:observations.length,pickup:nameA,dropoff:nameB};
 }
 // Interpretable nonparametric estimator. Holdout accuracy must be measured before using it for real fares.
+// Prefer genuine historical Uber quotes for the same category, distance, weekday
+// and a +/-30-minute clock window (Europe/Paris). Never extrapolate from
+// unrelated journeys or fabricate a low fare when matching data is missing.
 export async function predictLearnedPrice(admin,{distanceKm,productName="UberX",date=new Date()}) {
-  const res=await admin.from("uber_price_observations").select("price_eur,distance_km,product_name,context").eq("product_name",productName).order("observed_at",{ascending:false}).limit(1000);
+  const targetKm=Number(distanceKm);
+  if(!Number.isFinite(targetKm)||targetKm<=0||targetKm>500)
+    return {ready:false,samples:0,reason:"Distance invalide"};
+  const res=await admin.from("uber_price_observations")
+    .select("price_eur,distance_km,product_name,context,observed_at")
+    .eq("product_name",productName)
+    .order("observed_at",{ascending:false}).limit(5000);
   if(res.error)throw res.error;
   const target=features(date);
-  const ranked=(res.data||[]).filter(x=>x.distance_km>0).map(x=>{
-    const c=x.context||{};
-    const score=Math.abs(Math.log(Math.max(.1,distanceKm)/x.distance_km))*3+
-      (c.hour==null?2:Math.min(Math.abs(c.hour-target.hour),24-Math.abs(c.hour-target.hour)))*.12+
-      (c.weekend!==target.weekend?1:0)+(c.holiday!==target.holiday?1:0)+
-      (c.halloween!==target.halloween?1:0);
-    return {...x,score};
-  }).sort((a,b)=>a.score-b.score).slice(0,30);
-  if(ranked.length<10)return {ready:false,samples:ranked.length};
-  const weights=ranked.map(x=>1/(.5+x.score));
-  const total=weights.reduce((a,b)=>a+b,0);
-  const price=ranked.reduce((a,x,i)=>a+weights[i]*x.price_eur*Math.max(.4,Math.min(2.5,distanceKm/x.distance_km)),0)/total;
-  return {ready:true,price:Math.round(price*100)/100,samples:ranked.length,method:"weighted-neighbors"};
+  const minuteOfDay=(d)=>{
+    const parts=Object.fromEntries(new Intl.DateTimeFormat("en-GB",{
+      timeZone:"Europe/Paris",hour:"2-digit",minute:"2-digit",hourCycle:"h23"
+    }).formatToParts(d).map(p=>[p.type,p.value]));
+    return Number(parts.hour)*60+Number(parts.minute);
+  };
+  const targetMinute=minuteOfDay(date);
+  const clockGap=(a,b)=>{const diff=Math.abs(a-b);return Math.min(diff,1440-diff);};
+  const distanceTolerance=Math.max(0.3,targetKm*0.15);
+  const candidates=(res.data||[]).filter(x=>
+    Number.isFinite(Number(x.price_eur))&&Number(x.price_eur)>0&&
+    Number.isFinite(Number(x.distance_km))&&Number(x.distance_km)>0&&
+    Math.abs(Number(x.distance_km)-targetKm)<=distanceTolerance&&
+    x.observed_at&&!Number.isNaN(new Date(x.observed_at).getTime())
+  ).map(x=>{
+    const observed=new Date(x.observed_at);
+    const context=features(observed);
+    return {...x,weekday:context.dayOfWeek,minute:minuteOfDay(observed),
+      gap:clockGap(minuteOfDay(observed),targetMinute)};
+  });
+  // Priority: same weekday and +/-30 minutes; then same clock window
+  // on another day; then same weekday +/-90 minutes.
+  const groups=[
+    {name:"same-weekday-30min",items:candidates.filter(x=>x.weekday===target.dayOfWeek&&x.gap<=30)},
+    {name:"same-time-30min",items:candidates.filter(x=>x.gap<=30)},
+    {name:"same-weekday-90min",items:candidates.filter(x=>x.weekday===target.dayOfWeek&&x.gap<=90)}
+  ];
+  const selected=groups.find(g=>g.items.length>=3);
+  if(!selected)return {ready:false,samples:groups[0].items.length,
+    reason:"Pas assez de courses Uber comparables (distance, jour et heure)",
+    matchingDistanceKm:distanceTolerance,requiredSamples:3};
+  const ordered=selected.items.sort((a,b)=>
+    (Math.abs(a.distance_km-targetKm)/Math.max(1,targetKm)*4+a.gap/30)-
+    (Math.abs(b.distance_km-targetKm)/Math.max(1,targetKm)*4+b.gap/30)
+  ).slice(0,40);
+  // Median protects against anomalously low/high fares. Do not scale prices
+  // from very different distances; only narrow distance matches are accepted.
+  const prices=ordered.map(x=>Number(x.price_eur)).sort((a,b)=>a-b);
+  const mid=Math.floor(prices.length/2);
+  const median=prices.length%2?prices[mid]:(prices[mid-1]+prices[mid])/2;
+  return {ready:true,price:Math.round(median*100)/100,samples:ordered.length,
+    method:"matched-uber-median",matchLevel:selected.name,
+    matchingDistanceKm:distanceTolerance};
 }
 
 export async function learningObservationsPage(admin, { offset=0, limit=500 }={}) {
