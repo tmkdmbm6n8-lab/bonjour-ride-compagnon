@@ -644,8 +644,10 @@ function DriverDashboard() {
               margin: "-16px -16px",
               border: "1px solid rgba(212, 160, 23, 0.25)",
               boxShadow: "0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(212, 160, 23, 0.12)",
+              position: "relative",
             }}
           >
+            <div className="drv-offer-top-close"><CloseControl onClick={decline} disabled={actionBusy} label="Ignorer la course" /></div>
             <div className="driver-offer-preview" aria-label="Aperçu du trajet proposé">
               <div className="driver-offer-map">
                 <MapView
@@ -689,7 +691,11 @@ function DriverDashboard() {
                 <span>{offer.airportReturn ? "Course Gold" : (VEHICLE_LABELS[offer.rideClass] || "StrasDrive Go")}</span>
               </div>
 
-              <CloseControl onClick={decline} disabled={actionBusy} label="Ignorer la course" />
+              {offer.paymentMethod === "cash" ? (
+                <span className="drv-payment-icon drv-payment-icon--cash" role="img" aria-label="Paiement en espèces" title="Espèces"><Banknote size={40} aria-hidden="true" /></span>
+              ) : (
+                <span className="drv-payment-icon drv-payment-icon--card" role="img" aria-label="Paiement par carte" title="Carte bancaire"><CreditCard size={40} aria-hidden="true" /></span>
+              )}
             </div>
 
             {/* 2. Gain net en or géant */}
@@ -718,14 +724,8 @@ function DriverDashboard() {
               </span>
             </div>
 
-            {/* 3. Badges d'infos (Paiement, Note passager) */}
-            <div className="flex justify-center gap-2 mb-5">
-              {offer.paymentMethod === "cash" ? (
-                <span className="drv-payment-icon drv-payment-icon--cash" role="img" aria-label="Paiement en espèces" title="Espèces"><Banknote size={20} aria-hidden="true" /></span>
-              ) : (
-                <span className="drv-payment-icon drv-payment-icon--card" role="img" aria-label="Paiement par carte" title="Carte bancaire"><CreditCard size={20} aria-hidden="true" /></span>
-              )}
-
+            {/* Note du passager centrée sous le gain net */}
+            <div className="flex justify-center mb-5">
               <span
                 style={{
                   background: "rgba(255, 255, 255, 0.05)",
