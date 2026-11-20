@@ -32,6 +32,43 @@ function AdminPricingPage() {
   const [showCookieBox, setShowCookieBox] = useState(false);
   const [savingCookie, setSavingCookie] = useState(false);
   const [cookieStatus, setCookieStatus] = useState(null);
+  const [hourlyChecks, setHourlyChecks] = useState({ enabled: false });
+  const [checkingUber, setCheckingUber] = useState(false);
+
+  async function updateHourlyChecks(enabled) {
+    setCheckingUber(true);
+    try {
+      const res = await fetch("/api/admin/pricing", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehicleType: "uber_hourly_checks", enabled }),
+      });
+      if (!res.ok) throw new Error("Enregistrement impossible");
+      setHourlyChecks((prev) => ({ ...prev, enabled }));
+      toast(enabled ? "Vérification horaire activée" : "Vérification horaire désactivée", "success");
+    } catch {
+      toast("Impossible de modifier la vérification horaire", "error");
+    } finally {
+      setCheckingUber(false);
+    }
+  }
+
+  async function testHourlyCheck() {
+    setCheckingUber(true);
+    try {
+      const res = await fetch("/api/admin/pricing", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehicleType: "uber_hourly_check_now" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erreur de vérification");
+      setHourlyChecks((prev) => ({ ...prev, lastCheckedAt: data.checkedAt, lastSuccess: data.ok, lastProductCount: data.products }));
+      toast(data.ok ? "Tarifs Uber reçus" : "Uber indisponible : vérifier la session", data.ok ? "success" : "error");
+    } catch {
+      toast("Impossible de vérifier la session Uber", "error");
+    } finally {
+      setCheckingUber(false);
+    }
+  }
 
   async function saveCookie() {
     if (!cookieInput.trim()) {
@@ -70,6 +107,7 @@ function AdminPricingPage() {
         if (ignore || !res.ok) return;
 
         if (data.uberCookieStatus) setCookieStatus(data.uberCookieStatus);
+        if (data.uberHourlyChecks) setHourlyChecks(data.uberHourlyChecks);
 
         // Récupérer la règle Uber
         const dbUber = data.rules?.find((r) => r.vehicleType === "uber_discount");
@@ -277,6 +315,25 @@ function AdminPricingPage() {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="card card-pad mb-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <strong>Simulation de tarifs Uber chaque heure</strong>
+            <p className="tiny muted mt-1">Trajets fictifs aléatoires autour de Strasbourg, sans réservation.</p>
+          </div>
+          <Switch checked={hourlyChecks.enabled === true} onCheckedChange={updateHourlyChecks} disabled={checkingUber} aria-label="Activer les vérifications horaires Uber" />
+        </div>
+        <p className="tiny muted mt-2">
+          {hourlyChecks.lastCheckedAt
+            ? `Dernier test : ${new Date(hourlyChecks.lastCheckedAt).toLocaleString("fr-FR")} — ${hourlyChecks.lastSuccess ? "Réussi" : "Échec"}`
+            : "Aucun test enregistré."}
+        </p>
+        <p className="tiny muted mt-2">L'exécution toutes les heures nécessite un planificateur serveur configuré. Cette option seule ne démarre pas de tâche en arrière-plan.</p>
+        <button type="button" className="btn btn-secondary btn-sm mt-3" disabled={checkingUber} onClick={testHourlyCheck}>
+          {checkingUber ? "Vérification…" : "Tester maintenant"}
+        </button>
       </div>
 
       <h2 style={{ fontSize: "1.15rem", marginBottom: 12 }}>Grille tarifaire de secours (StrasDrive)</h2>
