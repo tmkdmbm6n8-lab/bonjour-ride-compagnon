@@ -1690,7 +1690,7 @@ export async function handleVtc(input, context) {
   if (p === "/api/admin/pricing-ai-compare") {
     if (method !== "POST") throw new Error("Méthode non autorisée");
     const { compareRandomUberAi } = await import("./vtc-pricing-learning.server");
-    return compareRandomUberAi(admin);
+    return compareRandomUberAi(admin,{maxDistanceKm:Number(body.maxDistanceKm)});
   }
   if (p === "/api/admin/pricing-ai-observations") {
     if (method !== "GET") throw new Error("Méthode non autorisée");
