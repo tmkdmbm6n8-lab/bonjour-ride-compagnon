@@ -20,7 +20,6 @@ describe('Signup email confirmation', () => {
   async function submit(email: string) {
     const Component = Route.options.component as React.ComponentType;
     render(<Component />);
-    fireEvent.change(screen.getByLabelText('Nom complet'), { target: { value: 'Alex Martin' } });
     fireEvent.change(screen.getByLabelText('Nom d’utilisateur'), { target: { value: 'alexmartin' } });
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: email } });
     fireEvent.change(screen.getByLabelText('Mot de passe'), { target: { value: 'SecurePass123!' } });
