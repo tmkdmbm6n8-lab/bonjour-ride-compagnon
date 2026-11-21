@@ -37,7 +37,7 @@ describe('fiche passager et accès admin', () => {
     render(<AdminLayout><span>Admin</span></AdminLayout>);
     expect(screen.getByTestId('shell')).toHaveAttribute('data-variant', 'admin');
     expect(screen.getByRole('link', { name: 'Assistance' })).toHaveAttribute('href', '/admin/support');
-    expect(screen.getByRole('link', { name: 'Signalements' })).toHaveAttribute('href', '/admin/alerts');
+    expect(screen.getByRole('link', { name: 'Échanges signalés' })).toHaveAttribute('href', '/admin/chat-evidence');
   });
   it('masque complètement le téléphone absent', () => {
     render(<PassengerInfo ride={{ rider: { name: 'Léa Martin', phone: '' } }} />);
