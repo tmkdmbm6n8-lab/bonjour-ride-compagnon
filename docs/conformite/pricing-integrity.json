@@ -1,1 +1,8 @@
-{"src/lib/vtc-pricing.js": "f3d1fcc03b1828fade9080a5ad390f59b2c1821cfd52f36347b52900d24a05ac", "src/lib/vtc-uber.server.js": "a424f038c0c9484716f303777f20039c9901dfc6ebffa9128a7054c2aab100fd", "src/lib/vtc-checkout.js": "5ea4e17e82e2e5791f0a6cebeb5112cfd067acbc885d1c5df71da079c9abc1b3", "src/lib/vtc-routing.js": "f05ac84b81cb576e748f037ea01d65fe9c8b605386337501abef416241c7d0c2", "vtc.server.js:estimates": "d5f6e11d8ac1be295f661c6e0e1b9a2a80ba5c965ad6fe87b525580c0d989014", "vtc.functions.js:homeEstimate": "1994a55da6c85b5be3f75c22f96df40ba5709512a257fbf0447c14fac7779472"}
+{
+  "src/lib/vtc-pricing.js": "f3d1fcc03b1828fade9080a5ad390f59b2c1821cfd52f36347b52900d24a05ac",
+  "src/lib/vtc-uber.server.js": "201a20d033c313c293f499843e1a3a6bc72cc903374ae213ba60a95b9979bdc5",
+  "src/lib/vtc-checkout.js": "5ea4e17e82e2e5791f0a6cebeb5112cfd067acbc885d1c5df71da079c9abc1b3",
+  "src/lib/vtc-routing.js": "f05ac84b81cb576e748f037ea01d65fe9c8b605386337501abef416241c7d0c2",
+  "vtc.server.js:estimates": "79f6dfb9c45ac4c668bb5eca9255ab163c2fb79827c29d51c4032713f3e2ae93",
+  "vtc.functions.js:homeEstimate": "1994a55da6c85b5be3f75c22f96df40ba5709512a257fbf0447c14fac7779472"
+}

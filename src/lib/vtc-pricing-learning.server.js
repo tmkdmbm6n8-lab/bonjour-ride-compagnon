@@ -379,8 +379,6 @@ export async function predictLearnedPrice(admin,{distanceKm,productName="UberX",
       reason:"Estimation calculée à partir des prix Uber historiques de cette catégorie"};
   };
   if(ranked.length<3)return inferFromCategoryHistory();
-    reason:"Pas assez de courses Uber comparables pour cette distance et catégorie",
-    matchingDistanceKm:distanceTolerance,requiredSamples:3};
   // Choose a local time neighborhood around the closest available observation,
   // rather than mixing prices from very different hours.
   const nearestGap=ranked[0].gap;
