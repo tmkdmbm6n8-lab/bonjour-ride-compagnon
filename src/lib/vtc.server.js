@@ -376,7 +376,7 @@ async function estimates(db, a, b) {
     }
 
     if (rawPrice && Number.isFinite(rawPrice) && rawPrice > 0) {
-      const commRate = rules[type]?.platformCommission || 5;
+      const commRate = rules[type]?.platformCommission || 15;
 
       // Calcul du prix réduit de 20 %
       let price = rawPrice;
@@ -385,7 +385,7 @@ async function estimates(db, a, b) {
       }
 
       // ── Plancher légal ARPE : 9,00 € nets min par course pour le chauffeur ──
-      // Avec 5 % de commission, le prix payé par le client ne descend jamais sous 9,47 €
+      // Avec 15 % de commission, le prix payé par le client ne descend jamais sous 10,59 €
       const minNetDriver = 9.0;
       const minLegalPrice = Math.round((minNetDriver / (1 - commRate / 100)) * 100) / 100;
       if (price < minLegalPrice) {
@@ -431,7 +431,7 @@ async function estimates(db, a, b) {
         console.error("[pricing-ai] Prediction failed:", type, error?.message || error);
       }
       if (!prediction?.ready || !Number.isFinite(prediction.price) || prediction.price <= 0) continue;
-      const commRate = Number(rules[type]?.platformCommission ?? 5);
+      const commRate = Number(rules[type]?.platformCommission ?? 15);
       const commission = Math.min(95, Math.max(0, commRate));
       const rawPrice = prediction.price;
       let price = isDiscountActive ? rawPrice * (1 - discountRate) : rawPrice;
