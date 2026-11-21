@@ -79,6 +79,7 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
         <h2 id="driver-gold-status">StrasDrive <span>Gold <Crown className="driver-gold-crown" size={27} aria-hidden="true" /></span></h2>
       </header>
 
+      <p>Commission : 15 % sans abonnement, 5 % avec Gold payant, et 0 % pour une course effectuée avec votre propre client privé si votre abonnement est payant et actif.</p>
       {gold.active ? (
         <div className="driver-gold-current">
           <strong>{gold.included ? "Accès inclus" : gold.status === "trialing" ? "Essai en cours" : "Abonnement actif"}</strong>
