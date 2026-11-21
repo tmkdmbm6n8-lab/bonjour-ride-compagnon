@@ -48,37 +48,6 @@ function AdminPricingPage() {
   const [priceComparison, setPriceComparison] = useState(null);
   const [comparisonBusy, setComparisonBusy] = useState(false);
   const [comparisonMaxKm, setComparisonMaxKm] = useState(9);
-  const [roadPool,setRoadPool]=useState(null);
-  const [roadPoolRunning,setRoadPoolRunning]=useState(false);
-  const [roadPoolError,setRoadPoolError]=useState("");
-  const roadPoolBusy=useRef(false);
-  async function loadRoadPool(){
-    const res=await fetch("/api/admin/pricing-ai-road-pool");
-    const data=await res.json();
-    if(!res.ok)throw new Error(data.error||"Réservoir indisponible : migration SQL 0024 requise");
-    setRoadPool(data);return data;
-  }
-  useEffect(()=>{loadRoadPool().catch(e=>setRoadPoolError(e.message));},[]);
-  useEffect(()=>{
-    if(!roadPoolRunning)return;
-    let active=true;
-    const timer=setInterval(async()=>{
-      if(!active||roadPoolBusy.current||document.visibilityState!=="visible")return;
-      roadPoolBusy.current=true;
-      try{
-        const res=await fetch("/api/admin/pricing-ai-road-pool",{
-          method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({limit:5})
-        });
-        const data=await res.json();
-        if(!res.ok)throw new Error(data.error||"Génération impossible");
-        if(!active)return;
-        setRoadPool(data);setRoadPoolError("");
-        if(data.total>=data.target)setRoadPoolRunning(false);
-      }catch(e){if(active){setRoadPoolError(e.message);setRoadPoolRunning(false);}}
-      finally{roadPoolBusy.current=false;}
-    },1200);
-    return()=>{active=false;clearInterval(timer);};
-  },[roadPoolRunning]);
   const [autoCompare, setAutoCompare] = useState(false);
   const [bulkTarget, setBulkTarget] = useState(false);
   const [bulkDeadline, setBulkDeadline] = useState(null);
@@ -280,20 +249,6 @@ function AdminPricingPage() {
       setCheckingUber(false);
     }
   }
-
-  useEffect(() => {
-    const refresh = async () => {
-      if (document.visibilityState !== "visible") return;
-      try {
-        const response = await fetch("/api/admin/pricing", { cache: "no-store" });
-        if (!response.ok) return;
-        const data = await response.json();
-        if (data.uberCookieStatus) setCookieStatus(data.uberCookieStatus);
-      } catch { /* Keep last known status. */ }
-    };
-    const timer = setInterval(refresh, 60000);
-    return () => clearInterval(timer);
-  }, []);
 
   async function saveCookie() {
     if (!cookieInput.trim()) {
@@ -524,21 +479,6 @@ function AdminPricingPage() {
             ? `Session enregistrée le ${cookieStatus.updatedAt ? new Date(cookieStatus.updatedAt).toLocaleString("fr-FR") : "—"} (validité non garantie).`
             : "Aucun cookie personnalisé enregistré. Repli sur UBER_COOKIE si configuré."}
         </p>
-        {cookieStatus?.session && (
-          <div className="tiny mb-3" role="status" aria-live="polite">
-            {cookieStatus.session.status === "expired" ? (
-              <span style={{ color: "#dc2626", fontWeight: 700 }}>Session Uber : JWT expiré. Remplacez le cookie.</span>
-            ) : cookieStatus.session.status === "expiring_soon" ? (
-              <span style={{ color: "#b45309", fontWeight: 700 }}>Session Uber : expiration prévue dans moins de 2 heures.</span>
-            ) : cookieStatus.session.status === "valid_until" ? (
-              <span>JWT Uber : expiration théorique le {new Date(cookieStatus.session.expiresAt).toLocaleString("fr-FR")} (révocation anticipée possible).</span>
-            ) : cookieStatus.session.status === "missing" ? (
-              <span>Session Uber non configurée.</span>
-            ) : (
-              <span>Expiration Uber inconnue : vérifiez la session avec un test de tarif.</span>
-            )}
-          </div>
-        )}
         {showCookieBox && (
           <div className="flex-col gap-2">
             <textarea
@@ -586,26 +526,6 @@ function AdminPricingPage() {
             {aiConfig.enabled ? "Collecte active" : "À l'arrêt"}
           </span>
         </div>
-        <div className="mb-4" style={{border:"1px solid var(--border, #555)",borderRadius:12,padding:14}}>
-          <h4 style={{fontWeight:700,marginBottom:6}}>Réservoir de 9 000 trajets réels · Strasbourg</h4>
-          <p className="small muted mb-2">Google Maps Routes valide la distance réellement parcourue en voiture. 1 000 paires uniques par tranche, de 500 m à 9 km. Les deux outils IA partagent ce réservoir. La génération utilise des requêtes Google Maps et peut entraîner des frais.</p>
-          <p className="small">Progression : <strong>{(roadPool?.total||0).toLocaleString("fr-FR")} / 9 000</strong> trajets</p>
-          <progress value={roadPool?.total||0} max={9000} style={{width:"100%"}} />
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(125px,1fr))",gap:8,marginTop:10}}>
-            {(roadPool?.bands||[]).map(b=><div key={b.key} className="small">
-              <strong>{b.key} km</strong> : {b.count} / 1 000
-              <progress value={b.count} max={1000} style={{width:"100%"}} />
-            </div>)}
-          </div>
-          <div className="flex items-center gap-2 mt-3">
-            <button type="button" className="btn btn-primary btn-sm" disabled={roadPoolRunning||roadPool?.total>=9000}
-              onClick={()=>{setRoadPoolError("");setRoadPoolRunning(true);}}>Constituer les 9 000 trajets</button>
-            {roadPoolRunning&&<button type="button" className="btn btn-secondary btn-sm" onClick={()=>setRoadPoolRunning(false)}>Arrêter</button>}
-            <button type="button" className="btn btn-secondary btn-sm" onClick={()=>loadRoadPool().catch(e=>setRoadPoolError(e.message))}>Actualiser</button>
-          </div>
-          {roadPoolRunning&&<p className="tiny muted mt-2">Génération progressive pendant que cette page reste ouverte et visible. Les doublons sont refusés par la base.</p>}
-          {roadPoolError&&<p role="alert" className="small mt-2" style={{color:"#e66"}}>{roadPoolError}</p>}
-        </div>
         <label className="small font-semibold" htmlFor="ai-radius">Rayon de recherche autour de Strasbourg (km)</label>
         <div className="flex items-center gap-3 mt-2 mb-3">
           <input id="ai-radius" className="input" type="number" min="1" max="200" step="1"
@@ -626,7 +546,7 @@ function AdminPricingPage() {
         <p className="tiny muted mb-3">Objectif libre (ex. 1000/s), mais le moteur actuel exécute au maximum 1 requête à la fois, avec un intervalle minimal de 1 seconde. Un objectif de 1000/s ne signifie pas 1000 requêtes réellement envoyées.</p>
         <div className="flex gap-2 flex-wrap mb-3">
           <button type="button" className="btn btn-primary btn-sm" disabled={aiBusy || aiConfig.enabled}
-            onClick={() => {setRoadPoolError("");setRoadPoolRunning(true);saveAiConfig({ ...aiConfig, enabled: true });}}>Démarrer la collecte</button>
+            onClick={() => saveAiConfig({ ...aiConfig, enabled: true })}>Démarrer la collecte</button>
           <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy || !aiConfig.enabled}
             onClick={() => saveAiConfig({ ...aiConfig, enabled: false })}>Arrêter</button>
           <button type="button" className="btn btn-secondary btn-sm" disabled={aiInFlight.current || !aiConfig.enabled}
@@ -679,11 +599,16 @@ function AdminPricingPage() {
       <UberAnalytics observations={aiStats.recent || []} total={aiStats.count || 0} onRefresh={() => Promise.all([loadAiStatus(), loadAllAiObservations()]).catch(() => toast("Actualisation impossible", "error"))} />
       <div className="card card-pad mb-5">
         <h3 style={{fontSize:"1.15rem",marginBottom:8}}>Comparer Uber et l’algorithme IA en temps réel</h3>
-        <p className="small muted mb-3">Chaque comparaison utilise une paire unique du réservoir de 9 000 trajets, classée selon la distance réelle en voiture Google Maps (500 m à 9 km). Les trajets manquants sont générés automatiquement au démarrage. Comparaison sans remise StrasDrive ni réservation client.</p>
+        <p className="small muted mb-3">Un trajet aléatoire entre deux adresses numérotées réelles est recherché à chaque clic. Choisis un petit trajet (maximum 9 km) ou un grand trajet (maximum 100 km). Comparaison par catégorie, sans appliquer la remise StrasDrive. Chaque adresse testée est réservée définitivement pour ne jamais être réutilisée. Aucune réservation client n’est créée.</p>
+        <div className="flex items-center gap-3 flex-wrap mb-3">
+          <span className="small font-semibold">Distance maximale :</span>
+          <button type="button" className={`btn btn-sm ${comparisonMaxKm===9?"btn-primary":"btn-secondary"}`} disabled={comparisonBusy} onClick={()=>setComparisonMaxKm(9)}>Petit trajet · 9 km</button>
+          <button type="button" className={`btn btn-sm ${comparisonMaxKm===100?"btn-primary":"btn-secondary"}`} disabled={comparisonBusy} onClick={()=>setComparisonMaxKm(100)}>Grand trajet · 100 km</button>
+        </div>
         <button type="button" className="btn btn-primary btn-sm" disabled={comparisonBusy || autoCompare} onClick={()=>comparePrices(false)}>
-          {comparisonBusy ? "Comparaison en cours…" : "Tester un trajet du réservoir"}
+          {comparisonBusy ? "Comparaison en cours…" : "Tester un trajet aléatoire"}
         </button>
-        <button type="button" className={`btn btn-sm ${autoCompare?"btn-secondary":"btn-primary"}`} style={{marginLeft:8}} onClick={()=>{if(!autoCompare){setRoadPoolError("");setRoadPoolRunning(true);}setAutoCompare(v=>!v);setBulkTarget(false);setBulkDeadline(null);setComparisonMaxKm(9);}}>
+        <button type="button" className={`btn btn-sm ${autoCompare?"btn-secondary":"btn-primary"}`} style={{marginLeft:8}} onClick={()=>{setAutoCompare(v=>!v);setBulkTarget(false);setBulkDeadline(null);setComparisonMaxKm(9);}}>
           {autoCompare?"Arrêter le test automatique":"Démarrer le test automatique"}
         </button>
         <div className="mt-3 flex items-center gap-2 flex-wrap">
