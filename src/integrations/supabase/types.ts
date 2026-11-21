@@ -853,6 +853,54 @@ export type Database = {
         }
         Relationships: []
       }
+      uber_ai_road_routes: {
+        Row: {
+          compared_at: string | null
+          created_at: string
+          distance_band: string
+          dropoff_key: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id: number
+          pickup_key: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          road_distance_km: number
+        }
+        Insert: {
+          compared_at?: string | null
+          created_at?: string
+          distance_band: string
+          dropoff_key: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id?: never
+          pickup_key: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          road_distance_km: number
+        }
+        Update: {
+          compared_at?: string | null
+          created_at?: string
+          distance_band?: string
+          dropoff_key?: string
+          dropoff_lat?: number
+          dropoff_lng?: number
+          dropoff_name?: string
+          id?: never
+          pickup_key?: string
+          pickup_lat?: number
+          pickup_lng?: number
+          pickup_name?: string
+          road_distance_km?: number
+        }
+        Relationships: []
+      }
       uber_benchmark_measurements: {
         Row: {
           id: number
@@ -1168,6 +1216,30 @@ export type Database = {
       approve_withdrawal: {
         Args: { _actor: string; _request: string }
         Returns: Json
+      }
+      claim_uber_ai_road_route: {
+        Args: never
+        Returns: {
+          compared_at: string | null
+          created_at: string
+          distance_band: string
+          dropoff_key: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id: number
+          pickup_key: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          road_distance_km: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "uber_ai_road_routes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       claim_uber_random_addresses: {
         Args: {
