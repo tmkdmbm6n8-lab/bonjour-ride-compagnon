@@ -335,7 +335,8 @@ async function estimates(db, a, b) {
   const sourceMode = rows.find(r => r.vehicle_type === "pricing_source_mode")?.rule?.mode || "auto";
   const mode = ["auto", "uber", "ai"].includes(sourceMode) ? sourceMode : "auto";
   let uberList = [];
-  if (mode !== "ai") {
+  // Uber is always the first choice when a valid live quote exists.
+  {
     try {
       const { uberProducts } = await import("./vtc-uber.server");
       const cookieRow = rows.find(r => r.vehicle_type === "uber_cookie");
@@ -422,13 +423,12 @@ async function estimates(db, a, b) {
   // category independently. Never present an untrained model as a valid fare.
   const aiNames = { economy: "UberX", comfort: "Comfort", pet: "Uber Pet", xl: "UberXL" };
   let aiUsed = false;
-  if (mode !== "uber") {
+  {
     const { predictLearnedPrice } = await import("./vtc-pricing-learning.server");
     const distanceKm = Number(route.distanceMeters) / 1000;
     for (const type of Object.keys(DEFAULT_PRICING)) {
-      if (mode === "auto" && finalEstimates[type]) continue;
-      // AI-only mode must not retain Uber-derived estimates.
-      if (mode === "ai") delete finalEstimates[type];
+      // Never replace a valid Uber quote with an AI prediction.
+      if (finalEstimates[type]) continue;
       let prediction;
       try {
         prediction = await predictLearnedPrice(db, { distanceKm, productName: aiNames[type] });
