@@ -25,6 +25,16 @@ describe("ARPE hourly reconciliation", () => {
     expect(result.excluded).toHaveLength(1);
     expect(result.supplementDue).toBe(0);
   });
+  it("rejects missing earnings rather than treating them as zero", () => {
+    const result = prepareHourlyReconciliation([{
+      id: "ride-missing", status: "completed",
+      accepted_at: "2026-11-02T10:00:00Z", started_at: "2026-11-02T10:10:00Z",
+      completed_at: "2026-11-02T10:50:00Z", fare: {},
+    }], period);
+    expect(result.includedCount).toBe(0);
+    expect(result.needsReview).toBe(true);
+    expect(result.readyForPayment).toBe(false);
+  });
   it("does not double count a ride", () => {
     const ride = { id: "ride-3", status: "completed", accepted_at: "2026-11-02T10:00:00Z",
       started_at: "2026-11-02T10:00:00Z", completed_at: "2026-11-02T11:00:00Z",
