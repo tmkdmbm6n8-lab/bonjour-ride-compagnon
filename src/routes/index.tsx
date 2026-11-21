@@ -46,8 +46,8 @@ const DEMO_RIDE: RideSummary = {
 const FEATURES = [
   {
     icon: Wallet,
-    title: "Les chauffeurs conservent 95 %",
-    text: "StrasDrive prélève une commission fixe de 5 %. Le chauffeur conserve 95 % du prix de la course.",
+    title: "Les chauffeurs conservent 85 %",
+    text: "StrasDrive prélève une commission de 15 % (0 % avec l’abonnement Gold). Le chauffeur conserve au moins 85 % du prix de la course.",
   },
   {
     icon: Zap,
@@ -302,7 +302,7 @@ function LandingPage() {
               <h3 style={{ fontSize: "1.3rem" }}>Transformez votre voiture en source de revenus</h3>
               <p className="small mt-1" style={{ color: "rgba(250,250,249,0.7)" }}>
                 {" "}
-                Conservez 95 % du prix de chaque course : StrasDrive prélève une commission fixe de 5 %. Passez en ligne
+                Conservez 85 % du prix de chaque course (et 100 % avec StrasDrive Gold) : commission de 15 % pour les non-abonnés. Passez en ligne
                 quand cela vous convient.{" "}
               </p>
             </div>
