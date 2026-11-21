@@ -15,6 +15,7 @@ vi.mock("@/lib/stripe.server", () => ({
 import { handleCheckout } from "@/lib/vtc-checkout.server";
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("APP_URL", "https://example.test");
   mock.createSession.mockResolvedValue({ id: "session", client_secret: "secret_test" });
   mock.createCustomer.mockResolvedValue({ id: "customer" });
 });
