@@ -1723,6 +1723,22 @@ export async function handleVtc(input, context) {
       limit: Number(q.get("limit") || 500),
     });
   }
+  if (p === "/api/admin/address-search-provider") {
+    if (method === "GET") {
+      const row = required(await admin.from("pricing_rules").select("rule").eq("vehicle_type", "address_search_provider").maybeSingle());
+      return { provider: row?.rule?.provider || "auto" };
+    }
+    if (method === "PUT") {
+      const provider = String(body.provider || "");
+      if (!["osm", "google"].includes(provider)) throw new Error("Fournisseur d'adresses invalide");
+      required(await admin.from("pricing_rules").upsert({
+        vehicle_type: "address_search_provider", is_active: false,
+        rule: { provider, updatedAt: new Date().toISOString() },
+      }, { onConflict: "vehicle_type" }));
+      return { ok: true, provider };
+    }
+    throw new Error("Méthode non autorisée");
+  }
   if (p === "/api/admin/pricing-source") {
     if (method === "GET") {
       const row = required(await admin.from("pricing_rules").select("rule").eq("vehicle_type","pricing_source_mode").maybeSingle());
@@ -2164,7 +2180,11 @@ async function assignOffer(db, r, pool) {
 export async function publicVtc(input) {
   const path = String(input?.path || "");
   const url = new URL(path, "http://app");
-  if (url.pathname === "/api/geo/search") return geoSearch(url.searchParams);
+  if (url.pathname === "/api/geo/search") {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const setting = required(await supabaseAdmin.from("pricing_rules").select("rule").eq("vehicle_type", "address_search_provider").maybeSingle());
+    return geoSearch(url.searchParams, fetch, setting?.rule?.provider || "auto");
+  }
   if (url.pathname === "/api/rides/estimate") {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     return estimates(supabaseAdmin, input.body?.pickup, input.body?.dropoff);
