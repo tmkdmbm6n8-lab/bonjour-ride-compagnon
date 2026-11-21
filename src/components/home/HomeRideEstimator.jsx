@@ -118,7 +118,7 @@ export default function HomeRideEstimator() {
           key: type,
           icon: ICONS[type] || Car,
           name: VEHICLE_LABELS[type],
-          sub: `${formatDuration(result.route.durationSeconds)} de trajet`,
+          sub: `${formatDuration(result.route.durationSeconds)} de trajet · ${fare.priceSource === "local" ? "Estimation StrasDrive (barème local)" : fare.isAiPrice ? "Estimation IA" : "Tarif basé sur Uber"}`,
           price: fare.total,
         }));
 
