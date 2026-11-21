@@ -137,7 +137,9 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
       if (booking.ride_id) return { paid: true, booked: true, ride: await serializeRide(booking.ride_id) };
       if (booking.status !== "pending") return { paid: true, booked: false, processing: booking.status === "booking" };
       if (cardBookingExpired(booking.created_at)) {
-        await admin.from("card_bookings").update({ status: "expired" }).eq("id", booking.id).eq("status", "pending");
+        const expired = await admin.from("card_bookings").update({ status: "expired" }).eq("id", booking.id).eq("status", "pending").select("id");
+        if (expired.error) return { paid: true, booked: false, error: "Expiration de la réservation non enregistrée. Contactez le support." };
+        if (expired.data?.length !== 1) return { paid: true, booked: false, processing: true };
         return { paid: true, booked: false, expired: true };
       }
       // Only one confirmation (return page or callback) may create the ride.
@@ -158,8 +160,12 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
         }
         return { paid: true, booked: true, ride };
       } catch (e) {
-        await admin.from("card_bookings").update({ status: "pending" }).eq("id", booking.id);
-        return { error: `${e?.message || "La course n’a pas pu être créée"} — le montant payé est sur votre portefeuille` };
+        // Only release our own claim; do not overwrite a concurrently completed booking.
+        const reset = await admin.from("card_bookings").update({ status: "pending" }).eq("id", booking.id).eq("status", "booking").is("ride_id", null).select("id");
+        if (reset.error || reset.data?.length !== 1) {
+          return { paid: true, booked: false, processing: true, error: "Échec de création de la course ; état de réservation à vérifier par le support." };
+        }
+        return { paid: true, booked: false, error: `${e?.message || "La course n’a pas pu être créée"} — le montant payé est sur votre portefeuille` };
       }
     }
   } catch (error) {
