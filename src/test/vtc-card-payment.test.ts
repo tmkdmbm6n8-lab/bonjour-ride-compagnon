@@ -24,5 +24,10 @@ describe('Course payée par carte', () => {
   it('only returns to a plain site address', () => {
     expect(safeOrigin('https://bonjour-ride-compagnon.lovable.app')).toBe('https://bonjour-ride-compagnon.lovable.app');
     expect(safeOrigin('https://evil.example/path')).toBeNull();
+    expect(safeOrigin('https://evil.example', 'https://strasdrive.fr')).toBeNull();
+    expect(safeOrigin('https://strasdrive.fr', 'https://strasdrive.fr')).toBe('https://strasdrive.fr');
+    expect(safeOrigin('http://strasdrive.fr', 'http://strasdrive.fr')).toBeNull();
+    expect(safeOrigin('http://localhost:3000', 'http://localhost:3000')).toBe('http://localhost:3000');
+    expect(safeOrigin('https://strasdrive.fr', undefined)).toBe('https://strasdrive.fr');
   });
 });
