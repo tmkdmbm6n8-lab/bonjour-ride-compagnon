@@ -626,7 +626,7 @@ function AdminPricingPage() {
         <p className="tiny muted mb-3">Objectif libre (ex. 1000/s), mais le moteur actuel exécute au maximum 1 requête à la fois, avec un intervalle minimal de 1 seconde. Un objectif de 1000/s ne signifie pas 1000 requêtes réellement envoyées.</p>
         <div className="flex gap-2 flex-wrap mb-3">
           <button type="button" className="btn btn-primary btn-sm" disabled={aiBusy || aiConfig.enabled}
-            onClick={() => saveAiConfig({ ...aiConfig, enabled: true })}>Démarrer la collecte</button>
+            onClick={() => {setRoadPoolError("");setRoadPoolRunning(true);saveAiConfig({ ...aiConfig, enabled: true });}}>Démarrer la collecte</button>
           <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy || !aiConfig.enabled}
             onClick={() => saveAiConfig({ ...aiConfig, enabled: false })}>Arrêter</button>
           <button type="button" className="btn btn-secondary btn-sm" disabled={aiInFlight.current || !aiConfig.enabled}
@@ -679,11 +679,11 @@ function AdminPricingPage() {
       <UberAnalytics observations={aiStats.recent || []} total={aiStats.count || 0} onRefresh={() => Promise.all([loadAiStatus(), loadAllAiObservations()]).catch(() => toast("Actualisation impossible", "error"))} />
       <div className="card card-pad mb-5">
         <h3 style={{fontSize:"1.15rem",marginBottom:8}}>Comparer Uber et l’algorithme IA en temps réel</h3>
-        <p className="small muted mb-3">Chaque comparaison utilise une paire unique du réservoir de 9 000 trajets, classée selon la distance réelle en voiture Google Maps (500 m à 9 km). Constitue d’abord le réservoir dans le Laboratoire. Comparaison sans remise StrasDrive ni réservation client.</p>
+        <p className="small muted mb-3">Chaque comparaison utilise une paire unique du réservoir de 9 000 trajets, classée selon la distance réelle en voiture Google Maps (500 m à 9 km). Les trajets manquants sont générés automatiquement au démarrage. Comparaison sans remise StrasDrive ni réservation client.</p>
         <button type="button" className="btn btn-primary btn-sm" disabled={comparisonBusy || autoCompare} onClick={()=>comparePrices(false)}>
           {comparisonBusy ? "Comparaison en cours…" : "Tester un trajet du réservoir"}
         </button>
-        <button type="button" className={`btn btn-sm ${autoCompare?"btn-secondary":"btn-primary"}`} style={{marginLeft:8}} onClick={()=>{setAutoCompare(v=>!v);setBulkTarget(false);setBulkDeadline(null);setComparisonMaxKm(9);}}>
+        <button type="button" className={`btn btn-sm ${autoCompare?"btn-secondary":"btn-primary"}`} style={{marginLeft:8}} onClick={()=>{if(!autoCompare){setRoadPoolError("");setRoadPoolRunning(true);}setAutoCompare(v=>!v);setBulkTarget(false);setBulkDeadline(null);setComparisonMaxKm(9);}}>
           {autoCompare?"Arrêter le test automatique":"Démarrer le test automatique"}
         </button>
         <div className="mt-3 flex items-center gap-2 flex-wrap">
