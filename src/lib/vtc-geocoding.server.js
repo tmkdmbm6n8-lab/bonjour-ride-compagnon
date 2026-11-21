@@ -149,7 +149,7 @@ async function backupSearch(query, fetcher) {
   return merged;
 }
 
-export async function geoSearch(q, fetcher = fetch) {
+export async function geoSearch(q, fetcher = fetch, provider = "auto") {
   const reverse = q.get("reverse") === "1";
   const lat = Number.parseFloat(q.get("lat")),
     lng = Number.parseFloat(q.get("lng"));
@@ -164,15 +164,20 @@ export async function geoSearch(q, fetcher = fetch) {
   const query = { reverse, lat, lng, text };
   const limit = reverse ? 1 : 6;
 
+  if (provider === "osm") {
+    try { return { results: (await backupSearch(query, fetcher)).slice(0, limit), provider: "osm" }; }
+    catch (error) { console.error("[geo] OSM indisponible:", error?.message || error); throw new Error("La recherche OpenStreetMap est momentanément indisponible"); }
+  }
   if (!googleGeocodingPaused()) {
     try {
-      return { results: (await googleSearch(query, fetcher)).slice(0, limit) };
+      return { results: (await googleSearch(query, fetcher)).slice(0, limit), provider: "google" };
     } catch (error) {
       console.warn("[geo] Google indisponible, bascule sur le secours:", error?.message || error);
     }
   }
+  if (provider === "google") throw new Error("Google Places est indisponible ou son quota est atteint. Sélectionnez OSM dans les réglages.");
   try {
-    return { results: (await backupSearch(query, fetcher)).slice(0, limit), backup: true };
+    return { results: (await backupSearch(query, fetcher)).slice(0, limit), backup: true, provider: "osm" };
   } catch (error) {
     console.error("[geo] Secours indisponible:", error?.message || error);
     throw new Error("La recherche d’adresse est momentanément indisponible");
