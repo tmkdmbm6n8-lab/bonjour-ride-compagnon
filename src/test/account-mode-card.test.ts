@@ -12,7 +12,7 @@ vi.mock("@/lib/stripe.server", () => ({
   }),
   getStripeErrorMessage: () => "Erreur test",
 }));
-import { handleCheckout } from "@/lib/vtc-checkout.server";
+import { handleCheckout, creditPaidSession } from "@/lib/vtc-checkout.server";
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("APP_URL", "https://example.test");
@@ -87,5 +87,26 @@ describe("réservation carte en mode passager", () => {
     await handleCheckout(input);
     expect(input.quoteRide).not.toHaveBeenCalled();
     expect(mock.createSession).not.toHaveBeenCalled();
+  });
+});
+
+describe("crédit du portefeuille après paiement", () => {
+  it("refuse une session payée sans référence client correspondante", async () => {
+    const rpc = vi.fn();
+    await expect(creditPaidSession({ rpc }, {
+      id: "cs_test", payment_status: "paid", amount_total: 1200,
+      livemode: false, currency: "eur", mode: "payment",
+      metadata: { userId: "user-1", kind: "topup" },
+      client_reference_id: "another-user",
+    })).rejects.toThrow(/invalide/);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("refuse un montant Stripe non entier", async () => {
+    const rpc = vi.fn();
+    await expect(creditPaidSession({ rpc }, {
+      id: "cs_test", payment_status: "paid", amount_total: 12.5,
+      metadata: { userId: "user-1", kind: "topup" }, client_reference_id: "user-1",
+    })).rejects.toThrow(/invalide/);
+    expect(rpc).not.toHaveBeenCalled();
   });
 });
