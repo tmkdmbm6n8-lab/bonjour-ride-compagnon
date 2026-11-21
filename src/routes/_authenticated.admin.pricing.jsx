@@ -27,6 +27,8 @@ function AdminPricingPage() {
   const [rules, setRules] = useState(null);
   const [pricingSource, setPricingSource] = useState("auto");
   const [sourceSaving, setSourceSaving] = useState(false);
+  const [addressProvider, setAddressProvider] = useState("auto");
+  const [addressSaving, setAddressSaving] = useState(false);
   const [savingType, setSavingType] = useState(null);
 
   // État de la réduction Uber
@@ -98,6 +100,24 @@ function AdminPricingPage() {
     return ()=>clearInterval(timer);
   },[autoCompare,comparisonMaxKm,bulkTarget,bulkDeadline,autoStats.saved]);
 
+  async function saveAddressProvider(provider) {
+    setAddressSaving(true);
+    try {
+      const res = await fetch("/api/admin/address-search-provider", {method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({provider})});
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Enregistrement impossible");
+      setAddressProvider(data.provider);
+      toast("API de recherche enregistrée", "success");
+    } catch (error) { toast(error.message || "Impossible de changer l'API", "error"); }
+    finally { setAddressSaving(false); }
+  }
+  useEffect(() => {
+    let active=true;
+    fetch("/api/admin/address-search-provider").then(r=>r.json()).then(data=>{
+      if(active && ["auto","osm","google"].includes(data.provider)) setAddressProvider(data.provider);
+    }).catch(()=>{});
+    return ()=>{active=false};
+  },[]);
   async function savePricingSource(mode) {
     setSourceSaving(true);
     try {
@@ -655,6 +675,18 @@ function AdminPricingPage() {
            "Les tarifs sont calculés uniquement à partir des observations Uber enregistrées, sans nouvelle requête Uber pour le devis."}
         </p>
         <p className="tiny muted mt-2">Si l'IA manque de données pour une catégorie, cette catégorie ne peut pas être tarifée. La grille fixe de secours a été retirée.</p>
+      </div>
+
+      <div className="card card-pad mb-5">
+        <h3 style={{fontSize:"1.15rem",marginBottom:8}}>API de recherche d'adresses</h3>
+        <p className="small muted mb-3">Choisis le service de recherche pour les adresses de départ et d'arrivée. Le calcul des itinéraires reste inchangé.</p>
+        <div className="flex gap-2 flex-wrap">
+          {[["osm","OSM (OpenStreetMap)"],["google","Google Maps"]].map(([provider,label])=>(
+            <button type="button" key={provider} className={addressProvider===provider?"btn btn-sm btn-primary":"btn btn-sm btn-secondary"}
+              disabled={addressSaving} onClick={()=>saveAddressProvider(provider)}>{label}</button>
+          ))}
+        </div>
+        <p className="tiny muted mt-2">{addressProvider==="google"?"Google Maps nécessite une clé API et un quota disponibles.":"OSM utilise Géoplateforme et Photon/OpenStreetMap."}</p>
       </div>
 
       <UberBenchmarkChart />
