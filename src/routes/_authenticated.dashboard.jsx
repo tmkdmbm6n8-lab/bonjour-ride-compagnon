@@ -771,6 +771,11 @@ function RiderDashboard() {
                           </span>
                           <span className="flex-col" style={{ alignItems: "flex-end", flexShrink: 0 }}>
                             <span className="small mono-nums" style={{ fontWeight: 700 }}>{money(fare.total)}</span>
+                            {estimate.showPriorityPriceSource === true && (
+                              <span className="tiny muted" data-testid="priority-fare-source" style={{display:"block",textAlign:"right"}}>
+                                {fare.isUberPrice ? "Prix Uber" : fare.priceSource === "ai" || fare.isAiPrice ? "Prix IA" : "Prix Admin"}
+                              </span>
+                            )}
                             {fare.discount > 0 && (
                               <span className="tiny muted mono-nums" style={{ textDecoration: "line-through" }}>
                                 {money(fare.originalTotal)}
