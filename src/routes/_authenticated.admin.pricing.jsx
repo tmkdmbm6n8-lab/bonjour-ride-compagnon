@@ -359,7 +359,17 @@ function AdminPricingPage() {
         const data = await res.json();
         if (ignore || !res.ok) return;
 
-        if (data.uberCookieStatus) setCookieStatus(data.uberCookieStatus);
+        if (data.uberCookieStatus) {
+          setCookieStatus(data.uberCookieStatus);
+          // Resume monitoring an already saved cookie after page reload.
+          // Duration is measured from the first observation in this browser tab,
+          // not from the original Uber login or cookie creation.
+          if (data.uberCookieStatus.hasCustomCookie && !sessionMonitorRef.current.active) {
+            const startedAt = Date.now();
+            sessionMonitorRef.current = { startedAt, failures: 0, active: true };
+            setSessionMonitor({ state: "active", startedAt, endedAt: null, durationMs: null, failures: 0 });
+          }
+        }
         if (data.uberHourlyChecks) setHourlyChecks(data.uberHourlyChecks);
 
         // Récupérer la règle Uber
@@ -552,6 +562,7 @@ function AdminPricingPage() {
             ? `Session enregistrée le ${cookieStatus.updatedAt ? new Date(cookieStatus.updatedAt).toLocaleString("fr-FR") : "—"} (validité non garantie).`
             : "Aucun cookie personnalisé enregistré. Repli sur UBER_COOKIE si configuré."}
         </p>
+        {sessionMonitor.state==="idle" && <p className="small mt-2 muted" role="status">Voyant en attente : aucune session Uber personnalisée surveillée. Enregistrez un cookie pour démarrer les vérifications.</p>}
         {sessionMonitor.state==="active" && <div className="small mt-2 flex items-center gap-2" role="status" aria-live="polite">
           <span aria-hidden="true" style={{display:"inline-block",width:12,height:12,borderRadius:"50%",background:sessionMonitor.failures>0?"#f59e0b":"#22c55e",boxShadow:sessionMonitor.failures>0?"0 0 0 3px #f59e0b30":"0 0 0 3px #22c55e30",flexShrink:0}} />
           <span><strong style={{color:sessionMonitor.failures>0?"#d97706":"#16a34a"}}>{sessionMonitor.failures>0?"Signal incertain":"Signal Uber actif"}</strong> · vérification toutes les 2 secondes.{sessionMonitor.failures>0?" Première vérification sans réponse valide.":""}</span>
