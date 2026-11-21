@@ -1,8 +1,12 @@
-// Snapshot the subscription benefit when the driver accepts. Passenger totals and
-// the original quoted fare remain available if the ride needs another driver.
-export function waiveGoldCommission(fare) {
-  const fee = Number(fare.platformFee);
-  if (!(fee > 0)) return fare;
+// Apply the paid Gold benefit to the fare snapshot, without changing passenger totals.
+// The rider/driver favorite relationship must be checked server-side before calling.
+export function waiveGoldCommission(fare, ownPrivateClient = false) {
+  const total = Number(fare.total ?? fare.estimatedTotal);
+  if (!Number.isFinite(total) || total < 0) return fare;
+  const rate = ownPrivateClient ? 0 : 5;
+  const platformFee = Math.round(total * rate) / 100;
+  const driverEarnings = Math.round((total - platformFee) * 100) / 100;
+  if (fare.goldOriginalCommission) return fare;
   return {
     ...fare,
     goldOriginalCommission: {
@@ -10,9 +14,9 @@ export function waiveGoldCommission(fare) {
       platformFee: fare.platformFee,
       driverEarnings: fare.driverEarnings,
     },
-    platformCommission: 0,
-    platformFee: 0,
-    driverEarnings: Math.round((Number(fare.driverEarnings) + fee) * 100) / 100,
+    platformCommission: rate,
+    platformFee,
+    driverEarnings,
   };
 }
 
