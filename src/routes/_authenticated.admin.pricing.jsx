@@ -36,6 +36,9 @@ function AdminPricingPage() {
   const [showCookieBox, setShowCookieBox] = useState(false);
   const [savingCookie, setSavingCookie] = useState(false);
   const [cookieStatus, setCookieStatus] = useState(null);
+  const [sessionMonitor, setSessionMonitor] = useState({state:"idle",startedAt:null,endedAt:null,durationMs:null,failures:0});
+  const sessionMonitorBusy = useRef(false);
+  const sessionMonitorRef = useRef({startedAt:null,failures:0,active:false});
   const [hourlyChecks, setHourlyChecks] = useState({ enabled: false });
   const [checkingUber, setCheckingUber] = useState(false);
   const [aiConfig, setAiConfig] = useState({ enabled: false, radiusKm: 100 });
@@ -268,6 +271,9 @@ function AdminPricingPage() {
         toast(data.error || "Session refusée par Uber", "error", 6000);
       } else {
         toast(`Connexion Uber validée (${data.count} gammes détectées)`, "success", 5000);
+        const startedAt=Date.now();
+        sessionMonitorRef.current={startedAt,failures:0,active:true};
+        setSessionMonitor({state:"active",startedAt,endedAt:null,durationMs:null,failures:0});
         setCookieStatus({ hasCustomCookie: true, updatedAt: new Date().toISOString() });
         setCookieInput("");
         setShowCookieBox(false);
@@ -278,6 +284,52 @@ function AdminPricingPage() {
       setSavingCookie(false);
     }
   }
+
+  // A successful Uber price response is a heartbeat, not proof that the cookie
+  // remains valid until the next check. Two failed probes avoid false alarms
+  // from a single network interruption.
+  useEffect(() => {
+    if(sessionMonitor.state!=="active")return;
+    let cancelled=false;
+    async function probe(){
+      if(sessionMonitorBusy.current||!sessionMonitorRef.current.active)return;
+      sessionMonitorBusy.current=true;
+      try{
+        const res=await fetch("/api/admin/pricing",{
+          method:"PUT",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({vehicleType:"uber_hourly_check_now"})
+        });
+        const data=await res.json();
+        if(cancelled)return;
+        if(res.ok&&data.ok){
+          sessionMonitorRef.current.failures=0;
+          setSessionMonitor(prev=>({...prev,failures:0}));
+        }else{
+          sessionMonitorRef.current.failures+=1;
+          if(sessionMonitorRef.current.failures>=2){
+            const endedAt=Date.now();
+            const durationMs=endedAt-sessionMonitorRef.current.startedAt;
+            sessionMonitorRef.current.active=false;
+            setSessionMonitor({state:"lost",startedAt:sessionMonitorRef.current.startedAt,endedAt,durationMs,failures:2});
+            toast("Signal Uber perdu : durée de session "+Math.floor(durationMs/60000)+" min "+Math.floor(durationMs%60000/1000)+" s","error",10000);
+          }else setSessionMonitor(prev=>({...prev,failures:1}));
+        }
+      }catch{
+        if(!cancelled){
+          sessionMonitorRef.current.failures+=1;
+          if(sessionMonitorRef.current.failures>=2){
+            const endedAt=Date.now(),durationMs=endedAt-sessionMonitorRef.current.startedAt;
+            sessionMonitorRef.current.active=false;
+            setSessionMonitor({state:"lost",startedAt:sessionMonitorRef.current.startedAt,endedAt,durationMs,failures:2});
+            toast("Signal Uber perdu ou réseau indisponible : durée observée "+Math.floor(durationMs/60000)+" min "+Math.floor(durationMs%60000/1000)+" s","error",10000);
+          }
+        }
+      }finally{sessionMonitorBusy.current=false;}
+    }
+    probe();
+    const timer=setInterval(probe,2000);
+    return ()=>{cancelled=true;clearInterval(timer);};
+  },[sessionMonitor.state,sessionMonitor.startedAt]);
 
   useEffect(() => {
     let ignore = false;
@@ -480,6 +532,14 @@ function AdminPricingPage() {
             ? `Session enregistrée le ${cookieStatus.updatedAt ? new Date(cookieStatus.updatedAt).toLocaleString("fr-FR") : "—"} (validité non garantie).`
             : "Aucun cookie personnalisé enregistré. Repli sur UBER_COOKIE si configuré."}
         </p>
+        {sessionMonitor.state==="active" && <p className="small mt-2" role="status">
+          <strong>Surveillance active</strong> · vérification du signal Uber toutes les 2 secondes.
+          {sessionMonitor.failures>0?" Première vérification sans réponse valide.":""}
+        </p>}
+        {sessionMonitor.state==="lost" && <p className="small mt-2" role="alert" style={{color:"#ef4444"}}>
+          <strong>Signal Uber perdu</strong> · session observée pendant {Math.floor(sessionMonitor.durationMs/3600000)} h {Math.floor(sessionMonitor.durationMs%3600000/60000)} min {Math.floor(sessionMonitor.durationMs%60000/1000)} s.
+          La perte de signal peut aussi provenir du réseau ou du serveur.
+        </p>}
         {showCookieBox && (
           <div className="flex-col gap-2">
             <textarea
