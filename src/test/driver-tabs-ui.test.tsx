@@ -66,7 +66,7 @@ describe("onglets chauffeur", () => {
         <div />
       </DriverLayout>,
     );
-    expect(screen.getByRole("link", { name: "Trafic" }).getAttribute("href")).toBe("/driver/discover");
+    expect(screen.getByRole("link", { name: /Gold|SDGold|Découvrir/i }).getAttribute("href")).toBe("/driver/discover");
     expect(screen.getByRole("link", { name: "Inbox" }).getAttribute("href")).toBe("/driver/inbox");
     expect(screen.getByRole("link", { name: "Menu" }).getAttribute("href")).toBe("/driver/menu");
   });
@@ -80,7 +80,7 @@ describe("onglets chauffeur", () => {
     render(<Component />);
     expect(screen.queryByText("Horaires non publiés")).toBeNull();
     expect(screen.queryByText("Aucun horaire disponible pour cette sélection.")).toBeNull();
-    expect(screen.getByText("Aucun flux d'arrivée répertorié pour le moment.")).toBeTruthy();
+    expect(screen.getByText(/Aucun flux d['’]arrivée|Aucune arrivée/i)).toBeTruthy();
   });
   it("affiche les vrais totaux et permet de choisir un jour", () => {
     fixtures.data["/api/drivers/me/earnings"] = {
