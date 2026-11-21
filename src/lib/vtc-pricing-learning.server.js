@@ -330,16 +330,62 @@ export async function predictLearnedPrice(admin,{distanceKm,productName="UberX",
     Number(b.weekday===target.dayOfWeek)-Number(a.weekday===target.dayOfWeek) ||
     Math.abs(a.distance_km-targetKm)-Math.abs(b.distance_km-targetKm)
   );
-  if(ranked.length<3)return {ready:false,samples:ranked.length,
+  // Only when the strict matching model lacks evidence, infer a conservative
+  // distance-based price from genuine Uber quotes for the SAME category.
+  // Never persist inferred fares as Uber observations: new genuine observations
+  // automatically take precedence as soon as the strict model has enough data.
+  const inferFromCategoryHistory=()=>{
+    const rows=(res.data||[]).filter(x=>
+      Number.isFinite(Number(x.price_eur))&&Number(x.price_eur)>0&&
+      Number.isFinite(Number(x.distance_km))&&Number(x.distance_km)>0
+    );
+    if(rows.length<3)return {ready:false,samples:rows.length,
+      reason:"Moins de trois tarifs Uber réels pour cette catégorie"};
+    const distances=rows.map(x=>Number(x.distance_km)).sort((a,b)=>a-b);
+    const minKm=distances[0],maxKm=distances[distances.length-1];
+    // Avoid extrapolating far outside the observed range.
+    if(targetKm<Math.max(0.5,minKm*.5)||targetKm>maxKm*1.5)
+      return {ready:false,samples:rows.length,reason:"Distance trop éloignée des trajets connus"};
+    const nearby=[...rows].sort((a,b)=>
+      Math.abs(Number(a.distance_km)-targetKm)-Math.abs(Number(b.distance_km)-targetKm)
+    ).slice(0,Math.min(40,rows.length));
+    // Fit a nonnegative base fare + per-km slope, using pairwise median slopes
+    // to limit the influence of surges and outliers.
+    const slopes=[];
+    for(let i=0;i<nearby.length;i++)for(let j=i+1;j<nearby.length;j++){
+      const dx=Number(nearby[j].distance_km)-Number(nearby[i].distance_km);
+      if(Math.abs(dx)>=0.5){
+        const slope=(Number(nearby[j].price_eur)-Number(nearby[i].price_eur))/dx;
+        if(Number.isFinite(slope))slopes.push(slope);
+      }
+    }
+    const medianOf=values=>{
+      const sorted=[...values].sort((a,b)=>a-b),mid=Math.floor(sorted.length/2);
+      return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+    };
+    const slope=slopes.length?Math.max(0,medianOf(slopes)):0;
+    const intercept=Math.max(0,medianOf(nearby.map(x=>Number(x.price_eur)-slope*Number(x.distance_km))));
+    let estimate=intercept+slope*targetKm;
+    // If every known distance is nearly identical, use proportional scaling.
+    if(!slopes.length){
+      const typicalKm=medianOf(nearby.map(x=>Number(x.distance_km)));
+      const typicalPrice=medianOf(nearby.map(x=>Number(x.price_eur)));
+      estimate=typicalPrice*(0.4+0.6*targetKm/typicalKm);
+    }
+    if(!Number.isFinite(estimate)||estimate<=0)return {ready:false,samples:rows.length,
+      reason:"Impossible d'estimer un prix cohérent"};
+    return {ready:true,price:Math.round(estimate*100)/100,samples:nearby.length,
+      method:"historical-category-distance-estimate",estimated:true,
+      reason:"Estimation calculée à partir des prix Uber historiques de cette catégorie"};
+  };
+  if(ranked.length<3)return inferFromCategoryHistory();
     reason:"Pas assez de courses Uber comparables pour cette distance et catégorie",
     matchingDistanceKm:distanceTolerance,requiredSamples:3};
   // Choose a local time neighborhood around the closest available observation,
   // rather than mixing prices from very different hours.
   const nearestGap=ranked[0].gap;
   const selected=ranked.filter(x=>x.gap<=nearestGap+30).slice(0,40);
-  if(selected.length<3)return {ready:false,samples:selected.length,
-    reason:"Moins de trois tarifs Uber dans les 30 minutes autour de l'heure de référence la plus proche",
-    nearestTimeGapMinutes:nearestGap,requiredSamples:3};
+  if(selected.length<3)return inferFromCategoryHistory();
   const ordered=selected;
   // Median protects against anomalously low/high fares. Do not scale prices
   // from very different distances; only narrow distance matches are accepted.
