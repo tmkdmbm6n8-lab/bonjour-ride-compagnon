@@ -40,6 +40,30 @@ function AdminPricingPage() {
   const [cookieStatus, setCookieStatus] = useState(null);
   const [sessionMonitor, setSessionMonitor] = useState({state:"idle",startedAt:null,endedAt:null,durationMs:null,failures:0});
   const [sessionProbeLog, setSessionProbeLog] = useState([]);
+  const [sessionHistoryReady, setSessionHistoryReady] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState([]);
+  useEffect(() => {
+    try {
+      const checks = JSON.parse(localStorage.getItem("strasdrive_uber_checks_v1") || "[]");
+      if (Array.isArray(checks)) setSessionProbeLog(checks.filter(x => x && x.status !== "pending").slice(0, 500));
+      const sessions = JSON.parse(localStorage.getItem("strasdrive_uber_sessions_v1") || "[]");
+      if (Array.isArray(sessions)) setSessionHistory(sessions.slice(0, 100));
+    } catch {}
+    setSessionHistoryReady(true);
+  }, []);
+  useEffect(() => {
+    if (!sessionHistoryReady) return;
+    try { localStorage.setItem("strasdrive_uber_checks_v1", JSON.stringify(sessionProbeLog.filter(x => x.status !== "pending").slice(0, 500))); } catch {}
+  }, [sessionProbeLog, sessionHistoryReady]);
+  useEffect(() => {
+    if (!sessionHistoryReady) return;
+    try { localStorage.setItem("strasdrive_uber_sessions_v1", JSON.stringify(sessionHistory.slice(0, 100))); } catch {}
+  }, [sessionHistory, sessionHistoryReady]);
+  function saveSessionEnd(status, endedAt) {
+    const startedAt = sessionMonitorRef.current.startedAt;
+    if (!startedAt) return;
+    setSessionHistory(prev => [{startedAt, endedAt, durationMs: Math.max(0, endedAt-startedAt), status}, ...prev].slice(0, 100));
+  }
   const [monitorEnabled, setMonitorEnabled] = useState(false);
   const sessionMonitorBusy = useRef(false);
   const sessionMonitorRef = useRef({startedAt:null,failures:0,active:false});
@@ -318,7 +342,7 @@ function AdminPricingPage() {
       if(sessionMonitorBusy.current||!sessionMonitorRef.current.active)return;
       sessionMonitorBusy.current=true;
       const sentAt=Date.now();
-      setSessionProbeLog(prev=>[{id:sentAt,at:sentAt,status:"pending",detail:"Requête envoyée",duration:null},...prev].slice(0,3));
+      setSessionProbeLog(prev=>[{id:sentAt,at:sentAt,status:"pending",detail:"Requête envoyée",duration:null},...prev].slice(0,500));
       const recordProbe=(status,detail)=>setSessionProbeLog(prev=>prev.map(entry=>entry.id===sentAt?{...entry,status,detail,duration:Date.now()-sentAt}:entry));
       try{
         const res=await fetch("/api/admin/pricing",{
@@ -337,6 +361,7 @@ function AdminPricingPage() {
             const endedAt=Date.now();
             const durationMs=endedAt-sessionMonitorRef.current.startedAt;
             sessionMonitorRef.current.active=false;
+            saveSessionEnd("Signal perdu",endedAt);
             setSessionMonitor({state:"lost",startedAt:sessionMonitorRef.current.startedAt,endedAt,durationMs,failures:2});
             toast("Signal Uber perdu : durée de session "+Math.floor(durationMs/60000)+" min "+Math.floor(durationMs%60000/1000)+" s","error",10000);
           }else setSessionMonitor(prev=>({...prev,failures:1}));
@@ -348,6 +373,7 @@ function AdminPricingPage() {
           if(sessionMonitorRef.current.failures>=2){
             const endedAt=Date.now(),durationMs=endedAt-sessionMonitorRef.current.startedAt;
             sessionMonitorRef.current.active=false;
+            saveSessionEnd("Signal perdu",endedAt);
             setSessionMonitor({state:"lost",startedAt:sessionMonitorRef.current.startedAt,endedAt,durationMs,failures:2});
             toast("Signal Uber perdu ou réseau indisponible : durée observée "+Math.floor(durationMs/60000)+" min "+Math.floor(durationMs%60000/1000)+" s","error",10000);
           }
@@ -575,6 +601,7 @@ function AdminPricingPage() {
           <button type="button" className={monitorEnabled?"btn btn-secondary btn-sm":"btn btn-primary btn-sm"} aria-pressed={monitorEnabled}
             onClick={()=>{
               if(monitorEnabled){
+                saveSessionEnd("Arrêt manuel",Date.now());
                 setMonitorEnabled(false);
                 sessionMonitorRef.current.active=false;
                 setSessionMonitor(prev=>({...prev,state:"idle",failures:0}));
@@ -599,17 +626,30 @@ function AdminPricingPage() {
           <span><strong>Signal Uber perdu</strong> · durée observée : <strong>{Math.floor(sessionMonitor.durationMs/3600000)} h {Math.floor(sessionMonitor.durationMs%3600000/60000)} min {Math.floor(sessionMonitor.durationMs%60000/1000)} s</strong>.
           <span className="block">Dernier constat de perte : {sessionMonitor.endedAt ? new Date(sessionMonitor.endedAt).toLocaleString("fr-FR") : "—"}. La perte peut aussi provenir du réseau ou du serveur.</span></span>
         </div>}
+        <div className="mt-3">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <strong className="small">Historique des sessions Uber</strong>
+            <button type="button" className="btn btn-secondary btn-xs" onClick={()=>setSessionHistory([])}>Effacer</button>
+          </div>
+          <p className="tiny muted">Durée de surveillance observée, pas durée de validité garantie du cookie. Historique conservé sur cet appareil.</p>
+          <div style={{maxHeight:180,overflowY:"auto",fontSize:12}}>
+            {sessionHistory.length===0 && <p className="tiny muted">Aucune session terminée enregistrée.</p>}
+            {sessionHistory.map((entry,i)=><div key={entry.startedAt+"-"+i} style={{padding:"5px 0",borderBottom:"1px solid var(--border, #333)"}}>
+              {new Date(entry.startedAt).toLocaleString("fr-FR")} → {new Date(entry.endedAt).toLocaleString("fr-FR")} · {entry.status} · {Math.floor(entry.durationMs/3600000)} h {Math.floor(entry.durationMs%3600000/60000)} min {Math.floor(entry.durationMs%60000/1000)} s
+            </div>)}
+          </div>
+        </div>
         <div className="mt-3" style={{borderTop:"1px solid var(--border, #333)",paddingTop:12}}>
           <div className="flex items-center justify-between gap-2 mb-2">
             <strong className="small">Journal des requêtes Uber (toutes les 10 minutes)</strong>
             <button type="button" className="btn btn-secondary btn-xs" onClick={()=>setSessionProbeLog([])}>Effacer</button>
           </div>
-          <p className="tiny muted mb-2">Chaque ligne correspond à une vérification lancée par cette page. L'heure, le résultat HTTP et la durée sont affichés sans révéler le cookie. Aucune requête ne se chevauche.</p>
+          <p className="tiny muted mb-2">Les 500 dernières vérifications sont conservées dans ce navigateur, même après actualisation. L'heure, le résultat HTTP et la durée sont affichés sans révéler le cookie. Aucune requête ne se chevauche.</p>
           <div role="log" aria-live="off" style={{maxHeight:210,overflowY:"auto",fontFamily:"monospace",fontSize:12}}>
-            {sessionProbeLog.length===0 && <p className="tiny muted">Aucune requête observée dans cet onglet.</p>}
+            {sessionProbeLog.length===0 && <p className="tiny muted">Aucune requête enregistrée dans ce navigateur.</p>}
             {sessionProbeLog.map(entry=>(
               <div key={entry.id} style={{padding:"5px 0",borderBottom:"1px solid var(--border, #333)",color:entry.status==="ok"?"#22c55e":entry.status==="error"?"#ef4444":"#f59e0b"}}>
-                {new Date(entry.at).toLocaleTimeString("fr-FR")} · {entry.status==="ok"?"✓ OK":entry.status==="error"?"✕ ÉCHEC":"… EN COURS"} · {entry.detail}{entry.duration!==null?` · ${entry.duration} ms`:""}
+                {new Date(entry.at).toLocaleString("fr-FR")} · {entry.status==="ok"?"✓ OK":entry.status==="error"?"✕ ÉCHEC":"… EN COURS"} · {entry.detail}{entry.duration!==null?` · ${entry.duration} ms`:""}
               </div>
             ))}
           </div>
