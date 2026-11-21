@@ -64,6 +64,8 @@ import { requireRadarReporter } from "./vtc-road-alerts.server";
 import {
   DEFAULT_PRICING,
   calculateFare,
+  minimumPassengerTotal,
+  driverMinimumNet,
   settleDriverEarnings,
   paymentMethodOf,
   bookingPaymentProblem,
@@ -376,7 +378,7 @@ async function estimates(db, a, b) {
     }
 
     if (rawPrice && Number.isFinite(rawPrice) && rawPrice > 0) {
-      const commRate = rules[type]?.platformCommission || 15;
+      const commRate = Number(rules[type]?.platformCommission ?? DEFAULT_PRICING[type].platformCommission);
 
       // Calcul du prix réduit de 20 %
       let price = rawPrice;
@@ -386,12 +388,13 @@ async function estimates(db, a, b) {
 
       // ── Plancher légal ARPE : 9,00 € nets min par course pour le chauffeur ──
       // Avec 15 % de commission, le prix payé par le client ne descend jamais sous 10,59 €
-      const minNetDriver = 9.0;
-      const minLegalPrice = Math.round((minNetDriver / (1 - commRate / 100)) * 100) / 100;
+      const minNetDriver = driverMinimumNet(route.distanceMeters, route.durationSeconds);
+      const minLegalPrice = minimumPassengerTotal(minNetDriver, commRate);
       if (price < minLegalPrice) {
         price = minLegalPrice;
       }
 
+      price = Math.round(price * 100) / 100;
       const platformFee = Math.round(price * commRate) / 100;
       const driverEarnings = Math.round((price - platformFee) * 100) / 100;
 
@@ -399,6 +402,7 @@ async function estimates(db, a, b) {
         total: price,
         estimatedTotal: price,
         originalTotal: rawPrice, // Le prix Uber de référence avant réduction
+        platformCommission: commRate,
         platformFee,
         driverEarnings,
         uberProduct: product ? product.name : type === "pet" ? "Uber Pet" : null,
@@ -435,11 +439,12 @@ async function estimates(db, a, b) {
       const commission = Math.min(95, Math.max(0, commRate));
       const rawPrice = prediction.price;
       let price = isDiscountActive ? rawPrice * (1 - discountRate) : rawPrice;
-      const minLegalPrice = 9 / (1 - commission / 100);
+      const minLegalPrice = minimumPassengerTotal(driverMinimumNet(route.distanceMeters, route.durationSeconds), commission);
       price = Math.round(Math.max(price, minLegalPrice) * 100) / 100;
       const platformFee = Math.round(price * commission) / 100;
       finalEstimates[type] = {
         total: price, estimatedTotal: price, originalTotal: rawPrice,
+        platformCommission: commission,
         platformFee, driverEarnings: Math.round((price-platformFee)*100)/100,
         uberProduct: aiNames[type], isUberPrice: false, isAiPrice: true,
         priceSource: "ai", predictionSamples: prediction.samples,
