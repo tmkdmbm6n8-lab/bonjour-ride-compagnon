@@ -130,6 +130,9 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
       const { data: booking } = await admin
         .from("card_bookings").select("*").eq("id", session.metadata.bookingId).eq("rider_id", uid).maybeSingle();
       if (!booking) return { paid: true, booked: false };
+      if (booking.environment !== env || booking.stripe_session_id !== session.id) {
+        return { paid: true, booked: false, error: "La session de paiement ne correspond pas à cette réservation. Contactez le support." };
+      }
       if (booking.ride_id) return { paid: true, booked: true, ride: await serializeRide(booking.ride_id) };
       if (booking.status !== "pending") return { paid: true, booked: false, processing: booking.status === "booking" };
       if (cardBookingExpired(booking.created_at)) {
