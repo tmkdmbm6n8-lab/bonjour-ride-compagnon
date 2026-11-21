@@ -64,7 +64,8 @@ function AdminPricingPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Comparaison impossible");
       setPriceComparison(data);
-      if (automatic) setAutoStats(prev=>({...prev,tested:prev.tested+1,saved:prev.saved+(Number(data.savedCount)||0)}));
+      if (automatic && data.skipped === "9 000 trajets terminés") setAutoCompare(false);
+      if (automatic && !data.skipped) setAutoStats(prev=>({...prev,tested:prev.tested+1,saved:prev.saved+(Number(data.savedCount)||0)}));
     } catch (error) {
       setPriceComparison({ error: error.message || "Comparaison impossible" });
       if (automatic) setAutoStats(prev=>({...prev,errors:prev.errors+1}));
