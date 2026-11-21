@@ -28,7 +28,7 @@ function params(role: string) {
         select: () => q,
         single: async () => ({ data: { id: "booking" }, error: null }),
         update: () => q,
-        eq: async () => ({ error: null }),
+        eq: () => ({ error: null, select: async () => ({ data: [{ id: "booking" }], error: null }) }),
       };
       return q;
     },
@@ -74,7 +74,7 @@ describe("réservation carte en mode passager", () => {
     const baseFrom = input.admin.from;
     input.admin.from = () => {
       const query = baseFrom();
-      query.update = () => ({ eq: async () => ({ error: { message: "Database unavailable" } }) });
+      query.update = () => ({ eq: () => ({ select: async () => ({ data: null, error: { message: "Database unavailable" } }) }) });
       return query;
     };
     const result = await handleCheckout(input);
