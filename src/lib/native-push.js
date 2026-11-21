@@ -40,7 +40,8 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
     // Tapping the banner opens the driver home, where the offer is shown.
     await PushNotifications.addListener("pushNotificationActionPerformed", ({ notification }) => {
       const path = notification?.data?.path || OFFER_PATH;
-      if (path.startsWith("/") && window.location.pathname !== path) window.location.assign(path);
+      // Reject protocol-relative URLs (//host), backslashes and control characters from push payloads.
+      if (typeof path === "string" && /^\/(?!\/)[^\\\x00-\x1F\x7F]*$/.test(path) && window.location.pathname !== path) window.location.assign(path);
     });
     let perm = await PushNotifications.checkPermissions();
     if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale")
