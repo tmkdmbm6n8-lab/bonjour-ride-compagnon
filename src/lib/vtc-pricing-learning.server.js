@@ -135,42 +135,18 @@ const ROAD_BANDS_DESC = [
   {key:"2-3",min:2,max:3},{key:"1-2",min:1,max:2},
   {key:"0.5-1",min:0.5,max:1}
 ];
-async function mapboxDrivingKm(a,b) {
-  const token=process.env.MAPBOX_ACCESS_TOKEN;
-  if (!token) throw new Error("MAPBOX_ACCESS_TOKEN non configuré");
-  const coords=[a,b].map(p=>`${Number(p.lng)},${Number(p.lat)}`).join(";");
-  const url=`https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?overview=false&access_token=${encodeURIComponent(token)}`;
-  const response=await fetch(url,{signal:AbortSignal.timeout(12000)});
-  if (!response.ok) throw new Error(`Mapbox Directions HTTP ${response.status}`);
-  const data=await response.json();
-  const meters=Number(data.routes?.[0]?.distance);
-  if(data.code!=="Ok"||!Number.isFinite(meters)||meters<=0)throw new Error("Itinéraire Mapbox indisponible");
-  return meters/1000;
-}
-async function googleDrivingKm(a,b) {
-  const token=process.env.LOVABLE_API_KEY,key=process.env.GOOGLE_MAPS_API_KEY;
-  if(!token||!key)throw new Error("Google Routes non configuré");
+async function actualDrivingKm(a,b) {
+  const token=process.env.LOVABLE_API_KEY, key=process.env.GOOGLE_MAPS_API_KEY;
+  if(!token||!key)throw new Error("Distance routière Google non configurée (LOVABLE_API_KEY / GOOGLE_MAPS_API_KEY)");
   const {googleRouteRequest}=await import("./vtc-routing");
-  const response=await fetch("https://connector-gateway.lovable.dev/google_maps/routes/directions/v2:computeRoutes",{
+  const res=await fetch("https://connector-gateway.lovable.dev/google_maps/routes/directions/v2:computeRoutes",{
     method:"POST",headers:{Authorization:`Bearer ${token}`,"X-Connection-Api-Key":key,
       "Content-Type":"application/json","X-Goog-FieldMask":"routes.distanceMeters"},
     body:JSON.stringify(googleRouteRequest(a,b)),signal:AbortSignal.timeout(10000)
   });
-  if(!response.ok)throw new Error(`Google Routes HTTP ${response.status}`);
-  const meters=Number((await response.json()).routes?.[0]?.distanceMeters);
-  if(!Number.isFinite(meters)||meters<=0)throw new Error("Itinéraire Google indisponible");
-  return meters/1000;
-}
-async function actualDrivingKm(a,b) {
-  try { return await googleDrivingKm(a,b); }
-  catch(error) {
-    // Fail over only for rate limits, temporary server errors, and missing Google configuration.
-    const msg=String(error?.message||error);
-    if(!/HTTP (429|5\\d\\d)|non configuré|timeout|abort/i.test(msg))throw error;
-    if(!process.env.MAPBOX_ACCESS_TOKEN)throw error;
-    try {return await mapboxDrivingKm(a,b);}
-    catch(mapboxError){throw new Error(`Routage indisponible (Google: ${msg}; Mapbox: ${mapboxError.message})`);}
-  }
+  if(!res.ok)throw new Error(`Google Routes HTTP ${res.status}`);
+  const meters=Number((await res.json()).routes?.[0]?.distanceMeters);
+  return Number.isFinite(meters)&&meters>0?meters/1000:null;
 }
 
 async function nextRoadBand(admin) {
