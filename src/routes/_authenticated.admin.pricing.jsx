@@ -316,7 +316,7 @@ function AdminPricingPage() {
       if(sessionMonitorBusy.current||!sessionMonitorRef.current.active)return;
       sessionMonitorBusy.current=true;
       const sentAt=Date.now();
-      setSessionProbeLog(prev=>[{id:sentAt,at:sentAt,status:"pending",detail:"Requête envoyée",duration:null},...prev].slice(0,30));
+      setSessionProbeLog(prev=>[{id:sentAt,at:sentAt,status:"pending",detail:"Requête envoyée",duration:null},...prev].slice(0,3));
       const recordProbe=(status,detail)=>setSessionProbeLog(prev=>prev.map(entry=>entry.id===sentAt?{...entry,status,detail,duration:Date.now()-sentAt}:entry));
       try{
         const res=await fetch("/api/admin/pricing",{
