@@ -47,3 +47,30 @@ export function prepareHourlyReconciliation(rides, { periodStart, periodEnd } = 
   }
   return { ...hourlyGuaranteeStatement(eligible), includedCount: eligible.length, excluded, needsReview: excluded.length > 0, readyForPayment: false };
 }
+
+/**
+ * Prépare un état par chauffeur sans mélanger les rémunérations.
+ * Une course sans chauffeur est mise en quarantaine et interdit toute validation automatique.
+ * La validation des périodes, des primes et des paiements reste une étape humaine.
+ */
+export function prepareDriverHourlyReconciliations(rides, period) {
+  const byDriver = new Map();
+  const unassigned = [];
+  for (const ride of rides || []) {
+    const driverId = ride?.driver_id;
+    if (!driverId) {
+      unassigned.push({ id: ride?.id ?? null, reason: "chauffeur manquant" });
+      continue;
+    }
+    if (!byDriver.has(driverId)) byDriver.set(driverId, []);
+    byDriver.get(driverId).push(ride);
+  }
+  return {
+    statements: [...byDriver.entries()].map(([driverId, driverRides]) => ({
+      driverId,
+      ...prepareHourlyReconciliation(driverRides, period),
+    })),
+    unassigned,
+    readyForPayment: false,
+  };
+}
