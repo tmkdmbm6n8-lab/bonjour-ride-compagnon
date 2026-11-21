@@ -66,7 +66,7 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
     if (p === "/api/wallet/checkout" && method === "POST") {
       const problem = topupAmountProblem(body.amount);
       if (problem) return { error: problem };
-      const origin = safeOrigin(body.origin, process.env.APP_URL);
+      const origin = safeOrigin(body.origin, process.env.APP_URL || '');
       if (!origin) return { error: "Adresse de retour invalide" };
       const customer = await resolveOrCreateCustomer(stripe, { email, userId: uid });
       const metadata = { userId: uid, kind: "topup" };
@@ -86,7 +86,7 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
     }
     if (p === "/api/rides/card-checkout") {
       await preparePassenger();
-      const origin = safeOrigin(body.origin, process.env.APP_URL);
+      const origin = safeOrigin(body.origin, process.env.APP_URL || '');
       if (!origin) return { error: "Adresse de retour invalide" };
       // The favorite choice is kept with the paid booking so the ride never changes circuit after payment.
       const favorite = body.favorite === true ? await resolveFavorite() : null;
