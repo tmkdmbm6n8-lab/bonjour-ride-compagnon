@@ -454,11 +454,23 @@ async function estimates(db, a, b) {
       aiUsed = true;
     }
   }
-  // Fail closed: no invented fixed-grid fares if Uber and AI cannot price a category.
-  if (!Object.keys(finalEstimates).length) {
-    throw new Error("Tarifs indisponibles : Uber ne répond pas et le modèle IA ne dispose pas encore de données suffisantes pour cette catégorie.");
+  // No Uber quote or trained AI prediction: use the published StrasDrive
+  // distance/time tariff, clearly labelled as a local estimate (never as Uber/AI).
+  // This also fills missing vehicle classes without inventing competitor prices.
+  let localUsed = false;
+  for (const type of Object.keys(DEFAULT_PRICING)) {
+    if (finalEstimates[type]) continue;
+    const rule = { ...DEFAULT_PRICING[type], ...(rules[type] || {}) };
+    const fare = calculateFare(rule, route.distanceMeters, route.durationSeconds);
+    if (!Number.isFinite(fare.total) || fare.total <= 0) continue;
+    finalEstimates[type] = { ...fare, isUberPrice: false, isAiPrice: false, priceSource: "local", estimatedFromLocalRules: true };
+    localUsed = true;
   }
-  return { route, estimates: finalEstimates, source: aiUsed ? (Object.values(finalEstimates).some(x=>x.isUberPrice) ? "mixed" : "ai") : "uber", pricingMode: mode };
+  if (!Object.keys(finalEstimates).length) {
+    throw new Error("Tarifs indisponibles : impossible de calculer un trajet valide.");
+  }
+  const uberUsed = Object.values(finalEstimates).some(x => x.isUberPrice);
+  return { route, estimates: finalEstimates, source: localUsed ? (uberUsed || aiUsed ? "mixed" : "local") : aiUsed ? (uberUsed ? "mixed" : "ai") : "uber", pricingMode: mode };
 
 }
 
