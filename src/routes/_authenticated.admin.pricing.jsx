@@ -355,7 +355,7 @@ function AdminPricingPage() {
       }finally{sessionMonitorBusy.current=false;}
     }
     probe();
-    const timer=setInterval(probe,2000);
+    const timer=setInterval(probe,600000);
     return ()=>{cancelled=true;clearInterval(timer);};
   },[monitorEnabled,sessionMonitor.state,sessionMonitor.startedAt]);
 
@@ -571,7 +571,7 @@ function AdminPricingPage() {
             : "Aucun cookie personnalisé enregistré. Repli sur UBER_COOKIE si configuré."}
         </p>
         <div className="flex items-center justify-between gap-3 mb-3">
-          <span className="small">Requêtes automatiques de surveillance Uber (2 secondes)</span>
+          <span className="small">Requêtes automatiques de surveillance Uber (10 minutes)</span>
           <button type="button" className={monitorEnabled?"btn btn-secondary btn-sm":"btn btn-primary btn-sm"} aria-pressed={monitorEnabled}
             onClick={()=>{
               if(monitorEnabled){
@@ -592,7 +592,7 @@ function AdminPricingPage() {
         {sessionMonitor.state==="idle" && <p className="small mt-2 muted" role="status">Voyant en attente : aucune session Uber personnalisée surveillée. Enregistrez un cookie pour démarrer les vérifications.</p>}
         {sessionMonitor.state==="active" && <div className="small mt-2 flex items-center gap-2" role="status" aria-live="polite">
           <span aria-hidden="true" style={{display:"inline-block",width:12,height:12,borderRadius:"50%",background:sessionMonitor.failures>0?"#f59e0b":"#22c55e",boxShadow:sessionMonitor.failures>0?"0 0 0 3px #f59e0b30":"0 0 0 3px #22c55e30",flexShrink:0}} />
-          <span><strong style={{color:sessionMonitor.failures>0?"#d97706":"#16a34a"}}>{sessionMonitor.failures>0?"Signal incertain":"Signal Uber actif"}</strong> · vérification toutes les 2 secondes.{sessionMonitor.failures>0?" Première vérification sans réponse valide.":""}</span>
+          <span><strong style={{color:sessionMonitor.failures>0?"#d97706":"#16a34a"}}>{sessionMonitor.failures>0?"Signal incertain":"Signal Uber actif"}</strong> · vérification toutes les 10 minutes.{sessionMonitor.failures>0?" Première vérification sans réponse valide.":""}</span>
         </div>}
         {sessionMonitor.state==="lost" && <div className="small mt-2 flex items-start gap-2" role="alert" style={{color:"#ef4444"}}>
           <span aria-hidden="true" style={{display:"inline-block",width:12,height:12,marginTop:3,borderRadius:"50%",background:"#ef4444",boxShadow:"0 0 0 3px #ef444430",flexShrink:0}} />
@@ -601,7 +601,7 @@ function AdminPricingPage() {
         </div>}
         <div className="mt-3" style={{borderTop:"1px solid var(--border, #333)",paddingTop:12}}>
           <div className="flex items-center justify-between gap-2 mb-2">
-            <strong className="small">Journal des requêtes Uber (toutes les 2 secondes)</strong>
+            <strong className="small">Journal des requêtes Uber (toutes les 10 minutes)</strong>
             <button type="button" className="btn btn-secondary btn-xs" onClick={()=>setSessionProbeLog([])}>Effacer</button>
           </div>
           <p className="tiny muted mb-2">Chaque ligne correspond à une vérification lancée par cette page. L'heure, le résultat HTTP et la durée sont affichés sans révéler le cookie. Aucune requête ne se chevauche.</p>
