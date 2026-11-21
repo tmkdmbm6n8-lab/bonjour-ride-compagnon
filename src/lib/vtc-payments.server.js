@@ -15,14 +15,21 @@ async function payoutSummary(admin,uid,profile){
 
 /** Sends one recorded payout to the driver's Stripe account; a refusal puts the money back in the wallet. */
 async function sendTransfer(admin,stripe,payout,accountId){
- try{
-  const t=await stripe.transfers.create({amount:Math.round(payout.amount*100),currency:'eur',destination:accountId,metadata:{payoutId:payout.id}},{idempotencyKey:`payout-${payout.id}`});
-  await admin.rpc('finish_payout',{_id:payout.id,_ok:true,_provider:t.id,_failure:null});return true;
- }catch(err){
-  await admin.rpc('finish_payout',{_id:payout.id,_ok:false,_provider:null,_failure:String(err?.message||err)});throw new Error('Le virement a été refusé par Stripe — votre solde a été recrédité');
+ let transfer;
+ try {
+  transfer=await stripe.transfers.create(
+   {amount:Math.round(payout.amount*100),currency:'eur',destination:accountId,metadata:{payoutId:payout.id}},
+   {idempotencyKey:`payout-${payout.id}`}
+  );
+ } catch(err) {
+  // A network timeout does not prove Stripe rejected the transfer. Do not refund
+  // automatically: a retry with the same idempotency key must reconcile it.
+  throw new Error('Virement non confirmé par Stripe. Vérifiez son état avant tout remboursement ou nouvel essai.');
  }
+ const result=await admin.rpc('finish_payout',{_id:payout.id,_ok:true,_provider:transfer.id,_failure:null});
+ if(result.error)throw new Error('Virement transmis à Stripe, mais confirmation Supabase en attente. Ne recréditez pas le solde.');
+ return true;
 }
-
 /** Weekly run (Monday 00:00 Paris): pays each driver's whole positive balance, no fee. Idempotent per week. */
 export async function runWeeklyPayouts(admin,now=new Date()){
  const week=payoutWeekKey(now);
