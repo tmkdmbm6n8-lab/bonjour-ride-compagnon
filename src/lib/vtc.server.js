@@ -758,7 +758,12 @@ export async function handleVtc(input, context) {
       loadPool: () => dispatchPool(admin),
       routeBetween,
     }).catch(() => null);
-    return { ...quote, favorite };
+    // Only an admin-designated priority driver, using the authenticated
+    // passenger estimate, may inspect the origin of each quoted price.
+    const priorityDriver = canDrive
+      ? required(await admin.from("drivers").select("is_priority").eq("user_id", uid).maybeSingle())
+      : null;
+    return { ...quote, favorite, showPriorityPriceSource: priorityDriver?.is_priority === true };
   }
   if (p === "/api/riders/me/favorite") {
     const pc = await import("./private-clients.server");
