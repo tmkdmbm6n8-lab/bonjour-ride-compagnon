@@ -33,7 +33,7 @@ export function prepareHourlyReconciliation(rides, { periodStart, periodEnd } = 
     if (!Number.isFinite(completed) || completed < start || completed >= end) continue;
     const rideSeconds = secondsBetween(ride.started_at ?? ride.fare?.startedAt, ride.completed_at ?? ride.fare?.completedAt);
     const approachSeconds = secondsBetween(ride.accepted_at ?? ride.fare?.acceptedAt, ride.started_at ?? ride.fare?.startedAt);
-    if (rideSeconds === null || approachSeconds === null || !Number.isFinite(Number(ride.fare?.driverEarnings))) {
+    if (rideSeconds === null || approachSeconds === null || ride.fare?.driverEarnings == null || !Number.isFinite(Number(ride.fare.driverEarnings)) || Number(ride.fare.driverEarnings) < 0) {
       excluded.push({ id: ride.id, reason: "horodatages ou rémunération manquants" });
       continue;
     }
@@ -45,5 +45,5 @@ export function prepareHourlyReconciliation(rides, { periodStart, periodEnd } = 
       bonuses: Number(ride.fare?.bonuses || 0),
     });
   }
-  return { ...hourlyGuaranteeStatement(eligible), includedCount: eligible.length, excluded, readyForPayment: false };
+  return { ...hourlyGuaranteeStatement(eligible), includedCount: eligible.length, excluded, needsReview: excluded.length > 0, readyForPayment: false };
 }
