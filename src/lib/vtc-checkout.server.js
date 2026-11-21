@@ -25,6 +25,11 @@ export async function resolveOrCreateCustomer(stripe, options) {
 export async function creditPaidSession(admin, session) {
   const userId = session?.metadata?.userId;
   if (!userId || session.payment_status !== "paid" || !session.amount_total) return false;
+  const configuredEnv = process.env.PAYMENTS_STRIPE_ENV;
+  if (!isStripeEnv(configuredEnv) || session.livemode !== (configuredEnv === "live") ||
+      session.currency?.toLowerCase() !== "eur" || session.mode !== "payment") {
+    throw new Error("Environnement ou devise de paiement non autorisé");
+  }
   const { error } = await admin.rpc("wallet_entry", {
     _user: userId,
     _amount: session.amount_total / 100,
@@ -55,7 +60,12 @@ function embeddedSession(stripe, { uid, customer, amount, name, returnUrl, metad
  */
 export async function handleCheckout({ admin, uid, role, email, p, q, method, body, createRide, quoteRide, resolveFavorite, serializeRide, cardBookingProblem, preparePassenger }) {
   const env = method === "GET" ? q.get("env") : body.environment;
-  if (!isStripeEnv(env)) throw new Error("Paiement par carte indisponible pour le moment");
+  // Never let a request select the Stripe account whose payments fund the real wallet.
+  // Configure PAYMENTS_STRIPE_ENV (sandbox/live) on the server; no implicit sandbox fallback.
+  const configuredEnv = process.env.PAYMENTS_STRIPE_ENV;
+  if (!isStripeEnv(configuredEnv) || env !== configuredEnv) {
+    throw new Error("Environnement de paiement indisponible ou non autorisé");
+  }
   let stripe;
   try {
     stripe = createStripeClient(env);
@@ -79,7 +89,7 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
     }
     if (p === "/api/wallet/checkout") {
       const session = await stripe.checkout.sessions.retrieve(String(q.get("session_id") || ""));
-      if (session.metadata?.userId !== uid) return { error: "Paiement inaccessible" };
+      if (session.metadata?.userId !== uid || session.metadata?.kind !== "topup") return { error: "Paiement inaccessible" };
       if (session.payment_status !== "paid") return { paid: false };
       await creditPaidSession(admin, session);
       return { paid: true, credited: true, amount: session.amount_total / 100 };
@@ -107,19 +117,21 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
         name: `Course StrasDrive ${VEHICLE_CLASS_LABELS[vehicleType] || ""}`.trim(),
         returnUrl: `${origin}/dashboard?card_session={CHECKOUT_SESSION_ID}`,
       });
-      await admin.from("card_bookings").update({ stripe_session_id: session.id }).eq("id", booking.id);
+      const linked = await admin.from("card_bookings").update({ stripe_session_id: session.id }).eq("id", booking.id);
+      if (linked.error) return { error: "Session de paiement créée mais non enregistrée. Aucun paiement ne doit être lancé ; contactez le support." };
       return { clientSecret: session.client_secret, sessionId: session.id, amount: fare.total };
     }
     if (p === "/api/rides/card-confirm") {
       const session = await stripe.checkout.sessions.retrieve(String(body.sessionId || ""));
-      if (session.metadata?.userId !== uid || session.metadata?.kind !== "ride") return { error: "Paiement inaccessible" };
+      if (session.metadata?.userId !== uid || session.metadata?.kind !== "ride" ||
+          !session.metadata?.bookingId) return { error: "Paiement inaccessible" };
       if (session.payment_status !== "paid") return { paid: false };
       await creditPaidSession(admin, session);
       const { data: booking } = await admin
         .from("card_bookings").select("*").eq("id", session.metadata.bookingId).eq("rider_id", uid).maybeSingle();
       if (!booking) return { paid: true, booked: false };
       if (booking.ride_id) return { paid: true, booked: true, ride: await serializeRide(booking.ride_id) };
-      if (booking.status !== "pending") return { paid: true, booked: booking.status === "booking" };
+      if (booking.status !== "pending") return { paid: true, booked: false, processing: booking.status === "booking" };
       if (cardBookingExpired(booking.created_at)) {
         await admin.from("card_bookings").update({ status: "expired" }).eq("id", booking.id).eq("status", "pending");
         return { paid: true, booked: false, expired: true };
@@ -127,14 +139,18 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
       // Only one confirmation (return page or callback) may create the ride.
       const { data: claimed } = await admin
         .from("card_bookings").update({ status: "booking" }).eq("id", booking.id).eq("status", "pending").select("id");
-      if (!claimed?.length) return { paid: true, booked: true };
+      if (!claimed?.length) return { paid: true, booked: false, processing: true };
       try {
         const ride = await createRide({
           vehicleType: booking.vehicle_type, pickup: booking.pickup, dropoff: booking.dropoff,
           route: booking.route, fare: booking.fare, payment: { method: "card", stripeSessionId: session.id },
           favoriteDriverId: booking.favorite_driver_id || null,
         });
-        await admin.from("card_bookings").update({ status: "booked", ride_id: ride.id }).eq("id", booking.id);
+        const saved = await admin.from("card_bookings").update({ status: "booked", ride_id: ride.id }).eq("id", booking.id).eq("status", "booking");
+        if (saved.error) {
+          // Ride creation already succeeded: never reset to pending or create it again.
+          return { paid: true, booked: false, processing: true, error: "Course créée mais confirmation non enregistrée. Contactez le support." };
+        }
         return { paid: true, booked: true, ride };
       } catch (e) {
         await admin.from("card_bookings").update({ status: "pending" }).eq("id", booking.id);
