@@ -24,7 +24,12 @@ export async function resolveOrCreateCustomer(stripe, options) {
 /** Credits the paid amount of a Checkout Session to its user's wallet. Idempotent per session (webhook + return page). */
 export async function creditPaidSession(admin, session) {
   const userId = session?.metadata?.userId;
-  if (!userId || session.payment_status !== "paid" || !session.amount_total) return false;
+  if (!userId || session.payment_status !== "paid") return false;
+  if (!Number.isSafeInteger(session.amount_total) || session.amount_total <= 0 ||
+      !["topup", "ride"].includes(session.metadata?.kind) ||
+      session.client_reference_id !== userId) {
+    throw new Error("Session de paiement invalide : crédit refusé");
+  }
   const configuredEnv = process.env.PAYMENTS_STRIPE_ENV;
   if (!isStripeEnv(configuredEnv) || session.livemode !== (configuredEnv === "live") ||
       session.currency?.toLowerCase() !== "eur" || session.mode !== "payment") {
@@ -91,7 +96,7 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
       const session = await stripe.checkout.sessions.retrieve(String(q.get("session_id") || ""));
       if (session.metadata?.userId !== uid || session.metadata?.kind !== "topup") return { error: "Paiement inaccessible" };
       if (session.payment_status !== "paid") return { paid: false };
-      await creditPaidSession(admin, session);
+      if (!await creditPaidSession(admin, session)) return { paid: false, credited: false };
       return { paid: true, credited: true, amount: session.amount_total / 100 };
     }
     if (p === "/api/rides/card-checkout") {
@@ -126,7 +131,7 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
       if (session.metadata?.userId !== uid || session.metadata?.kind !== "ride" ||
           !session.metadata?.bookingId) return { error: "Paiement inaccessible" };
       if (session.payment_status !== "paid") return { paid: false };
-      await creditPaidSession(admin, session);
+      if (!await creditPaidSession(admin, session)) return { paid: false, booked: false };
       const { data: booking, error: bookingError } = await admin
         .from("card_bookings").select("*").eq("id", session.metadata.bookingId).eq("rider_id", uid).maybeSingle();
       if (bookingError) return { paid: true, booked: false, error: "Impossible de vérifier la réservation payée. Contactez le support." };
