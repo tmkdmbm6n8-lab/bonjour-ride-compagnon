@@ -532,14 +532,15 @@ function AdminPricingPage() {
             ? `Session enregistrée le ${cookieStatus.updatedAt ? new Date(cookieStatus.updatedAt).toLocaleString("fr-FR") : "—"} (validité non garantie).`
             : "Aucun cookie personnalisé enregistré. Repli sur UBER_COOKIE si configuré."}
         </p>
-        {sessionMonitor.state==="active" && <p className="small mt-2" role="status">
-          <strong>Surveillance active</strong> · vérification du signal Uber toutes les 2 secondes.
-          {sessionMonitor.failures>0?" Première vérification sans réponse valide.":""}
-        </p>}
-        {sessionMonitor.state==="lost" && <p className="small mt-2" role="alert" style={{color:"#ef4444"}}>
-          <strong>Signal Uber perdu</strong> · session observée pendant {Math.floor(sessionMonitor.durationMs/3600000)} h {Math.floor(sessionMonitor.durationMs%3600000/60000)} min {Math.floor(sessionMonitor.durationMs%60000/1000)} s.
-          La perte de signal peut aussi provenir du réseau ou du serveur.
-        </p>}
+        {sessionMonitor.state==="active" && <div className="small mt-2 flex items-center gap-2" role="status" aria-live="polite">
+          <span aria-hidden="true" style={{display:"inline-block",width:12,height:12,borderRadius:"50%",background:sessionMonitor.failures>0?"#f59e0b":"#22c55e",boxShadow:sessionMonitor.failures>0?"0 0 0 3px #f59e0b30":"0 0 0 3px #22c55e30",flexShrink:0}} />
+          <span><strong style={{color:sessionMonitor.failures>0?"#d97706":"#16a34a"}}>{sessionMonitor.failures>0?"Signal incertain":"Signal Uber actif"}</strong> · vérification toutes les 2 secondes.{sessionMonitor.failures>0?" Première vérification sans réponse valide.":""}</span>
+        </div>}
+        {sessionMonitor.state==="lost" && <div className="small mt-2 flex items-start gap-2" role="alert" style={{color:"#ef4444"}}>
+          <span aria-hidden="true" style={{display:"inline-block",width:12,height:12,marginTop:3,borderRadius:"50%",background:"#ef4444",boxShadow:"0 0 0 3px #ef444430",flexShrink:0}} />
+          <span><strong>Signal Uber perdu</strong> · durée observée : <strong>{Math.floor(sessionMonitor.durationMs/3600000)} h {Math.floor(sessionMonitor.durationMs%3600000/60000)} min {Math.floor(sessionMonitor.durationMs%60000/1000)} s</strong>.
+          <span className="block">Dernier constat de perte : {sessionMonitor.endedAt ? new Date(sessionMonitor.endedAt).toLocaleString("fr-FR") : "—"}. La perte peut aussi provenir du réseau ou du serveur.</span></span>
+        </div>}
         {showCookieBox && (
           <div className="flex-col gap-2">
             <textarea
