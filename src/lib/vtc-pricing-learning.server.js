@@ -127,15 +127,28 @@ export async function randomAddressNear(center,nearRadius,globalRadius) {
   }
   return null;
 }
+// Both collection buttons can run without manually preparing the route pool.
+// Never substitute a straight-line distance or fabricate an Uber quote.
+async function claimOrBuildRoadRoute(admin) {
+  const claim=async()=>{
+    const result=await admin.rpc("claim_uber_ai_road_route");
+    if(result.error)throw new Error("Appliquer la migration SQL 0024 : "+result.error.message);
+    return Array.isArray(result.data)?result.data[0]:result.data;
+  };
+  let route=await claim();
+  if(route)return route;
+  const {buildRoadPoolBatch}=await import("./vtc-ai-road-pool.server");
+  await buildRoadPoolBatch(admin,{limit:1});
+  return await claim();
+}
+
 export async function compareRandomUberAi(admin,{maxDistanceKm=9}={}) {
   const maxKm=Number(maxDistanceKm);
   if(![9,100].includes(maxKm))throw new Error("Distance maximale invalide");
   // Consume a previously verified driving-distance pair from the 9,000-route pool.
   // Do not fall back to straight-line random routes or silently repeat a pair.
-  const claimed=await admin.rpc("claim_uber_ai_road_route");
-  if(claimed.error)throw new Error("Appliquer la migration SQL 0024 : "+claimed.error.message);
-  const route=Array.isArray(claimed.data)?claimed.data[0]:claimed.data;
-  if(!route)throw new Error("Réservoir de trajets vide ou épuisé : lancer « Constituer 9 000 trajets » dans le laboratoire.");
+  const route=await claimOrBuildRoadRoute(admin);
+  if(!route)return {savedCount:0,skipped:"Recherche de nouveaux trajets en cours",comparisons:[]};
   const pickup={name:route.pickup_name,lat:route.pickup_lat,lng:route.pickup_lng};
   const dropoff={name:route.dropoff_name,lat:route.dropoff_lat,lng:route.dropoff_lng};
   const roadDistanceKm=Number(route.road_distance_km);
@@ -184,10 +197,8 @@ export async function runLearningSample(admin) {
   if(config.error)throw config.error;
   const settings=config.data?.rule||{};
   if(!settings.enabled)return {skipped:"disabled"};
-  const claim=await admin.rpc("claim_uber_ai_road_route");
-  if(claim.error)throw new Error("Appliquer la migration SQL 0024 : "+claim.error.message);
-  const route=Array.isArray(claim.data)?claim.data[0]:claim.data;
-  if(!route)return {skipped:"Aucun trajet routier non utilisé dans le réservoir : constituer les 9 000 trajets d'abord"};
+  const route=await claimOrBuildRoadRoute(admin);
+  if(!route)return {skipped:"Recherche de nouveaux trajets en cours"};
   const nameA=route.pickup_name,nameB=route.dropoff_name;
   const latA=route.pickup_lat,lngA=route.pickup_lng,latB=route.dropoff_lat,lngB=route.dropoff_lng;
   const cookie=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_cookie").maybeSingle();
