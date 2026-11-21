@@ -63,6 +63,24 @@ describe("réservation carte en mode passager", () => {
       expect(mock.createSession.mock.calls[0][0].line_items[0].price_data.unit_amount).toBe(4200);
     },
   );
+  it("refuse un environnement Stripe différent de celui du serveur", async () => {
+    const input = params("driver");
+    input.body.environment = "live";
+    await expect(handleCheckout(input)).rejects.toThrow(/non autorisé/);
+    expect(mock.createSession).not.toHaveBeenCalled();
+  });
+  it("ne remet pas une session de paiement au client si son enregistrement échoue", async () => {
+    const input = params("driver");
+    const baseFrom = input.admin.from;
+    input.admin.from = () => {
+      const query = baseFrom();
+      query.update = () => ({ eq: async () => ({ error: { message: "Database unavailable" } }) });
+      return query;
+    };
+    const result = await handleCheckout(input);
+    expect(result.error).toMatch(/non enregistrée/);
+    expect(result.clientSecret).toBeUndefined();
+  });
   it("ne prépare pas de paiement si le conflit de course bloque la bascule", async () => {
     const input = params("driver");
     input.preparePassenger.mockRejectedValue(new Error("Course active"));
