@@ -29,10 +29,10 @@ export function prepareHourlyReconciliation(rides, { periodStart, periodEnd } = 
     }
     seen.add(ride.id);
     if (ride.status !== "completed" || ride.is_test) continue;
-    const completed = Date.parse(ride.completed_at);
+    const completed = Date.parse(ride.completed_at ?? ride.fare?.completedAt);
     if (!Number.isFinite(completed) || completed < start || completed >= end) continue;
-    const rideSeconds = secondsBetween(ride.started_at ?? ride.fare?.startedAt, ride.completed_at);
-    const approachSeconds = secondsBetween(ride.accepted_at, ride.started_at ?? ride.fare?.startedAt);
+    const rideSeconds = secondsBetween(ride.started_at ?? ride.fare?.startedAt, ride.completed_at ?? ride.fare?.completedAt);
+    const approachSeconds = secondsBetween(ride.accepted_at ?? ride.fare?.acceptedAt, ride.started_at ?? ride.fare?.startedAt);
     if (rideSeconds === null || approachSeconds === null || !Number.isFinite(Number(ride.fare?.driverEarnings))) {
       excluded.push({ id: ride.id, reason: "horodatages ou rémunération manquants" });
       continue;
