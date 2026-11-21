@@ -655,13 +655,13 @@ function AdminPricingPage() {
         <div className="flex items-center justify-between gap-3 mb-3">
           <div>
             <h3 style={{ fontSize: "1.1rem" }}>IA Tarification · Laboratoire</h3>
-            <p className="tiny muted">Apprentissage continu sur des estimations, sans commander de courses.</p>
+            <p className="tiny muted">Campagne fixe : 4 rue de la Marquise de Sévigné, Strasbourg → 10 trajets par tranche de 0,5 km, de 1 à 100 km (1 990 trajets). Arrêt automatique à la fin. Gardez cette page ouverte.</p>
           </div>
           <span className={`badge ${aiConfig.enabled ? "badge-success" : "badge-neutral"}`}>
             {aiConfig.enabled ? "Collecte active" : "À l'arrêt"}
           </span>
         </div>
-        <label className="small font-semibold" htmlFor="ai-radius">Rayon de recherche autour de Strasbourg (km)</label>
+        <label className="small font-semibold" htmlFor="ai-radius">Rayon historique (sans effet sur la collecte fixe)</label>
         <div className="flex items-center gap-3 mt-2 mb-3">
           <input id="ai-radius" className="input" type="number" min="1" max="200" step="1"
             style={{ width: 110 }} value={aiConfig.radiusKm}
@@ -678,7 +678,7 @@ function AdminPricingPage() {
           <button type="button" className="btn btn-secondary btn-sm" disabled={aiBusy}
             onClick={() => saveAiConfig(aiConfig)}>Enregistrer la cadence</button>
         </div>
-        <p className="tiny muted mb-3">Objectif libre (ex. 1000/s), mais le moteur actuel exécute au maximum 1 requête à la fois, avec un intervalle minimal de 1 seconde. Un objectif de 1000/s ne signifie pas 1000 requêtes réellement envoyées.</p>
+        <p className="tiny muted mb-3">Une seule requête à la fois, avec un intervalle minimal de 1 seconde. Les recherches d’adresses et les distances routières peuvent prendre davantage de temps. Une tranche difficile à trouver sera réessayée.</p>
         <div className="flex gap-2 flex-wrap mb-3">
           <button type="button" className="btn btn-primary btn-sm" disabled={aiBusy || aiConfig.enabled}
             onClick={() => saveAiConfig({ ...aiConfig, enabled: true })}>Démarrer la collecte</button>
