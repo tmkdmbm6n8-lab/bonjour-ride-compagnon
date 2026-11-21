@@ -47,7 +47,7 @@ const FEATURES = [
   {
     icon: Wallet,
     title: "Les chauffeurs conservent 85 %",
-    text: "StrasDrive prélève 15 % de commission sans abonnement, 5 % avec un abonnement Gold payant actif, et 0 % lorsque le chauffeur abonné transporte son propre client privé.",
+    text: "StrasDrive prélève 15 % de commission pour les courses ordinaires, et 0 % lorsque le chauffeur abonné Gold payant transporte son propre client privé.",
   },
   {
     icon: Zap,
@@ -302,7 +302,7 @@ function LandingPage() {
               <h3 style={{ fontSize: "1.3rem" }}>Transformez votre voiture en source de revenus</h3>
               <p className="small mt-1" style={{ color: "rgba(250,250,249,0.7)" }}>
                 {" "}
-                Conservez 85 % du prix de la course sans abonnement, 95 % avec Gold payant, et 100 % lorsque vous transportez votre propre client privé avec Gold payant. Passez en ligne
+                Conservez 85 % du prix de la course ordinaire, et 100 % lorsque vous transportez votre propre client privé avec Gold payant. Passez en ligne
                 quand cela vous convient.{" "}
               </p>
             </div>
