@@ -76,7 +76,7 @@ export async function recordClientUberQuote(admin, pickup, dropoff, products, ro
   if (result.error) throw result.error;
   return { saved: rows.length };
 }
-export async function randomAddress(radius) {
+async function randomAddress(radius) {
   for (let attempt=0;attempt<12;attempt++) {
     const angle=Math.random()*2*Math.PI;
     const radiusKm=Math.sqrt(Math.random())*radius;
@@ -104,7 +104,7 @@ export async function randomAddress(radius) {
   return null;
 }
 
-export async function randomAddressNear(center,nearRadius,globalRadius) {
+async function randomAddressNear(center,nearRadius,globalRadius) {
   for(let attempt=0;attempt<12;attempt++){
     const angle=Math.random()*2*Math.PI;
     const distance=Math.sqrt(Math.random())*nearRadius;
@@ -127,36 +127,40 @@ export async function randomAddressNear(center,nearRadius,globalRadius) {
   }
   return null;
 }
-// Both collection buttons can run without manually preparing the route pool.
-// Never substitute a straight-line distance or fabricate an Uber quote.
-async function claimOrBuildRoadRoute(admin) {
-  const claim=async()=>{
-    const result=await admin.rpc("claim_uber_ai_road_route");
-    if(result.error)throw new Error("Appliquer la migration SQL 0024 : "+result.error.message);
-    return Array.isArray(result.data)?result.data[0]:result.data;
-  };
-  let route=await claim();
-  if(route)return route;
-  const {buildRoadPoolBatch}=await import("./vtc-ai-road-pool.server");
-  await buildRoadPoolBatch(admin,{limit:1});
-  return await claim();
-}
-
 export async function compareRandomUberAi(admin,{maxDistanceKm=9}={}) {
   const maxKm=Number(maxDistanceKm);
   if(![9,100].includes(maxKm))throw new Error("Distance maximale invalide");
-  // Consume a previously verified driving-distance pair from the 9,000-route pool.
-  // Do not fall back to straight-line random routes or silently repeat a pair.
-  const route=await claimOrBuildRoadRoute(admin);
-  if(!route)return {savedCount:0,skipped:"Recherche de nouveaux trajets en cours",comparisons:[]};
-  const pickup={name:route.pickup_name,lat:route.pickup_lat,lng:route.pickup_lng};
-  const dropoff={name:route.dropoff_name,lat:route.dropoff_lat,lng:route.dropoff_lng};
-  const roadDistanceKm=Number(route.road_distance_km);
+  const config=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_ai_learning").maybeSingle();
+  if(config.error)throw config.error;
+  const radius=Math.max(1,Math.min(200,Number(config.data?.rule?.radiusKm)||100));
+  let pickup=null,dropoff=null,claimed=false;
+  for(let attempt=0;attempt<24;attempt++){
+    const candidatePickup=await randomAddress(radius);
+    if(!candidatePickup)continue;
+    const destinationRadius=Math.min(radius,maxKm/2);
+    const candidateDropoff=await randomAddressNear(candidatePickup,destinationRadius,radius);
+    if(!candidateDropoff||candidatePickup.id===candidateDropoff.id)continue;
+    const distance=km(candidatePickup,candidateDropoff);
+    if(distance<1||distance>maxKm)continue;
+    // Atomically claim BOTH addresses across comparison and automatic learning.
+    // The SQL function also excludes addresses used by the fixed hourly cohort.
+    const claim=await admin.rpc("claim_uber_random_addresses",{
+      p_pickup_key:candidatePickup.id,p_dropoff_key:candidateDropoff.id,
+      p_pickup_name:candidatePickup.name,p_dropoff_name:candidateDropoff.name,
+      p_pickup_lat:candidatePickup.lat,p_pickup_lng:candidatePickup.lng,
+      p_dropoff_lat:candidateDropoff.lat,p_dropoff_lng:candidateDropoff.lng
+    });
+    if(claim.error)throw new Error("Migration SQL 0012 nécessaire : "+claim.error.message);
+    if(claim.data===true){
+      pickup=candidatePickup;dropoff=candidateDropoff;claimed=true;break;
+    }
+  }
+  if(!claimed)throw new Error("Aucune nouvelle paire d'adresses jamais utilisées trouvée dans la limite de "+maxKm+" km");
   const cookie=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_cookie").maybeSingle();
   if(cookie.error)throw cookie.error;
   const offers=await uberProducts(pickup,dropoff,cookie.data?.rule?.cookie||null);
   if(!Array.isArray(offers)||!offers.length)throw new Error("Uber ne fournit aucun tarif pour ce trajet");
-  const distanceKm=roadDistanceKm;
+  const distanceKm=km(pickup,dropoff);
   const at=new Date();
   const comparisons=[];
   for(const offer of offers){
@@ -189,7 +193,7 @@ export async function compareRandomUberAi(admin,{maxDistanceKm=9}={}) {
   const savedCount=distanceKm<=9?observations.length:0;
   return {savedCount,pickup:pickup.name,dropoff:dropoff.name,distanceKm:Math.round(distanceKm*100)/100,
     comparedAt:at.toISOString(),comparisons,
-    distanceMethod:"itinéraire routier Google Maps",note:"Comparaison expérimentale sur une paire unique prévalidée par Google Routes (distance réelle en voiture)."};
+    distanceMethod:"à vol d'oiseau",note:"Comparaison expérimentale des prix Uber bruts et des prédictions IA, sans remise ni minimum tarifaire. La distance utilisée est à vol d'oiseau."};
 }
 
 export async function runLearningSample(admin) {
@@ -197,17 +201,33 @@ export async function runLearningSample(admin) {
   if(config.error)throw config.error;
   const settings=config.data?.rule||{};
   if(!settings.enabled)return {skipped:"disabled"};
-  const route=await claimOrBuildRoadRoute(admin);
-  if(!route)return {skipped:"Recherche de nouveaux trajets en cours"};
-  const nameA=route.pickup_name,nameB=route.dropoff_name;
-  const latA=route.pickup_lat,lngA=route.pickup_lng,latB=route.dropoff_lat,lngB=route.dropoff_lng;
+  const radius=Math.max(1,Math.min(200,Number(settings.radiusKm)||100));
+  // Sample genuine numbered street addresses from the French national address API.
+  // Every address is claimed permanently and atomically before it is tested.
+  let selected=null;
+  for(let attempt=0;attempt<15;attempt++){
+    const pickup=await randomAddress(radius);
+    if(!pickup)continue;
+    const dropoff=await randomAddressNear(pickup,4.3,radius);
+    if(!dropoff||pickup.id===dropoff.id||km(pickup,dropoff)>9||km(pickup,dropoff)<0.1)continue;
+    const claim=await admin.rpc("claim_uber_random_addresses",{
+      p_pickup_key:pickup.id,p_dropoff_key:dropoff.id,
+      p_pickup_name:pickup.name,p_dropoff_name:dropoff.name,
+      p_pickup_lat:pickup.lat,p_pickup_lng:pickup.lng,
+      p_dropoff_lat:dropoff.lat,p_dropoff_lng:dropoff.lng
+    });
+    if(claim.error)throw new Error("Migration SQL 0012 nécessaire : "+claim.error.message);
+    if(claim.data===true){selected=[pickup,dropoff];break;}
+  }
+  if(!selected)return {skipped:"Aucune nouvelle paire d'adresses numérotées trouvée ; aucune adresse réutilisée"};
+  const [{name:nameA,lat:latA,lng:lngA},{name:nameB,lat:latB,lng:lngB}]=selected;
   const cookie=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_cookie").maybeSingle();
   if(cookie.error)throw cookie.error;
   const products=await uberProducts({lat:latA,lng:lngA},{lat:latB,lng:lngB},cookie.data?.rule?.cookie||null);
   if(!products?.length)return stopLearning(admin, settings, "Aucun tarif direct Uber reçu : collecte arrêtée automatiquement.");
   const now=new Date();
   const context=features(now);
-  const sampledDistanceKm=Number(route.road_distance_km);
+  const sampledDistanceKm=km({lat:latA,lng:lngA},{lat:latB,lng:lngB});
   if(sampledDistanceKm>9)return {skipped:"distance_over_9km"};
   const observations=products.filter(p=>p.currency==="EUR"&&Number.isFinite(p.price)&&p.price>0).map(p=>({
     observed_at:now.toISOString(),pickup_name:nameA,dropoff_name:nameB,
