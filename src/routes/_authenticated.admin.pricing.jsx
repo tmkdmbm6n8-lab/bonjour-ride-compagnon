@@ -40,6 +40,7 @@ function AdminPricingPage() {
   const [cookieStatus, setCookieStatus] = useState(null);
   const [sessionMonitor, setSessionMonitor] = useState({state:"idle",startedAt:null,endedAt:null,durationMs:null,failures:0});
   const [sessionProbeLog, setSessionProbeLog] = useState([]);
+  const [monitorEnabled, setMonitorEnabled] = useState(false);
   const sessionMonitorBusy = useRef(false);
   const sessionMonitorRef = useRef({startedAt:null,failures:0,active:false});
   const [hourlyChecks, setHourlyChecks] = useState({ enabled: false });
@@ -295,6 +296,7 @@ function AdminPricingPage() {
         const startedAt=Date.now();
         sessionMonitorRef.current={startedAt,failures:0,active:true};
         setSessionMonitor({state:"active",startedAt,endedAt:null,durationMs:null,failures:0});
+        setMonitorEnabled(true);
         setCookieStatus({ hasCustomCookie: true, updatedAt: new Date().toISOString() });
         setCookieInput("");
         setShowCookieBox(false);
@@ -310,7 +312,7 @@ function AdminPricingPage() {
   // remains valid until the next check. Two failed probes avoid false alarms
   // from a single network interruption.
   useEffect(() => {
-    if(sessionMonitor.state!=="active")return;
+    if(!monitorEnabled || sessionMonitor.state!=="active")return;
     let cancelled=false;
     async function probe(){
       if(sessionMonitorBusy.current||!sessionMonitorRef.current.active)return;
@@ -355,7 +357,7 @@ function AdminPricingPage() {
     probe();
     const timer=setInterval(probe,2000);
     return ()=>{cancelled=true;clearInterval(timer);};
-  },[sessionMonitor.state,sessionMonitor.startedAt]);
+  },[monitorEnabled,sessionMonitor.state,sessionMonitor.startedAt]);
 
   useEffect(() => {
     let ignore = false;
@@ -370,7 +372,7 @@ function AdminPricingPage() {
           // Resume monitoring an already saved cookie after page reload.
           // Duration is measured from the first observation in this browser tab,
           // not from the original Uber login or cookie creation.
-          if (data.uberCookieStatus.hasCustomCookie && !sessionMonitorRef.current.active) {
+          if (data.uberCookieStatus.hasCustomCookie && monitorEnabled && !sessionMonitorRef.current.active) {
             const startedAt = Date.now();
             sessionMonitorRef.current = { startedAt, failures: 0, active: true };
             setSessionMonitor({ state: "active", startedAt, endedAt: null, durationMs: null, failures: 0 });
@@ -568,6 +570,25 @@ function AdminPricingPage() {
             ? `Session enregistrée le ${cookieStatus.updatedAt ? new Date(cookieStatus.updatedAt).toLocaleString("fr-FR") : "—"} (validité non garantie).`
             : "Aucun cookie personnalisé enregistré. Repli sur UBER_COOKIE si configuré."}
         </p>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <span className="small">Requêtes automatiques de surveillance Uber (2 secondes)</span>
+          <button type="button" className={monitorEnabled?"btn btn-secondary btn-sm":"btn btn-primary btn-sm"} aria-pressed={monitorEnabled}
+            onClick={()=>{
+              if(monitorEnabled){
+                setMonitorEnabled(false);
+                sessionMonitorRef.current.active=false;
+                setSessionMonitor(prev=>({...prev,state:"idle",failures:0}));
+              }else{
+                const startedAt=Date.now();
+                sessionMonitorRef.current={startedAt,failures:0,active:true};
+                setSessionMonitor({state:"active",startedAt,endedAt:null,durationMs:null,failures:0});
+                setMonitorEnabled(true);
+              }
+            }}>
+            {monitorEnabled?"Désactiver les requêtes":"Activer les requêtes"}
+          </button>
+        </div>
+        {!monitorEnabled && <p className="tiny muted mb-2">Surveillance arrêtée : aucune nouvelle requête de contrôle automatique n'est lancée par cette page. Les estimations des clients restent disponibles.</p>}
         {sessionMonitor.state==="idle" && <p className="small mt-2 muted" role="status">Voyant en attente : aucune session Uber personnalisée surveillée. Enregistrez un cookie pour démarrer les vérifications.</p>}
         {sessionMonitor.state==="active" && <div className="small mt-2 flex items-center gap-2" role="status" aria-live="polite">
           <span aria-hidden="true" style={{display:"inline-block",width:12,height:12,borderRadius:"50%",background:sessionMonitor.failures>0?"#f59e0b":"#22c55e",boxShadow:sessionMonitor.failures>0?"0 0 0 3px #f59e0b30":"0 0 0 3px #22c55e30",flexShrink:0}} />
