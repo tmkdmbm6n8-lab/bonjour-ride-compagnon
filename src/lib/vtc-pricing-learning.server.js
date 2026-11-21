@@ -256,14 +256,75 @@ export async function compareRandomUberAi(admin,{maxDistanceKm=9}={}) {
     distanceMethod:"à vol d'oiseau",note:"Comparaison expérimentale des prix Uber bruts et des prédictions IA, sans remise ni minimum tarifaire. La distance utilisée est à vol d'oiseau."};
 }
 
+
+// Fixed-origin, half-kilometre learning campaign: 10 routes per band from
+// 1.0 km through 100.0 km, inclusive (199 bands, 1,990 routes).
+const CAMPAIGN_ORIGIN = "4 rue de la Marquise de Sévigné, Strasbourg";
+const CAMPAIGN_TOTAL = 1990;
+async function campaignOrigin() {
+  const response = await fetch("https://api-adresse.data.gouv.fr/search/?" + new URLSearchParams({
+    q: CAMPAIGN_ORIGIN, limit: "5", type: "housenumber"
+  }), {signal: AbortSignal.timeout(8000)});
+  if (!response.ok) throw new Error("Géocodage de l'adresse de référence indisponible");
+  const features = (await response.json()).features || [];
+  const match = features.find(f => {
+    const p = f.properties || {};
+    return String(p.housenumber || "").trim() === "4" &&
+      /marquise de s[eé]vign[eé]/i.test(String(p.street || "")) &&
+      /strasbourg/i.test(String(p.city || ""));
+  });
+  if (!match) throw new Error("Adresse de référence introuvable : " + CAMPAIGN_ORIGIN);
+  const [lng,lat] = match.geometry.coordinates;
+  return {name:CAMPAIGN_ORIGIN,lat,lng,id:String(match.properties.id)};
+}
+async function nextOriginCampaignTrip(admin) {
+  const origin = await campaignOrigin();
+  // Counts only completed primary observations for this campaign.
+  for (let index = 0; index < 199; index++) {
+    const target = 1 + index * 0.5;
+    const key = target.toFixed(1);
+    const count = await admin.from("uber_price_observations").select("id",{count:"exact",head:true})
+      .contains("context",{campaign:"sevigne_1990",campaignBand:key,routePrimary:true});
+    if (count.error) throw count.error;
+    if ((count.count || 0) >= 10) continue;
+    // Road distance, not straight-line distance, must be in [target,target+0.5).
+    // Generate varied numbered addresses, keeping the origin unchanged.
+    for (let attempt = 0; attempt < 35; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = target * (0.57 + Math.random() * 0.23);
+      const lat = origin.lat + radius * Math.cos(angle) / 111.2;
+      const lng = origin.lng + radius * Math.sin(angle) / (111.2 * Math.cos(radians(origin.lat)));
+      const response = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lat=${lat}&lon=${lng}&type=housenumber&limit=1`,{signal:AbortSignal.timeout(6000)}).catch(()=>null);
+      if (!response?.ok) continue;
+      const f = (await response.json()).features?.[0];
+      const p = f?.properties || {}, coords = f?.geometry?.coordinates;
+      if (!p.housenumber || !p.street || !p.city || !Array.isArray(coords)) continue;
+      const destination = {name:p.label || `${p.housenumber} ${p.street}, ${p.city}`,
+        lat:Number(coords[1]),lng:Number(coords[0]),id:String(p.id || coords.join(":"))};
+      if (!Number.isFinite(destination.lat) || !Number.isFinite(destination.lng) ||
+          destination.id === origin.id || km(origin,destination) > target + 0.5) continue;
+      const driving = await actualDrivingKm(origin,destination).catch(()=>null);
+      if (driving === null || driving < target || driving >= target + 0.5) continue;
+      const claim = await admin.rpc("claim_uber_random_addresses",{
+        p_pickup_key:origin.id,p_dropoff_key:destination.id,
+        p_pickup_name:origin.name,p_dropoff_name:destination.name,
+        p_pickup_lat:origin.lat,p_pickup_lng:origin.lng,
+        p_dropoff_lat:destination.lat,p_dropoff_lng:destination.lng
+      });
+      if (claim.error) throw new Error("Impossible de réserver le trajet : " + claim.error.message);
+      if (claim.data === true) return {pickup:origin,dropoff:destination,distanceKm:driving,band:key};
+    }
+    return {pending:true,band:key};
+  }
+  return {complete:true};
+}
 export async function runLearningSample(admin) {
   const config=await admin.from("pricing_rules").select("rule").eq("vehicle_type","uber_ai_learning").maybeSingle();
   if(config.error)throw config.error;
   const settings=config.data?.rule||{};
   if(!settings.enabled)return {skipped:"disabled"};
-  const radius=Math.max(1,Math.min(200,Number(settings.radiusKm)||100));
-  const route=await nextDescendingRoadTrip(admin,radius);
-  if(route.complete)return stopLearning(admin,settings,"9 000 trajets routiers collectés.");
+  const route=await nextOriginCampaignTrip(admin);
+  if(route.complete)return stopLearning(admin,settings,"Collecte terminée : 1 990 trajets depuis la rue de la Marquise de Sévigné.");
   if(route.pending)return {skipped:"Recherche d'un trajet routier dans la tranche "+route.band};
   const {pickup,dropoff,distanceKm:sampledDistanceKm,band:roadBand}=route;
   const nameA=pickup.name,latA=pickup.lat,lngA=pickup.lng;
@@ -274,13 +335,13 @@ export async function runLearningSample(admin) {
   if(!products?.length)return stopLearning(admin, settings, "Aucun tarif direct Uber reçu : collecte arrêtée automatiquement.");
   const now=new Date();
   const context=features(now);
-  if(sampledDistanceKm>9)return {skipped:"distance_over_9km"};
+
   const observations=products.filter(p=>p.currency==="EUR"&&Number.isFinite(p.price)&&p.price>0).map(p=>({
     observed_at:now.toISOString(),pickup_name:nameA,dropoff_name:nameB,
     pickup_lat:latA,pickup_lng:lngA,dropoff_lat:latB,dropoff_lng:lngB,
     distance_km:sampledDistanceKm,
     product_name:p.name||"Uber",price_eur:p.price,trip_seconds:p.tripSeconds||null,
-    context:{...context,roadBand,routePrimary:false},
+    context:{...context,source:'uber_ai_fixed_origin_campaign',campaign:'sevigne_1990',campaignBand:roadBand,routePrimary:false},
   }));
   if(!observations.length)return stopLearning(admin, settings, "Aucun prix Uber valide en euros : collecte arrêtée automatiquement.");
   observations[0].context.routePrimary=true;
