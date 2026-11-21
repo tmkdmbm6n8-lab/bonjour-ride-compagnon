@@ -1514,9 +1514,9 @@ export async function handleVtc(input, context) {
             .eq("status", "in_progress"),
         );
       } else if (action === "complete") {
-        const since = new Date(r.accepted_at || r.arrived_at || r.created_at).getTime();
+        const since = new Date(r.fare?.acceptedAt || r.accepted_at || r.arrived_at || r.created_at).getTime();
         const activitySeconds = Math.max(0, (Date.now() - since) / 1000);
-        const fare = settleDriverEarnings(r.fare, r.route.distanceMeters, activitySeconds);
+        const fare = { ...settleDriverEarnings(r.fare, r.route.distanceMeters, activitySeconds), completedAt: new Date().toISOString() };
         required(await admin.from("rides").update({ fare }).eq("id", id).eq("status", "in_progress"));
         required(await admin.rpc("settle_ride", { _id: id, _actor: uid }));
       } else
@@ -1526,6 +1526,7 @@ export async function handleVtc(input, context) {
             .update({
               status: action === "arrive" ? "arrived" : "in_progress",
               ...(action === "arrive" ? { arrived_at: new Date().toISOString() } : {}),
+              ...(action === "start" ? { fare: { ...r.fare, startedAt: new Date().toISOString(), acceptedAt: r.accepted_at } } : {}),
             })
             .eq("id", id)
             .eq("status", previous),
