@@ -18,6 +18,15 @@ export function cardBookingExpired(createdAt, now = Date.now()) {
   return now - new Date(createdAt).getTime() > CARD_BOOKING_TTL_MS;
 }
 /** Origine de retour après paiement : http(s)://hôte uniquement, sans chemin. */
-export function safeOrigin(origin) {
-  return typeof origin === "string" && /^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(origin) ? origin : null;
+export function safeOrigin(origin, trustedOrigin) {
+  if (typeof origin !== "string" || !/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(origin)) return null;
+  if (trustedOrigin === undefined) return origin; // Syntax-only check for existing callers.
+  try {
+    const trusted = new URL(trustedOrigin);
+    if (!["https:", "http:"].includes(trusted.protocol) || trusted.origin !== origin) return null;
+    if (trusted.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(trusted.hostname)) return null;
+    return origin;
+  } catch {
+    return null;
+  }
 }
