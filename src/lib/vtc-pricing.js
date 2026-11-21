@@ -50,11 +50,11 @@ const round2 = (n) => Math.round(n * 100) / 100;
 const ceil2 = (n) => Math.ceil(Math.round(n * 1e6) / 1e4) / 100;
 const feeFor = (total, commission) => Math.round(total * commission) / 100;
 
-/** Revenu net minimum dû au chauffeur pour une course (le plus élevé des trois planchers). */
+/** Planchers applicables au devis : 9 € par course et 1 €/km estimé. La garantie horaire est contrôlée par période. */
 export function driverMinimumNet(meters, activitySeconds) {
   const km = Math.max(0, Number(meters) || 0) / 1000;
-  const hours = Math.max(0, Number(activitySeconds) || 0) / 3600;
-  return ceil2(Math.max(DRIVER_MIN_NET_PER_RIDE, km * DRIVER_MIN_NET_PER_KM, hours * DRIVER_MIN_NET_PER_HOUR));
+  // activitySeconds est conservé pour compatibilité, mais ne majore pas le devis.
+  return ceil2(Math.max(DRIVER_MIN_NET_PER_RIDE, km * DRIVER_MIN_NET_PER_KM));
 }
 
 /** Prix passager minimum pour que le chauffeur touche `net` après la commission (en %). */
@@ -111,8 +111,8 @@ export function calculateFare(
 
 /**
  * À la fin de la course, enregistre le temps d'activité réel. Le passager paie le prix annoncé
- * et la plateforme garde toujours sa commission : aucun complément n'est versé si la course
- * dure plus longtemps que prévu (bouchons).
+ * et la plateforme conserve le tarif annoncé. La garantie horaire doit être contrôlée
+ * séparément sur la période réglementaire, avec versement du complément éventuellement dû.
  */
 export function settleDriverEarnings(fare, meters, activitySeconds) {
   return { ...fare, activitySeconds: Math.round(Math.max(0, Number(activitySeconds) || 0)) };
