@@ -15,7 +15,10 @@ export function topupAmountProblem(amount) {
 export const toCents = (amount) => Math.round(Number(amount) * 100);
 export const isStripeEnv = (v) => v === "sandbox" || v === "live";
 export function cardBookingExpired(createdAt, now = Date.now()) {
-  return now - new Date(createdAt).getTime() > CARD_BOOKING_TTL_MS;
+  const created = typeof createdAt === "string" && createdAt.trim() ? Date.parse(createdAt) : NaN;
+  // Invalid or future timestamps must not keep a paid booking eligible indefinitely.
+  if (!Number.isFinite(created) || !Number.isFinite(now) || created > now) return true;
+  return now - created > CARD_BOOKING_TTL_MS;
 }
 /** Origine de retour après paiement : http(s)://hôte uniquement, sans chemin. */
 export function safeOrigin(origin, trustedOrigin) {
