@@ -1,8 +1,8 @@
 {
-  "src/lib/vtc-pricing.js": "c029e39c5d2f3d1c713c80557a5e9d660f22b99d3e506e60454b48e1543cdc1f",
+  "src/lib/vtc-pricing.js": "64e8d29c9a69f776d096ff65a9ca141156925e2c7511bcee910ca2797b91c717",
   "src/lib/vtc-uber.server.js": "201a20d033c313c293f499843e1a3a6bc72cc903374ae213ba60a95b9979bdc5",
   "src/lib/vtc-checkout.js": "5ea4e17e82e2e5791f0a6cebeb5112cfd067acbc885d1c5df71da079c9abc1b3",
   "src/lib/vtc-routing.js": "f05ac84b81cb576e748f037ea01d65fe9c8b605386337501abef416241c7d0c2",
-  "vtc.server.js:estimates": "89560fb9fa16cd367593af0e6c7ac9eb822e2635e917250e52791e1a9d59facb",
+  "vtc.server.js:estimates": "51e1485cc7c6768b6cf1b38cacea31d51060afe26fa60ad2acd66d51de5b6c4d",
   "vtc.functions.js:homeEstimate": "1994a55da6c85b5be3f75c22f96df40ba5709512a257fbf0447c14fac7779472"
 }
