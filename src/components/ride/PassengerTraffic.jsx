@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Plane, TrainFront, RefreshCw, Clock, MapPin, Car, LocateFixed } from "lucide-react";
 import RiderLayout from "@/components/RiderLayout";
 import Modal from "@/components/ui/Modal";
@@ -26,6 +26,7 @@ export default function PassengerTraffic() {
   const [cancelling, setCancelling] = useState(false);
   const [locating, setLocating] = useState(false);
   const [cancelWhenReady, setCancelWhenReady] = useState(false);
+  const cancelPendingRef = useRef(false);
   const { data, error, reload } = useDriverData("/api/riders/me/transport-board?day=" + parisDay());
   const items = (data?.items || []).filter(item => item.kind === kind && item.direction === direction && item.status !== "completed" && item.status !== "cancelled" && Date.parse(item.actual || item.estimated || item.scheduled) > Date.now());
   const dayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(new Date());
@@ -54,6 +55,7 @@ export default function PassengerTraffic() {
   }
   async function requestDriver() {
     if (!pickup || !dropoff || busy) return;
+    cancelPendingRef.current = false;
     setBusy(true); setCancelWhenReady(false); setErrorMessage("");
     setSelected(null);
     try {
@@ -67,16 +69,16 @@ export default function PassengerTraffic() {
       // Navigate only after the ride was successfully created so it can resume the active ride.
       if (!result.ride?.id) throw new Error("Le serveur n’a pas confirmé la création de la course.");
       setCreatedRide(result.ride);
-      if (cancelWhenReady) {
+      if (cancelPendingRef.current) {
         // The ride exists now: cancelling is safe even if the user closed the pending search.
         const cancelled = await apiFetch(`/api/rides/${result.ride.id}/cancel`, {method:"POST",body:JSON.stringify({reason:"Annulation par le passager"})});
         if (cancelled.ok) { setCreatedRide(null); setSuccess("Votre demande a été annulée."); }
       }
-    } catch (e) { setErrorMessage(e.message); setSuccess(""); }
+    } catch (e) { setErrorMessage(e.message); setSuccess(""); setSelected(previous => previous || {number:"Demande",city:"Réessayer",direction:"arrival",scheduled:new Date().toISOString()}); }
     finally { setBusy(false); }
   }
   async function cancelSearch() {
-    if (!createdRide?.id) { setCancelWhenReady(true); setSuccess("Annulation demandée. La course sera annulée dès sa confirmation."); return; }
+    if (!createdRide?.id) { cancelPendingRef.current = true; setCancelWhenReady(true); setSuccess("Annulation demandée. La course sera annulée dès sa confirmation."); return; }
     if (cancelling) return;
     setCancelling(true);
     try {
