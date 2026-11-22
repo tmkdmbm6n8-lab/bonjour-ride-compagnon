@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Loading, Empty, money } from '@/components/ui/bits';
 import { formatRelativeTime } from '@/lib/utils/geo';
 import EmbeddedPayment from '@/components/payments/EmbeddedPayment';
+import RiderCardsSection from './RiderCardsSection';
 import { getStripeEnvironment } from '@/lib/stripe';
 import { TOPUP_MIN, TOPUP_MAX, topupAmountProblem } from '@/lib/vtc-checkout';
 
@@ -183,6 +184,9 @@ export default function WalletPanel({ headingAction = null }) {
         <button className="btn btn-gold mt-4" onClick={() => setTopupOpen(true)}>
           <Plus size={17} /> Ajouter des fonds </button>
       </div>
+
+      {/* Cartes bancaires enregistrées pour les courses */}
+      <RiderCardsSection />
 
       <h2 className="small mt-8 mb-3" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)' }}> Activité </h2>
 
