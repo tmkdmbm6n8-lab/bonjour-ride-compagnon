@@ -41,11 +41,9 @@ import { useToast } from "@/components/ui/Toast";
 import { Avatar, Stars, StarPicker, VEHICLE_LABELS, money } from "@/components/ui/bits";
 import useRiderRide from "@/hooks/useRiderRide";
 import { bookingPaymentProblem, paymentMethodLabel } from "@/lib/vtc-pricing";
-import EmbeddedPayment from "@/components/payments/EmbeddedPayment";
 import FavoriteQuoteRow from "@/components/private-clients/FavoriteQuoteRow";
 import FavoriteRideChoice from "@/components/private-clients/FavoriteRideChoice";
 import { readPendingClaim } from "@/lib/private-client-claim";
-import { getStripeEnvironment } from "@/lib/stripe";
 import { playSound } from "@/lib/sounds";
 import useVisualViewport from "@/hooks/useVisualViewport";
 import useGeolocation from "@/hooks/useGeolocation";
@@ -87,8 +85,6 @@ function RiderDashboard() {
   const [pickup, setPickup] = useState(null); // {address, lat, lng}
   const [dropoff, setDropoff] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("card"); // 'card' | 'cash'
-  const [cardKey, setCardKey] = useState(0); // >0 while Stripe's card form is shown
-  const cardRef = useRef({ booking: null, sessionId: null });
   const [pickupText, setPickupText] = useState("");
   const [dropoffText, setDropoffText] = useState("");
   const [estimate, setEstimate] = useState(null); // {route, estimates}
@@ -329,94 +325,18 @@ function RiderDashboard() {
   async function handleBook() {
     if (!pickup || !dropoff || booking) return;
     const bookedType = favoriteSelected && estimate?.favorite ? estimate.favorite.vehicleType : vehicleType;
-    if (paymentMethod === "card") {
-      cardRef.current = {
-        booking: { pickup, dropoff, vehicleType: bookedType, ...(favoriteSelected ? { favorite: true } : {}) },
-        sessionId: null,
-      };
-      setCardKey((k) => k + 1);
-      return;
-    }
     setBooking(true);
     try {
       await book({ pickup, dropoff, vehicleType: bookedType, paymentMethod, favorite: favoriteSelected });
       setUnread(0);
       setLastMsg(null);
+      toast("Recherche d’un chauffeur en cours…", "success");
     } catch (err) {
       toast(err.message, "error", 5000);
     } finally {
       setBooking(false);
     }
   }
-
-  // ── Card payment: Stripe form in the app, then the ride is booked with the paid price ──
-  const fetchCardSecret = useCallback(async () => {
-    const res = await fetch("/api/rides/card-checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...cardRef.current.booking,
-        environment: getStripeEnvironment(),
-        origin: window.location.origin,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok || data.error) {
-      toast(data.error || "Impossible de lancer le paiement", "error", 6000);
-      setCardKey(0);
-      throw new Error(data.error || "Impossible de lancer le paiement");
-    }
-    cardRef.current.sessionId = data.sessionId;
-    return data.clientSecret;
-  }, [toast]);
-
-  const confirmCard = useCallback(
-    async (sessionId) => {
-      if (!sessionId) return;
-      setBooking(true);
-      try {
-        const res = await fetch("/api/rides/card-confirm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId, environment: getStripeEnvironment() }),
-        });
-        const data = await res.json();
-        if (!res.ok || data.error) toast(data.error || "Impossible de confirmer le paiement", "error", 7000);
-        else if (!data.paid) toast("Paiement non effectué — aucun montant n’a été débité", "info", 5000);
-        else if (data.ride) {
-          adoptRide(data.ride);
-          setUnread(0);
-          setLastMsg(null);
-          toast("Paiement accepté — recherche d’un chauffeur", "success");
-        } else if (data.expired)
-          toast("Paiement reçu, mais la réservation a expiré : le montant est sur votre portefeuille", "info", 7000);
-        else if (!data.booked) toast("Paiement reçu : le montant a été ajouté à votre portefeuille", "info", 6000);
-      } catch {
-        toast("Paiement reçu — actualisez la page dans un instant", "info", 6000);
-      } finally {
-        setBooking(false);
-        refreshWallet();
-      }
-    },
-    [adoptRide, toast, refreshWallet],
-  );
-
-  const onCardPaid = useCallback(() => {
-    const id = cardRef.current.sessionId;
-    setCardKey(0);
-    confirmCard(id);
-  }, [confirmCard]);
-
-  // Back from a payment method that leaves the page (bank redirect): confirm once, then clean the address bar.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get("card_session");
-    if (!sessionId) return;
-    params.delete("card_session");
-    const rest = params.toString();
-    window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
-    confirmCard(sessionId);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCancel(reason) {
     setCancelling(true);
@@ -1132,15 +1052,6 @@ function RiderDashboard() {
       )}
 
       {/* Cancel confirm */}
-      <Modal
-        open={cardKey > 0}
-        onClose={() => setCardKey(0)}
-        title={`Paiement par carte · ${VEHICLE_LABELS[cardRef.current.booking?.vehicleType] || ""}`}
-        maxWidth={520}
-      >
-        {cardKey > 0 && <EmbeddedPayment key={cardKey} fetchClientSecret={fetchCardSecret} onComplete={onCardPaid} />}
-      </Modal>
-
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Annuler cette course ?">
         {ride?.status === "arrived" && (
           <p className="small mb-3">Des frais d’annulation tardive peuvent s’appliquer : 3,00 € selon les conditions de la course.</p>
