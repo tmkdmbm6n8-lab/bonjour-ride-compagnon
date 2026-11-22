@@ -92,7 +92,7 @@ export default function PassengerTraffic() {
     try {
       const response = await apiFetch("/api/riders/me/scheduled-requests", {method:"POST",body:JSON.stringify({
         kind:"transport",pickupAddress:pickup.address,dropoffAddress:dropoff.address,
-        transportType:selected.kind,transportNumber:selected.number,scheduledAt:when.toISOString()
+        transportType:selected.kind,transportNumber:selected.number,scheduledAt:when.toISOString(),paymentMethod
       })});
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Enregistrement impossible");
@@ -158,7 +158,7 @@ export default function PassengerTraffic() {
         <label>Destination<PlaceSearch value={dropoffText} onChangeText={t => { setDropoffText(t); setDropoff(null); }} onSelect={point => { setDropoff(point); setDropoffText(point.address); }} committedValue={dropoff?.address} placeholder="Adresse d'arrivée" icon={MapPin}/></label>
         {bookingMode === "later" && <label style={{display:"grid",gap:8,fontWeight:600}}>Date et heure de prise en charge<input className="input" type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)}/></label>}
         {bookingMode === "now" && <label style={{display:"grid",gap:8,fontWeight:600}}>Véhicule<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={vehicleType} onChange={e => setVehicleType(e.target.value)}><option value="economy">Économique</option><option value="comfort">Confort</option><option value="xl">XL</option><option value="pet">Animaux</option></select></label>}
-        {bookingMode === "now" && <label style={{display:"grid",gap:8,fontWeight:600}}>Paiement<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">Espèces</option><option value="wallet">Portefeuille</option><option value="card">Carte bancaire</option></select></label>}
+        <label style={{display:"grid",gap:8,fontWeight:600}}>Paiement<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">Espèces</option><option value="wallet">Portefeuille</option><option value="card">Carte bancaire</option></select></label>
         {errorMessage && <p role="alert" style={{ color: "crimson" }}>{errorMessage}</p>}
         {bookingMode === "now" ? <button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || busy || selected.status === "cancelled" || selected.status === "completed"} onClick={requestDriver}>{busy ? "Recherche…" : "Chercher un chauffeur"}</button> : <><p className="small muted">La demande sera enregistrée pour plus tard. Aucun chauffeur ne sera recherché immédiatement.</p><button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || scheduleBusy} onClick={scheduleTransport}>{scheduleBusy ? "Enregistrement…" : "Enregistrer la réservation"}</button></>}
       </div>}
