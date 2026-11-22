@@ -38,6 +38,7 @@ function AdminPricingPage() {
   const [showCookieBox, setShowCookieBox] = useState(false);
   const [savingCookie, setSavingCookie] = useState(false);
   const [cookieStatus, setCookieStatus] = useState(null);
+  const [backgroundStatus, setBackgroundStatus] = useState(null);
   const [visibleUberCookie, setVisibleUberCookie] = useState(null);
   const [cookieRevealed, setCookieRevealed] = useState(false);
   const [cookieInspectBusy, setCookieInspectBusy] = useState(false);
@@ -410,6 +411,7 @@ function AdminPricingPage() {
         const data = await res.json();
         if (ignore || !res.ok) return;
 
+        setBackgroundStatus(data.uberBackgroundStatus || null);
         if (data.uberCookieStatus) {
           setCookieStatus(data.uberCookieStatus);
           // Resume monitoring an already saved cookie after page reload.
@@ -604,6 +606,7 @@ function AdminPricingPage() {
       <div className="card card-pad mb-5">
         <div className="flex items-center justify-between gap-2 mb-2">
           <strong>Session Uber (cookie)</strong>
+          {backgroundStatus?.finishedAt && <span className="tiny muted">Serveur : dernière exécution {new Date(backgroundStatus.finishedAt).toLocaleString("fr-FR")} · Uber {backgroundStatus.monitor?.ok ? "OK" : "Échec"} · IA {backgroundStatus.learning?.saved || 0} tarifs enregistrés</span>}
           <button type="button" className="btn btn-secondary btn-xs" onClick={() => setShowCookieBox(!showCookieBox)}>
             {showCookieBox ? "Fermer" : "Modifier le cookie Uber"}
           </button>
