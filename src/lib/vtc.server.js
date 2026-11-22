@@ -504,6 +504,33 @@ export async function handleVtc(input, context) {
   // RLS has verified the role; privileged operations below use only the verified caller identity.
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
   const profile = required(await db.from("profiles").select("*").eq("id", uid).single());
+
+  // Gestion des cartes du passager : identité issue de la session, jamais du corps de requête.
+  if (p === "/api/rider/cards" && method === "GET") {
+    const { listRiderCards } = await import("./vtc-card-hold.server.js");
+    return { cards: await listRiderCards(admin, uid) };
+  }
+  if (p === "/api/rider/cards/setup" && method === "POST") {
+    const { createCardSetupIntent } = await import("./vtc-card-hold.server.js");
+    return createCardSetupIntent(admin, { userId: uid, email: context.email || profile.email });
+  }
+  if (p === "/api/rider/cards/save" && method === "POST") {
+    const { saveRiderCard } = await import("./vtc-card-hold.server.js");
+    const card = await saveRiderCard(admin, {
+      userId: uid, paymentMethodId: body.paymentMethodId, isDefault: body.isDefault ?? true,
+    });
+    return { card };
+  }
+  if (p === "/api/rider/cards/delete" && method === "POST") {
+    const { deleteRiderCard } = await import("./vtc-card-hold.server.js");
+    return deleteRiderCard(admin, { userId: uid, cardId: body.cardId });
+  }
+  if (p === "/api/rider/cards/default" && method === "POST") {
+    const { setDefaultRiderCard } = await import("./vtc-card-hold.server.js");
+    return setDefaultRiderCard(admin, { userId: uid, cardId: body.cardId });
+  }
+  if (p.startsWith("/api/rider/cards")) throw new Error("Méthode non autorisée");
+
   if (p === "/api/admin/chat-evidence") {
     if (method === "GET") return adminChatEvidence(admin, q);
     if (method === "POST") return handleAdminReportAction(admin, body);
