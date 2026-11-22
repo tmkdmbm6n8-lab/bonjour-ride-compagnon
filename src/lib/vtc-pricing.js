@@ -5,7 +5,7 @@ export const DEFAULT_PRICING = {
     perMinRate: 0.15,
     minimumFare: 4,
     bookingFee: 0.5,
-    platformCommission: 15,
+    platformCommission: 10,
     surgeMultiplierCap: 3,
   },
   comfort: {
@@ -14,7 +14,7 @@ export const DEFAULT_PRICING = {
     perMinRate: 0.25,
     minimumFare: 6.5,
     bookingFee: 0.75,
-    platformCommission: 15,
+    platformCommission: 10,
     surgeMultiplierCap: 3,
   },
   pet: {
@@ -23,7 +23,7 @@ export const DEFAULT_PRICING = {
     perMinRate: 0.2,
     minimumFare: 7,
     bookingFee: 0.75,
-    platformCommission: 15,
+    platformCommission: 10,
     surgeMultiplierCap: 3,
   },
   xl: {
@@ -32,7 +32,7 @@ export const DEFAULT_PRICING = {
     perMinRate: 0.3,
     minimumFare: 8,
     bookingFee: 0.75,
-    platformCommission: 15,
+    platformCommission: 10,
     surgeMultiplierCap: 3,
   },
 };
