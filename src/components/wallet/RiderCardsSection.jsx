@@ -130,46 +130,69 @@ export default function RiderCardsSection({ onSelectCard, selectedCardId }) {
   }
 
   return (
-    <section className="card card-pad mt-4" aria-label="Moyens de paiement">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="flex items-center gap-2" style={{ margin: 0, fontSize: '1.1rem' }}>
-          <CreditCard size={18} /> Cartes bancaires enregistrées
-        </h3>
-        <button type="button" className="btn btn-primary btn-sm flex items-center gap-1" onClick={handleOpenAddCard} disabled={busy || loadingSetup}>
-          <Plus size={16} /> Ajouter une carte
-        </button>
+    <section className="card card-pad mt-4" aria-label="Moyens de paiement" style={{ padding: '20px', borderRadius: 22 }}>
+      <div className="flex items-center gap-3" style={{ marginBottom: 20 }}>
+        <span style={{ width: 42, height: 42, flexShrink: 0, borderRadius: 13, background: 'var(--ink-100)', display: 'grid', placeItems: 'center' }}>
+          <CreditCard size={21} aria-hidden="true" />
+        </span>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.3 }}>Cartes bancaires</h3>
+          <p className="tiny muted" style={{ margin: '3px 0 0' }}>Vos moyens de paiement</p>
+        </div>
       </div>
 
-      {loading ? <p className="tiny muted">Chargement de vos cartes…</p> : cards.length === 0 ? (
-        <div className="text-center p-3 muted tiny">
-          <p>Aucune carte enregistrée.</p>
-          <p className="mt-1">Enregistrez votre carte une seule fois pour commander vos courses sans ressaisir vos numéros.</p>
+      {loading ? (
+        <p className="tiny muted" style={{ textAlign: 'center', padding: '14px 0' }}>Chargement de vos cartes…</p>
+      ) : cards.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '8px 12px 22px' }}>
+          <div style={{ width: 56, height: 56, margin: '0 auto 12px', borderRadius: 18, background: 'var(--ink-100)', display: 'grid', placeItems: 'center' }}>
+            <CreditCard size={26} aria-hidden="true" style={{ opacity: 0.65 }} />
+          </div>
+          <p style={{ margin: 0, fontWeight: 600, fontSize: '0.95rem' }}>Aucune carte enregistrée</p>
+          <p className="small muted" style={{ margin: '6px auto 0', maxWidth: 300, lineHeight: 1.5 }}>
+            Ajoutez une carte pour payer vos prochaines courses plus facilement.
+          </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2" style={{ marginBottom: 18 }}>
           {cards.map(c => {
             const selected = selectedCardId ? selectedCardId === c.id : c.is_default;
-            return <div key={c.id}
-              className={`p-3 rounded-lg border flex items-center justify-between ${selected ? 'border-primary bg-primary/5' : 'border-border'}`}>
-              <div className="flex items-center gap-3">
-                {onSelectCard ? <button type="button" onClick={() => onSelectCard(c)} className="flex items-center gap-3 text-left" aria-label={`Sélectionner ${c.brand} finissant par ${c.last4}`}>
-                  <CreditCard size={20} />
-                  <span className="text-sm font-medium uppercase">{c.brand} •••• {c.last4}{c.is_default && <span className="ml-2 tiny">(Par défaut)</span>}
-                    <span className="block tiny muted">Expire {String(c.exp_month).padStart(2, '0')}/{c.exp_year}</span></span>
-                </button> : <div className="flex items-center gap-3"><CreditCard size={20} /><div className="text-sm font-medium uppercase">{c.brand} •••• {c.last4}{c.is_default && <span className="ml-2 tiny">(Par défaut)</span>}<div className="tiny muted">Expire {String(c.exp_month).padStart(2, '0')}/{c.exp_year}</div></div></div>}
+            return (
+              <div key={c.id} className="flex items-center gap-3" style={{ padding: '12px', borderRadius: 14, border: '1px solid var(--border)', minWidth: 0 }}>
+                <span style={{ width: 40, height: 40, borderRadius: 11, background: 'var(--ink-100)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                  <CreditCard size={19} aria-hidden="true" />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {onSelectCard ? (
+                    <button type="button" onClick={() => onSelectCard(c)} aria-label={`Sélectionner ${c.brand} finissant par ${c.last4}`}
+                      style={{ background: 'none', border: 0, color: 'inherit', padding: 0, textAlign: 'left', cursor: 'pointer', fontWeight: selected ? 700 : 600 }}>
+                      {c.brand} •••• {c.last4}
+                    </button>
+                  ) : <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{c.brand} •••• {c.last4}</div>}
+                  <div className="tiny muted" style={{ marginTop: 3 }}>
+                    Exp. {String(c.exp_month).padStart(2, '0')}/{c.exp_year}{c.is_default ? ' · Par défaut' : ''}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+                  {!c.is_default && <button type="button" className="btn btn-secondary btn-sm tiny" disabled={busy} onClick={() => handleSetDefault(c.id)}>Définir</button>}
+                  <button type="button" disabled={busy} onClick={() => handleDelete(c.id)} aria-label="Supprimer la carte"
+                    style={{ border: 0, background: 'transparent', color: 'var(--text-3)', padding: 8, cursor: 'pointer' }}>
+                    <Trash2 size={17} />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                {!c.is_default && <button type="button" className="btn btn-secondary btn-sm tiny" disabled={busy}
-                  onClick={() => handleSetDefault(c.id)}>Par défaut</button>}
-                <button type="button" className="p-1 text-muted-foreground hover:text-destructive" disabled={busy}
-                  onClick={() => handleDelete(c.id)} title="Supprimer la carte" aria-label="Supprimer la carte"><Trash2 size={16} /></button>
-              </div>
-            </div>;
+            );
           })}
         </div>
       )}
-      <div className="mt-3 pt-3 border-t flex items-center gap-1 tiny muted">
-        <ShieldCheck size={14} /> Informations bancaires sensibles traitées par Stripe
+
+      <button type="button" className="btn btn-primary" onClick={handleOpenAddCard} disabled={busy || loadingSetup}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, minHeight: 48, borderRadius: 13 }}>
+        <Plus size={18} /> Ajouter une carte
+      </button>
+      <div className="flex items-center justify-center gap-2 tiny muted" style={{ marginTop: 14, textAlign: 'center', lineHeight: 1.4 }}>
+        <ShieldCheck size={15} style={{ flexShrink: 0 }} aria-hidden="true" />
+        <span>Enregistrement sécurisé par Stripe</span>
       </div>
       <Modal open={modalOpen} onClose={closeCardModal} title="Ajouter une carte bancaire" portal keyboardSafe>
         {loadingSetup ? <p className="tiny muted text-center p-4">Initialisation sécurisée Stripe…</p> :
