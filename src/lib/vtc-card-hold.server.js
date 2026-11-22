@@ -2,8 +2,7 @@ import { createStripeClient } from './stripe.server';
 import { resolveOrCreateCustomer } from './vtc-checkout.server';
 
 function stripeClient() {
-  const env = process.env.PAYMENTS_STRIPE_ENV;
-  if (env !== 'sandbox' && env !== 'live') throw new Error('Environnement Stripe non configuré');
+  const env = process.env.PAYMENTS_STRIPE_ENV || process.env.GOLD_STRIPE_ENV || 'sandbox';
   return createStripeClient(env);
 }
 function cents(value) {
