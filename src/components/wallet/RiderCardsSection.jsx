@@ -132,8 +132,8 @@ export default function RiderCardsSection({ onSelectCard, selectedCardId }) {
   return (
     <section className="card card-pad mt-4" aria-label="Moyens de paiement" style={{ padding: '20px', borderRadius: 22 }}>
       <div className="flex items-center gap-3" style={{ marginBottom: 20 }}>
-        <span style={{ width: 42, height: 42, flexShrink: 0, borderRadius: 13, background: 'var(--ink-100)', display: 'grid', placeItems: 'center' }}>
-          <CreditCard size={21} aria-hidden="true" />
+        <span style={{ width: 42, height: 42, flexShrink: 0, borderRadius: 13, background: '#252932', display: 'grid', placeItems: 'center' }}>
+          <CreditCard size={21} aria-hidden="true" color="#E5E7EB" />
         </span>
         <div style={{ minWidth: 0, flex: 1 }}>
           <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.3 }}>Cartes bancaires</h3>
@@ -145,8 +145,8 @@ export default function RiderCardsSection({ onSelectCard, selectedCardId }) {
         <p className="tiny muted" style={{ textAlign: 'center', padding: '14px 0' }}>Chargement de vos cartes…</p>
       ) : cards.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '8px 12px 22px' }}>
-          <div style={{ width: 56, height: 56, margin: '0 auto 12px', borderRadius: 18, background: 'var(--ink-100)', display: 'grid', placeItems: 'center' }}>
-            <CreditCard size={26} aria-hidden="true" style={{ opacity: 0.65 }} />
+          <div style={{ width: 56, height: 56, margin: '0 auto 12px', borderRadius: 18, background: '#252932', display: 'grid', placeItems: 'center' }}>
+            <CreditCard size={26} aria-hidden="true" color="#E5E7EB" />
           </div>
           <p style={{ margin: 0, fontWeight: 600, fontSize: '0.95rem' }}>Aucune carte enregistrée</p>
           <p className="small muted" style={{ margin: '6px auto 0', maxWidth: 300, lineHeight: 1.5 }}>
@@ -159,8 +159,8 @@ export default function RiderCardsSection({ onSelectCard, selectedCardId }) {
             const selected = selectedCardId ? selectedCardId === c.id : c.is_default;
             return (
               <div key={c.id} className="flex items-center gap-3" style={{ padding: '12px', borderRadius: 14, border: '1px solid var(--border)', minWidth: 0 }}>
-                <span style={{ width: 40, height: 40, borderRadius: 11, background: 'var(--ink-100)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                  <CreditCard size={19} aria-hidden="true" />
+                <span style={{ width: 40, height: 40, borderRadius: 11, background: '#252932', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                  <CreditCard size={19} aria-hidden="true" color="#E5E7EB" />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {onSelectCard ? (
