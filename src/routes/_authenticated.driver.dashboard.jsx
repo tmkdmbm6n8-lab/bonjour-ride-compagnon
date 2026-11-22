@@ -170,6 +170,44 @@ function DriverDashboard() {
     return () => clearInterval(timer);
   }, [offer]);
 
+  const [reservationOffer,setReservationOffer] = useState(null);
+  const [reservationBusy,setReservationBusy] = useState(false);
+  const dismissedReservations = useRef(new Set());
+  useEffect(() => {
+    if (!online || ride || offer) return;
+    let disposed = false;
+    async function pollReservations() {
+      try {
+        const response = await fetch("/api/drivers/me/advance-reservations");
+        if (!response.ok) return;
+        const data = await response.json();
+        const next = (data.reservations || []).find(item => !dismissedReservations.current.has(item.id));
+        if (!disposed && next) setReservationOffer(current => current || next);
+      } catch { /* normal dispatch is unaffected */ }
+    }
+    pollReservations();
+    const interval = setInterval(pollReservations,15000);
+    return () => {disposed=true;clearInterval(interval);};
+  }, [online,ride?.id,offer?.rideId]);
+  async function acceptReservation() {
+    if (!reservationOffer || reservationBusy) return;
+    setReservationBusy(true);
+    try {
+      const response = await fetch("/api/drivers/me/advance-reservations/accept",{
+        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:reservationOffer.id})
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Réservation indisponible");
+      dismissedReservations.current.add(reservationOffer.id);
+      setReservationOffer(null);
+      toast("Réservation acceptée pour le "+new Date(result.reservation.scheduled_at).toLocaleString("fr-FR"),"success",5000);
+    } catch(e) { toast(e.message,"error",4500); }
+    finally {setReservationBusy(false);}
+  }
+  function declineReservation() {
+    if (reservationOffer) dismissedReservations.current.add(reservationOffer.id);
+    setReservationOffer(null);
+  }
   const canAccept = true;
 
   async function handleToggle() {
@@ -634,6 +672,25 @@ function DriverDashboard() {
       </Modal>
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
 
+      <Modal open={Boolean(reservationOffer && !offer && !ride && online && !profile?.isReportSuspended)} onClose={declineReservation} closable={false}>
+        {reservationOffer && <div style={{background:"linear-gradient(180deg,#13151f 0%,#0a0b10 100%)",color:"#fff",borderRadius:24,padding:"24px 20px 20px",margin:"-16px",border:"1px solid rgba(212,160,23,.25)",boxShadow:"0 24px 60px rgba(0,0,0,.8),0 0 30px rgba(212,160,23,.12)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:9,color:"#facc15",fontWeight:700,marginBottom:18}}>
+            {reservationOffer.transport_type === "flight" ? <Plane size={20}/> : <TrainFront size={20}/>}
+            <span>Réservation</span>
+            <span style={{marginLeft:"auto",fontSize:12,color:"#a8b2c3"}}>{reservationOffer.transport_number}</span>
+          </div>
+          <div style={{fontSize:21,fontWeight:750,marginBottom:18}}>{new Date(reservationOffer.scheduled_at).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"})}</div>
+          <div style={{display:"grid",gap:12,marginBottom:22}}>
+            <div><span style={{color:"#a8b2c3",fontSize:12}}>Départ</span><div>{reservationOffer.pickup_address}</div></div>
+            <div><span style={{color:"#a8b2c3",fontSize:12}}>Destination</span><div>{reservationOffer.dropoff_address}</div></div>
+          </div>
+          <p style={{fontSize:12,color:"#a8b2c3",marginBottom:14}}>Course prévue ultérieurement : l’acceptation ne démarre pas le trajet.</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <button className="btn btn-secondary" type="button" disabled={reservationBusy} onClick={declineReservation}>Refuser</button>
+            <button className="btn btn-primary" type="button" disabled={reservationBusy} onClick={acceptReservation}>{reservationBusy ? "Validation…" : "Accepter"}</button>
+          </div>
+        </div>}
+      </Modal>
       {/* ── Notification de course : Cockpit StrasDrive (Design Original) ── */}
       <Modal open={Boolean(offer) && !profile?.isReportSuspended} onClose={decline} closable={false}>
         {offer && (
