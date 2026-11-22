@@ -59,7 +59,8 @@ export async function runUberFareCheck(admin, { force = false } = {}) {
   const offset = 1 + Math.floor(Math.random() * (POINTS.length - 1));
   const pickup = POINTS[i];
   const dropoff = POINTS[(i + offset) % POINTS.length];
-  const products = await uberProducts(pickup, dropoff, cookie);
+  const diagnostic = {};
+  const products = await uberProducts(pickup, dropoff, cookie, diagnostic);
   const result = {
     enabled: settings.enabled === true,
     updatedAt: settings.updatedAt || null,
@@ -97,5 +98,5 @@ export async function runUberFareCheck(admin, { force = false } = {}) {
     vehicle_type: "uber_hourly_checks", is_active: false, rule: result,
   }, { onConflict: "vehicle_type" });
   if (saved.error) throw saved.error;
-  return { ok: result.lastSuccess, checkedAt: result.lastCheckedAt, products: result.lastProductCount, emailAlert: alert };
+  return { ok: result.lastSuccess, checkedAt: result.lastCheckedAt, products: result.lastProductCount, diagnostic, emailAlert: alert };
 }
