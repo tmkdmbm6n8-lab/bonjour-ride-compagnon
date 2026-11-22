@@ -806,6 +806,9 @@ export async function handleVtc(input, context) {
       : null;
     return { ...quote, favorite, showPriorityPriceSource: priorityDriver?.is_priority === true };
   }
+  if (p === "/api/riders/me/transport-board" && method === "GET") {
+    return discoverBoard(q.get("day") || parisDay());
+  }
   if (p === "/api/riders/me/scheduled-requests") {
     if (method === "GET") {
       const rows = required(await db.from("rider_scheduled_requests").select("*")
