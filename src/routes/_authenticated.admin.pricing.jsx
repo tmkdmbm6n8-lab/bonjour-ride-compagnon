@@ -343,7 +343,7 @@ function AdminPricingPage() {
       sessionMonitorBusy.current=true;
       const sentAt=Date.now();
       setSessionProbeLog(prev=>[{id:sentAt,at:sentAt,status:"pending",detail:"Requête envoyée",duration:null},...prev].slice(0,500));
-      const recordProbe=(status,detail)=>setSessionProbeLog(prev=>prev.map(entry=>entry.id===sentAt?{...entry,status,detail,duration:Date.now()-sentAt}:entry));
+      const recordProbe=(status,detail,diagnostic=null)=>setSessionProbeLog(prev=>prev.map(entry=>entry.id===sentAt?{...entry,status,detail,diagnostic,duration:Date.now()-sentAt}:entry));
       try{
         const res=await fetch("/api/admin/pricing",{
           method:"PUT",headers:{"Content-Type":"application/json"},
@@ -351,7 +351,7 @@ function AdminPricingPage() {
         });
         const data=await res.json();
         if(cancelled)return;
-        recordProbe(res.ok&&data.ok?"ok":"error",res.ok?(data.ok?"Réponse Uber valide":"Aucun prix Uber valide"):`HTTP ${res.status}`);
+        recordProbe(res.ok&&data.ok?"ok":"error",res.ok?(data.ok?"Réponse Uber valide":"Aucun prix Uber valide"):`HTTP ${res.status}`,data?.diagnostic||null);
         if(res.ok&&data.ok){
           sessionMonitorRef.current.failures=0;
           setSessionMonitor(prev=>({...prev,failures:0}));
@@ -644,12 +644,19 @@ function AdminPricingPage() {
             <strong className="small">Journal des requêtes Uber (toutes les 10 minutes)</strong>
             <button type="button" className="btn btn-secondary btn-xs" onClick={()=>setSessionProbeLog([])}>Effacer</button>
           </div>
-          <p className="tiny muted mb-2">Les 500 dernières vérifications sont conservées dans ce navigateur, même après actualisation. L'heure, le résultat HTTP et la durée sont affichés sans révéler le cookie. Aucune requête ne se chevauche.</p>
+          <p className="tiny muted mb-2">Les 500 dernières vérifications sont conservées dans ce navigateur, même après actualisation. Le statut HTTP, le code GraphQL, le nombre de prix et les durées sont affichés sans révéler le cookie. Aucune requête ne se chevauche.</p>
           <div role="log" aria-live="off" style={{maxHeight:210,overflowY:"auto",fontFamily:"monospace",fontSize:12}}>
             {sessionProbeLog.length===0 && <p className="tiny muted">Aucune requête enregistrée dans ce navigateur.</p>}
             {sessionProbeLog.map(entry=>(
               <div key={entry.id} style={{padding:"5px 0",borderBottom:"1px solid var(--border, #333)",color:entry.status==="ok"?"#22c55e":entry.status==="error"?"#ef4444":"#f59e0b"}}>
-                {new Date(entry.at).toLocaleString("fr-FR")} · {entry.status==="ok"?"✓ OK":entry.status==="error"?"✕ ÉCHEC":"… EN COURS"} · {entry.detail}{entry.duration!==null?` · ${entry.duration} ms`:""}
+                <div>{new Date(entry.at).toLocaleString("fr-FR")} · {entry.status==="ok"?"✓ OK":entry.status==="error"?"✕ ÉCHEC":"… EN COURS"} · {entry.detail}</div>
+                <div style={{color:"var(--muted-foreground, #999)",paddingLeft:12,whiteSpace:"normal",lineHeight:1.6}}>
+                  {entry.diagnostic ? <>
+                    Source : {entry.diagnostic.source || "Uber"} · HTTP : {entry.diagnostic.httpStatus ?? "non reçu"} · GraphQL : {entry.diagnostic.graphqlCode || (entry.status==="ok"?"OK":"inconnu")}<br/>
+                    Prix reçus : {entry.diagnostic.priceCount ?? 0} · Durée Uber : {entry.diagnostic.durationMs ?? "?"} ms · Durée totale : {entry.duration ?? "?"} ms<br/>
+                    {entry.diagnostic.graphqlMessage ? `Message : ${entry.diagnostic.graphqlMessage} · ` : ""}{entry.diagnostic.error ? `Diagnostic : ${entry.diagnostic.error}` : ""}
+                  </> : <>Durée : {entry.duration ?? "?"} ms · Diagnostic détaillé indisponible pour cet ancien contrôle</>}
+                </div>
               </div>
             ))}
           </div>
