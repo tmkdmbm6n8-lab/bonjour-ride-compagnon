@@ -456,19 +456,28 @@ async function estimates(db, a, b) {
       aiUsed = true;
     }
   }
-  // No Uber quote or trained AI prediction: use the published StrasDrive
-  // distance/time tariff, clearly labelled as a local estimate (never as Uber/AI).
-  // This also fills missing vehicle classes without inventing competitor prices.
+  // Système de secours local : activé UNIQUEMENT en mode « Automatique · Uber → IA ».
+  // En mode « Uber uniquement » ou « IA uniquement », aucun secours local n'est calculé.
   let localUsed = false;
-  for (const type of Object.keys(DEFAULT_PRICING)) {
-    if (finalEstimates[type]) continue;
-    const rule = { ...DEFAULT_PRICING[type], ...(rules[type] || {}) };
-    const fare = calculateFare(rule, route.distanceMeters, route.durationSeconds);
-    if (!Number.isFinite(fare.total) || fare.total <= 0) continue;
-    finalEstimates[type] = { ...fare, isUberPrice: false, isAiPrice: false, priceSource: "local", estimatedFromLocalRules: true };
-    localUsed = true;
+  if (mode === "auto") {
+    for (const type of Object.keys(DEFAULT_PRICING)) {
+      if (finalEstimates[type]) continue;
+      const rule = { ...DEFAULT_PRICING[type], ...(rules[type] || {}) };
+      const fare = calculateFare(rule, route.distanceMeters, route.durationSeconds);
+      if (!Number.isFinite(fare.total) || fare.total <= 0) continue;
+      finalEstimates[type] = { ...fare, isUberPrice: false, isAiPrice: false, priceSource: "local", estimatedFromLocalRules: true };
+      localUsed = true;
+    }
   }
+
+  // Si aucun tarif valide n'a pu être obtenu selon le mode choisi, lever une erreur explicite
   if (!Object.keys(finalEstimates).length) {
+    if (mode === "uber") {
+      throw new Error("Tarifs Uber indisponibles : aucun prix en direct n'a pu être obtenu.");
+    }
+    if (mode === "ai") {
+      throw new Error("Tarifs IA indisponibles : prévisions non disponibles pour ce trajet.");
+    }
     throw new Error("Tarifs indisponibles : impossible de calculer un trajet valide.");
   }
   const uberUsed = Object.values(finalEstimates).some(x => x.isUberPrice);
