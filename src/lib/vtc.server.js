@@ -1222,7 +1222,7 @@ export async function handleVtc(input, context) {
     const { favoriteBooking } = await import("./private-clients.server");
     return favoriteBooking(admin, uid, await dispatchPool(admin));
   };
-  const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment, favoriteDriverId = null, allowGoldReplacement = false }) => {
+  const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment, favoriteDriverId = null }) => {
     await preparePassengerBooking(admin, uid, canDrive);
     const pin = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000).padStart(4, "0");
     // Note moyenne laissée par les chauffeurs, figée à la commande (filtre « note minimale » des chauffeurs).
@@ -1245,7 +1245,7 @@ export async function handleVtc(input, context) {
           vehicle_type: vehicleType,
           pickup,
           dropoff,
-          route: favoriteDriverId && allowGoldReplacement ? { ...route, allowGoldReplacement: true } : route,
+          route,
           fare,
           pin,
           payment,
@@ -1308,7 +1308,6 @@ export async function handleVtc(input, context) {
       const ride = await createRide({
         vehicleType, pickup: body.pickup, dropoff: body.dropoff, route, fare,
         payment: paymentMeta, favoriteDriverId: favorite?.driverId || null,
-        allowGoldReplacement: favorite != null && body.allowGoldReplacement === true,
       });
       return { ride };
     } catch (error) {
@@ -1360,13 +1359,13 @@ export async function handleVtc(input, context) {
     }
     const fresh = [];
     for (const r of rs) fresh.push(await assignOffer(admin, r, pool));
-    const goldPool = fresh.some((ride) => (ride.route?.goldReturn || ride.dispatch_phase === "replacement") && ride.status === "searching")
+    const goldPool = fresh.some((ride) => ride.route?.goldReturn && ride.status === "searching")
       ? await goldDispatchPool(admin, pool)
       : pool;
     const goldMe = goldPool.find((driver) => driver.user_id === uid);
     let r = fresh
       .filter((ride) =>
-        (ride.route?.goldReturn || ride.dispatch_phase === "replacement")
+        ride.route?.goldReturn
           ? canSeeOffer(ride, goldMe, Date.now(), goldPool)
           : canSeeOffer(ride, me, Date.now(), pool),
       )
@@ -1492,7 +1491,7 @@ export async function handleVtc(input, context) {
         const pool = r.route?.goldReturn ? await goldDispatchPool(admin, available) : available;
         const candidate = pool.find((d) => d.user_id === uid) || null;
         const me =
-          (r.dispatch_phase === "private" || r.dispatch_phase === "replacement") && !r.route?.goldReturn ? await withDriverGold(admin, candidate) : candidate;
+          r.dispatch_phase === "private" && !r.route?.goldReturn ? await withDriverGold(admin, candidate) : candidate;
         if (!canSeeOffer(r, me, Date.now(), pool)) throw new Error("Cette demande n’est plus disponible");
       }
       const fare = !r.is_test && (await hasPaidDriverGold(admin, uid))
@@ -2253,7 +2252,7 @@ async function assignOffer(db, r, pool) {
     const goldReturn = await goldReturnHintForRide(r, approachSeconds, routeBetween);
     if (goldReturn) route = { ...route, goldReturn };
   }
-  if (route?.goldReturn || route?.allowGoldReplacement) drivers = await goldDispatchPool(db, drivers);
+  if (route?.goldReturn) drivers = await goldDispatchPool(db, drivers);
   const targetId = r.dispatch_phase === "private" ? r.offer_driver_id : !r.dispatch_phase ? r.favorite_driver_id : null;
   const target = targetId && drivers.find((driver) => driver.user_id === targetId);
   if (target && !route?.goldReturn) {
