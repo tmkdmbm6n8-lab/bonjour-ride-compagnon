@@ -389,7 +389,7 @@ async function estimates(db, a, b) {
       }
 
       // ── Plancher légal ARPE : 9,00 € nets min par course pour le chauffeur ──
-      // Avec 15 % de commission, le prix payé par le client ne descend jamais sous 10,59 €
+      // Avec 10 % de commission, le prix payé par le client ne descend jamais sous 10,59 €
       const minNetDriver = driverMinimumNet(route.distanceMeters, route.durationSeconds);
       const minLegalPrice = minimumPassengerTotal(minNetDriver, commRate);
       if (price < minLegalPrice) {
@@ -438,7 +438,7 @@ async function estimates(db, a, b) {
         console.error("[pricing-ai] Prediction failed:", type, error?.message || error);
       }
       if (!prediction?.ready || !Number.isFinite(prediction.price) || prediction.price <= 0) continue;
-      const commRate = Number(rules[type]?.platformCommission ?? 15);
+      const commRate = Number(rules[type]?.platformCommission ?? 10);
       const commission = Math.min(95, Math.max(0, commRate));
       const rawPrice = prediction.price;
       let price = isDiscountActive ? rawPrice * (1 - discountRate) : rawPrice;
