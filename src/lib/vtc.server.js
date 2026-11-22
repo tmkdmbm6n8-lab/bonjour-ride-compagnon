@@ -326,6 +326,9 @@ async function estimates(db, a, b) {
     }
   }
 
+  // Commission contractuelle unique des chauffeurs sans Gold, même si une ancienne règle DB indique 15 %.
+  for (const type of Object.keys(DEFAULT_PRICING)) rules[type] = { ...DEFAULT_PRICING[type], ...(rules[type] || {}), platformCommission: 10 };
+
   // Configuration de la réduction Uber (20 % par défaut, activée par défaut)
   const discountSetting = rows.find((r) => r.vehicle_type === "uber_discount")?.rule;
   const isDiscountActive = discountSetting ? Boolean(discountSetting.enabled) : true;
