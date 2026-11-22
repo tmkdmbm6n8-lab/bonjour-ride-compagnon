@@ -1222,7 +1222,7 @@ export async function handleVtc(input, context) {
     const { favoriteBooking } = await import("./private-clients.server");
     return favoriteBooking(admin, uid, await dispatchPool(admin));
   };
-  const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment, favoriteDriverId = null }) => {
+  const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment, favoriteDriverId = null, allowGoldReplacement = false }) => {
     await preparePassengerBooking(admin, uid, canDrive);
     const pin = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000).padStart(4, "0");
     // Note moyenne laissée par les chauffeurs, figée à la commande (filtre « note minimale » des chauffeurs).
@@ -1245,7 +1245,7 @@ export async function handleVtc(input, context) {
           vehicle_type: vehicleType,
           pickup,
           dropoff,
-          route,
+          route: favoriteDriverId && allowGoldReplacement ? { ...route, allowGoldReplacement: true } : route,
           fare,
           pin,
           payment,
@@ -1308,6 +1308,7 @@ export async function handleVtc(input, context) {
       const ride = await createRide({
         vehicleType, pickup: body.pickup, dropoff: body.dropoff, route, fare,
         payment: paymentMeta, favoriteDriverId: favorite?.driverId || null,
+        allowGoldReplacement: favorite != null && body.allowGoldReplacement === true,
       });
       return { ride };
     } catch (error) {
@@ -2252,7 +2253,7 @@ async function assignOffer(db, r, pool) {
     const goldReturn = await goldReturnHintForRide(r, approachSeconds, routeBetween);
     if (goldReturn) route = { ...route, goldReturn };
   }
-  if (route?.goldReturn) drivers = await goldDispatchPool(db, drivers);
+  if (route?.goldReturn || route?.allowGoldReplacement) drivers = await goldDispatchPool(db, drivers);
   const targetId = r.dispatch_phase === "private" ? r.offer_driver_id : !r.dispatch_phase ? r.favorite_driver_id : null;
   const target = targetId && drivers.find((driver) => driver.user_id === targetId);
   if (target && !route?.goldReturn) {
