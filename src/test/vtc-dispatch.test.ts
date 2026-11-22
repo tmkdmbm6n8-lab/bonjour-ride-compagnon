@@ -55,6 +55,23 @@ describe('attribution des courses', () => {
     expect(planDispatch(offered, pool, NOW)?.dispatch_phase).toBe('priority');
   });
 
+  it('propose un remplaçant uniquement Gold après consentement du passager', () => {
+    const fav = { ...driver('favori', 3), gold_active: true };
+    const gold = { ...driver('gold', 1), gold_active: true };
+    const free = driver('gratuit', 0.1);
+    const base = ride({ favorite_driver_id: 'favori', route: { allowGoldReplacement: true } });
+    const first = apply(base, planDispatch(base, [fav, gold, free], NOW));
+    expect(first.dispatch_phase).toBe('private');
+    const declined = { ...first, declined: ['favori'] };
+    const replacement = apply(declined, planDispatch(declined, [fav, gold, free], NOW + 1000));
+    expect(replacement.dispatch_phase).toBe('replacement');
+    expect(replacement.offer_driver_id).toBe('gold');
+    expect(canSeeOffer(replacement, free, NOW + 1000, [fav, gold, free])).toBe(false);
+    expect(canSeeOffer(replacement, gold, NOW + 1000, [fav, gold, free])).toBe(true);
+    const noGold = planDispatch({ ...base, declined: ['favori'] }, [free], NOW);
+    expect(noGold?.status).toBe('no_drivers');
+  });
+
   it('réserve les courses à potentiel de retour à Gold, y compris en diffusion générale', () => {
     const gold = { ...other, gold_active: true };
     const exclusive = ride({ route: { goldReturn: { kind: 'train' } } });
