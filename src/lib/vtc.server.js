@@ -832,11 +832,8 @@ export async function handleVtc(input, context) {
         const time = String(body.localTime || "");
         if (!Number.isInteger(day) || day < 0 || day > 6 || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time))
           throw new Error("Jour ou heure invalide");
-        // Any eligible driver can serve recurring rides. A favorite is optional,
-        // and never restricts dispatch to Gold drivers.
-        const { favoriteDriverId: findFavorite } = await import("./private-clients.server");
-        const fav = await findFavorite(admin, uid);
-        Object.assign(payload, { weekday: day, local_time: time, favorite_driver_id: fav || null });
+        // Do not preselect or prioritize a favorite: the rider chooses among driver proposals.
+        Object.assign(payload, { weekday: day, local_time: time, favorite_driver_id: null });
       }
       const row = required(await db.from("rider_scheduled_requests").insert(payload).select("*").single());
       return { request: row };
