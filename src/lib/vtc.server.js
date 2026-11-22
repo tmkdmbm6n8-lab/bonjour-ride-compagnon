@@ -1665,6 +1665,17 @@ export async function handleVtc(input, context) {
           patch.fare = { ...r.fare, cancellationFee: 3 };
         }
         required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
+        if (r.payment?.method === "card" && r.payment?.intent_id) {
+          try {
+            const { cancelRideHold } = await import("./vtc-card-hold.server.js");
+            await cancelRideHold(admin, { paymentIntentId: r.payment.intent_id });
+            required(await admin.from("rides").update({
+              payment: { ...r.payment, status: "canceled" },
+            }).eq("id", id).eq("status", "cancelled"));
+          } catch (error) {
+            console.error("Impossible de libérer l'empreinte Stripe après annulation", error);
+          }
+        }
       }
     } else if (action === "block" || action === "unblock") {
       if (!participant || !r.driver_id) throw new Error("Accès refusé");
