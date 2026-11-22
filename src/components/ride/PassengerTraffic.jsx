@@ -19,6 +19,10 @@ export default function PassengerTraffic() {
   const [dropoffText, setDropoffText] = useState("");
   const [vehicleType, setVehicleType] = useState("economy");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [bookingMode, setBookingMode] = useState("now");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduledRequests, setScheduledRequests] = useState([]);
+  const [scheduleBusy, setScheduleBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [success, setSuccess] = useState("");
@@ -33,6 +37,9 @@ export default function PassengerTraffic() {
   function openTransport(item) {
     const hub = item.kind === "flight" ? AIRPORT : STATION;
     setSelected(item);
+    setBookingMode("now");
+    const at = new Date(item.estimated || item.scheduled);
+    setScheduledAt(Number.isFinite(at.getTime()) ? new Date(at.getTime() - at.getTimezoneOffset()*60000).toISOString().slice(0,16) : "");
     setErrorMessage(item.status === "cancelled" ? "Ce transport est annulé : réservation indisponible." : item.status === "completed" ? "Ce transport est déjà terminé : choisissez un transport à venir pour réserver." : "");
     setSuccess("");
     if (item.direction === "arrival") {
@@ -77,6 +84,31 @@ export default function PassengerTraffic() {
     } catch (e) { setErrorMessage(e.message); setSuccess(""); setSelected(previous => previous || {number:"Demande",city:"Réessayer",direction:"arrival",scheduled:new Date().toISOString()}); }
     finally { setBusy(false); }
   }
+  async function scheduleTransport() {
+    if (!selected || !pickup?.address || !dropoff?.address || scheduleBusy) return;
+    const when = new Date(scheduledAt);
+    if (!Number.isFinite(when.getTime()) || when.getTime() <= Date.now()) { setErrorMessage("Choisissez une date et une heure futures."); return; }
+    setScheduleBusy(true); setErrorMessage("");
+    try {
+      const response = await apiFetch("/api/riders/me/scheduled-requests", {method:"POST",body:JSON.stringify({
+        kind:"transport",pickupAddress:pickup.address,dropoffAddress:dropoff.address,
+        transportType:selected.kind,transportNumber:selected.number,scheduledAt:when.toISOString()
+      })});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Enregistrement impossible");
+      setScheduledRequests(current => [result.request,...current]);
+      setSelected(null);
+      setSuccess("Réservation anticipée enregistrée pour le " + when.toLocaleString("fr-FR") + ". Aucun chauffeur n'est encore confirmé.");
+    } catch(e) { setErrorMessage(e.message); }
+    finally { setScheduleBusy(false); }
+  }
+  async function cancelScheduled(id) {
+    const response = await apiFetch("/api/riders/me/scheduled-requests", {method:"DELETE",body:JSON.stringify({id})});
+    const result = await response.json();
+    if (!response.ok) { setSuccess(result.error || "Annulation impossible"); return; }
+    setScheduledRequests(current => current.filter(item => item.id !== id));
+    setSuccess("Réservation anticipée annulée.");
+  }
   async function cancelSearch() {
     if (!createdRide?.id) { cancelPendingRef.current = true; setCancelWhenReady(true); setSuccess("Annulation demandée. La course sera annulée dès sa confirmation."); return; }
     if (cancelling) return;
@@ -103,6 +135,7 @@ export default function PassengerTraffic() {
     </div>
     {error && <div role="alert" className="driver-notice">{error}<button className="driver-chip" onClick={reload}>Réessayer</button></div>}
     {success && <p role="status">{success}</p>}
+    {scheduledRequests.length > 0 && <section className="card card-pad" style={{marginBlock:12}}><h3>Mes réservations à venir</h3>{scheduledRequests.map(req=><div key={req.id} style={{padding:"10px 0",borderBottom:"1px solid #333"}}><p>{req.transport_number} · {new Date(req.scheduled_at).toLocaleString("fr-FR")}</p><p className="small muted">En attente de prise en charge</p><button className="btn btn-secondary" type="button" onClick={()=>cancelScheduled(req.id)}>Annuler</button></div>)}</section>}
     {(busy || createdRide) && <div className="overlay" role="dialog" aria-modal="true" aria-label="Recherche de chauffeur"><div className="modal modal-pad" style={{maxWidth:440,textAlign:"center"}}><div className="pulse-ring" style={{width:72,height:72,borderRadius:"50%",display:"grid",placeItems:"center",margin:"12px auto 24px",background:"var(--ink-950)"}}><Car size={30} color="#fff"/></div><h3>Recherche de votre chauffeur…</h3><p className="small muted mt-2">{busy ? "Préparation de votre demande…" : "Nous contactons les chauffeurs proches de votre point de prise en charge."}</p>{errorMessage && <p role="alert" style={{color:"crimson"}}>{errorMessage}</p>}<button type="button" className="btn btn-secondary btn-full mt-6" disabled={cancelling || cancelWhenReady} onClick={cancelSearch}>{cancelling ? "Annulation…" : cancelWhenReady ? "Annulation demandée…" : "Annuler la demande"}</button>{createdRide && <button type="button" className="btn btn-primary btn-full mt-3" onClick={() => window.location.assign("/dashboard")}>Suivre ma course sur la carte</button>}</div></div>}
     {!data && !error && <Loading label="Réception des horaires…"/>}
     {data && !items.length && <p className="driver-empty-state">Aucun transport répertorié pour le moment.</p>}
@@ -119,13 +152,15 @@ export default function PassengerTraffic() {
     <Modal portal keyboardSafe open={Boolean(selected)} onClose={() => { if (!busy) setSelected(null); }} title={selected ? selected.number + " · " + selected.city : ""} maxWidth={560}>
       {selected && <div style={{ display: "grid", gap: 16 }}>
         <p>{selected.direction === "arrival" ? "Prise en charge à l'arrivée" : "Transfert pour le départ"} · {clock(selected.estimated || selected.scheduled)}</p>
-        <p>Voulez-vous chercher un chauffeur pour ce trajet ?</p>
+        <p>Choisissez quand vous souhaitez effectuer ce trajet.</p>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><button type="button" className={"btn "+(bookingMode === "now" ? "btn-primary":"btn-secondary")} onClick={()=>setBookingMode("now")}>Maintenant</button><button type="button" className={"btn "+(bookingMode === "later" ? "btn-primary":"btn-secondary")} onClick={()=>setBookingMode("later")}>Réserver à l’avance</button></div>
         <div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}><strong>Départ</strong><button type="button" className="btn btn-secondary" style={{padding:"7px 10px",fontSize:13}} onClick={locatePickup} disabled={locating}><LocateFixed size={16}/>{locating ? "Localisation…" : "Ma position"}</button></div><PlaceSearch value={pickupText} onChangeText={t => { setPickupText(t); setPickup(null); }} onSelect={point => { setPickup(point); setPickupText(point.address); }} committedValue={pickup?.address} placeholder="Adresse de départ" icon={MapPin}/></div>
         <label>Destination<PlaceSearch value={dropoffText} onChangeText={t => { setDropoffText(t); setDropoff(null); }} onSelect={point => { setDropoff(point); setDropoffText(point.address); }} committedValue={dropoff?.address} placeholder="Adresse d'arrivée" icon={MapPin}/></label>
-        <label style={{display:"grid",gap:8,fontWeight:600}}>Véhicule<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={vehicleType} onChange={e => setVehicleType(e.target.value)}><option value="economy">Économique</option><option value="comfort">Confort</option><option value="xl">XL</option><option value="pet">Animaux</option></select></label>
-        <label style={{display:"grid",gap:8,fontWeight:600}}>Paiement<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">Espèces</option><option value="wallet">Portefeuille</option><option value="card">Carte bancaire</option></select></label>
+        {bookingMode === "later" && <label style={{display:"grid",gap:8,fontWeight:600}}>Date et heure de prise en charge<input className="input" type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)}/></label>}
+        {bookingMode === "now" && <label style={{display:"grid",gap:8,fontWeight:600}}>Véhicule<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={vehicleType} onChange={e => setVehicleType(e.target.value)}><option value="economy">Économique</option><option value="comfort">Confort</option><option value="xl">XL</option><option value="pet">Animaux</option></select></label>}
+        {bookingMode === "now" && <label style={{display:"grid",gap:8,fontWeight:600}}>Paiement<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">Espèces</option><option value="wallet">Portefeuille</option><option value="card">Carte bancaire</option></select></label>}
         {errorMessage && <p role="alert" style={{ color: "crimson" }}>{errorMessage}</p>}
-        <button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || busy || selected.status === "cancelled" || selected.status === "completed"} onClick={requestDriver}>{busy ? "Recherche…" : "Chercher un chauffeur"}</button>
+        {bookingMode === "now" ? <button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || busy || selected.status === "cancelled" || selected.status === "completed"} onClick={requestDriver}>{busy ? "Recherche…" : "Chercher un chauffeur"}</button> : <><p className="small muted">La demande sera enregistrée pour plus tard. Aucun chauffeur ne sera recherché immédiatement.</p><button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || scheduleBusy} onClick={scheduleTransport}>{scheduleBusy ? "Enregistrement…" : "Enregistrer la réservation"}</button></>}
       </div>}
     </Modal>
   </div></RiderLayout>;
