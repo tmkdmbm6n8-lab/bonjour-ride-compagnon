@@ -803,6 +803,51 @@ export async function handleVtc(input, context) {
       : null;
     return { ...quote, favorite, showPriorityPriceSource: priorityDriver?.is_priority === true };
   }
+  if (p === "/api/riders/me/scheduled-requests") {
+    if (method === "GET") {
+      const rows = required(await db.from("rider_scheduled_requests").select("*")
+        .eq("rider_id", uid).order("created_at", { ascending: false }).limit(100));
+      return { requests: rows };
+    }
+    if (method === "POST") {
+      const kind = body.kind;
+      if (!["transport", "recurring"].includes(kind)) throw new Error("Type de réservation invalide");
+      const pickup = String(body.pickupAddress || "").trim().slice(0, 240);
+      const dropoff = String(body.dropoffAddress || "").trim().slice(0, 240);
+      if (pickup.length < 5 || dropoff.length < 5) throw new Error("Indiquez les deux adresses complètes");
+      const payload = { rider_id: uid, kind, pickup_address: pickup, dropoff_address: dropoff };
+      if (kind === "transport") {
+        const number = String(body.transportNumber || "").trim().toUpperCase();
+        const date = new Date(body.scheduledAt);
+        if (!["flight", "train"].includes(body.transportType) || !/^[A-Z0-9 -]{2,24}$/.test(number) ||
+          !Number.isFinite(date.getTime()) || date.getTime() < Date.now())
+          throw new Error("Numéro de vol/train ou date invalide");
+        Object.assign(payload, { transport_type: body.transportType, transport_number: number,
+          scheduled_at: date.toISOString(), adjustment_consent: body.adjustmentConsent === true });
+      } else {
+        const day = Number(body.weekday);
+        const time = String(body.localTime || "");
+        if (!Number.isInteger(day) || day < 0 || day > 6 || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time))
+          throw new Error("Jour ou heure invalide");
+        const { favoriteDriverId: findFavorite } = await import("./private-clients.server");
+        const fav = await findFavorite(admin, uid);
+        if (!fav) throw new Error("Ajoutez d’abord un chauffeur favori");
+        const { loadDriverGold: getGold } = await import("./driver-gold.server");
+        if (!(await getGold(admin, fav)).active) throw new Error("Le chauffeur favori doit être abonné Gold");
+        Object.assign(payload, { weekday: day, local_time: time, favorite_driver_id: fav });
+      }
+      const row = required(await db.from("rider_scheduled_requests").insert(payload).select("*").single());
+      return { request: row };
+    }
+    if (method === "DELETE") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Identifiant invalide");
+      required(await db.from("rider_scheduled_requests").update({ status: "canceled" })
+        .eq("rider_id", uid).eq("id", id).eq("status", "pending"));
+      return { ok: true };
+    }
+    throw new Error("Méthode non autorisée");
+  }
   if (p === "/api/riders/me/favorite") {
     const pc = await import("./private-clients.server");
     if (method === "GET") return pc.favoriteCard(admin, uid);
