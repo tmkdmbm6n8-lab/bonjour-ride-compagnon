@@ -38,6 +38,21 @@ function AdminPricingPage() {
   const [showCookieBox, setShowCookieBox] = useState(false);
   const [savingCookie, setSavingCookie] = useState(false);
   const [cookieStatus, setCookieStatus] = useState(null);
+  const [visibleUberCookie, setVisibleUberCookie] = useState(null);
+  const [cookieRevealed, setCookieRevealed] = useState(false);
+  const [cookieInspectBusy, setCookieInspectBusy] = useState(false);
+  async function inspectUberCookie() {
+    if (visibleUberCookie !== null) { setVisibleUberCookie(null); setCookieRevealed(false); return; }
+    setCookieInspectBusy(true);
+    try {
+      const res = await fetch("/api/admin/pricing", { method:"PUT", headers:{"Content-Type":"application/json","Cache-Control":"no-store"}, body:JSON.stringify({vehicleType:"uber_cookie_inspect"}), cache:"no-store" });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Lecture impossible");
+      setVisibleUberCookie(data);
+      setCookieRevealed(false);
+    } catch (error) { toast(error?.message || "Impossible de consulter le cookie","error"); }
+    finally { setCookieInspectBusy(false); }
+  }
   const [sessionMonitor, setSessionMonitor] = useState({state:"idle",startedAt:null,endedAt:null,durationMs:null,failures:0});
   const [sessionProbeLog, setSessionProbeLog] = useState([]);
   const [sessionHistoryReady, setSessionHistoryReady] = useState(false);
@@ -323,6 +338,8 @@ function AdminPricingPage() {
         setMonitorEnabled(true);
         setCookieStatus({ hasCustomCookie: true, updatedAt: new Date().toISOString() });
         setCookieInput("");
+        setVisibleUberCookie(null);
+        setCookieRevealed(false);
         setShowCookieBox(false);
       }
     } catch {
@@ -590,6 +607,24 @@ function AdminPricingPage() {
           <button type="button" className="btn btn-secondary btn-xs" onClick={() => setShowCookieBox(!showCookieBox)}>
             {showCookieBox ? "Fermer" : "Modifier le cookie Uber"}
           </button>
+        </div>
+        <div className="mb-3">
+          <button type="button" className="btn btn-secondary btn-sm" onClick={inspectUberCookie} disabled={cookieInspectBusy}>
+            {cookieInspectBusy ? "Chargement…" : visibleUberCookie !== null ? "Masquer et effacer le cookie" : "Voir le cookie utilisé"}
+          </button>
+          {visibleUberCookie !== null && (
+            <div className="mt-2" style={{padding:12,border:"1px solid var(--border, #333)",borderRadius:8}}>
+              <p className="tiny muted">Source : {visibleUberCookie.source}. Cookie actuellement configuré sur le serveur (validité non garantie).</p>
+              {visibleUberCookie.cookie ? <>
+                <button type="button" className="btn btn-secondary btn-xs mt-2 mb-2" onClick={()=>setCookieRevealed(v=>!v)}>
+                  {cookieRevealed ? "Cacher la valeur" : "Afficher la valeur complète"}
+                </button>
+                <textarea className="input" readOnly rows={4} spellCheck={false} autoComplete="off" aria-label="Cookie Uber configuré"
+                  value={cookieRevealed ? visibleUberCookie.cookie : "•••••••••••• (cookie masqué)"} style={{fontFamily:"monospace",fontSize:12}} />
+              </> : <p className="tiny muted mt-2">Aucun cookie configuré.</p>}
+              <p className="tiny muted mt-2">Secret sensible : ne le partagez pas. Il n'est pas conservé dans l'historique ni dans le stockage du navigateur.</p>
+            </div>
+          )}
         </div>
         <p className="tiny muted mb-3">
           {cookieStatus?.hasCustomCookie
