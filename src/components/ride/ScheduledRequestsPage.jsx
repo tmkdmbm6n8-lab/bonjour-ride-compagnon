@@ -45,7 +45,7 @@ export default function ScheduledRequestsPage({ kind }) {
   const field = { display: "block", width: "100%", boxSizing: "border-box", padding: 12, borderRadius: 10, border: "1px solid #9ca3af", background: "transparent", color: "inherit" };
   return <RiderLayout><main style={{ padding: "22px 16px", maxWidth: 620, margin: "0 auto" }}>
     <h1>{transport ? "Vols et trains" : "Trajets récurrents"}</h1>
-    <p>{transport ? "Préparez un transfert depuis une gare ou un aéroport." : "Préparez un trajet hebdomadaire à proposer à votre chauffeur favori Gold."}</p>
+    <p>{transport ? "Préparez un transfert depuis une gare ou un aéroport." : "Préparez un trajet hebdomadaire accessible à tous les chauffeurs disponibles, avec ou sans abonnement."}</p>
     <p style={{ fontSize: 13 }}>Les demandes sont enregistrées, mais le suivi automatique des retards, l'attribution du chauffeur et la création automatique des courses ne sont pas encore activés. Aucun paiement n'est prélevé ici.</p>
     <form onSubmit={submit} style={{ display: "grid", gap: 14, marginTop: 20 }}>
       <label>Adresse de départ<input style={field} required minLength={5} maxLength={240} value={form.pickupAddress} onChange={(e) => update("pickupAddress", e.target.value)} placeholder="Adresse complète" /></label>
@@ -58,7 +58,7 @@ export default function ScheduledRequestsPage({ kind }) {
       </> : <>
         <label>Jour de la semaine<select style={field} value={form.weekday} onChange={(e) => update("weekday", e.target.value)}>{DAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}</select></label>
         <label>Heure habituelle<input style={field} type="time" required value={form.localTime} onChange={(e) => update("localTime", e.target.value)} /></label>
-        <p style={{ fontSize: 13 }}>Un chauffeur favori Gold doit déjà être associé à votre compte. Sa disponibilité devra être confirmée.</p>
+        <p style={{ fontSize: 13 }}>Tous les chauffeurs éligibles peuvent effectuer ce trajet, avec ou sans abonnement Gold. Votre favori peut être sollicité en priorité s’il est disponible.</p>
       </>}
       {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
       {message && <p role="status">{message}</p>}
