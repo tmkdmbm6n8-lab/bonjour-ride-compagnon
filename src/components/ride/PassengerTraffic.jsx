@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plane, TrainFront, RefreshCw, Clock, MapPin, Car } from "lucide-react";
+import { Plane, TrainFront, RefreshCw, Clock, MapPin, Car, LocateFixed } from "lucide-react";
 import RiderLayout from "@/components/RiderLayout";
 import Modal from "@/components/ui/Modal";
 import PlaceSearch from "@/components/maps/PlaceSearch";
@@ -24,6 +24,8 @@ export default function PassengerTraffic() {
   const [success, setSuccess] = useState("");
   const [createdRide, setCreatedRide] = useState(null);
   const [cancelling, setCancelling] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [cancelWhenReady, setCancelWhenReady] = useState(false);
   const { data, error, reload } = useDriverData("/api/riders/me/transport-board?day=" + parisDay());
   const items = (data?.items || []).filter(item => item.kind === kind && item.direction === direction && item.status !== "completed" && item.status !== "cancelled" && Date.parse(item.actual || item.estimated || item.scheduled) > Date.now());
   const dayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(new Date());
@@ -40,9 +42,20 @@ export default function PassengerTraffic() {
       setPickup(null); setPickupText("");
     }
   }
+  async function locatePickup() {
+    if (!navigator.geolocation) { setErrorMessage("Localisation indisponible sur cet appareil."); return; }
+    setLocating(true); setErrorMessage("");
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      let address = "Position actuelle";
+      try { const res = await apiFetch(`/api/geo/search?reverse=1&lat=${lat}&lng=${lng}`); const data = await res.json(); address = data.results?.[0]?.address || address; } catch { /* keep GPS coordinates */ }
+      setPickup({ lat, lng, address }); setPickupText(address); setLocating(false);
+    }, () => { setLocating(false); setErrorMessage("Impossible de vous localiser. Autorisez la localisation dans votre navigateur."); }, { enableHighAccuracy:true, timeout:10000, maximumAge:10000 });
+  }
   async function requestDriver() {
     if (!pickup || !dropoff || busy) return;
-    setBusy(true); setErrorMessage("");
+    setBusy(true); setCancelWhenReady(false); setErrorMessage("");
+    setSelected(null);
     try {
       const response = await apiFetch("/api/rides", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -54,12 +67,17 @@ export default function PassengerTraffic() {
       // Navigate only after the ride was successfully created so it can resume the active ride.
       if (!result.ride?.id) throw new Error("Le serveur n’a pas confirmé la création de la course.");
       setCreatedRide(result.ride);
-      setSelected(null);
-    } catch (e) { setErrorMessage(e.message); }
+      if (cancelWhenReady) {
+        // The ride exists now: cancelling is safe even if the user closed the pending search.
+        const cancelled = await apiFetch(`/api/rides/${result.ride.id}/cancel`, {method:"POST",body:JSON.stringify({reason:"Annulation par le passager"})});
+        if (cancelled.ok) { setCreatedRide(null); setSuccess("Votre demande a été annulée."); }
+      }
+    } catch (e) { setErrorMessage(e.message); setSuccess(""); }
     finally { setBusy(false); }
   }
   async function cancelSearch() {
-    if (!createdRide?.id || cancelling) return;
+    if (!createdRide?.id) { setCancelWhenReady(true); setSuccess("Annulation demandée. La course sera annulée dès sa confirmation."); return; }
+    if (cancelling) return;
     setCancelling(true);
     try {
       const response = await apiFetch(`/api/rides/${createdRide.id}/cancel`, { method: "POST", body: JSON.stringify({ reason: "Annulation par le passager" }) });
@@ -83,7 +101,7 @@ export default function PassengerTraffic() {
     </div>
     {error && <div role="alert" className="driver-notice">{error}<button className="driver-chip" onClick={reload}>Réessayer</button></div>}
     {success && <p role="status">{success}</p>}
-    {createdRide && <div className="overlay" role="dialog" aria-modal="true" aria-label="Recherche de chauffeur"><div className="modal modal-pad" style={{maxWidth:440,textAlign:"center"}}><div className="pulse-ring" style={{width:72,height:72,borderRadius:"50%",display:"grid",placeItems:"center",margin:"12px auto 24px",background:"var(--ink-950)"}}><Car size={30} color="#fff"/></div><h3>Recherche de votre chauffeur…</h3><p className="small muted mt-2">Nous contactons les chauffeurs proches de votre point de prise en charge.</p>{errorMessage && <p role="alert" style={{color:"crimson"}}>{errorMessage}</p>}<button type="button" className="btn btn-secondary btn-full mt-6" disabled={cancelling} onClick={cancelSearch}>{cancelling ? "Annulation…" : "Annuler la demande"}</button><button type="button" className="btn btn-primary btn-full mt-3" onClick={() => window.location.assign("/dashboard")}>Suivre ma course sur la carte</button></div></div>}
+    {(busy || createdRide) && <div className="overlay" role="dialog" aria-modal="true" aria-label="Recherche de chauffeur"><div className="modal modal-pad" style={{maxWidth:440,textAlign:"center"}}><div className="pulse-ring" style={{width:72,height:72,borderRadius:"50%",display:"grid",placeItems:"center",margin:"12px auto 24px",background:"var(--ink-950)"}}><Car size={30} color="#fff"/></div><h3>Recherche de votre chauffeur…</h3><p className="small muted mt-2">{busy ? "Préparation de votre demande…" : "Nous contactons les chauffeurs proches de votre point de prise en charge."}</p>{errorMessage && <p role="alert" style={{color:"crimson"}}>{errorMessage}</p>}<button type="button" className="btn btn-secondary btn-full mt-6" disabled={cancelling || cancelWhenReady} onClick={cancelSearch}>{cancelling ? "Annulation…" : cancelWhenReady ? "Annulation demandée…" : "Annuler la demande"}</button>{createdRide && <button type="button" className="btn btn-primary btn-full mt-3" onClick={() => window.location.assign("/dashboard")}>Suivre ma course sur la carte</button>}</div></div>}
     {!data && !error && <Loading label="Réception des horaires…"/>}
     {data && !items.length && <p className="driver-empty-state">Aucun transport répertorié pour le moment.</p>}
     <div className="discover-events">{items.map(item => <article key={item.id} className="drv-traffic-card">
@@ -100,7 +118,7 @@ export default function PassengerTraffic() {
       {selected && <div style={{ display: "grid", gap: 16 }}>
         <p>{selected.direction === "arrival" ? "Prise en charge à l'arrivée" : "Transfert pour le départ"} · {clock(selected.estimated || selected.scheduled)}</p>
         <p>Voulez-vous chercher un chauffeur pour ce trajet ?</p>
-        <label>Départ<PlaceSearch value={pickupText} onChangeText={t => { setPickupText(t); setPickup(null); }} onSelect={point => { setPickup(point); setPickupText(point.address); }} committedValue={pickup?.address} placeholder="Adresse de départ" icon={MapPin}/></label>
+        <div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}><strong>Départ</strong><button type="button" className="btn btn-secondary" style={{padding:"7px 10px",fontSize:13}} onClick={locatePickup} disabled={locating}><LocateFixed size={16}/>{locating ? "Localisation…" : "Ma position"}</button></div><PlaceSearch value={pickupText} onChangeText={t => { setPickupText(t); setPickup(null); }} onSelect={point => { setPickup(point); setPickupText(point.address); }} committedValue={pickup?.address} placeholder="Adresse de départ" icon={MapPin}/></div>
         <label>Destination<PlaceSearch value={dropoffText} onChangeText={t => { setDropoffText(t); setDropoff(null); }} onSelect={point => { setDropoff(point); setDropoffText(point.address); }} committedValue={dropoff?.address} placeholder="Adresse d'arrivée" icon={MapPin}/></label>
         <label>Véhicule<select value={vehicleType} onChange={e => setVehicleType(e.target.value)}><option value="economy">Économique</option><option value="comfort">Confort</option><option value="xl">XL</option><option value="pet">Animaux</option></select></label>
         <label>Paiement<select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">Espèces</option><option value="wallet">Portefeuille</option><option value="card">Carte bancaire</option></select></label>
