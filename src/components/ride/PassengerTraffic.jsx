@@ -48,8 +48,9 @@ export default function PassengerTraffic() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || result.message || "La recherche de chauffeur a échoué.");
-      setSelected(null);
-      setSuccess("Recherche lancée : la course est proposée aux chauffeurs disponibles selon leur proximité.");
+      // The dashboard already owns the live search animation, driver updates and cancellation flow.
+      // Navigate only after the ride was successfully created so it can resume the active ride.
+      window.location.assign("/dashboard");
     } catch (e) { setErrorMessage(e.message); }
     finally { setBusy(false); }
   }
