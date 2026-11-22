@@ -6,9 +6,11 @@ const QUERY = `query Products($destinations: [InputCoordinate!]!, $pickup: Input
   }
 }`;
 
-export async function uberProducts(pickup, dropoff, customCookie = null) {
+export async function uberProducts(pickup, dropoff, customCookie = null, diagnostic = null) {
   const cookie = customCookie || process.env.UBER_COOKIE;
-  if (!cookie) return null;
+  if (diagnostic) Object.assign(diagnostic, { source: 'Uber GraphQL Products', httpStatus: null, graphqlCode: null, graphqlMessage: null, priceCount: 0, checkedAt: new Date().toISOString(), error: null });
+  if (!cookie) { if (diagnostic) diagnostic.error = 'Cookie absent'; return null; }
+  const startedAt = Date.now();
   try {
     const res = await fetch("https://m.uber.com/go/graphql", {
       method: "POST",
@@ -32,10 +34,13 @@ export async function uberProducts(pickup, dropoff, customCookie = null) {
         },
       }),
     });
-    if (!res.ok) return null;
+    if (diagnostic) { diagnostic.httpStatus = res.status; diagnostic.durationMs = Date.now() - startedAt; }
+    if (!res.ok) { if (diagnostic) diagnostic.error = `HTTP ${res.status}`; return null; }
     const j = await res.json();
+    if (diagnostic && Array.isArray(j?.errors) && j.errors.length) { diagnostic.graphqlCode = j.errors[0]?.extensions?.code || 'graphql_error'; diagnostic.graphqlMessage = j.errors[0]?.message || 'Erreur GraphQL'; }
+
     const tiers = j?.data?.products?.tiers;
-    if (!Array.isArray(tiers)) return null;
+    if (!Array.isArray(tiers)) { if (diagnostic && !diagnostic.graphqlCode) diagnostic.error = 'Aucun produit dans la réponse'; return null; }
     const list = [];
     for (const t of tiers)
       for (const pr of t.products || []) {
@@ -51,9 +56,13 @@ export async function uberProducts(pickup, dropoff, customCookie = null) {
           etaMinutes: pr.etaInMin,
         });
       }
+    if (diagnostic) { diagnostic.priceCount = list.length; if (!list.length) diagnostic.error = 'Aucun tarif exploitable'; }
     return list.length ? list : null;
-  } catch {
+  } catch (error) {
+    if (diagnostic) diagnostic.error = error?.name === 'TimeoutError' ? 'Délai dépassé' : 'Erreur réseau ou réponse invalide';
     return null;
+  } finally {
+    if (diagnostic) diagnostic.durationMs = Date.now() - startedAt;
   }
 }
 
