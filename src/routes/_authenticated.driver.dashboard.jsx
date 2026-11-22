@@ -31,6 +31,9 @@ import {
   ChevronDown,
   CreditCard,
   Banknote,
+  CalendarClock,
+  Plane,
+  TrainFront,
 } from "lucide-react";
 import useGeolocation from "@/hooks/useGeolocation";
 
@@ -168,6 +171,21 @@ function DriverDashboard() {
     return () => clearInterval(timer);
   }, [offer]);
 
+  const [advanceReservations, setAdvanceReservations] = useState([]);
+  useEffect(() => {
+    let stopped = false;
+    async function refreshAdvance() {
+      try {
+        const response = await fetch("/api/drivers/me/advance-reservations");
+        if (!response.ok) return;
+        const result = await response.json();
+        if (!stopped) setAdvanceReservations(result.reservations || []);
+      } catch { /* non-blocking; normal offers stay available */ }
+    }
+    refreshAdvance();
+    const timer = setInterval(refreshAdvance, 30000);
+    return () => { stopped = true; clearInterval(timer); };
+  }, []);
   const canAccept = true;
 
   async function handleToggle() {
@@ -592,6 +610,15 @@ function DriverDashboard() {
         </div>
       ) : (
         <>
+          {advanceReservations.length > 0 && <section aria-label="Réservations à l'avance" style={{margin:"12px 16px",padding:"14px 16px",background:"#11141c",border:"1px solid rgba(233,189,80,.32)",borderRadius:18,color:"#f1f5f9"}}>
+            <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:10,color:"#e9bd50",fontWeight:700,fontSize:13}}><CalendarClock size={17}/> Réservations à l’avance <span style={{marginLeft:"auto",fontSize:12,opacity:.85}}>{advanceReservations.length}</span></div>
+            {advanceReservations.slice(0,4).map(request => <article key={request.id} style={{padding:"10px 0",borderTop:"1px solid rgba(255,255,255,.08)"}}>
+              <div style={{display:"flex",gap:9,alignItems:"center",fontWeight:650,fontSize:14}}>{request.transport_type === "train" ? <TrainFront size={17} color="#e9bd50"/> : <Plane size={17} color="#e9bd50"/>}<span>{request.transport_type === "train" ? "Train" : "Vol"} {request.transport_number}</span><span style={{marginLeft:"auto",fontSize:11,color:"#e9bd50",whiteSpace:"nowrap"}}>À L’AVANCE</span></div>
+              <p style={{margin:"6px 0",fontSize:13}}>{new Date(request.scheduled_at).toLocaleString("fr-FR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"})}</p>
+              <p style={{margin:0,fontSize:12,color:"#a8b2c3",overflowWrap:"anywhere"}}>{request.pickup_address} → {request.dropoff_address}</p>
+            </article>)}
+            <p style={{margin:"10px 0 0",fontSize:11,color:"#a8b2c3"}}>Demandes enregistrées, non attribuées. Aucune course immédiate à accepter.</p>
+          </section>}
           <DriverHome
             onWaybill={() => setWaybillOpen(true)}
             loading={loading}
