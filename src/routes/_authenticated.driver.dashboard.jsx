@@ -174,6 +174,14 @@ function DriverDashboard() {
   const [reservationBusy,setReservationBusy] = useState(false);
   const dismissedReservations = useRef(new Set());
   useEffect(() => {
+    if (!reservationOffer) return;
+    const timer = setTimeout(() => {
+      dismissedReservations.current.add(reservationOffer.id);
+      setReservationOffer(current => current?.id === reservationOffer.id ? null : current);
+    },7000);
+    return () => clearTimeout(timer);
+  },[reservationOffer?.id]);
+  useEffect(() => {
     if (!online || ride || offer) return;
     let disposed = false;
     async function pollReservations() {
@@ -672,22 +680,27 @@ function DriverDashboard() {
       </Modal>
       {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
 
-      <Modal open={Boolean(reservationOffer && !offer && !ride && online && !profile?.isReportSuspended)} onClose={declineReservation} closable={false}>
+      <Modal portal sheetOnMobile={false} maxWidth={440} open={Boolean(reservationOffer && !offer && !ride && online && !profile?.isReportSuspended)} onClose={declineReservation} closable={false}>
         {reservationOffer && <div style={{background:"linear-gradient(180deg,#13151f 0%,#0a0b10 100%)",color:"#fff",borderRadius:24,padding:"24px 20px 20px",margin:"-16px",border:"1px solid rgba(212,160,23,.25)",boxShadow:"0 24px 60px rgba(0,0,0,.8),0 0 30px rgba(212,160,23,.12)"}}>
+          <style>{`@keyframes reservation-green-drain {from{width:100%}to{width:0%}}`}</style>
           <div style={{display:"flex",alignItems:"center",gap:9,color:"#facc15",fontWeight:700,marginBottom:18}}>
             {reservationOffer.transport_type === "flight" ? <Plane size={20}/> : <TrainFront size={20}/>}
             <span>Réservation</span>
-            <span style={{marginLeft:"auto",fontSize:12,color:"#a8b2c3"}}>{reservationOffer.transport_number}</span>
+            <span style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:5,color:reservationOffer.payment_method === "cash" ? "#39ff88" : reservationOffer.payment_method === "card" ? "#31baff" : "#a8b2c3"}}>
+              {reservationOffer.payment_method === "cash" ? <Banknote size={23}/> : reservationOffer.payment_method === "card" ? <CreditCard size={23}/> : null}
+            </span>
           </div>
           <div style={{fontSize:21,fontWeight:750,marginBottom:18}}>{new Date(reservationOffer.scheduled_at).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"})}</div>
           <div style={{display:"grid",gap:12,marginBottom:22}}>
-            <div><span style={{color:"#a8b2c3",fontSize:12}}>Départ</span><div>{reservationOffer.pickup_address}</div></div>
-            <div><span style={{color:"#a8b2c3",fontSize:12}}>Destination</span><div>{reservationOffer.dropoff_address}</div></div>
+            <div><span style={{color:"#a8b2c3",fontSize:12,display:"inline-flex",gap:6,alignItems:"center"}}><MapPin size={14} color="#39ff88"/> Départ</span><div>{reservationOffer.pickup_address}</div></div>
+            <div><span style={{color:"#a8b2c3",fontSize:12,display:"inline-flex",gap:6,alignItems:"center"}}><Flag size={14} color="#ff657c"/> Arrivée</span><div>{reservationOffer.dropoff_address}</div></div>
           </div>
-          <p style={{fontSize:12,color:"#a8b2c3",marginBottom:14}}>Course prévue ultérieurement : l’acceptation ne démarre pas le trajet.</p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <button className="btn btn-secondary" type="button" disabled={reservationBusy} onClick={declineReservation}>Refuser</button>
-            <button className="btn btn-primary" type="button" disabled={reservationBusy} onClick={acceptReservation}>{reservationBusy ? "Validation…" : "Accepter"}</button>
+            <button type="button" disabled={reservationBusy} onClick={declineReservation} style={{minHeight:49,borderRadius:12,border:"1px solid #ff335c",background:"rgba(255,38,79,.10)",color:"#ff4567",fontWeight:750,boxShadow:"0 0 12px rgba(255,38,79,.16)"}}>Refuser</button>
+            <button type="button" disabled={reservationBusy} onClick={acceptReservation} style={{minHeight:49,borderRadius:12,border:"1px solid #21d46a",background:"#10251b",color:"#fff",fontWeight:750,position:"relative",overflow:"hidden",isolation:"isolate"}}>
+              <span key={reservationOffer.id} aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",background:"linear-gradient(90deg,#10a34c,#32e67c)",animation:"reservation-green-drain 7s linear forwards",zIndex:-1}}/>
+              {reservationBusy ? "Validation…" : "Accepter"}
+            </button>
           </div>
         </div>}
       </Modal>
