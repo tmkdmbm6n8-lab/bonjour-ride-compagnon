@@ -53,7 +53,7 @@ function DiscoverPage() {
   }
 
   const selected = data?.items.find((item) => item.id === selectedId);
-  const items = (data?.items || []).filter((item) => item.kind === kind && item.direction === direction);
+  const items = (data?.items || []).filter((item) => item.kind === kind && item.direction === direction && item.status !== "completed" && item.status !== "cancelled" && Date.parse(item.actual || item.estimated || item.scheduled) > Date.now());
 
   const formattedDay = new Intl.DateTimeFormat("fr-FR", {
     weekday: "long",
