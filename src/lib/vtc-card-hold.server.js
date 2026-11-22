@@ -98,3 +98,47 @@ export async function cancelRideHold(admin, { paymentIntentId }) {
   });
   return { intentId: canceled.id, status: canceled.status };
 }
+
+/** Liste des cartes enregistrées du passager, sans données bancaires sensibles. */
+export async function listRiderCards(admin, userId) {
+  requiredId(userId, 'Utilisateur');
+  const { data, error } = await admin.from('rider_payment_methods')
+    .select('id, brand, last4, exp_month, exp_year, is_default, created_at')
+    .eq('user_id', userId)
+    .order('is_default', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/** Détache la carte Stripe et supprime son enregistrement local. */
+export async function deleteRiderCard(admin, { userId, cardId }) {
+  requiredId(userId, 'Utilisateur');
+  requiredId(cardId, 'Identifiant carte');
+  const { data: card, error: fetchErr } = await admin.from('rider_payment_methods')
+    .select('id, stripe_payment_method_id').eq('id', cardId).eq('user_id', userId).single();
+  if (fetchErr || !card) throw new Error('Carte introuvable');
+  const stripe = stripeClient();
+  const customerId = await resolveOrCreateCustomer(stripe, { userId });
+  const pm = await stripe.paymentMethods.retrieve(card.stripe_payment_method_id);
+  if (pm.customer && pm.customer !== customerId) throw new Error('Carte associée à un autre client Stripe');
+  if (pm.customer === customerId) await stripe.paymentMethods.detach(pm.id);
+  const { error } = await admin.from('rider_payment_methods').delete().eq('id', cardId).eq('user_id', userId);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
+/** Définit une carte appartenant au passager comme carte par défaut. */
+export async function setDefaultRiderCard(admin, { userId, cardId }) {
+  requiredId(userId, 'Utilisateur');
+  requiredId(cardId, 'Identifiant carte');
+  const { data: card, error: lookupError } = await admin.from('rider_payment_methods')
+    .select('id').eq('id', cardId).eq('user_id', userId).maybeSingle();
+  if (lookupError || !card) throw new Error('Carte introuvable');
+  const cleared = await admin.from('rider_payment_methods').update({ is_default: false }).eq('user_id', userId);
+  if (cleared.error) throw new Error(cleared.error.message);
+  const { data, error } = await admin.from('rider_payment_methods')
+    .update({ is_default: true }).eq('id', cardId).eq('user_id', userId).select('id').maybeSingle();
+  if (error || !data) throw new Error(error?.message || 'Carte introuvable');
+  return { ok: true };
+}
