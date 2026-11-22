@@ -58,7 +58,6 @@ export default function ScheduledRequestsPage({ kind }) {
       </> : <>
         <label>Jour de la semaine<select style={field} value={form.weekday} onChange={(e) => update("weekday", e.target.value)}>{DAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}</select></label>
         <label>Heure habituelle<input style={field} type="time" required value={form.localTime} onChange={(e) => update("localTime", e.target.value)} /></label>
-        <p style={{ fontSize: 13 }}>Tous les chauffeurs éligibles peuvent effectuer ce trajet, avec ou sans abonnement Gold. Votre favori peut être sollicité en priorité s’il est disponible.</p>
       </>}
       {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
       {message && <p role="status">{message}</p>}
