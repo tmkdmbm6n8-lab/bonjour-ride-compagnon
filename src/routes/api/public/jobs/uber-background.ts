@@ -14,6 +14,15 @@ export const Route = createFileRoute('/api/public/jobs/uber-background')({
       const c: any = await runUberFareCheck(admin, { force: true });
       status.monitor = { ok: c.ok, checkedAt: c.checkedAt, products: c.products, diagnostic: c.diagnostic };
     } catch (e: any) { status.monitor = { ok: false, error: String(e?.message || e).slice(0, 200) }; }
+    // Server-side request log (last 500), shown in the admin pricing page.
+    try {
+      const at = Date.parse(status.startedAt);
+      const m = status.monitor || {};
+      const entry = { id: at, at, status: m.ok ? 'ok' : 'error', detail: m.ok ? 'Réponse Uber valide' : (m.error || 'Aucun prix Uber valide'), diagnostic: m.diagnostic || null, duration: Date.now() - at, source: 'serveur' };
+      const prev: any = await admin.from('pricing_rules').select('rule').eq('vehicle_type', 'uber_check_log').maybeSingle();
+      const entries = Array.isArray(prev.data?.rule?.entries) ? prev.data.rule.entries : [];
+      await admin.from('pricing_rules').upsert({ vehicle_type: 'uber_check_log', is_active: false, rule: { entries: [entry, ...entries].slice(0, 500) } }, { onConflict: 'vehicle_type' });
+    } catch (e: any) { console.error('[uber-background] log failed', e?.message || e); }
     try {
       const s: any = await runLearningSample(admin);
       status.learning = { ok: s.ok === true, saved: s.saved || 0, skipped: s.skipped || null, stopped: s.stopped || false, reason: s.reason || null };

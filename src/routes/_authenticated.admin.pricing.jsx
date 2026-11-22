@@ -56,6 +56,15 @@ function AdminPricingPage() {
   }
   const [sessionMonitor, setSessionMonitor] = useState({state:"idle",startedAt:null,endedAt:null,durationMs:null,failures:0});
   const [sessionProbeLog, setSessionProbeLog] = useState([]);
+  const [serverLog, setServerLog] = useState([]);
+  useEffect(() => {
+    // Server log is written every 10 minutes by the scheduled job, even with this page closed.
+    const t = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      fetch("/api/admin/pricing").then(r => r.json()).then(d => { if (Array.isArray(d.uberCheckLog)) setServerLog(d.uberCheckLog); }).catch(() => {});
+    }, 60000);
+    return () => clearInterval(t);
+  }, []);
   const [sessionHistoryReady, setSessionHistoryReady] = useState(false);
   const [sessionHistory, setSessionHistory] = useState([]);
   useEffect(() => {
@@ -412,6 +421,7 @@ function AdminPricingPage() {
         if (ignore || !res.ok) return;
 
         setBackgroundStatus(data.uberBackgroundStatus || null);
+        if (Array.isArray(data.uberCheckLog)) setServerLog(data.uberCheckLog);
         if (data.uberCookieStatus) {
           setCookieStatus(data.uberCookieStatus);
           // Resume monitoring an already saved cookie after page reload.
@@ -679,13 +689,12 @@ function AdminPricingPage() {
         </div>
         <div className="mt-3" style={{borderTop:"1px solid var(--border, #333)",paddingTop:12}}>
           <div className="flex items-center justify-between gap-2 mb-2">
-            <strong className="small">Journal des requêtes Uber (toutes les 10 minutes)</strong>
-            <button type="button" className="btn btn-secondary btn-xs" onClick={()=>setSessionProbeLog([])}>Effacer</button>
+            <strong className="small">Journal des requêtes Uber (toutes les 10 minutes, serveur)</strong>
           </div>
-          <p className="tiny muted mb-2">Les 500 dernières vérifications sont conservées dans ce navigateur, même après actualisation. Le statut HTTP, le code GraphQL, le nombre de prix et les durées sont affichés sans révéler le cookie. Aucune requête ne se chevauche.</p>
+          <p className="tiny muted mb-2">Vérifications faites par le serveur toutes les 10 minutes, même téléphone éteint ou page fermée. Les 500 dernières sont conservées. Le statut HTTP, le code GraphQL, le nombre de prix et les durées sont affichés sans révéler le cookie. Aucune requête ne se chevauche.</p>
           <div role="log" aria-live="off" style={{maxHeight:210,overflowY:"auto",fontFamily:"monospace",fontSize:12}}>
-            {sessionProbeLog.length===0 && <p className="tiny muted">Aucune requête enregistrée dans ce navigateur.</p>}
-            {sessionProbeLog.map(entry=>(
+            {serverLog.length===0 && <p className="tiny muted">Aucune requête serveur enregistrée pour l'instant (première dans 10 minutes au plus).</p>}
+            {serverLog.map(entry=>(
               <div key={entry.id} style={{padding:"5px 0",borderBottom:"1px solid var(--border, #333)",color:entry.status==="ok"?"#22c55e":entry.status==="error"?"#ef4444":"#f59e0b"}}>
                 <div>{new Date(entry.at).toLocaleString("fr-FR")} · {entry.status==="ok"?"✓ OK":entry.status==="error"?"✕ ÉCHEC":"… EN COURS"} · {entry.detail}</div>
                 <div style={{color:"var(--muted-foreground, #999)",paddingLeft:12,whiteSpace:"normal",lineHeight:1.6}}>

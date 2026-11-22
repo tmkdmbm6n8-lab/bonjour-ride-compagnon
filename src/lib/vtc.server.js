@@ -1845,8 +1845,10 @@ export async function handleVtc(input, context) {
     const cookieRow = allRows.find((r) => r.vehicle_type === "uber_cookie");
     const hourlyRow = allRows.find((r) => r.vehicle_type === "uber_hourly_checks");
     const backgroundRow = allRows.find((r) => r.vehicle_type === "uber_background_status");
+    const logRow = allRows.find((r) => r.vehicle_type === "uber_check_log");
     return {
-      rules: allRows.filter((r) => r.vehicle_type !== "uber_cookie" && r.vehicle_type !== "uber_hourly_checks").map((r) => ({
+      uberCheckLog: Array.isArray(logRow?.rule?.entries) ? logRow.rule.entries.slice(0, 500) : [],
+      rules: allRows.filter((r) => r.vehicle_type !== "uber_cookie" && r.vehicle_type !== "uber_hourly_checks" && r.vehicle_type !== "uber_check_log").map((r) => ({
         ...r.rule,
         vehicleType: r.vehicle_type,
         city: r.city,
