@@ -3,7 +3,7 @@
 export function waiveGoldCommission(fare, ownPrivateClient = false) {
   const total = Number(fare.total ?? fare.estimatedTotal);
   if (!Number.isFinite(total) || total < 0) return fare;
-  const rate = ownPrivateClient ? 0 : 15;
+  const rate = ownPrivateClient ? 0 : 5;
   const platformFee = Math.round(total * rate) / 100;
   const driverEarnings = Math.round((total - platformFee) * 100) / 100;
   if (fare.goldOriginalCommission) return fare;
