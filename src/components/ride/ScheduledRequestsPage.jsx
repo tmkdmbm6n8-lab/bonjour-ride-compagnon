@@ -9,6 +9,8 @@ export default function ScheduledRequestsPage({ kind }) {
   const [form, setForm] = useState({ pickupAddress: "", dropoffAddress: "", transportType: "flight", transportNumber: "", scheduledAt: "", weekday: "1", localTime: "07:00", adjustmentConsent: false });
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [board, setBoard] = useState([]);
+  const [selectedId, setSelectedId] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const update = (key, value) => setForm((f) => ({ ...f, [key]: value }));
@@ -21,9 +23,14 @@ export default function ScheduledRequestsPage({ kind }) {
     } catch (e) { setError(e.message); }
   }
   useEffect(() => { load(); }, [kind]);
+  useEffect(() => {
+    if (!transport) return;
+    fetch("/api/riders/me/transport-board").then(r => r.json()).then(d => setBoard(d.items || [])).catch(() => setBoard([]));
+  }, [kind]);
   async function submit(e) {
     e.preventDefault(); setBusy(true); setError(""); setMessage("");
     try {
+      if (transport && !selectedId) throw new Error("Sélectionnez un vol ou un train.");
       const payload = { ...form, kind, weekday: Number(form.weekday), scheduledAt: transport ? new Date(form.scheduledAt).toISOString() : undefined };
       const response = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json();
@@ -46,15 +53,12 @@ export default function ScheduledRequestsPage({ kind }) {
   return <RiderLayout><main style={{ padding: "22px 16px", maxWidth: 620, margin: "0 auto" }}>
     <h1>{transport ? "Vols et trains" : "Trajets récurrents"}</h1>
     <p>{transport ? "Préparez un transfert depuis une gare ou un aéroport." : "Préparez un trajet hebdomadaire accessible à tous les chauffeurs disponibles, avec ou sans abonnement."}</p>
-    <p style={{ fontSize: 13 }}>Les demandes sont enregistrées, mais le suivi automatique des retards, l'attribution du chauffeur et la création automatique des courses ne sont pas encore activés. Aucun paiement n'est prélevé ici.</p>
+    {transport && <section><h2>Vols et trains</h2>{board.map(item => <button key={item.id} type="button" disabled={item.status === "cancelled" || item.status === "completed"} onClick={() => { setSelectedId(item.id); setForm(f => ({ ...f, transportType: item.kind, transportNumber: item.number, scheduledAt: new Date(item.estimated || item.scheduled).toISOString().slice(0,16) })); }} style={{ display: "block", padding: 12, marginBottom: 8, width: "100%", border: selectedId === item.id ? "2px solid green" : "1px solid gray", borderRadius: 8 }}><strong>{item.kind === "flight" ? "Vol" : "Train"} {item.number}</strong> · {item.direction === "arrival" ? "Retour" : "Aller"} · {item.city} · {new Date(item.estimated || item.scheduled).toLocaleTimeString("fr-FR")}</button>)}</section>}
     <form onSubmit={submit} style={{ display: "grid", gap: 14, marginTop: 20 }}>
       <label>Adresse de départ<input style={field} required minLength={5} maxLength={240} value={form.pickupAddress} onChange={(e) => update("pickupAddress", e.target.value)} placeholder="Adresse complète" /></label>
       <label>Adresse d'arrivée<input style={field} required minLength={5} maxLength={240} value={form.dropoffAddress} onChange={(e) => update("dropoffAddress", e.target.value)} placeholder="Adresse complète" /></label>
       {transport ? <>
-        <label>Transport<select style={field} value={form.transportType} onChange={(e) => update("transportType", e.target.value)}><option value="flight">Avion</option><option value="train">Train</option></select></label>
-        <label>Numéro du vol ou du train<input style={field} required maxLength={24} value={form.transportNumber} onChange={(e) => update("transportNumber", e.target.value)} placeholder="Ex. AF1234 ou TGV 9876" /></label>
-        <label>Date et heure prévues<input style={field} type="datetime-local" required value={form.scheduledAt} onChange={(e) => update("scheduledAt", e.target.value)} /></label>
-        <label style={{ display: "flex", gap: 10 }}><input type="checkbox" checked={form.adjustmentConsent} onChange={(e) => update("adjustmentConsent", e.target.checked)} /> J'autorise l'ajustement de la prise en charge en cas de retard, lorsque le suivi sera disponible.</label>
+        <p>Sélectionnez un vol ou un train dans la liste.</p>
       </> : <>
         <label>Jour de la semaine<select style={field} value={form.weekday} onChange={(e) => update("weekday", e.target.value)}>{DAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}</select></label>
         <label>Heure habituelle<input style={field} type="time" required value={form.localTime} onChange={(e) => update("localTime", e.target.value)} /></label>
