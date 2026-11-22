@@ -48,6 +48,7 @@ import { Route as AuthenticatedDriverTripsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedDriverWalletRouteImport } from './routes/_authenticated.driver.wallet'
 import { Route as AuthenticatedRidesIdRouteImport } from './routes/_authenticated.rides.$id'
 import { Route as ApiPublicJobsChatRetentionRouteImport } from './routes/api/public/jobs/chat-retention'
+import { Route as ApiPublicJobsUberBackgroundRouteImport } from './routes/api/public/jobs/uber-background'
 import { Route as ApiPublicJobsWeeklyPayoutsRouteImport } from './routes/api/public/jobs/weekly-payouts'
 import { Route as ApiPublicJobsWithdrawalNotificationsRouteImport } from './routes/api/public/jobs/withdrawal-notifications'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -265,6 +266,12 @@ const ApiPublicJobsChatRetentionRoute =
     path: '/api/public/jobs/chat-retention',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsUberBackgroundRoute =
+  ApiPublicJobsUberBackgroundRouteImport.update({
+    id: '/api/public/jobs/uber-background',
+    path: '/api/public/jobs/uber-background',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicJobsWeeklyPayoutsRoute =
   ApiPublicJobsWeeklyPayoutsRouteImport.update({
     id: '/api/public/jobs/weekly-payouts',
@@ -323,6 +330,7 @@ export interface FileRoutesByFullPath {
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
+  '/api/public/jobs/uber-background': typeof ApiPublicJobsUberBackgroundRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -366,6 +374,7 @@ export interface FileRoutesByTo {
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
+  '/api/public/jobs/uber-background': typeof ApiPublicJobsUberBackgroundRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -411,6 +420,7 @@ export interface FileRoutesById {
   '/_authenticated/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/_authenticated/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
+  '/api/public/jobs/uber-background': typeof ApiPublicJobsUberBackgroundRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -456,6 +466,7 @@ export interface FileRouteTypes {
     | '/driver/wallet'
     | '/rides/$id'
     | '/api/public/jobs/chat-retention'
+    | '/api/public/jobs/uber-background'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
     | '/api/public/payments/webhook'
@@ -499,6 +510,7 @@ export interface FileRouteTypes {
     | '/driver/wallet'
     | '/rides/$id'
     | '/api/public/jobs/chat-retention'
+    | '/api/public/jobs/uber-background'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
     | '/api/public/payments/webhook'
@@ -543,6 +555,7 @@ export interface FileRouteTypes {
     | '/_authenticated/driver/wallet'
     | '/_authenticated/rides/$id'
     | '/api/public/jobs/chat-retention'
+    | '/api/public/jobs/uber-background'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
     | '/api/public/payments/webhook'
@@ -561,6 +574,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiUberHourlyCheckRoute: typeof ApiUberHourlyCheckRoute
   ApiPublicJobsChatRetentionRoute: typeof ApiPublicJobsChatRetentionRoute
+  ApiPublicJobsUberBackgroundRoute: typeof ApiPublicJobsUberBackgroundRoute
   ApiPublicJobsWeeklyPayoutsRoute: typeof ApiPublicJobsWeeklyPayoutsRoute
   ApiPublicJobsWithdrawalNotificationsRoute: typeof ApiPublicJobsWithdrawalNotificationsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -841,6 +855,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsChatRetentionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/uber-background': {
+      id: '/api/public/jobs/uber-background'
+      path: '/api/public/jobs/uber-background'
+      fullPath: '/api/public/jobs/uber-background'
+      preLoaderRoute: typeof ApiPublicJobsUberBackgroundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/weekly-payouts': {
       id: '/api/public/jobs/weekly-payouts'
       path: '/api/public/jobs/weekly-payouts'
@@ -951,6 +972,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiUberHourlyCheckRoute: ApiUberHourlyCheckRoute,
   ApiPublicJobsChatRetentionRoute: ApiPublicJobsChatRetentionRoute,
+  ApiPublicJobsUberBackgroundRoute: ApiPublicJobsUberBackgroundRoute,
   ApiPublicJobsWeeklyPayoutsRoute: ApiPublicJobsWeeklyPayoutsRoute,
   ApiPublicJobsWithdrawalNotificationsRoute:
     ApiPublicJobsWithdrawalNotificationsRoute,
