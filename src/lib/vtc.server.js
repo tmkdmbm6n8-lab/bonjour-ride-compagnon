@@ -1183,9 +1183,18 @@ export async function handleVtc(input, context) {
         .order("created_at", { ascending: false })
         .limit(100),
     );
+    const rideIds = [...new Set(tx.map(t => t.ride_id).filter(Boolean))];
+    const relatedRides = rideIds.length
+      ? required(await db.from("rides").select("id, fare, completed_at, created_at").in("id", rideIds))
+      : [];
+    const ridesById = new Map(relatedRides.map(r => [r.id, r]));
     return {
       wallet: { balance: Number(profile.balance), currency: "EUR" },
       transactions: tx.map((t) => ({
+        ride: ridesById.get(t.ride_id) ? {
+          total: Number(ridesById.get(t.ride_id).fare?.total),
+          date: ridesById.get(t.ride_id).completed_at || ridesById.get(t.ride_id).created_at,
+        } : null,
         ...t,
         _id: t.id,
         amount: Number(t.amount),
