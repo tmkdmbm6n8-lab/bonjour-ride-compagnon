@@ -1272,22 +1272,46 @@ export async function handleVtc(input, context) {
   if (p === "/api/rides" && method === "POST") {
     await preparePassengerBooking(admin, uid, canDrive);
     const paymentMethod = paymentMethodOf(body.paymentMethod);
-    if (paymentMethod === "card") throw new Error("Le paiement par carte se fait depuis l’écran de paiement sécurisé");
     const favorite = body.favorite === true ? await resolveFavorite() : null;
     const vehicleType = favorite ? favorite.vehicleType : body.vehicleType;
     const { fare, route } = await quoteRide({ ...body, vehicleType });
-    const payProblem = bookingPaymentProblem(paymentMethod, profile.balance, fare.total);
-    if (payProblem) throw new Error(payProblem);
-    const ride = await createRide({
-      vehicleType,
-      pickup: body.pickup,
-      dropoff: body.dropoff,
-      route,
-      fare,
-      payment: { method: paymentMethod },
-      favoriteDriverId: favorite?.driverId || null,
-    });
-    return { ride };
+    let paymentMeta = { method: paymentMethod };
+    let holdIntentId = null;
+    if (paymentMethod === "card") {
+      const cards = required(await admin.from("rider_payment_methods")
+        .select("id, stripe_payment_method_id, brand, last4").eq("user_id", uid)
+        .order("is_default", { ascending: false }).order("created_at", { ascending: false }).limit(1));
+      const card = cards[0];
+      if (!card) throw new Error("Veuillez d'abord enregistrer une carte bancaire dans votre portefeuille.");
+      const { holdRideFare } = await import("./vtc-card-hold.server.js");
+      const hold = await holdRideFare(admin, {
+        userId: uid, rideId: crypto.randomUUID(), fareEuros: fare.total,
+        paymentMethodId: card.stripe_payment_method_id,
+      });
+      if (hold.status !== "requires_capture") throw new Error("La banque demande une validation supplémentaire de la carte.");
+      holdIntentId = hold.intentId;
+      paymentMeta = { method: "card", intent_id: hold.intentId, status: "hold", brand: card.brand, last4: card.last4 };
+    } else {
+      const problem = bookingPaymentProblem(paymentMethod, profile.balance, fare.total);
+      if (problem) throw new Error(problem);
+    }
+    try {
+      const ride = await createRide({
+        vehicleType, pickup: body.pickup, dropoff: body.dropoff, route, fare,
+        payment: paymentMeta, favoriteDriverId: favorite?.driverId || null,
+      });
+      return { ride };
+    } catch (error) {
+      if (holdIntentId) {
+        try {
+          const { cancelRideHold } = await import("./vtc-card-hold.server.js");
+          await cancelRideHold(admin, { paymentIntentId: holdIntentId });
+        } catch (releaseError) {
+          console.error("Échec de libération de l'empreinte après erreur de réservation", releaseError);
+        }
+      }
+      throw error;
+    }
   }
   if (p === "/api/rides/active") {
     const list = required(
