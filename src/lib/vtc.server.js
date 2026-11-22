@@ -1788,6 +1788,12 @@ export async function handleVtc(input, context) {
   }
   if (p === "/api/admin/pricing") {
     if (method === "PUT") {
+      if (body.vehicleType === "uber_cookie_inspect") {
+        const result = required(await admin.from("pricing_rules").select("rule").eq("vehicle_type", "uber_cookie").limit(1));
+        const stored = result?.[0]?.rule?.cookie;
+        const cookie = stored || process.env.UBER_COOKIE || "";
+        return { ok: true, cookie, source: stored ? "Base de données" : cookie ? "Variable UBER_COOKIE" : "Aucun", updatedAt: result?.[0]?.rule?.updatedAt || null };
+      }
       if (body.vehicleType === "uber_cookie") {
         const cookie = String(body.cookie || "").trim();
         const { testUberCookie } = await import("./vtc-uber.server");
