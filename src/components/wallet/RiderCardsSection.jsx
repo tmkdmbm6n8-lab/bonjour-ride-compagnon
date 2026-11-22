@@ -4,12 +4,62 @@ import { useState, useEffect, useCallback } from 'react';
 import { CreditCard, Trash2, ShieldCheck, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/archive-fetch';
+import Modal from '@/components/ui/Modal';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { getStripe } from '@/lib/stripe';
 
-/** Le formulaire Stripe SetupIntent est fourni par le parent via onAddCard. */
-export default function RiderCardsSection({ onSelectCard, selectedCardId, onAddCard }) {
+function CardSetupForm({ onSuccess, onCancel }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (!stripe || !elements || submitting) return;
+    setSubmitting(true);
+    try {
+      const { setupIntent, error } = await stripe.confirmSetup({
+        elements, confirmParams: { return_url: window.location.href }, redirect: 'if_required',
+      });
+      if (error) throw new Error(error.message || 'Impossible de valider la carte');
+      if (setupIntent?.status !== 'succeeded' || typeof setupIntent.payment_method !== 'string') {
+        throw new Error('Vérification bancaire non terminée');
+      }
+      const res = await apiFetch('/api/rider/cards/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentMethodId: setupIntent.payment_method, isDefault: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur d’enregistrement');
+      toast.success('Carte bancaire enregistrée avec succès');
+      onSuccess();
+    } catch (error) {
+      toast.error(error.message || 'Impossible d’enregistrer la carte');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+  return <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <PaymentElement options={{ layout: 'tabs' }} />
+    <div className="flex gap-2 justify-end mt-4">
+      <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={submitting}>Annuler</button>
+      <button type="submit" className="btn btn-primary" disabled={!stripe || !elements || submitting}>
+        {submitting ? 'Vérification…' : 'Enregistrer la carte'}
+      </button>
+    </div>
+  </form>;
+}
+
+const stripePromise = typeof window !== 'undefined' ? (() => {
+  try { return getStripe(); } catch { return null; }
+})() : null;
+
+export default function RiderCardsSection({ onSelectCard, selectedCardId }) {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [clientSecret, setClientSecret] = useState(null);
+  const [loadingSetup, setLoadingSetup] = useState(false);
 
   const loadCards = useCallback(async () => {
     try {
@@ -25,6 +75,31 @@ export default function RiderCardsSection({ onSelectCard, selectedCardId, onAddC
   }, []);
 
   useEffect(() => { loadCards(); }, [loadCards]);
+
+  async function handleOpenAddCard() {
+    if (loadingSetup || busy) return;
+    setClientSecret(null);
+    setLoadingSetup(true);
+    setModalOpen(true);
+    try {
+      if (!stripePromise) throw new Error('Stripe n’est pas configuré');
+      const res = await apiFetch('/api/rider/cards/setup', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.clientSecret) throw new Error(data.error || 'Erreur d’initialisation');
+      setClientSecret(data.clientSecret);
+    } catch (error) {
+      toast.error(error.message || 'Impossible de lancer l’enregistrement');
+      setModalOpen(false);
+    } finally {
+      setLoadingSetup(false);
+    }
+  }
+
+  function closeCardModal() {
+    if (loadingSetup) return;
+    setModalOpen(false);
+    setClientSecret(null);
+  }
 
   async function post(path, cardId) {
     setBusy(true);
@@ -60,9 +135,9 @@ export default function RiderCardsSection({ onSelectCard, selectedCardId, onAddC
         <h3 className="flex items-center gap-2" style={{ margin: 0, fontSize: '1.1rem' }}>
           <CreditCard size={18} /> Cartes bancaires enregistrées
         </h3>
-        {onAddCard && <button type="button" className="btn btn-secondary btn-sm" onClick={onAddCard} disabled={busy}>
-          <Plus size={16} /> Ajouter
-        </button>}
+        <button type="button" className="btn btn-primary btn-sm flex items-center gap-1" onClick={handleOpenAddCard} disabled={busy || loadingSetup}>
+          <Plus size={16} /> Ajouter une carte
+        </button>
       </div>
 
       {loading ? <p className="tiny muted">Chargement de vos cartes…</p> : cards.length === 0 ? (
@@ -96,6 +171,12 @@ export default function RiderCardsSection({ onSelectCard, selectedCardId, onAddC
       <div className="mt-3 pt-3 border-t flex items-center gap-1 tiny muted">
         <ShieldCheck size={14} /> Informations bancaires sensibles traitées par Stripe
       </div>
+      <Modal open={modalOpen} onClose={closeCardModal} title="Ajouter une carte bancaire" portal keyboardSafe>
+        {loadingSetup ? <p className="tiny muted text-center p-4">Initialisation sécurisée Stripe…</p> :
+          clientSecret && stripePromise ? <Elements key={clientSecret} stripe={stripePromise} options={{ clientSecret }}>
+            <CardSetupForm onSuccess={() => { closeCardModal(); loadCards(); }} onCancel={closeCardModal} />
+          </Elements> : null}
+      </Modal>
     </section>
   );
 }
