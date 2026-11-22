@@ -28,4 +28,4 @@ jobs:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           PAYOUT_NOTIFICATION_FROM: ${{ secrets.PAYOUT_NOTIFICATION_FROM }}
-        run: node --experimental-specifier-resolution=node scripts/strasdrive-background.mjs
+        run: npx --yes tsx scripts/strasdrive-background.mjs
