@@ -92,7 +92,6 @@ function RiderDashboard() {
   const [vehicleType, setVehicleType] = useState("economy");
   // True only when the rider explicitly picks her favorite driver; any other row means ordinary dispatch.
   const [favoriteSelected, setFavoriteSelected] = useState(false);
-  const [allowGoldReplacement, setAllowGoldReplacement] = useState(false);
   const [pendingClaim, setPendingClaim] = useState(null);
   useEffect(() => {
     setPendingClaim(readPendingClaim());
@@ -328,7 +327,7 @@ function RiderDashboard() {
     const bookedType = favoriteSelected && estimate?.favorite ? estimate.favorite.vehicleType : vehicleType;
     setBooking(true);
     try {
-      await book({ pickup, dropoff, vehicleType: bookedType, paymentMethod, favorite: favoriteSelected, allowGoldReplacement });
+      await book({ pickup, dropoff, vehicleType: bookedType, paymentMethod, favorite: favoriteSelected });
       setUnread(0);
       setLastMsg(null);
       toast("Recherche d’un chauffeur en cours…", "success");
@@ -656,10 +655,6 @@ function RiderDashboard() {
                     selected={Boolean(favoriteChosen)}
                     onSelect={() => setFavoriteSelected(true)}
                   />
-                  {favoriteChosen && <label className="flex items-center gap-2 text-sm" style={{ padding: "8px 2px" }}>
-                    <input type="checkbox" checked={allowGoldReplacement} onChange={(e) => setAllowGoldReplacement(e.target.checked)} />
-                    Si mon favori est indisponible, je consens à un chauffeur remplaçant Gold (même prix affiché).
-                  </label>}
                   {(() => {
                     const types = ["economy", "comfort", "pet", "xl"].filter((type) => estimate.estimates[type]);
                     const index = Math.max(0, types.indexOf(vehicleType));
