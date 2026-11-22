@@ -806,6 +806,15 @@ export async function handleVtc(input, context) {
       : null;
     return { ...quote, favorite, showPriorityPriceSource: priorityDriver?.is_priority === true };
   }
+  if (p === "/api/drivers/me/advance-reservations" && method === "GET") {
+    if (!canDrive) throw new Error("Accès chauffeur requis");
+    const rows = required(await admin.from("rider_scheduled_requests")
+      .select("id,kind,transport_type,transport_number,scheduled_at,pickup_address,dropoff_address,created_at")
+      .eq("kind","transport").eq("status","pending")
+      .gte("scheduled_at",new Date().toISOString())
+      .order("scheduled_at",{ascending:true}).limit(15));
+    return { reservations: rows };
+  }
   if (p === "/api/riders/me/transport-board" && method === "GET") {
     return discoverBoard(q.get("day") || parisDay());
   }
