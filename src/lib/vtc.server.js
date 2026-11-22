@@ -806,6 +806,18 @@ export async function handleVtc(input, context) {
       : null;
     return { ...quote, favorite, showPriorityPriceSource: priorityDriver?.is_priority === true };
   }
+  if (p === "/api/drivers/me/advance-reservations/accept" && method === "POST") {
+    if (!canDrive) throw new Error("Accès chauffeur requis");
+    const id = String(body.id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Réservation invalide");
+    const driver = required(await admin.from("drivers").select("user_id,is_online").eq("user_id",uid).single());
+    if (!driver.is_online) throw new Error("Passez en ligne pour accepter une réservation");
+    const updated = required(await admin.from("rider_scheduled_requests").update({status:"confirmed",favorite_driver_id:uid})
+      .eq("id",id).eq("kind","transport").eq("status","pending")
+      .gt("scheduled_at",new Date().toISOString()).select("id,scheduled_at,transport_type,transport_number").maybeSingle());
+    if (!updated) throw new Error("Cette réservation n’est plus disponible");
+    return {reservation:updated};
+  }
   if (p === "/api/drivers/me/advance-reservations" && method === "GET") {
     if (!canDrive) throw new Error("Accès chauffeur requis");
     const rows = required(await admin.from("rider_scheduled_requests")
