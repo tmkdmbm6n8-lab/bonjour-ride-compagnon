@@ -83,7 +83,7 @@ function PayoutCardInner() {
   const owed = status.balance < 0 ? -status.balance : 0;
   const pendingRequest = status.withdrawals?.requests?.find((row) => ['pending', 'processing'].includes(row.status));
   let quote = null, validation = '';
-  try { quote = withdrawalQuote(amount, status.balance, status.earlyFee); } catch (error) { validation = amount ? error.message : ''; }
+  try { quote = withdrawalQuote(amount, status.balance); } catch (error) { validation = amount ? error.message : ''; }
 
   return (
     <div className="card card-pad mb-4 payout-card">
@@ -105,7 +105,7 @@ function PayoutCardInner() {
           <div className="tiny muted mt-1">
             Chaque semaine, dans la nuit de dimanche à lundi, tout votre solde positif est viré sans frais
             {status.nextPayoutAmount > 0 ? ` — ${money(status.nextPayoutAmount)} si vous ne retirez rien d’ici là.` : '.'}
-            {' '}Un retrait avant cette date coûte {money(status.earlyFee)}.
+            {' '}Retrait anticipé : 1 % de frais bancaires estimés (minimum 0,50 €) + 0,50 € de frais StrasDrive, minimum 1,00 €.
           </div>
         </div>
       </div>
@@ -151,7 +151,7 @@ function PayoutCardInner() {
           <button type="button" className="btn btn-secondary" disabled={busy || Boolean(pendingRequest) || status.balance < 10} onClick={() => setAmount(Number(status.balance).toFixed(2))}>Tout le solde</button>
         </div>
         {validation && <p className="tiny payout-form-message" role="status">{validation}</p>}
-        {quote && <p className="tiny muted">Frais : {money(quote.fee)} · Vous recevrez {money(quote.amount)}.</p>}
+        {quote && <p className="tiny muted">Frais totaux : <strong>{money(quote.fee)}</strong> (dont {money(quote.stripeFee)} bancaires estimés + {money(quote.margin)} de service) · Vous recevrez <strong>{money(quote.amount)}</strong>.</p>}
         {pendingRequest && <p className="payout-info tiny">Demande de {money(pendingRequest.debit)} {pendingRequest.status === 'pending' ? 'en attente de validation' : 'validée, virement en cours'}. Aucun nouveau retrait ne peut être demandé pendant son traitement.</p>}
         {!status.withdrawals?.available && <p className="tiny muted">Les demandes de retrait sont en cours d’activation.</p>}
         {status.withdrawals?.available && !bankReady && <p className="tiny muted">Configurez et faites vérifier vos coordonnées bancaires avant d’envoyer une demande.</p>}
