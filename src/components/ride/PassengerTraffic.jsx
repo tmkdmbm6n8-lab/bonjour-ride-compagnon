@@ -23,7 +23,7 @@ export default function PassengerTraffic() {
   const [errorMessage, setErrorMessage] = useState("");
   const [success, setSuccess] = useState("");
   const { data, error, reload } = useDriverData("/api/riders/me/transport-board?day=" + parisDay());
-  const items = (data?.items || []).filter(item => item.kind === kind && item.direction === direction);
+  const items = (data?.items || []).filter(item => item.kind === kind && item.direction === direction && item.status !== "completed" && item.status !== "cancelled" && Date.parse(item.actual || item.estimated || item.scheduled) > Date.now());
   const dayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(new Date());
   function openTransport(item) {
     const hub = item.kind === "flight" ? AIRPORT : STATION;
