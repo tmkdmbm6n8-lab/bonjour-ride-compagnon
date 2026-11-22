@@ -821,7 +821,7 @@ export async function handleVtc(input, context) {
   if (p === "/api/drivers/me/advance-reservations" && method === "GET") {
     if (!canDrive) throw new Error("Accès chauffeur requis");
     const rows = required(await admin.from("rider_scheduled_requests")
-      .select("id,kind,transport_type,transport_number,scheduled_at,pickup_address,dropoff_address,created_at")
+      .select("id,kind,transport_type,transport_number,scheduled_at,pickup_address,dropoff_address,payment_method,created_at")
       .eq("kind","transport").eq("status","pending")
       .gte("scheduled_at",new Date().toISOString())
       .order("scheduled_at",{ascending:true}).limit(15));
@@ -850,7 +850,7 @@ export async function handleVtc(input, context) {
           !Number.isFinite(date.getTime()) || date.getTime() < Date.now())
           throw new Error("Numéro de vol/train ou date invalide");
         Object.assign(payload, { transport_type: body.transportType, transport_number: number,
-          scheduled_at: date.toISOString(), adjustment_consent: body.adjustmentConsent === true });
+          scheduled_at: date.toISOString(), payment_method: ["cash","card","wallet"].includes(body.paymentMethod) ? body.paymentMethod : null, adjustment_consent: body.adjustmentConsent === true });
       } else {
         const day = Number(body.weekday);
         const time = String(body.localTime || "");
