@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ScanLine } from "lucide-react";
+import FavoriteQrScanner from "@/components/private-clients/FavoriteQrScanner";
 import { useCallback, useEffect, useState } from "react";
 import RiderLayout from "@/components/RiderLayout";
 import FavoriteDriverCard from "@/components/private-clients/FavoriteDriverCard";
@@ -7,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 
 function FavoritePage() {
   const toast = useToast();
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [state, setState] = useState({ loading: true, driver: null, error: "" });
 
   const load = useCallback(async () => {
@@ -38,6 +41,11 @@ function FavoritePage() {
         Votre chauffeur favori apparaît en tête de vos recherches avec son temps d’arrivée. Si vous le choisissez, la course
         lui est proposée en premier ; sinon le choix d’une gamme se fait comme d’habitude.
       </p>
+      <button type="button" className="btn btn-primary btn-full" onClick={() => setScannerOpen(true)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 52, marginBottom: 20 }}>
+        <ScanLine size={21} /> Scanner le QR code d’un chauffeur
+      </button>
+      {scannerOpen && <FavoriteQrScanner onClose={() => setScannerOpen(false)} />}
       {state.loading ? (
         <p className="small muted" role="status">
           <span className="spinner" /> Chargement…
