@@ -100,3 +100,28 @@
   .shell-rider .content-pad .card-pad,
   .shell-rider .rider-booking-card { padding: 16px; }
 }
+
+/* Navigation client : icônes de taille uniforme et libellés sur une seule ligne. */
+@media (max-width: 900px) {
+  .shell-rider .sidebar-nav .nav-item {
+    min-width: 0;
+    flex: 1 1 0;
+    gap: 5px;
+    padding-inline: 2px;
+  }
+  .shell-rider .sidebar-nav .nav-item svg {
+    width: 21px;
+    height: 21px;
+    min-width: 21px;
+    min-height: 21px;
+    flex-shrink: 0;
+  }
+  .shell-rider .sidebar-nav .nav-item span {
+    display: block;
+    max-width: 100%;
+    white-space: nowrap;
+    font-size: clamp(9px, 2.5vw, 11px);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+}
