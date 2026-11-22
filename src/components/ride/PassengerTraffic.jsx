@@ -26,10 +26,9 @@ export default function PassengerTraffic() {
   const items = (data?.items || []).filter(item => item.kind === kind && item.direction === direction);
   const dayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(new Date());
   function openTransport(item) {
-    if (item.status === "cancelled" || item.status === "completed") return;
     const hub = item.kind === "flight" ? AIRPORT : STATION;
     setSelected(item);
-    setErrorMessage("");
+    setErrorMessage(item.status === "cancelled" ? "Ce transport est annulé : réservation indisponible." : item.status === "completed" ? "Ce transport est déjà terminé : choisissez un transport à venir pour réserver." : "");
     setSuccess("");
     if (item.direction === "arrival") {
       setPickup({ ...hub, address: hub.name }); setPickupText(hub.name);
@@ -79,7 +78,7 @@ export default function PassengerTraffic() {
         </div>
       </button>
     </article>)}</div>
-    <Modal open={Boolean(selected)} onClose={() => { if (!busy) setSelected(null); }} title={selected ? selected.number + " · " + selected.city : ""} maxWidth={560}>
+    <Modal portal keyboardSafe open={Boolean(selected)} onClose={() => { if (!busy) setSelected(null); }} title={selected ? selected.number + " · " + selected.city : ""} maxWidth={560}>
       {selected && <div style={{ display: "grid", gap: 16 }}>
         <p>{selected.direction === "arrival" ? "Prise en charge à l'arrivée" : "Transfert pour le départ"} · {clock(selected.estimated || selected.scheduled)}</p>
         <p>Voulez-vous chercher un chauffeur pour ce trajet ?</p>
@@ -88,7 +87,7 @@ export default function PassengerTraffic() {
         <label>Véhicule<select value={vehicleType} onChange={e => setVehicleType(e.target.value)}><option value="economy">Économique</option><option value="comfort">Confort</option><option value="xl">XL</option><option value="pet">Animaux</option></select></label>
         <label>Paiement<select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">Espèces</option><option value="wallet">Portefeuille</option><option value="card">Carte bancaire</option></select></label>
         {errorMessage && <p role="alert" style={{ color: "crimson" }}>{errorMessage}</p>}
-        <button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || busy || selected.status === "cancelled"} onClick={requestDriver}>{busy ? "Recherche…" : "Chercher un chauffeur"}</button>
+        <button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || busy || selected.status === "cancelled" || selected.status === "completed"} onClick={requestDriver}>{busy ? "Recherche…" : "Chercher un chauffeur"}</button>
       </div>}
     </Modal>
   </div></RiderLayout>;
