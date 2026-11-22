@@ -1844,6 +1844,7 @@ export async function handleVtc(input, context) {
     const allRows = required(await admin.from("pricing_rules").select("*"));
     const cookieRow = allRows.find((r) => r.vehicle_type === "uber_cookie");
     const hourlyRow = allRows.find((r) => r.vehicle_type === "uber_hourly_checks");
+    const backgroundRow = allRows.find((r) => r.vehicle_type === "uber_background_status");
     return {
       rules: allRows.filter((r) => r.vehicle_type !== "uber_cookie" && r.vehicle_type !== "uber_hourly_checks").map((r) => ({
         ...r.rule,
@@ -1851,6 +1852,7 @@ export async function handleVtc(input, context) {
         city: r.city,
       })),
       uberHourlyChecks: hourlyRow?.rule || { enabled: false },
+      uberBackgroundStatus: backgroundRow?.rule || null,
       uberCookieStatus: {
         hasCustomCookie: Boolean(cookieRow?.rule?.cookie),
         updatedAt: cookieRow?.rule?.updatedAt || null,
