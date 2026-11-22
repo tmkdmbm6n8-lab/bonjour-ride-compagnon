@@ -13,6 +13,7 @@ export const TEST_OFFER_SECONDS = BROADCAST_WINDOW_SECONDS;
 // 0. "private": when the rider explicitly chose her favorite driver, only he sees the ride for this long.
 //    If he declines, lets it expire, goes offline or cannot serve it, the ordinary dispatch starts (he stays in it).
 export const PRIVATE_OFFER_SECONDS = 30;
+export const REPLACEMENT_OFFER_SECONDS = 15;
 
 const iso = (ms) => new Date(ms).toISOString();
 
@@ -39,7 +40,8 @@ export function isThrottled(driver, pool) {
 
 /** Drivers (already online, approved and free) who can still receive this ride: its class, or a higher class that opted into it, minus drivers whose trip preferences (cash, rider rating, pay per km) refuse it and fair-share throttled drivers when someone else can take it. */
 function allowsGoldRide(ride, driver) {
-  return !ride.route?.goldReturn || driver?.is_priority === true || driver?.gold_active === true;
+  return (!ride.route?.goldReturn || driver?.is_priority === true || driver?.gold_active === true) &&
+    (ride.dispatch_phase !== "replacement" || driver?.gold_active === true);
 }
 
 export function availableFor(ride, drivers) {
@@ -71,10 +73,21 @@ export function planDispatch(ride, drivers, now = Date.now()) {
   const running = now < until;
   const phase = ride.dispatch_phase || null;
 
+  if (phase === "replacement") {
+    if (running && pool.some((d) => d.user_id === ride.offer_driver_id)) return null;
+    return planDispatch({ ...ride, dispatch_phase: "replacement_search", offer_driver_id: null, offer_expires_at: null }, drivers, now);
+  }
+  if (phase === "replacement_search") {
+    const nearest = pool.filter((d) => d.gold_active === true && d.user_id !== ride.favorite_driver_id && d.location)
+      .sort((a, b) => distanceToPickupKm(ride, a) - distanceToPickupKm(ride, b))[0];
+    if (nearest) return { dispatch_phase: "replacement", offer_driver_id: nearest.user_id, offer_expires_at: iso(now + REPLACEMENT_OFFER_SECONDS * 1000) };
+    return { status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
+  }
   if (phase === "private") {
     const target = drivers.find((d) => d.user_id === ride.offer_driver_id);
     if (running && favoriteCanTake(ride, target)) return null;
-    // Ordinary dispatch from the start; the favorite competes like any other driver.
+    // The rider must explicitly consent to a Gold replacement; otherwise use ordinary dispatch.
+    if (ride.route?.allowGoldReplacement) return planDispatch({ ...ride, dispatch_phase: "replacement_search", offer_driver_id: null, offer_expires_at: null }, drivers, now);
     return planDispatch(
       { ...ride, dispatch_phase: null, offer_driver_id: null, offer_expires_at: null, favorite_driver_id: null },
       drivers,
@@ -90,6 +103,9 @@ export function planDispatch(ride, drivers, now = Date.now()) {
         offer_expires_at: iso(now + PRIVATE_OFFER_SECONDS * 1000),
       };
     }
+  }
+  if (!phase && ride.favorite_driver_id && ride.route?.allowGoldReplacement) {
+    return planDispatch({ ...ride, dispatch_phase: "replacement_search" }, drivers, now);
   }
   if (ride.route?.goldReturn && !pool.length) {
     return { status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
@@ -143,6 +159,7 @@ export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
   if (!driver || !allowsGoldRide(ride, driver) || ride.status !== "searching" || !ride.dispatch_phase) return false;
   if (!ride.offer_expires_at || new Date(ride.offer_expires_at).getTime() <= now) return false;
   if (ride.dispatch_phase === "private") return ride.offer_driver_id === driver.user_id && favoriteCanTake(ride, driver);
+  if (ride.dispatch_phase === "replacement") return ride.offer_driver_id === driver.user_id && driver.gold_active === true && availableFor(ride, [driver]).length > 0;
   const all = pool && pool.some((d) => d.user_id === driver.user_id) ? pool : [driver];
   if (!availableFor(ride, all).some((d) => d.user_id === driver.user_id)) return false;
 
