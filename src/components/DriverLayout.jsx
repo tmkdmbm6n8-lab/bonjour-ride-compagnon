@@ -58,6 +58,24 @@ export default function DriverLayout({ children }) {
   const gold = goldData?.gold ?? cachedGold;
   const [isSuspended, setIsSuspended] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [reservationBadge,setReservationBadge] = useState(0);
+  useEffect(() => {
+    let active = true;
+    async function checkPending() {
+      try {
+        const res = await fetch("/api/drivers/me/accepted-reservations");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active) setReservationBadge((data.reservations || []).filter(item => item.status === "modified_pending").length);
+      } catch { /* keep last count */ }
+    }
+    checkPending();
+    const interval = setInterval(checkPending,20000);
+    return () => {active=false;clearInterval(interval);};
+  },[]);
+  const navWithBadges = (gold?.active ? NAV : STANDARD_NAV).map(item =>
+    item.href === "/driver/reservations" ? {...item,badge:reservationBadge} : item
+  );
 
   useEffect(() => {
     registerDriverPush();
@@ -141,7 +159,7 @@ export default function DriverLayout({ children }) {
 
   return (
     <GoldContext.Provider value={gold}>
-      <AppShell nav={gold?.active ? NAV : STANDARD_NAV} variant="driver">
+      <AppShell nav={navWithBadges} variant="driver">
         {children}
       </AppShell>
     </GoldContext.Provider>
