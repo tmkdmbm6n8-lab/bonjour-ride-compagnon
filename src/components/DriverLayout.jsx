@@ -12,13 +12,13 @@ import {
   ShieldAlert,
   LogOut,
 } from "lucide-react";
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, createContext, useContext } from "react";
 import Link from "@/lib/archive-navigation";
 import useDriverData from "@/hooks/useDriverData";
 import AppShell from "@/components/shell/AppShell";
 import { registerDriverPush } from "@/lib/native-push";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
-import { signOut } from "@/lib/archive-auth";
+import { signOut, useSession } from "@/lib/archive-auth";
 
 const NAV = [
   { href: "/driver/dashboard", label: "Accueil", icon: Gauge },
@@ -34,76 +34,18 @@ const GoldContext = createContext(null);
 export const useDriverGold = () => useContext(GoldContext);
 const STANDARD_NAV = [NAV[0], NAV[1], ...NAV.slice(4, 6), { href: "/driver/private-clients", label: "SDGold", icon: Gem }, NAV[6]];
 
-// Cache persistant pour conserver le statut Gold entre les changements d'onglets
-let cachedGold = null;
-try {
-  if (typeof window !== "undefined") {
-    const raw = sessionStorage.getItem("sd_driver_gold_cache");
-    if (raw) cachedGold = JSON.parse(raw);
-  }
-} catch {}
-
 export default function DriverLayout({ children }) {
   const { data: goldData } = useDriverData("/api/drivers/me/gold", 15000);
-
-  // Mémoriser le statut dès réception de la réponse serveur
-  if (goldData?.gold !== undefined) {
-    cachedGold = goldData.gold;
-    try {
-      sessionStorage.setItem("sd_driver_gold_cache", JSON.stringify(goldData.gold));
-    } catch {}
-  }
-
-  // Utiliser immédiatement le cache si la requête est en cours
-  const gold = goldData?.gold ?? cachedGold;
-  const [isSuspended, setIsSuspended] = useState(false);
-  const [checked, setChecked] = useState(false);
-  const [reservationBadge,setReservationBadge] = useState(0);
-  useEffect(() => {
-    let active = true;
-    async function checkPending() {
-      try {
-        const res = await fetch("/api/drivers/me/accepted-reservations");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (active) setReservationBadge((data.reservations || []).filter(item => item.status === "modified_pending").length);
-      } catch { /* keep last count */ }
-    }
-    checkPending();
-    const interval = setInterval(checkPending,20000);
-    return () => {active=false;clearInterval(interval);};
-  },[]);
+  const { live } = useSession();
+  const gold = goldData?.gold;
+  const isSuspended = live?.suspended && !live?.hasDriverRide;
+  const { data: reservationData } = useDriverData("/api/drivers/me/accepted-reservations", 5000);
+  const reservationBadge = (reservationData?.reservations || []).filter(item => item.status === "modified_pending").length;
   const navWithBadges = (gold?.active ? NAV : STANDARD_NAV).map(item =>
     item.href === "/driver/reservations" ? {...item,badge:reservationBadge} : item
   );
 
-  useEffect(() => {
-    registerDriverPush();
-
-    // Vérifier l'état de suspension du compte
-    let ignore = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/drivers/me");
-        if (res.ok) {
-          const data = await res.json();
-          const d = data.driver;
-          // Seule une suspension par signalement/modération bloque l'accès ; l'approbation en attente n'est pas une suspension.
-          if (d && d.isReportSuspended) {
-            if (!ignore) setIsSuspended(true);
-          }
-        }
-      } catch {
-        // En cas d'erreur réseau, ne pas bloquer
-      } finally {
-        if (!ignore) setChecked(true);
-      }
-    })();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  useEffect(() => { registerDriverPush(); }, []);
 
   // Keep online time observed while using any driver tab, including when stationary.
   useEffect(() => {
@@ -140,7 +82,7 @@ export default function DriverLayout({ children }) {
           </div>
           <h1>Compte suspendu</h1>
           <p className="driver-banned-message">
-            Votre compte a été suspendu définitivement. Si vous pensez qu’il s’agit d’une erreur, contactez
+            Votre accès chauffeur a été suspendu. Si vous pensez qu’il s’agit d’une erreur, contactez
             l’assistance.
           </p>
           <div className="driver-banned-actions">

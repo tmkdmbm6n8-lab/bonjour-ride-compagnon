@@ -44,6 +44,24 @@ export async function getDriverDecisions(admin, driverId) {
   return rows.map(decodeDecision).filter((d) => d && d.driverId === driverId);
 }
 
+// Signed admin-only decisions distinguish a suspension from pending approval.
+export async function recordDriverAccess(admin, driverId, suspended) {
+  const payload = JSON.stringify({ driverId, accessSuspended: suspended, decidedAt: new Date().toISOString() });
+  required(await admin.from("contact_messages").insert({
+    topic: "safety_decision", name: `Driver access ${driverId}`,
+    email: "internal-safety@strasdrive.invalid",
+    message: JSON.stringify({ payload, signature: signPayload(payload) }),
+  }));
+}
+
+export async function driverAccess(admin, driverId, driver, knownDecisions) {
+  if (!driver || driver.is_approved) return { suspended: false };
+  const decisions = knownDecisions || await getDriverDecisions(admin, driverId);
+  const manual = decisions.filter(d => typeof d.accessSuspended === "boolean")
+    .sort((a, b) => String(b.decidedAt).localeCompare(String(a.decidedAt)))[0];
+  return { suspended: manual?.accessSuspended === true || shouldSuspendDriver(decisions) };
+}
+
 export async function recordAdminDecision(admin, { rideId, degree: degreeId, comment, isDismissed = false }) {
   if (!rideId) throw new Error("Identifiant de course requis");
   const ride = required(await admin.from("rides").select("id, driver_id, rider_id").eq("id", rideId).single());

@@ -3,6 +3,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSocket } from '@/context/SocketProvider';
+import { watchRefresh } from '@/lib/live-refresh';
 
 const PING_INTERVAL_MS = 3500;
 
@@ -10,7 +11,7 @@ const PING_INTERVAL_MS = 3500;
  * Owns the driver's live state: profile, online status, GPS streaming,
  * incoming offers, and the active trip.
  */
-export default function useDriverState({ onEvent } = {}) {
+export default function useDriverState({ onEvent, enabled = true, userId } = {}) {
   const { socket, isConnected } = useSocket();
   const [profile, setProfile] = useState(null); // Driver doc
   const [online, setOnline] = useState(false);
@@ -25,6 +26,8 @@ export default function useDriverState({ onEvent } = {}) {
   const rideRef = useRef(null);
   const socketRef = useRef(null);
   const onEventRef = useRef(onEvent);
+  const availabilityAction = useRef(false);
+  const availabilityRevision = useRef(0);
   useEffect(() => {
     rideRef.current = ride;
     socketRef.current = socket;
@@ -35,6 +38,12 @@ export default function useDriverState({ onEvent } = {}) {
 
   // ── Initial load: profile + active ride ──
   useEffect(() => {
+    if (!enabled) {
+      setProfile(null); setOffer(null); setRide(null); setOnline(false); setPosition(null); setLoading(true);
+      return;
+    }
+    setLoading(true);
+    setProfile(null); setOffer(null); setRide(null); setOnline(false);
     let ignore = false;
     (async () => {
       try {
@@ -59,30 +68,29 @@ export default function useDriverState({ onEvent } = {}) {
       }
     })();
     return () => { ignore = true; };
-  }, []);
+  }, [enabled, userId]);
 
   useEffect(() => {
-    let stopped = false;
-    const refresh = async () => {
+    if (!enabled) return;
+    return watchRefresh(async (active, signal) => {
+      if (availabilityAction.current) return;
+      const revision = availabilityRevision.current;
       try {
-        const res = await fetch('/api/drivers/me');
+        const res = await fetch('/api/drivers/me', { signal });
         if (!res.ok) return;
         const { driver } = await res.json();
-        if (!stopped) {
+        if (active() && revision === availabilityRevision.current) {
           setProfile(driver);
           setOnline(Boolean(driver.isOnline));
           if (driver.isReportSuspended) setOffer(null);
         }
       } catch { /* retain last known status while offline */ }
-    };
-    const timer = setInterval(refresh, 15000);
-    window.addEventListener('focus', refresh);
-    return () => { stopped = true; clearInterval(timer); window.removeEventListener('focus', refresh); };
-  }, []);
+    }, 5000);
+  }, [enabled, userId]);
 
   // ── GPS watch + socket ping while online (or on a trip) ──
   useEffect(() => {
-    const shouldTrack = online || Boolean(ride);
+    const shouldTrack = enabled && (online || Boolean(ride));
     if (!shouldTrack || !navigator.geolocation) return undefined;
 
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -114,11 +122,11 @@ export default function useDriverState({ onEvent } = {}) {
         watchIdRef.current = null;
       }
     };
-  }, [online, Boolean(ride)]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, online, Boolean(ride)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Socket events ──
   useEffect(() => {
-    if (!socket) return undefined;
+    if (!enabled || !socket) return undefined;
 
     const subscribe = () => {
       const current = rideRef.current;
@@ -167,7 +175,7 @@ export default function useDriverState({ onEvent } = {}) {
       socket.off('connect', subscribe);
       for (const [event, fn] of Object.entries(handlers)) socket.off(event, fn);
     };
-  }, [socket, isConnected, notify]);
+  }, [enabled, socket, isConnected, notify]);
 
   // ── Actions ──
   const getFix = () =>
@@ -197,6 +205,9 @@ export default function useDriverState({ onEvent } = {}) {
     });
 
   const goOnline = useCallback(async () => {
+    if (availabilityAction.current) return;
+    availabilityAction.current = true;
+    ++availabilityRevision.current;
     setBusy(true);
     try {
       const location = await getFix();
@@ -216,11 +227,16 @@ export default function useDriverState({ onEvent } = {}) {
       // Announce immediately so the H3 index has a fresh ping
       socketRef.current?.emit('driver:location', { ...location });
     } finally {
+      availabilityAction.current = false;
+      ++availabilityRevision.current;
       setBusy(false);
     }
   }, []);
 
   const goOffline = useCallback(async () => {
+    if (availabilityAction.current) return;
+    availabilityAction.current = true;
+    ++availabilityRevision.current;
     setBusy(true);
     try {
       const res = await fetch('/api/drivers/me/status', {
@@ -233,6 +249,8 @@ export default function useDriverState({ onEvent } = {}) {
       socketRef.current?.emit('driver:offline');
       setOnline(false);
     } finally {
+      availabilityAction.current = false;
+      ++availabilityRevision.current;
       setBusy(false);
     }
   }, []);
@@ -261,6 +279,7 @@ export default function useDriverState({ onEvent } = {}) {
     setOffer(null);
     setRide(data.ride);
     socketRef.current?.emit('ride:subscribe', { rideId: data.ride.id });
+    return data.ride;
   }, [offer, act]);
 
   const decline = useCallback(async () => {

@@ -6,7 +6,7 @@ import { Route } from '@/routes/_authenticated.driver.dashboard';
 const fixture = vi.hoisted(() => ({ home: vi.fn() }));
 vi.mock('@/components/DriverLayout', () => ({ default: ({ children }: any) => <>{children}</> }));
 vi.mock('@/components/driver/DriverHome', () => ({ default: (props: any) => { fixture.home(props); return <div>Accueil chauffeur chargé</div>; } }));
-vi.mock('@/hooks/useDriverState', () => ({ default: () => ({ loading: false, profile: { vehicle: { plate: 'AA-123-AA' }, activeWarningsCount: 1 }, online: false, position: null, offer: null, ride: null, busy: false, isConnected: false }) }));
+vi.mock('@/context/DriverActivityProvider', () => ({ useDriverActivity: () => ({ loading: false, profile: { vehicle: { plate: 'AA-123-AA' }, activeWarningsCount: 1 }, online: false, position: null, offer: null, ride: null, busy: false, isConnected: false }) }));
 vi.mock('@/hooks/useGeolocation', () => ({ default: () => ({ position: null }) }));
 vi.mock('@/hooks/useLiveRoute', () => ({ useLiveRoute: () => null }));
 vi.mock('@/hooks/useRouteRadars', () => ({ default: () => ({ count: 0 }) }));

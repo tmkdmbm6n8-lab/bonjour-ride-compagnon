@@ -2,6 +2,7 @@ import {
   getRideDecision,
   recordAdminDecision,
   getDriverDecisions,
+  recordDriverAccess,
 } from "./driver-warnings.server";
 import { countActiveWarnings, WARNING_DEGREES } from "./driver-warnings";
 import { newSupportThread } from "./vtc-support";
@@ -470,7 +471,7 @@ export async function handleAdminReportAction(admin, body) {
   }
 
   if (action === "suspend_driver") {
-    await admin
+    required(await admin
       .from("drivers")
       .update({
         is_approved: false,
@@ -478,18 +479,20 @@ export async function handleAdminReportAction(admin, body) {
         documents_override: false,
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", driverId);
+      .eq("user_id", driverId));
+    await recordDriverAccess(admin, driverId, true);
     return { ok: true, message: "Chauffeur suspendu avec succès." };
   }
 
   if (action === "unsuspend_driver") {
-    await admin
+    required(await admin
       .from("drivers")
       .update({
         is_approved: true,
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", driverId);
+      .eq("user_id", driverId));
+    await recordDriverAccess(admin, driverId, false);
     return { ok: true, message: "Suspension levée, chauffeur réactivé." };
   }
 

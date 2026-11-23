@@ -128,6 +128,12 @@ function LoginForm() {
         </h1>
         <p className="text-center muted small mt-1 mb-6"> Connectez-vous pour poursuivre votre voyage </p>
 
+        {searchParams.get("suspended") && (
+          <div className="small text-center mb-4" role="alert" style={{ color: "#f87171", fontWeight: 600 }}>
+            Votre accès chauffeur est suspendu. Vous avez été déconnecté de cet appareil.
+            <Link href="/contact?topic=driver_support" className="block mt-2">Contacter l’assistance</Link>
+          </div>
+        )}
         {searchParams.get("expired") && (
           <p className="small text-center mb-4" role="status" style={{ color: "var(--gold-700)", fontWeight: 600 }}>
             Votre session a expiré (déconnexion sur un autre appareil ou connexion trop ancienne). Reconnectez-vous pour

@@ -223,7 +223,9 @@ export default function DriverHome({
 
       {/* ── Bouton GO compact flottant en bas ── */}
       <div className="drv-cockpit-bottom-bar">
-        {needsVehicle ? (
+        {loading ? (
+          <div className="drv-status-loading" role="status">Vérification du statut…</div>
+        ) : needsVehicle ? (
           <Link href="/driver/profile" className="drv-go-btn vehicle-needed">
             <span>Véhicule requis</span>
           </Link>

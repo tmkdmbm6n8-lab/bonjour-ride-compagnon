@@ -3,7 +3,6 @@ import { ShieldAlert } from "lucide-react";
 import RidePauseButton from "@/components/driver/RidePauseButton";
 import FinishRideButton from "@/components/driver/FinishRideButton";
 import RideSafety from "@/components/ride/RideSafety";
-import { clock as transportClock } from "@/lib/vtc-dates";
 import { createFileRoute } from "@tanstack/react-router";
 import DriverLayout from "@/components/DriverLayout";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
@@ -12,27 +11,18 @@ import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/lib/archive-navigation";
 import {
-  Power,
   Navigation,
   Radar,
-  MapPin,
-  Circle,
   MessageCircle,
   X,
-  CheckCircle2,
   KeyRound,
   Flag,
-  PawPrint,
-  Star,
   Phone,
   FileText,
-  Hand,
   ChevronUp,
   ChevronDown,
   CreditCard,
   Banknote,
-  Plane,
-  TrainFront,
 } from "lucide-react";
 import useGeolocation from "@/hooks/useGeolocation";
 
@@ -40,7 +30,6 @@ import MapView from "@/components/ArchiveMap";
 import ChatSheet from "@/components/ride/ChatSheet";
 import MessageAlert from "@/components/ride/MessageAlert";
 import { whenChatMessageReady } from "@/lib/chat-media-cache";
-import DispatchWheel from "@/components/ride/DispatchWheel";
 import Waybill from "@/components/driver/Waybill";
 import DriverHome from "@/components/driver/DriverHome";
 import PassengerInfo from "@/components/driver/PassengerInfo";
@@ -48,22 +37,14 @@ import { pickupZoneProblem, ARRIVAL_ZONE_METERS } from "@/lib/vtc-dispatch";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { money, VEHICLE_LABELS } from "@/components/ui/bits";
-import useDriverState from "@/hooks/useDriverState";
+import { useDriverActivity } from "@/context/DriverActivityProvider";
 import { formatDistance, formatDuration, roadDistanceMeters, etaMinutes as etaFor } from "@/lib/utils/geo";
-import { playSound, startRinging } from "@/lib/sounds";
+import { playSound } from "@/lib/sounds";
 import ExternalNavigationButton from "@/components/driver/ExternalNavigationButton";
 import { useLiveRoute } from "@/hooks/useLiveRoute";
-import { driverOfferActivity } from "@/lib/live-activity";
-import { syncLiveActivity, stopLiveActivity } from "@/lib/live-activity-native";
 import useRouteRadars from "@/hooks/useRouteRadars";
 import { routeQualityLabel } from "@/lib/vtc-routing";
 import { drawableRoute, arrivalClock } from "@/lib/utils/route-display";
-
-const PROFIT_BADGES = {
-  very_profitable: { label: "Très rentable", className: "badge-success" },
-  profitable: { label: "Rentable", className: "badge-info" },
-  not_profitable: { label: "Non rentable", className: "badge-danger" },
-};
 
 function DriverDashboard() {
   const toast = useToast();
@@ -79,10 +60,8 @@ function DriverDashboard() {
 
   const [receipt, setReceipt] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
-  const [countdown, setCountdown] = useState(0);
   const [unread, setUnread] = useState(0);
   const [lastMsg, setLastMsg] = useState(null);
-  const [award, setAward] = useState(null); // null | 'spinning' | 'won' | 'lost'
   const chatOpenRef = useRef(false);
   useEffect(() => {
     chatOpenRef.current = chatOpen;
@@ -90,14 +69,6 @@ function DriverDashboard() {
 
   const onEvent = useCallback(
     (type, data) => {
-      if ((type === "offer" || type === "offer-updated") && data?.airportReturn)
-        toast(
-          `Course Gold · ${data.airportReturn.kind === "train" ? "train" : "vol"} ${data.airportReturn.flightNumber} à ${transportClock(data.airportReturn.arrivalAt)}`,
-          "info",
-          7000,
-        );
-      if (type === "offer-expired") toast("Demande expirée", "info", 2500);
-      if (type === "offer-withdrawn") toast("La demande a été annulée", "info", 2500);
       if (type === "rider-cancelled") {
         toast(
           data?.compensation
@@ -133,105 +104,14 @@ function DriverDashboard() {
     isConnected,
     goOnline,
     goOffline,
-    accept,
-    decline,
     arrive,
     start,
     complete,
     cancelTrip,
-  } = useDriverState({ onEvent });
+  } = useDriverActivity({ onEvent });
 
-  useEffect(() => {
-    if (loading) return;
-    const activity = driverOfferActivity(offer);
-    if (activity) void syncLiveActivity(activity);
-    else void stopLiveActivity('driver_offer');
-  }, [loading, offer?.rideId, offer?.receivedAt, offer?.expiresInSeconds, offer?.etaMinutes, offer?.durationSeconds, offer?.earnings]);
-
-  // A single local fix keeps the idle map centered, without road-alert polling or sounds.
+  // Availability and incoming offers are owned by the persistent app provider.
   const { position: idlePosition } = useGeolocation({ watch: false });
-
-  // Keep incoming ride notifications independent from removed radar sounds.
-  useEffect(() => {
-    if (!offer?.rideId) return undefined;
-    return startRinging("offer");
-  }, [offer?.rideId]);
-
-  // Offer countdown
-  useEffect(() => {
-    if (!offer) {
-      setCountdown(0);
-      return undefined;
-    }
-    const expires = offer.receivedAt + (offer.expiresInSeconds || 15) * 1000;
-    const tick = () => setCountdown(Math.max(0, Math.ceil((expires - Date.now()) / 1000)));
-    tick();
-    const timer = setInterval(tick, 250);
-    return () => clearInterval(timer);
-  }, [offer]);
-
-  const [reservationOffer,setReservationOffer] = useState(null);
-  const [reservationBusy,setReservationBusy] = useState(false);
-  const dismissedReservations = useRef(new Set(
-    (() => {
-      if (typeof window === "undefined") return [];
-      try {
-        const ids = JSON.parse(localStorage.getItem("strasdrive_handled_reservations") || "[]");
-        return Array.isArray(ids) ? ids : [];
-      } catch { return []; }
-    })()
-  ));
-  function rememberReservation(id) {
-    dismissedReservations.current.add(id);
-    try {
-      localStorage.setItem("strasdrive_handled_reservations",JSON.stringify([...dismissedReservations.current].slice(-250)));
-    } catch { /* still remembered for this session */ }
-  }
-  useEffect(() => {
-    if (!reservationOffer) return;
-    try { playSound("offer"); } catch { /* audio may be unavailable */ }
-    const timer = setTimeout(() => {
-      dismissedReservations.current.add(reservationOffer.id);
-      setReservationOffer(current => current?.id === reservationOffer.id ? null : current);
-    },15000);
-    return () => clearTimeout(timer);
-  },[reservationOffer?.id]);
-  useEffect(() => {
-    if (!online || ride || offer) return;
-    let disposed = false;
-    async function pollReservations() {
-      try {
-        const response = await fetch("/api/drivers/me/advance-reservations");
-        if (!response.ok) return;
-        const data = await response.json();
-        const next = (data.reservations || []).find(item => !dismissedReservations.current.has(item.id));
-        if (!disposed && next) setReservationOffer(current => current || next);
-      } catch { /* normal dispatch is unaffected */ }
-    }
-    pollReservations();
-    const interval = setInterval(pollReservations,4000);
-    return () => {disposed=true;clearInterval(interval);};
-  }, [online,ride?.id,offer?.rideId]);
-  async function acceptReservation() {
-    if (!reservationOffer || reservationBusy) return;
-    setReservationBusy(true);
-    try {
-      const response = await fetch("/api/drivers/me/advance-reservations/accept",{
-        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:reservationOffer.id})
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Réservation indisponible");
-      rememberReservation(reservationOffer.id);
-      setReservationOffer(null);
-      toast("Réservation acceptée pour le "+new Date(result.reservation.scheduled_at).toLocaleString("fr-FR"),"success",5000);
-    } catch(e) { toast(e.message,"error",4500); }
-    finally {setReservationBusy(false);}
-  }
-  function declineReservation() {
-    if (reservationOffer) rememberReservation(reservationOffer.id);
-    setReservationOffer(null);
-  }
-  const canAccept = true;
 
   async function handleToggle() {
     try {
@@ -246,31 +126,6 @@ function DriverDashboard() {
       } else {
         toast(err.message, "error", 5000);
       }
-    }
-  }
-
-  async function handleAccept() {
-    if (actionBusy) return;
-    setActionBusy(true);
-    setAward("spinning");
-    const spin = new Promise((r) => setTimeout(r, 1500));
-    try {
-      await Promise.all([accept(), spin]);
-      setUnread(0);
-      setLastMsg(null);
-      setAward("won");
-      playSound("driver-found");
-    } catch (err) {
-      await spin;
-      if (/déjà acceptée|plus disponible/i.test(err.message || "")) {
-        setAward("lost");
-        playSound("cancelled");
-      } else {
-        setAward(null);
-        toast(err.message, "error", 4000);
-      }
-    } finally {
-      setActionBusy(false);
     }
   }
 
@@ -458,7 +313,7 @@ function DriverDashboard() {
 
   return (
     <>
-      {profile?.isReportSuspended ? (
+      {profile?.isReportSuspended && !ride ? (
         <section className="driver-suspension-screen" role="status">
           <ShieldAlert size={48} aria-hidden="true" />
           <h1>Compte chauffeur suspendu</h1>
@@ -659,7 +514,7 @@ function DriverDashboard() {
             onWaybill={() => setWaybillOpen(true)}
             loading={loading}
             online={online}
-            waiting={!offer && !reservationOffer}
+            waiting={!offer}
             busy={busy}
             isConnected={isConnected}
             needsVehicle={needsVehicle}
@@ -694,261 +549,6 @@ function DriverDashboard() {
           Retour
         </button>
       </Modal>
-      {award && <DispatchWheel status={award} onDone={() => setAward(null)} />}
-
-      <Modal portal sheetOnMobile={false} maxWidth={440} open={Boolean(reservationOffer && !offer && !ride && online && !profile?.isReportSuspended)} onClose={declineReservation} closable={false}>
-        {reservationOffer && <div style={{background:"linear-gradient(180deg,#13151f 0%,#0a0b10 100%)",color:"#fff",borderRadius:24,padding:"24px 20px 20px",margin:"-16px",border:"1px solid rgba(212,160,23,.25)",boxShadow:"0 24px 60px rgba(0,0,0,.8),0 0 30px rgba(212,160,23,.12)"}}>
-          <style>{`@keyframes reservation-green-drain {from{width:100%}to{width:0%}}`}</style>
-          <div style={{display:"flex",alignItems:"center",gap:9,color:"#facc15",fontWeight:700,marginBottom:18}}>
-            {reservationOffer.transport_type === "flight" ? <Plane size={20}/> : <TrainFront size={20}/>}
-            <span>Réservation</span>
-            <span style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:5,color:reservationOffer.payment_method === "cash" ? "#39ff88" : "#31baff"}}>
-              {reservationOffer.payment_method === "cash" ? <Banknote size={24} strokeWidth={2.6} color="#39ff88" style={{filter:"drop-shadow(0 0 6px #39ff88)"}} aria-label="Paiement en espèces"/> : reservationOffer.payment_method === "card" ? <CreditCard size={24} strokeWidth={2.6} color="#31baff" style={{filter:"drop-shadow(0 0 6px #31baff)"}} aria-label="Paiement par carte"/> : <CreditCard size={24} strokeWidth={2.6} color="#31baff" style={{filter:"drop-shadow(0 0 6px #31baff)"}} aria-label="Moyen de paiement non renseigné"/>}
-            </span>
-          </div>
-          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",background:"rgba(212,160,23,0.1)",padding:"10px 14px",borderRadius:14,border:"1px solid rgba(212,160,23,0.3)",marginBottom:14}}>
-            <span style={{fontSize:13,color:"#a8b2c3",fontWeight:600}}>Tarif estimé</span>
-            <span style={{fontSize:24,fontWeight:800,color:"#39ff88",letterSpacing:"-0.02em"}}>
-              {reservationOffer.estimated_price != null && Number.isFinite(Number(reservationOffer.estimated_price)) ? Number(reservationOffer.estimated_price).toFixed(2).replace(".",",")+" €" : "Non disponible"}
-            </span>
-          </div>
-          <div style={{fontSize:21,fontWeight:750,marginBottom:18}}>{new Date(reservationOffer.scheduled_at).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"})}</div>
-          <div style={{display:"grid",gap:12,marginBottom:22}}>
-            <div><span style={{color:"#a8b2c3",fontSize:12,display:"inline-flex",gap:6,alignItems:"center"}}><MapPin size={14} color="#39ff88"/> Départ</span><div>{reservationOffer.pickup_address}</div></div>
-            <div><span style={{color:"#a8b2c3",fontSize:12,display:"inline-flex",gap:6,alignItems:"center"}}><Flag size={14} color="#ff657c"/> Arrivée</span><div>{reservationOffer.dropoff_address}</div></div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <button type="button" disabled={reservationBusy} onClick={declineReservation} style={{minHeight:49,borderRadius:12,border:"1px solid #ff335c",background:"rgba(255,38,79,.10)",color:"#ff4567",fontWeight:750,boxShadow:"0 0 12px rgba(255,38,79,.16)"}}>Refuser</button>
-            <button type="button" disabled={reservationBusy} onClick={acceptReservation} style={{minHeight:49,borderRadius:12,border:"1px solid #21d46a",background:"#10251b",color:"#fff",fontWeight:750,position:"relative",overflow:"hidden",isolation:"isolate"}}>
-              <span key={reservationOffer.id} aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",background:"linear-gradient(90deg,#10a34c,#32e67c)",animation:"reservation-green-drain 15s linear forwards",zIndex:-1}}/>
-              {reservationBusy ? "Validation…" : "Accepter"}
-            </button>
-          </div>
-        </div>}
-      </Modal>
-      {/* ── Notification de course : Cockpit StrasDrive (Design Original) ── */}
-      <Modal open={Boolean(offer) && !profile?.isReportSuspended} onClose={decline} closable={false}>
-        {offer && (
-          <div
-            style={{
-              background: "linear-gradient(180deg, #13151f 0%, #0a0b10 100%)",
-              color: "#ffffff",
-              borderRadius: 24,
-              padding: "24px 20px 20px",
-              margin: "-16px -16px",
-              border: "1px solid rgba(212, 160, 23, 0.25)",
-              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(212, 160, 23, 0.12)",
-              position: "relative",
-            }}
-          >
-            <div className="drv-offer-top-close"><CloseControl onClick={decline} disabled={actionBusy} label="Ignorer la course" /></div>
-            <div className="driver-offer-preview" aria-label="Aperçu du trajet proposé">
-              <div className="driver-offer-map">
-                <MapView
-                  key={offer.rideId}
-                  center={offer.pickup}
-                  pickup={offer.pickup}
-                  dropoff={offer.dropoff}
-                  routeGeometry={drawableRoute(offer.routeGeometry)}
-                  fit
-                  fitTo={[offer.pickup, offer.dropoff]}
-                  compact
-                />
-              </div>
-              <div className="driver-offer-legend">
-                <span>
-                  <i className="offer-pickup-dot" /> Prise en charge
-                </span>
-                <span>
-                  <i className="offer-dropoff-dot" /> Dépôt
-                </span>
-              </div>
-            </div>
-            {/* 1. En-tête : Badge StrasDrive Or + Bouton Ignorer */}
-            <div className="flex items-center justify-between mb-4">
-              <div
-                style={{
-                  background: "rgba(212, 160, 23, 0.15)",
-                  color: "#facc15",
-                  border: "1px solid rgba(212, 160, 23, 0.35)",
-                  fontWeight: 700,
-                  fontSize: "0.85rem",
-                  padding: "6px 14px",
-                  borderRadius: 9999,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#facc15" }} />
-                <span>{offer.isReservation || offer.scheduledAt || offer.reservationType === "transport" ? "Réservation" : offer.airportReturn ? "Course Gold" : (VEHICLE_LABELS[offer.rideClass] || "StrasDrive Go")}</span>
-                {(offer.isReservation || offer.scheduledAt || offer.reservationType === "transport") && (offer.transportType === "flight" || offer.transportType === "train") && (offer.transportType === "flight" ? <Plane size={16}/> : <TrainFront size={16}/> )}
-              </div>
-
-              {offer.paymentMethod === "cash" ? (
-                <span className="drv-payment-icon drv-payment-icon--cash" role="img" aria-label="Paiement en espèces" title="Espèces"><Banknote size={40} aria-hidden="true" /></span>
-              ) : (
-                <span className="drv-payment-icon drv-payment-icon--card" role="img" aria-label="Paiement par carte" title="Carte bancaire"><CreditCard size={40} aria-hidden="true" /></span>
-              )}
-            </div>
-
-            {/* 2. Gain net en or géant */}
-            <div style={{ textAlign: "center", marginBottom: 14 }}>
-              <div
-                style={{
-                  fontSize: "3rem",
-                  fontWeight: 800,
-                  letterSpacing: "-0.03em",
-                  lineHeight: 1,
-                  color: "#facc15",
-                }}
-              >
-                {money(offer.profitability?.expectedEarnings ?? offer.earnings)}
-              </div>
-              <span
-                style={{
-                  fontSize: "0.8rem",
-                  color: "#9ca3af",
-                  fontWeight: 500,
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Net chauffeur garanti
-              </span>
-            </div>
-
-            {/* Note du passager centrée sous le gain net */}
-            <div className="flex justify-center mb-5">
-              <span
-                style={{
-                  background: "rgba(255, 255, 255, 0.05)",
-                  color: "#ffffff",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  padding: "4px 12px",
-                  borderRadius: 10,
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
-                <Star size={12} fill="#facc15" stroke="#facc15" /> 5.0
-              </span>
-            </div>
-
-            {/* 4. Trajet : Prise en charge & Destination */}
-            <div
-              style={{
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-                borderRadius: 16,
-                padding: "14px 14px",
-                marginBottom: 18,
-              }}
-            >
-              <div className="flex gap-3 items-start mb-3">
-                <Circle size={10} strokeWidth={3} style={{ color: "#4ade80", marginTop: 4, flexShrink: 0 }} />
-                <div className="flex-1 min-w-0">
-                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#ffffff" }}>
-                    Prise en charge ({offer.etaMinutes} min · {formatDistance(offer.distanceToPickupMeters)})
-                  </div>
-                  <div className="truncate" style={{ fontSize: "0.78rem", color: "#9ca3af" }}>
-                    {offer.pickup.address}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "8px 0 8px 18px" }} />
-
-              <div className="flex gap-3 items-start">
-                <MapPin size={11} style={{ color: "#facc15", marginTop: 3, flexShrink: 0 }} />
-                <div className="flex-1 min-w-0">
-                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#ffffff" }}>
-                    Destination ({formatDistance(offer.distanceMeters)} · {formatDuration(offer.durationSeconds)})
-                  </div>
-                  <div className="truncate" style={{ fontSize: "0.78rem", color: "#9ca3af" }}>
-                    {offer.dropoff.address}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 5. Bouton Accepter Doré avec décompte */}
-            {(() => {
-              const maxSec = offer.expiresInSeconds || 15;
-              const progressPct = Math.max(0, Math.min(100, (countdown / maxSec) * 100));
-              return (
-                <div className="flex gap-3 driver-offer-actions">
-                  <button
-                    onClick={decline}
-                    disabled={actionBusy}
-                    style={{
-                      flex: "0 0 80px",
-                      height: 52,
-                      borderRadius: 14,
-                      background: "rgba(255, 255, 255, 0.06)",
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      color: "#9ca3af",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Passer
-                  </button>
-
-                  <button
-                    onClick={handleAccept}
-                    disabled={actionBusy || countdown === 0}
-                    style={{
-                      flex: 1,
-                      height: 52,
-                      borderRadius: 14,
-                      border: "none",
-                      position: "relative",
-                      overflow: "hidden",
-                      fontWeight: 800,
-                      fontSize: "1rem",
-                      cursor: countdown === 0 ? "not-allowed" : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "linear-gradient(135deg, #eab308 0%, #ca8a04 100%)",
-                      color: "#0c0d12",
-                      boxShadow: "0 8px 24px rgba(212, 160, 23, 0.35)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: `${progressPct}%`,
-                        background: "rgba(255, 255, 255, 0.25)",
-                        transition: "width 0.25s linear",
-                        zIndex: 1,
-                      }}
-                    />
-                    <span style={{ position: "relative", zIndex: 2 }}>
-                      {actionBusy ? (
-                        <span className="spinner" />
-                      ) : countdown === 0 ? (
-                        "Expirée"
-                      ) : (
-                        `Accepter (${countdown}s)`
-                      )}
-                    </span>
-                  </button>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-      </Modal>
-
       {/* ── PIN entry ── */}
       <Modal open={pinOpen} onClose={() => setPinOpen(false)} title="Code PIN du passager" keyboardSafe>
         <p className="small muted mb-4">Demandez au passager son code PIN à 4 chiffres pour démarrer la course.</p>

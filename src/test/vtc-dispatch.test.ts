@@ -24,13 +24,13 @@ describe('attribution des courses', () => {
     expect(next?.dispatch_phase).toBe('priority');
   });
 
-  it('propose d’abord la course au seul chauffeur favori choisi, même loin, pendant 30 s', () => {
+  it('propose d’abord la course au seul chauffeur favori choisi, même loin, pendant 45 s', () => {
     const fav = { ...driver('favori', 20), gold_active: true };
     const pool = [...all, fav];
     const r = apply(ride({ favorite_driver_id: fav.user_id }), planDispatch(ride({ favorite_driver_id: fav.user_id }), pool, NOW));
     expect(r.dispatch_phase).toBe('private');
     expect(r.offer_driver_id).toBe('favori');
-    expect(new Date(r.offer_expires_at).getTime() - NOW).toBe(30000);
+    expect(new Date(r.offer_expires_at).getTime() - NOW).toBe(45000);
     expect(canSeeOffer(r, fav, NOW, pool)).toBe(true);
     expect(canSeeOffer(r, near, NOW, pool)).toBe(false);
     expect(canSeeOffer(r, far, NOW, pool)).toBe(false);
@@ -125,15 +125,15 @@ describe('attribution des courses', () => {
     const r = { ...ride(), dispatch_phase: 'broadcast', offer_expires_at: new Date(NOW).toISOString() };
     expect(planDispatch(r, all, NOW)?.status).toBe('no_drivers');
   });
-  it('le compte à rebours de l’envoi à tous dure 4 secondes puis interdit l’acceptation', () => {
+  it('le compte à rebours de l’envoi à tous dure 45 secondes puis interdit l’acceptation', () => {
     const r = apply(ride({dispatch_phase:'nearest'}), planDispatch(ride({dispatch_phase:'nearest'}), all, NOW));
-    expect(r.offer_expires_at).toBe(new Date(NOW + 4000).toISOString());
-    expect(canSeeOffer(r, near, NOW + 3999)).toBe(true);
-    expect(canSeeOffer(r, near, NOW + 4000)).toBe(false);
-    expect(planDispatch(r, all, NOW + 4000)?.status).toBe('no_drivers');
+    expect(r.offer_expires_at).toBe(new Date(NOW + 45000).toISOString());
+    expect(canSeeOffer(r, near, NOW + 44999)).toBe(true);
+    expect(canSeeOffer(r, near, NOW + 45000)).toBe(false);
+    expect(planDispatch(r, all, NOW + 45000)?.status).toBe('no_drivers');
   });
-  it('les demandes test durent également 4 secondes', () => {
-    expect(TEST_OFFER_SECONDS).toBe(4);
+  it('les demandes test durent également 45 secondes', () => {
+    expect(TEST_OFFER_SECONDS).toBe(45);
   });
 });
 

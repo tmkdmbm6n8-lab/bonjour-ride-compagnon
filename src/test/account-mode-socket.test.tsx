@@ -33,7 +33,7 @@ describe("suivi selon l’espace ouvert", () => {
         <div />
       </SocketProvider>,
     );
-    await waitFor(() => expect(state.fetch).toHaveBeenCalledWith("/api/rides/active?view=rider"));
+    await waitFor(() => expect(state.fetch).toHaveBeenCalledWith("/api/rides/active?view=rider", expect.objectContaining({ signal: expect.any(AbortSignal) })));
     expect(state.fetch.mock.calls.some(([path]) => path === "/api/drivers/offers")).toBe(false);
     state.path = "/driver/dashboard";
     view.rerender(
@@ -41,8 +41,8 @@ describe("suivi selon l’espace ouvert", () => {
         <div />
       </SocketProvider>,
     );
-    await waitFor(() => expect(state.fetch).toHaveBeenCalledWith("/api/drivers/offers"));
-    await waitFor(() => expect(state.fetch).toHaveBeenCalledWith("/api/rides/active?view=driver"));
+    await waitFor(() => expect(state.fetch).toHaveBeenCalledWith("/api/drivers/offers", expect.objectContaining({ signal: expect.any(AbortSignal) })));
+    await waitFor(() => expect(state.fetch).toHaveBeenCalledWith("/api/rides/active?view=driver", expect.objectContaining({ signal: expect.any(AbortSignal) })));
   });
   it("permet aussi le suivi passager à un administrateur", async () => {
     state.role = "admin";
@@ -52,7 +52,7 @@ describe("suivi selon l’espace ouvert", () => {
         <div />
       </SocketProvider>,
     );
-    await waitFor(() => expect(state.fetch).toHaveBeenCalledWith("/api/rides/active?view=rider"));
+    await waitFor(() => expect(state.fetch).toHaveBeenCalledWith("/api/rides/active?view=rider", expect.objectContaining({ signal: expect.any(AbortSignal) })));
     expect(state.fetch.mock.calls.some(([path]) => path === "/api/drivers/offers")).toBe(false);
   });
 });

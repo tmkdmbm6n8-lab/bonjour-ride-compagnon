@@ -506,7 +506,24 @@ export async function handleVtc(input, context) {
   if (p.startsWith("/api/drivers/me") && !canDrive) throw new Error("Accès chauffeur requis");
   // RLS has verified the role; privileged operations below use only the verified caller identity.
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-  const profile = required(await db.from("profiles").select("*").eq("id", uid).single());
+  const profile = required(await db.from("profiles").select("*").eq("id", uid).maybeSingle());
+  if (!profile) throw new Error("ACCOUNT_UNAVAILABLE");
+
+  if (p === "/api/users/me/live" && method === "GET") {
+    const driver = canDrive ? required(await admin.from("drivers").select("*").eq("user_id", uid).maybeSingle()) : null;
+    const { driverAccess } = await import("./driver-warnings.server");
+    const access = driver ? await driverAccess(admin, uid, driver) : { suspended: false };
+    const current = required(await admin.from("rides").select("id,driver_id,rider_id,status")
+      .or(`driver_id.eq.${uid},rider_id.eq.${uid}`).in("status", active).limit(2));
+    return {
+      role, canDrive, suspended: access.suspended,
+      hasDriverRide: current.some(r => r.driver_id === uid),
+      hasActiveRide: current.length > 0,
+      revision: JSON.stringify([role, canDrive, profile.name, profile.phone, profile.balance, driver?.is_approved,
+        driver?.is_online, driver?.is_priority, driver?.vehicle_class, driver?.accepts_classes, driver?.vehicle, driver?.trip_prefs, access.suspended]),
+      buildId: typeof __STRASDRIVE_BUILD_ID__ === "string" ? __STRASDRIVE_BUILD_ID__ : null,
+    };
+  }
 
   // Gestion des cartes du passager : identité issue de la session, jamais du corps de requête.
   if (p === "/api/rider/cards" && method === "GET") {
@@ -840,7 +857,9 @@ export async function handleVtc(input, context) {
     if (!canDrive) throw new Error("Accès chauffeur requis");
     const id = String(body.id || "");
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Réservation invalide");
-    const driver = required(await admin.from("drivers").select("user_id,is_online").eq("user_id",uid).single());
+    const driver = required(await admin.from("drivers").select("user_id,is_online,is_approved").eq("user_id",uid).single());
+    const { driverAccess } = await import("./driver-warnings.server");
+    if ((await driverAccess(admin, uid, driver)).suspended) throw new Error("DRIVER_SUSPENDED");
     if (!driver.is_online) throw new Error("Passez en ligne pour accepter une réservation");
     const updated = required(await admin.from("rider_scheduled_requests").update({status:"confirmed",favorite_driver_id:uid})
       .eq("id",id).eq("kind","transport").eq("status","pending")
@@ -1139,11 +1158,12 @@ export async function handleVtc(input, context) {
     }
     const driverRow = required(await db.from("drivers").select("*").eq("user_id", uid).single());
     const { getDriverDecisions } = await import("./driver-warnings.server");
-    const { countActiveWarnings, shouldSuspendDriver } = await import("./driver-warnings");
+    const { countActiveWarnings } = await import("./driver-warnings");
     const decisions = await getDriverDecisions(admin, uid);
     const driver = driverShape(driverRow);
     driver.activeWarningsCount = countActiveWarnings(decisions);
-    driver.isReportSuspended = !driver.isApproved && shouldSuspendDriver(decisions);
+    const { driverAccess } = await import("./driver-warnings.server");
+    driver.isReportSuspended = (await driverAccess(admin, uid, driverRow, decisions)).suspended;
     return { driver };
   }
   if (p === "/api/drivers/me/classes" && method === "PATCH") {
@@ -1240,6 +1260,8 @@ export async function handleVtc(input, context) {
     if (body.online) {
       if (await hasPassengerRide(admin, uid)) throw new Error("Vous avez une course passager en cours");
       if (!d.is_approved) {
+        const { driverAccess } = await import("./driver-warnings.server");
+        if ((await driverAccess(admin, uid, d)).suspended) throw new Error("DRIVER_SUSPENDED");
         if ((await reportedRideCount(admin, uid)) >= 3)
           throw new Error(
             "Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.",
@@ -1466,6 +1488,9 @@ export async function handleVtc(input, context) {
   }
   if (p === "/api/drivers/offers") {
     if (!canDrive) throw new Error("Accès refusé");
+    const { driverAccess } = await import("./driver-warnings.server");
+    const accessDriver = required(await admin.from("drivers").select("is_approved").eq("user_id", uid).single());
+    if ((await driverAccess(admin, uid, accessDriver)).suspended) return { offer: null };
     if (await hasPassengerRide(admin, uid)) return { offer: null };
     const pool = await dispatchPool(admin);
     let me = pool.find((d) => d.user_id === uid);
@@ -1538,6 +1563,7 @@ export async function handleVtc(input, context) {
         routeGeometry: r.route?.geometry || null,
         surgeMultiplier: r.fare.surgeMultiplier,
         expiresInSeconds: Math.max(0, Math.ceil((new Date(r.offer_expires_at) - Date.now()) / 1000)),
+        expiresAt: r.offer_expires_at,
         ownClass: driverClass(me),
         lowerClass: isLowerClassRide(me, r.vehicle_type),
         distanceToPickupMeters: approachMeters ?? 0,
@@ -1597,6 +1623,8 @@ export async function handleVtc(input, context) {
       if (r.status === "searching" && (r.messages || []).length)
         await closeRideChat(admin, id, { allowSearching: true });
       const approval = required(await admin.from("drivers").select("is_approved").eq("user_id", uid).single());
+      const { driverAccess } = await import("./driver-warnings.server");
+      if ((await driverAccess(admin, uid, approval)).suspended) throw new Error("DRIVER_SUSPENDED");
       if (!approval.is_approved && (await reportedRideCount(admin, uid)) >= 3)
         throw new Error(
           "Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.",
@@ -1639,7 +1667,7 @@ export async function handleVtc(input, context) {
         .eq("offer_expires_at", r.offer_expires_at)
         .gt("offer_expires_at", new Date().toISOString());
       // En phase nearest, le plus proche peut accepter tout de suite ;
-      // les autres peuvent accepter si le délai de priorité de 4 s est écoulé
+      // les autres attendent le passage à la phase broadcast.
 
       const claimed = required(await claim.select("*"))[0];
       if (!claimed) throw new Error("Course déjà acceptée");
@@ -2143,6 +2171,11 @@ export async function handleVtc(input, context) {
                 ...(body.isApproved ? {} : { is_online: false }),
               };
       required(await admin.from("drivers").update(patch).eq("id", body.driverId));
+      if ("isApproved" in body && !("isPriority" in body) && !("vehicleClass" in body)) {
+        const target = required(await admin.from("drivers").select("user_id").eq("id", body.driverId).single());
+        const { recordDriverAccess } = await import("./driver-warnings.server");
+        await recordDriverAccess(admin, target.user_id, body.isApproved !== true);
+      }
       return { ok: true };
     }
     let query = admin.from("drivers").select("*");
@@ -2401,6 +2434,9 @@ async function assignOffer(db, r, pool) {
 
 // Visiteurs non connectés (page d'accueil) : uniquement la recherche d'adresse et l'estimation.
 export async function publicVtc(input) {
+  if (input?.path === "/api/public/app-version") {
+    return { buildId: typeof __STRASDRIVE_BUILD_ID__ === "string" ? __STRASDRIVE_BUILD_ID__ : null };
+  }
   const path = String(input?.path || "");
   const url = new URL(path, "http://app");
   if (url.pathname === "/api/geo/search") {

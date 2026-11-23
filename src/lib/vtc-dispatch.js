@@ -6,13 +6,13 @@ import { tripPrefsAllow } from "./vtc-trip-prefs";
 // 1. "priority": every available priority driver sees the ride at once, whatever the distance; first to accept wins.
 // 2. "nearest": the closest other driver sees it alone for a short head start.
 // 3. "broadcast": every available driver sees it; first to accept wins. When this window ends, the ride has no driver.
-export const PRIORITY_WINDOW_SECONDS = 15;
-export const NEAREST_WINDOW_SECONDS = 10;
-export const BROADCAST_WINDOW_SECONDS = 4;
+export const PRIORITY_WINDOW_SECONDS = 45;
+export const NEAREST_WINDOW_SECONDS = 45;
+export const BROADCAST_WINDOW_SECONDS = 45;
 export const TEST_OFFER_SECONDS = BROADCAST_WINDOW_SECONDS;
 // 0. "private": when the rider explicitly chose her favorite driver, only he sees the ride for this long.
 //    If he declines, lets it expire, goes offline or cannot serve it, the ordinary dispatch starts (he stays in it).
-export const PRIVATE_OFFER_SECONDS = 30;
+export const PRIVATE_OFFER_SECONDS = 45;
 
 const iso = (ms) => new Date(ms).toISOString();
 

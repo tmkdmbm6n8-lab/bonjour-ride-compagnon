@@ -1,6 +1,7 @@
 // Ride-offer notifications in the native iOS/Android app (Capacitor). No-op in a browser.
 import { apiFetch } from "./archive-fetch";
 import { OFFER_CHANNEL_ID, OFFER_PATH } from "./vtc-push";
+import { publishRefresh } from "./live-refresh";
 
 const TOKEN_KEY = "sd_push_token";
 let started = false;
@@ -37,8 +38,15 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
       });
     });
     await PushNotifications.addListener("registrationError", (e) => console.error("Push registration:", e?.error));
-    // Tapping the banner opens the driver home, where the offer is shown.
+    await PushNotifications.addListener("pushNotificationReceived", ({ data }) => {
+      if (data?.type === "ride_offer") publishRefresh();
+    });
+    // In an existing driver tab, reveal the shared offer without losing that page.
     await PushNotifications.addListener("pushNotificationActionPerformed", ({ notification }) => {
+      if (notification?.data?.type === "ride_offer" && /^\/driver(?:\/|$)/.test(window.location.pathname)) {
+        publishRefresh();
+        return;
+      }
       const path = notification?.data?.path || OFFER_PATH;
       // Reject protocol-relative URLs (//host), backslashes and control characters from push payloads.
       if (typeof path === "string" && /^\/(?!\/)[^\\\x00-\x1F\x7F]*$/.test(path) && window.location.pathname !== path) window.location.assign(path);
@@ -60,6 +68,11 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
 /** Stops offers on this phone before signing out, so the next account on it does not get them. */
 export async function unregisterDriverPush() {
   if (!isNativeApp()) return;
+  started = false;
+  try {
+    const { PushNotifications } = await import("@capacitor/push-notifications");
+    await PushNotifications.removeAllListeners();
+  } catch { /* sign-out must remain possible without the native plugin */ }
   let token = null;
   try {
     token = localStorage.getItem(TOKEN_KEY);

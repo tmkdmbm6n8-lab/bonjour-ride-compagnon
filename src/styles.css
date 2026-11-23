@@ -11636,3 +11636,50 @@ a.activity-pill:hover {
   .drv-online-sheet-waiting .drv-online-signal,
   .modal-portal-root .drv-online-sheet { animation: none; }
 }
+
+.app-update-notice {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #ffffff24;
+  border-radius: 16px;
+  background: #14221f;
+  color: #f1f7f5;
+  box-shadow: 0 8px 24px #0005;
+  font-size: 13px;
+}
+.app-update-notice button { border: 0; border-radius: 8px; padding: 8px 12px; background: #86e4bb; color: #10231b; font-weight: 700; cursor: pointer; }
+
+.drv-status-loading { padding: 14px 24px; border-radius: 24px; background: #14221f; color: #b4c4bd; font-size: 13px; }
+.modal-portal-root .driver-incoming-modal { background: #090c12; color: #fff; }
+.modal-portal-root .driver-incoming-modal > .modal-body { display: flex; padding: max(20px, env(safe-area-inset-top, 0px)) 18px max(24px, env(safe-area-inset-bottom, 0px)); }
+.driver-incoming-card { width: 100%; max-width: 440px; margin: auto; padding: 24px 20px; border: 1px solid #d4a01740; border-radius: 24px; background: linear-gradient(180deg,#13151f,#0a0b10); box-shadow: 0 24px 60px #0008, 0 0 30px #d4a01712; }
+.driver-incoming-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.driver-incoming-heading > span:first-child { display: inline-flex; align-items: center; gap: 8px; color: #facc15; font-size: 15px; font-weight: 700; flex: 1; }
+.driver-incoming-payment { color: #31baff; }
+.driver-incoming-payment.is-cash { color: #39ff88; }
+.driver-incoming-price { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; padding: 12px 14px; margin-bottom: 20px; background: #d4a01714; border: 1px solid #d4a01740; border-radius: 14px; }
+.driver-incoming-price > span { font-size: 13px; color: #a8b2c3; }
+.driver-incoming-price strong { font-size: 26px; font-weight: 800; color: #39ff88; }
+.driver-incoming-date { margin: 0 0 20px; font-size: 20px; font-weight: 700; }
+.driver-incoming-approach, .driver-incoming-distance { margin: 0 0 20px; font-size: 13px; color: #a8b2c3; }
+.driver-incoming-address { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+.driver-incoming-address > svg { color: #39ff88; flex-shrink: 0; margin-top: 2px; }
+.driver-incoming-address.is-destination > svg { color: #ff657c; }
+.driver-incoming-address small { color: #a8b2c3; font-size: 12px; }
+.driver-incoming-address p { margin: 5px 0 0; font-size: 16px; overflow-wrap: anywhere; }
+.driver-incoming-actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; margin-top: 24px; }
+.driver-incoming-actions button { min-height: 52px; border-radius: 12px; font-weight: 750; cursor: pointer; }
+.driver-incoming-refuse { border: 1px solid #ff335c; background: #ff264f14; color: #ff4567; box-shadow: 0 0 12px #ff264f20; }
+.driver-incoming-accept { position: relative; isolation: isolate; overflow: hidden; border: 1px solid #21d46a; background: #10251b; color: #fff; }
+.driver-incoming-progress { position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg,#10a34c,#32e67c); transition: width .25s linear; }
+.driver-incoming-actions button:disabled { opacity: .5; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .driver-incoming-progress { transition: none; } }
