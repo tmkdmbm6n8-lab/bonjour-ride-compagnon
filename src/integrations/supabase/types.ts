@@ -667,6 +667,107 @@ export type Database = {
           },
         ]
       }
+      rider_payment_methods: {
+        Row: {
+          brand: string
+          created_at: string
+          exp_month: number
+          exp_year: number
+          id: string
+          is_default: boolean
+          last4: string
+          stripe_payment_method_id: string
+          user_id: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          exp_month: number
+          exp_year: number
+          id?: string
+          is_default?: boolean
+          last4: string
+          stripe_payment_method_id: string
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          exp_month?: number
+          exp_year?: number
+          id?: string
+          is_default?: boolean
+          last4?: string
+          stripe_payment_method_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_payment_methods_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rider_scheduled_requests: {
+        Row: {
+          adjustment_consent: boolean
+          created_at: string
+          dropoff_address: string
+          favorite_driver_id: string | null
+          id: string
+          kind: string
+          local_time: string | null
+          payment_method: string | null
+          pickup_address: string
+          rider_id: string
+          scheduled_at: string | null
+          status: string
+          timezone: string
+          transport_number: string | null
+          transport_type: string | null
+          weekday: number | null
+        }
+        Insert: {
+          adjustment_consent?: boolean
+          created_at?: string
+          dropoff_address: string
+          favorite_driver_id?: string | null
+          id?: string
+          kind: string
+          local_time?: string | null
+          payment_method?: string | null
+          pickup_address: string
+          rider_id: string
+          scheduled_at?: string | null
+          status?: string
+          timezone?: string
+          transport_number?: string | null
+          transport_type?: string | null
+          weekday?: number | null
+        }
+        Update: {
+          adjustment_consent?: boolean
+          created_at?: string
+          dropoff_address?: string
+          favorite_driver_id?: string | null
+          id?: string
+          kind?: string
+          local_time?: string | null
+          payment_method?: string | null
+          pickup_address?: string
+          rider_id?: string
+          scheduled_at?: string | null
+          status?: string
+          timezone?: string
+          transport_number?: string | null
+          transport_type?: string | null
+          weekday?: number | null
+        }
+        Relationships: []
+      }
       rides: {
         Row: {
           accepted_at: string | null
