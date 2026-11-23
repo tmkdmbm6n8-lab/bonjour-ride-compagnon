@@ -172,13 +172,15 @@ function DriverDashboard() {
 
   const [reservationOffer,setReservationOffer] = useState(null);
   const [reservationBusy,setReservationBusy] = useState(false);
-  const dismissedReservations = useRef(new Set());
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("strasdrive_handled_reservations") || "[]");
-      if (Array.isArray(saved)) saved.forEach(id => dismissedReservations.current.add(id));
-    } catch { /* storage may be unavailable */ }
-  },[]);
+  const dismissedReservations = useRef(new Set(
+    (() => {
+      if (typeof window === "undefined") return [];
+      try {
+        const ids = JSON.parse(localStorage.getItem("strasdrive_handled_reservations") || "[]");
+        return Array.isArray(ids) ? ids : [];
+      } catch { return []; }
+    })()
+  ));
   function rememberReservation(id) {
     dismissedReservations.current.add(id);
     try {
@@ -700,6 +702,12 @@ function DriverDashboard() {
             <span>Réservation</span>
             <span style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:5,color:reservationOffer.payment_method === "cash" ? "#39ff88" : "#31baff"}}>
               {reservationOffer.payment_method === "cash" ? <Banknote size={24} strokeWidth={2.6} color="#39ff88" style={{filter:"drop-shadow(0 0 6px #39ff88)"}} aria-label="Paiement en espèces"/> : reservationOffer.payment_method === "card" ? <CreditCard size={24} strokeWidth={2.6} color="#31baff" style={{filter:"drop-shadow(0 0 6px #31baff)"}} aria-label="Paiement par carte"/> : <CreditCard size={24} strokeWidth={2.6} color="#31baff" style={{filter:"drop-shadow(0 0 6px #31baff)"}} aria-label="Moyen de paiement non renseigné"/>}
+            </span>
+          </div>
+          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",background:"rgba(212,160,23,0.1)",padding:"10px 14px",borderRadius:14,border:"1px solid rgba(212,160,23,0.3)",marginBottom:14}}>
+            <span style={{fontSize:13,color:"#a8b2c3",fontWeight:600}}>Tarif estimé</span>
+            <span style={{fontSize:24,fontWeight:800,color:"#39ff88",letterSpacing:"-0.02em"}}>
+              {reservationOffer.estimated_price != null && Number.isFinite(Number(reservationOffer.estimated_price)) ? Number(reservationOffer.estimated_price).toFixed(2).replace(".",",")+" €" : "Non disponible"}
             </span>
           </div>
           <div style={{fontSize:21,fontWeight:750,marginBottom:18}}>{new Date(reservationOffer.scheduled_at).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"})}</div>
