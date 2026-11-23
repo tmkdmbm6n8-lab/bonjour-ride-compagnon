@@ -189,10 +189,11 @@ function DriverDashboard() {
   }
   useEffect(() => {
     if (!reservationOffer) return;
+    try { playSound("offer"); } catch { /* audio may be unavailable */ }
     const timer = setTimeout(() => {
       dismissedReservations.current.add(reservationOffer.id);
       setReservationOffer(current => current?.id === reservationOffer.id ? null : current);
-    },7000);
+    },15000);
     return () => clearTimeout(timer);
   },[reservationOffer?.id]);
   useEffect(() => {
@@ -208,7 +209,7 @@ function DriverDashboard() {
       } catch { /* normal dispatch is unaffected */ }
     }
     pollReservations();
-    const interval = setInterval(pollReservations,15000);
+    const interval = setInterval(pollReservations,4000);
     return () => {disposed=true;clearInterval(interval);};
   }, [online,ride?.id,offer?.rideId]);
   async function acceptReservation() {
@@ -227,7 +228,7 @@ function DriverDashboard() {
     finally {setReservationBusy(false);}
   }
   function declineReservation() {
-    if (reservationOffer) dismissedReservations.current.add(reservationOffer.id);
+    if (reservationOffer) rememberReservation(reservationOffer.id);
     setReservationOffer(null);
   }
   const canAccept = true;
@@ -718,7 +719,7 @@ function DriverDashboard() {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <button type="button" disabled={reservationBusy} onClick={declineReservation} style={{minHeight:49,borderRadius:12,border:"1px solid #ff335c",background:"rgba(255,38,79,.10)",color:"#ff4567",fontWeight:750,boxShadow:"0 0 12px rgba(255,38,79,.16)"}}>Refuser</button>
             <button type="button" disabled={reservationBusy} onClick={acceptReservation} style={{minHeight:49,borderRadius:12,border:"1px solid #21d46a",background:"#10251b",color:"#fff",fontWeight:750,position:"relative",overflow:"hidden",isolation:"isolate"}}>
-              <span key={reservationOffer.id} aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",background:"linear-gradient(90deg,#10a34c,#32e67c)",animation:"reservation-green-drain 7s linear forwards",zIndex:-1}}/>
+              <span key={reservationOffer.id} aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",background:"linear-gradient(90deg,#10a34c,#32e67c)",animation:"reservation-green-drain 15s linear forwards",zIndex:-1}}/>
               {reservationBusy ? "Validation…" : "Accepter"}
             </button>
           </div>
