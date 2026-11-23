@@ -23,7 +23,9 @@ import { Route as AuthenticatedBecomeDriverRouteImport } from './routes/_authent
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedFavoriteRouteImport } from './routes/_authenticated.favorite'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
+import { Route as AuthenticatedRecurringRouteImport } from './routes/_authenticated.recurring'
 import { Route as AuthenticatedRidesRouteImport } from './routes/_authenticated.rides'
+import { Route as AuthenticatedTransportRouteImport } from './routes/_authenticated.transport'
 import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated.wallet'
 import { Route as ApiUberHourlyCheckRouteImport } from './routes/api.uber-hourly-check'
 import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenticated.admin.alerts'
@@ -44,6 +46,7 @@ import { Route as AuthenticatedDriverMenuRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDriverPreferencesRouteImport } from './routes/_authenticated.driver.preferences'
 import { Route as AuthenticatedDriverPrivateClientsRouteImport } from './routes/_authenticated.driver.private-clients'
 import { Route as AuthenticatedDriverProfileRouteImport } from './routes/_authenticated.driver.profile'
+import { Route as AuthenticatedDriverReservationsRouteImport } from './routes/_authenticated.driver.reservations'
 import { Route as AuthenticatedDriverTripsRouteImport } from './routes/_authenticated.driver.trips'
 import { Route as AuthenticatedDriverWalletRouteImport } from './routes/_authenticated.driver.wallet'
 import { Route as AuthenticatedRidesIdRouteImport } from './routes/_authenticated.rides.$id'
@@ -123,9 +126,19 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRecurringRoute = AuthenticatedRecurringRouteImport.update({
+  id: '/recurring',
+  path: '/recurring',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRidesRoute = AuthenticatedRidesRouteImport.update({
   id: '/rides',
   path: '/rides',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTransportRoute = AuthenticatedTransportRouteImport.update({
+  id: '/transport',
+  path: '/transport',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedWalletRoute = AuthenticatedWalletRouteImport.update({
@@ -243,6 +256,12 @@ const AuthenticatedDriverProfileRoute =
     path: '/driver/profile',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDriverReservationsRoute =
+  AuthenticatedDriverReservationsRouteImport.update({
+    id: '/driver/reservations',
+    path: '/driver/reservations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDriverTripsRoute =
   AuthenticatedDriverTripsRouteImport.update({
     id: '/driver/trips',
@@ -305,7 +324,9 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/favorite': typeof AuthenticatedFavoriteRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/recurring': typeof AuthenticatedRecurringRoute
   '/rides': typeof AuthenticatedRidesRouteWithChildren
+  '/transport': typeof AuthenticatedTransportRoute
   '/wallet': typeof AuthenticatedWalletRoute
   '/api/uber-hourly-check': typeof ApiUberHourlyCheckRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
@@ -326,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
   '/driver/private-clients': typeof AuthenticatedDriverPrivateClientsRoute
   '/driver/profile': typeof AuthenticatedDriverProfileRoute
+  '/driver/reservations': typeof AuthenticatedDriverReservationsRoute
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
@@ -349,7 +371,9 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/favorite': typeof AuthenticatedFavoriteRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/recurring': typeof AuthenticatedRecurringRoute
   '/rides': typeof AuthenticatedRidesRouteWithChildren
+  '/transport': typeof AuthenticatedTransportRoute
   '/wallet': typeof AuthenticatedWalletRoute
   '/api/uber-hourly-check': typeof ApiUberHourlyCheckRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
@@ -370,6 +394,7 @@ export interface FileRoutesByTo {
   '/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
   '/driver/private-clients': typeof AuthenticatedDriverPrivateClientsRoute
   '/driver/profile': typeof AuthenticatedDriverProfileRoute
+  '/driver/reservations': typeof AuthenticatedDriverReservationsRoute
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
@@ -395,7 +420,9 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/favorite': typeof AuthenticatedFavoriteRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/recurring': typeof AuthenticatedRecurringRoute
   '/_authenticated/rides': typeof AuthenticatedRidesRouteWithChildren
+  '/_authenticated/transport': typeof AuthenticatedTransportRoute
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
   '/api/uber-hourly-check': typeof ApiUberHourlyCheckRoute
   '/_authenticated/admin/alerts': typeof AuthenticatedAdminAlertsRoute
@@ -416,6 +443,7 @@ export interface FileRoutesById {
   '/_authenticated/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
   '/_authenticated/driver/private-clients': typeof AuthenticatedDriverPrivateClientsRoute
   '/_authenticated/driver/profile': typeof AuthenticatedDriverProfileRoute
+  '/_authenticated/driver/reservations': typeof AuthenticatedDriverReservationsRoute
   '/_authenticated/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/_authenticated/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/_authenticated/rides/$id': typeof AuthenticatedRidesIdRoute
@@ -441,7 +469,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/favorite'
     | '/profile'
+    | '/recurring'
     | '/rides'
+    | '/transport'
     | '/wallet'
     | '/api/uber-hourly-check'
     | '/admin/alerts'
@@ -462,6 +492,7 @@ export interface FileRouteTypes {
     | '/driver/preferences'
     | '/driver/private-clients'
     | '/driver/profile'
+    | '/driver/reservations'
     | '/driver/trips'
     | '/driver/wallet'
     | '/rides/$id'
@@ -485,7 +516,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/favorite'
     | '/profile'
+    | '/recurring'
     | '/rides'
+    | '/transport'
     | '/wallet'
     | '/api/uber-hourly-check'
     | '/admin/alerts'
@@ -506,6 +539,7 @@ export interface FileRouteTypes {
     | '/driver/preferences'
     | '/driver/private-clients'
     | '/driver/profile'
+    | '/driver/reservations'
     | '/driver/trips'
     | '/driver/wallet'
     | '/rides/$id'
@@ -530,7 +564,9 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/favorite'
     | '/_authenticated/profile'
+    | '/_authenticated/recurring'
     | '/_authenticated/rides'
+    | '/_authenticated/transport'
     | '/_authenticated/wallet'
     | '/api/uber-hourly-check'
     | '/_authenticated/admin/alerts'
@@ -551,6 +587,7 @@ export interface FileRouteTypes {
     | '/_authenticated/driver/preferences'
     | '/_authenticated/driver/private-clients'
     | '/_authenticated/driver/profile'
+    | '/_authenticated/driver/reservations'
     | '/_authenticated/driver/trips'
     | '/_authenticated/driver/wallet'
     | '/_authenticated/rides/$id'
@@ -680,11 +717,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/recurring': {
+      id: '/_authenticated/recurring'
+      path: '/recurring'
+      fullPath: '/recurring'
+      preLoaderRoute: typeof AuthenticatedRecurringRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/rides': {
       id: '/_authenticated/rides'
       path: '/rides'
       fullPath: '/rides'
       preLoaderRoute: typeof AuthenticatedRidesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/transport': {
+      id: '/_authenticated/transport'
+      path: '/transport'
+      fullPath: '/transport'
+      preLoaderRoute: typeof AuthenticatedTransportRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/wallet': {
@@ -827,6 +878,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDriverProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/driver/reservations': {
+      id: '/_authenticated/driver/reservations'
+      path: '/driver/reservations'
+      fullPath: '/driver/reservations'
+      preLoaderRoute: typeof AuthenticatedDriverReservationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/driver/trips': {
       id: '/_authenticated/driver/trips'
       path: '/driver/trips'
@@ -902,7 +960,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFavoriteRoute: typeof AuthenticatedFavoriteRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedRecurringRoute: typeof AuthenticatedRecurringRoute
   AuthenticatedRidesRoute: typeof AuthenticatedRidesRouteWithChildren
+  AuthenticatedTransportRoute: typeof AuthenticatedTransportRoute
   AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
   AuthenticatedAdminAlertsRoute: typeof AuthenticatedAdminAlertsRoute
   AuthenticatedAdminChatEvidenceRoute: typeof AuthenticatedAdminChatEvidenceRoute
@@ -922,6 +982,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDriverPreferencesRoute: typeof AuthenticatedDriverPreferencesRoute
   AuthenticatedDriverPrivateClientsRoute: typeof AuthenticatedDriverPrivateClientsRoute
   AuthenticatedDriverProfileRoute: typeof AuthenticatedDriverProfileRoute
+  AuthenticatedDriverReservationsRoute: typeof AuthenticatedDriverReservationsRoute
   AuthenticatedDriverTripsRoute: typeof AuthenticatedDriverTripsRoute
   AuthenticatedDriverWalletRoute: typeof AuthenticatedDriverWalletRoute
 }
@@ -931,7 +992,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFavoriteRoute: AuthenticatedFavoriteRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedRecurringRoute: AuthenticatedRecurringRoute,
   AuthenticatedRidesRoute: AuthenticatedRidesRouteWithChildren,
+  AuthenticatedTransportRoute: AuthenticatedTransportRoute,
   AuthenticatedWalletRoute: AuthenticatedWalletRoute,
   AuthenticatedAdminAlertsRoute: AuthenticatedAdminAlertsRoute,
   AuthenticatedAdminChatEvidenceRoute: AuthenticatedAdminChatEvidenceRoute,
@@ -952,6 +1015,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDriverPrivateClientsRoute:
     AuthenticatedDriverPrivateClientsRoute,
   AuthenticatedDriverProfileRoute: AuthenticatedDriverProfileRoute,
+  AuthenticatedDriverReservationsRoute: AuthenticatedDriverReservationsRoute,
   AuthenticatedDriverTripsRoute: AuthenticatedDriverTripsRoute,
   AuthenticatedDriverWalletRoute: AuthenticatedDriverWalletRoute,
 }
