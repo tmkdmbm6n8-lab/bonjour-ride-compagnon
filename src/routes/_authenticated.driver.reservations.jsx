@@ -15,6 +15,15 @@ function DriverReservations() {
     if (!response.ok) { setError(data.error || "Annulation impossible"); return; }
     setItems(current => current.filter(item => item.id !== id));
   }
+  async function acceptChange(id) {
+    try {
+      const response = await apiFetch("/api/drivers/me/accepted-reservations/confirm-change",{method:"POST",body:JSON.stringify({id})});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Confirmation impossible");
+      setItems(current => current.map(item => item.id === id ? {...item,status:"confirmed"} : item));
+      setError("");
+    } catch(e) {setError(e.message);}
+  }
   useEffect(() => {
     let active = true;
     async function load() {
@@ -41,8 +50,14 @@ function DriverReservations() {
       <p style={{fontWeight:700,margin:"12px 0"}}>{new Date(item.scheduled_at).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"})}</p>
       <p style={{display:"flex",gap:8,alignItems:"flex-start"}}><MapPin size={17} color="#39ff88"/>{item.pickup_address}</p>
       <p style={{display:"flex",gap:8,alignItems:"flex-start",marginTop:8}}><Flag size={17} color="#ff657c"/>{item.dropoff_address}</p>
-      <p style={{fontSize:12,color:"#39ff88",margin:"12px 0"}}>Acceptée</p>
-      <button type="button" className="btn btn-secondary" onClick={()=>cancel(item.id)}>Annuler la réservation</button>
+      {item.status === "modified_pending" ? <div style={{background:"rgba(250,204,21,0.12)",border:"1px solid #facc15",borderRadius:12,padding:12,margin:"12px 0"}}>
+        <p style={{color:"#facc15",fontWeight:700,fontSize:13,marginBottom:8}}>⚠️ Le client a modifié les horaires ou adresses</p>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <button type="button" className="btn btn-primary" onClick={()=>acceptChange(item.id)}>Confirmer</button>
+          <button type="button" className="btn btn-secondary" onClick={()=>cancel(item.id)}>Refuser</button>
+        </div>
+      </div> : <p style={{fontSize:12,color:"#39ff88",margin:"12px 0"}}>Acceptée{item.estimated_price != null ? " · "+Number(item.estimated_price).toFixed(2).replace(".",",")+" €" : ""}</p>}
+      {item.status !== "modified_pending" && <button type="button" className="btn btn-secondary" onClick={()=>cancel(item.id)}>Annuler la réservation</button>}
     </article>)}</div>
   </main></DriverLayout>;
 }
