@@ -3,7 +3,7 @@ import { Plane, TrainFront, RefreshCw, Clock, MapPin, Car, LocateFixed, Calendar
 import RiderLayout from "@/components/RiderLayout";
 import Modal from "@/components/ui/Modal";
 import PlaceSearch from "@/components/maps/PlaceSearch";
-import { Loading } from "@/components/ui/bits";
+import { Loading, money } from "@/components/ui/bits";
 import useDriverData from "@/hooks/useDriverData";
 import { apiFetch } from "@/lib/archive-fetch";
 import { clock, parisDay } from "@/lib/vtc-dates";
@@ -21,6 +21,8 @@ export default function PassengerTraffic() {
   const [pickupText, setPickupText] = useState("");
   const [dropoffText, setDropoffText] = useState("");
   const [vehicleType, setVehicleType] = useState("economy");
+  const [estimates, setEstimates] = useState(null);
+  const [estimating, setEstimating] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [bookingMode, setBookingMode] = useState("now");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -50,6 +52,33 @@ export default function PassengerTraffic() {
     const timer = setInterval(loadReservations,30000);
     return () => {active=false;clearInterval(timer);};
   },[]);
+  useEffect(() => {
+    if (!selected || !Number.isFinite(pickup?.lat) || !Number.isFinite(pickup?.lng) ||
+        !Number.isFinite(dropoff?.lat) || !Number.isFinite(dropoff?.lng)) {
+      setEstimates(null);
+      setEstimating(false);
+      return;
+    }
+    let cancelled = false;
+    setEstimates(null);
+    setEstimating(true);
+    (async () => {
+      try {
+        const res = await apiFetch("/api/rides/estimate", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            pickup: {lat:pickup.lat,lng:pickup.lng},
+            dropoff: {lat:dropoff.lat,lng:dropoff.lng}
+          })
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok && data?.estimates) setEstimates(data.estimates);
+      } catch { /* estimation facultative, sans blocage de réservation */ }
+      finally { if (!cancelled) setEstimating(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [selected, pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng]);
   const items = (data?.items || []).filter(item => item.kind === kind && item.direction === direction && item.status !== "completed" && item.status !== "cancelled" && Date.parse(item.actual || item.estimated || item.scheduled) > Date.now());
   const dayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(new Date());
   function openTransport(item) {
@@ -190,7 +219,15 @@ export default function PassengerTraffic() {
         <div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}><strong>Départ</strong><button type="button" className="btn btn-secondary" style={{padding:"7px 10px",fontSize:13}} onClick={locatePickup} disabled={locating}><LocateFixed size={16}/>{locating ? "Localisation…" : "Ma position"}</button></div><PlaceSearch value={pickupText} onChangeText={t => { setPickupText(t); setPickup(null); }} onSelect={point => { setPickup(point); setPickupText(point.address); }} committedValue={pickup?.address} placeholder="Adresse de départ" icon={MapPin}/></div>
         <label>Destination<PlaceSearch value={dropoffText} onChangeText={t => { setDropoffText(t); setDropoff(null); }} onSelect={point => { setDropoff(point); setDropoffText(point.address); }} committedValue={dropoff?.address} placeholder="Adresse d'arrivée" icon={MapPin}/></label>
         {bookingMode === "later" && <label style={{display:"grid",gap:8,fontWeight:600}}>Date et heure de prise en charge<input className="input" type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)}/></label>}
-        {bookingMode === "now" && <label style={{display:"grid",gap:8,fontWeight:600}}>Véhicule<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={vehicleType} onChange={e => setVehicleType(e.target.value)}><option value="economy">Économique</option><option value="comfort">Confort</option><option value="xl">XL</option><option value="pet">Animaux</option></select></label>}
+        {bookingMode === "now" && <label style={{display:"grid",gap:8,fontWeight:600}}>Catégorie de véhicule
+          <select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={vehicleType} onChange={e => setVehicleType(e.target.value)}>
+            <option value="economy">StrasDrive Go{Number.isFinite(Number(estimates?.economy)) && estimates?.economy != null ? " · " + money(estimates.economy) : ""}</option>
+            <option value="comfort">StrasDrive Confort{Number.isFinite(Number(estimates?.comfort)) && estimates?.comfort != null ? " · " + money(estimates.comfort) : ""}</option>
+            <option value="xl">StrasDrive XL{Number.isFinite(Number(estimates?.xl)) && estimates?.xl != null ? " · " + money(estimates.xl) : ""}</option>
+            <option value="pet">StrasDrive Pet{Number.isFinite(Number(estimates?.pet)) && estimates?.pet != null ? " · " + money(estimates.pet) : ""}</option>
+          </select>
+          {estimating && <span className="small muted">Calcul des tarifs…</span>}
+        </label>}
         <label style={{display:"grid",gap:8,fontWeight:600}}>Paiement<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">Espèces</option><option value="wallet">Portefeuille</option><option value="card">Carte bancaire</option></select></label>
         {errorMessage && <p role="alert" style={{ color: "crimson" }}>{errorMessage}</p>}
         {bookingMode === "now" ? <button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || busy || selected.status === "cancelled" || selected.status === "completed"} onClick={requestDriver}>{busy ? "Recherche…" : "Chercher un chauffeur"}</button> : <><p className="small muted">La demande sera enregistrée pour plus tard. Aucun chauffeur ne sera recherché immédiatement.</p><button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || scheduleBusy} onClick={scheduleTransport}>{scheduleBusy ? "Enregistrement…" : "Enregistrer la réservation"}</button></>}
