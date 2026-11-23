@@ -695,11 +695,6 @@ function DriverDashboard() {
       <Modal portal sheetOnMobile={false} maxWidth={440} open={Boolean(reservationOffer && !offer && !ride && online && !profile?.isReportSuspended)} onClose={declineReservation} closable={false}>
         {reservationOffer && <div style={{background:"linear-gradient(180deg,#13151f 0%,#0a0b10 100%)",color:"#fff",borderRadius:24,padding:"24px 20px 20px",margin:"-16px",border:"1px solid rgba(212,160,23,.25)",boxShadow:"0 24px 60px rgba(0,0,0,.8),0 0 30px rgba(212,160,23,.12)"}}>
           <style>{`@keyframes reservation-green-drain {from{width:100%}to{width:0%}}`}</style>
-          {/* Prix affiché uniquement lorsqu'une estimation réelle est disponible. */}
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",margin:"-24px auto 14px",padding:"8px 36px 12px",background:"linear-gradient(180deg, rgba(250, 204, 21, 0.28) 0%, rgba(212, 160, 23, 0.08) 100%)",borderBottom:"1.5px solid #facc15",borderLeft:"1.5px solid rgba(250, 204, 21, 0.4)",borderRight:"1.5px solid rgba(250, 204, 21, 0.4)",borderTop:"none",borderRadius:"0 0 40px 40px",boxShadow:"0 8px 24px rgba(250, 204, 21, 0.25)",width:"fit-content"}}>
-            <span style={{fontSize:"1.9rem",fontWeight:800,color:"#facc15",lineHeight:1,letterSpacing:"-0.02em"}}>{Number.isFinite(Number(reservationOffer.estimated_earnings ?? reservationOffer.fare ?? reservationOffer.price)) && (reservationOffer.estimated_earnings ?? reservationOffer.fare ?? reservationOffer.price) != null ? money(Number(reservationOffer.estimated_earnings ?? reservationOffer.fare ?? reservationOffer.price)) : "À estimer"}</span>
-            <span style={{fontSize:"0.68rem",color:"#d1d5db",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.05em",marginTop:3}}>Gain estimé</span>
-          </div>
           <div style={{display:"flex",alignItems:"center",gap:9,color:"#facc15",fontWeight:700,marginBottom:18}}>
             {reservationOffer.transport_type === "flight" ? <Plane size={20}/> : <TrainFront size={20}/>}
             <span>Réservation</span>
