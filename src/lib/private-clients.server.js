@@ -1,7 +1,7 @@
 import { driverGold, loadDriverGold } from "./driver-gold.server";
 // Private clients and favorite driver: server operations. Identity always comes from the verified session;
 // links go through the manage_favorite_driver RPC (as the rider) which requires a ride together or a scanned QR.
-import { PRIVATE_INVITATION_SECONDS, PRIVATE_CLAIM_HOURS, favoriteStatus, favoriteEtaMinutes } from "./private-client-policy";
+import { PRIVATE_CLAIM_HOURS, favoriteStatus, favoriteEtaMinutes } from "./private-client-policy";
 import { driverClass } from "./vtc-classes";
 import { passengerDisplayName } from "./passenger-name";
 import { accountRating } from "./account-ratings.server";
@@ -114,18 +114,32 @@ export async function favoriteBooking(admin, riderId, pool) {
   return { driverId: id, vehicleType: driverClass(fav) };
 }
 
-/** Driver: new five-minute QR invitation. Only the SHA-256 fingerprint is stored. */
+/** Stable, unguessable per-driver QR token; only its fingerprint is stored. */
+async function permanentDriverToken(driverId) {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) throw new Error("Configuration du serveur indisponible");
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const bytes = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("strasdrive:private-qr:v1:" + driverId)));
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/, "");
+}
+
+/** Driver: the same QR code on every visit, without a time limit. */
 export async function createInvitation(admin, driverId) {
   const gold = await loadDriverGold(admin, driverId);
   if (!gold.active) throw new Error("StrasDrive Gold est inactif.");
-  const expiresAt = Math.min(Date.now() + PRIVATE_INVITATION_SECONDS * 1000, gold.endsAt ? Date.parse(gold.endsAt) : Infinity);
-  const token = randomToken();
-  required(
-    await admin
-      .from("driver_private_invitations")
-      .insert({ driver_id: driverId, token_hash: await sha256(token), expires_at: new Date(expiresAt).toISOString() }),
-  );
-  return { token, expiresAt };
+  const token = await permanentDriverToken(driverId);
+  const hash = await sha256(token);
+  const existing = required(await admin.from("driver_private_invitations").select("id,expires_at").eq("token_hash", hash).maybeSingle());
+  const expiresAt = "9999-12-31T23:59:59.000Z";
+  if (!existing) {
+    const inserted = await admin.from("driver_private_invitations").insert({ driver_id: driverId, token_hash: hash, expires_at: expiresAt });
+    if (inserted.error && inserted.error.code !== "23505") throw new Error(inserted.error.message);
+  } else if (existing.expires_at !== expiresAt) {
+    required(await admin.from("driver_private_invitations").update({ expires_at: expiresAt }).eq("id", existing.id));
+  }
+  return { token, permanent: true };
 }
 
 /** Driver: his private clients, with only a display name and avatar. */
