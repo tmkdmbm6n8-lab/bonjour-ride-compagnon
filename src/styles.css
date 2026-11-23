@@ -11553,3 +11553,86 @@ a.activity-pill:hover {
 * {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Online waiting status and half-height availability sheet. */
+.drv-online-status {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(440px, calc(100% - 32px));
+  padding: 16px 20px;
+  border: 1px solid #ffffff18;
+  border-radius: 22px;
+  background: linear-gradient(120deg, #14221f, #11171d);
+  color: #f1f7f5;
+  box-shadow: 0 12px 32px #0006;
+  cursor: pointer;
+  text-align: left;
+}
+.drv-online-copy { display: grid; gap: 4px; flex: 1; }
+.drv-online-copy strong { font-size: 16px; font-weight: 650; }
+.drv-online-copy small { font-size: 12px; color: #a4b8b0; }
+.drv-online-signal {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #72ddb514;
+  color: #86e4bb;
+}
+.drv-online-status.is-searching .drv-online-signal,
+.drv-online-sheet-waiting .drv-online-signal {
+  animation: drvWaitingBreath 3s ease-in-out infinite;
+}
+@keyframes drvWaitingBreath {
+  0%, 100% { box-shadow: 0 0 0 0 #86e4bb00; opacity: .7; }
+  50% { box-shadow: 0 0 0 7px #86e4bb0c; opacity: 1; }
+}
+.modal-portal-overlay:has(.drv-online-sheet) {
+  align-items: flex-end;
+  padding: 0;
+  backdrop-filter: none;
+  background: #0004;
+}
+.modal-portal-root .drv-online-sheet {
+  display: flex;
+  flex-direction: column;
+  height: 50vh;
+  height: 50dvh;
+  max-height: 50dvh;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #ffffff18;
+  border-bottom: 0;
+  border-radius: 26px 26px 0 0;
+  background: #11191d;
+  color: #f1f7f5;
+  animation: slide-up 260ms ease-out;
+}
+.modal-portal-root .drv-online-sheet .modal-header {
+  margin: 0;
+  padding: 18px 20px;
+  flex-shrink: 0;
+  background: transparent;
+}
+.modal-portal-root .drv-online-sheet .modal-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 12px 24px max(24px, env(safe-area-inset-bottom, 0px));
+}
+.drv-online-sheet-waiting { margin: auto 0; padding: 12px 0 24px; text-align: center; }
+.drv-online-sheet-waiting .drv-online-signal { margin: 0 auto 20px; width: 56px; height: 56px; }
+.drv-online-sheet-waiting h4 { margin: 0 0 8px; font-size: 17px; }
+.drv-online-sheet-waiting p { margin: 0; font-size: 13px; color: #a4b8b0; }
+.drv-online-stop { width: 100%; justify-content: center; flex-shrink: 0; margin-top: auto; box-shadow: 0 0 22px #ef44442e; }
+.drv-online-stop:disabled { opacity: .55; cursor: wait; }
+.drv-online-status:focus-visible { outline: 2px solid #86e4bb; outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .drv-online-status.is-searching .drv-online-signal,
+  .drv-online-sheet-waiting .drv-online-signal,
+  .modal-portal-root .drv-online-sheet { animation: none; }
+}
