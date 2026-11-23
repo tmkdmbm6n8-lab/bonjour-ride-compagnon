@@ -149,7 +149,7 @@ export default function PassengerTraffic() {
       <button role="tab" aria-selected={kind === "train"} className={"drv-traffic-tab " + (kind === "train" ? "active" : "")} onClick={() => setKind("train")}><TrainFront size={18}/><span>Gare Centrale</span></button>
     </div>
     </>}
-    {!showReservations && <div className="drv-current-day-badge"><Clock size={14}/><span>Aujourd'hui · {dayLabel}</span></div>
+    {!showReservations && <div className="drv-current-day-badge"><Clock size={14}/><span>Aujourd'hui · {dayLabel}</span></div>}
     {!showReservations && <div className="drv-direction-segmented">
       <button className={"drv-direction-btn " + (direction === "arrival" ? "active" : "")} onClick={() => setDirection("arrival")}>Arrivées</button>
       <button className={"drv-direction-btn " + (direction === "departure" ? "active" : "")} onClick={() => setDirection("departure")}>Départs</button>
