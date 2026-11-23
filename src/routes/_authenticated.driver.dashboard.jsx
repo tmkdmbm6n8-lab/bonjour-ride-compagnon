@@ -174,6 +174,18 @@ function DriverDashboard() {
   const [reservationBusy,setReservationBusy] = useState(false);
   const dismissedReservations = useRef(new Set());
   useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("strasdrive_handled_reservations") || "[]");
+      if (Array.isArray(saved)) saved.forEach(id => dismissedReservations.current.add(id));
+    } catch { /* storage may be unavailable */ }
+  },[]);
+  function rememberReservation(id) {
+    dismissedReservations.current.add(id);
+    try {
+      localStorage.setItem("strasdrive_handled_reservations",JSON.stringify([...dismissedReservations.current].slice(-250)));
+    } catch { /* still remembered for this session */ }
+  }
+  useEffect(() => {
     if (!reservationOffer) return;
     const timer = setTimeout(() => {
       dismissedReservations.current.add(reservationOffer.id);
@@ -206,7 +218,7 @@ function DriverDashboard() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Réservation indisponible");
-      dismissedReservations.current.add(reservationOffer.id);
+      rememberReservation(reservationOffer.id);
       setReservationOffer(null);
       toast("Réservation acceptée pour le "+new Date(result.reservation.scheduled_at).toLocaleString("fr-FR"),"success",5000);
     } catch(e) { toast(e.message,"error",4500); }
