@@ -142,7 +142,7 @@ export default function PassengerTraffic() {
     try {
       const response = await apiFetch("/api/riders/me/scheduled-requests", {method:"POST",body:JSON.stringify({
         kind:"transport",pickupAddress:pickup.address,dropoffAddress:dropoff.address,
-        transportType:selected.kind,transportNumber:selected.number,scheduledAt:when.toISOString(),paymentMethod
+        transportType:selected.kind,transportNumber:selected.number,scheduledAt:when.toISOString(),paymentMethod,estimatedPrice:estimates?.[vehicleType] ?? null
       })});
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Enregistrement impossible");
