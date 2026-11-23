@@ -8,7 +8,6 @@ import useDriverData from "@/hooks/useDriverData";
 import { apiFetch } from "@/lib/archive-fetch";
 import { clock, parisDay } from "@/lib/vtc-dates";
 import { AIRPORT, STATION } from "@/lib/vtc-transport";
-import { saveRideDraft } from "@/lib/ride-draft";
 
 export default function PassengerTraffic() {
   const [kind, setKind] = useState("flight");
@@ -183,27 +182,18 @@ export default function PassengerTraffic() {
         </div>
       </button>
     </article>)}</div>}
-    <Modal portal keyboardSafe open={Boolean(selected)} onClose={() => { if (!busy) setSelected(null); }} title={selected ? selected.number + " · " + (selected.city || "Strasbourg") : ""} maxWidth={560}>
+    <Modal portal keyboardSafe open={Boolean(selected)} onClose={() => { if (!busy) setSelected(null); }} title={selected ? selected.number + " · " + selected.city : ""} maxWidth={560}>
       {selected && <div style={{ display: "grid", gap: 16 }}>
-        <p className="small muted">{selected.direction === "arrival" ? "Prise en charge à l'arrivée" : "Transfert pour le départ"} · {clock(selected.estimated || selected.scheduled)}</p>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          <button type="button" className={"btn "+(bookingMode === "now" ? "btn-primary":"btn-secondary")} onClick={()=>setBookingMode("now")}>Maintenant</button>
-          <button type="button" className={"btn "+(bookingMode === "later" ? "btn-primary":"btn-secondary")} onClick={()=>setBookingMode("later")}>Réserver à l’avance</button>
-        </div>
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}>
-            <strong>Départ</strong>
-            <button type="button" className="btn btn-secondary" style={{padding:"7px 10px",fontSize:13}} onClick={locatePickup} disabled={locating}><LocateFixed size={16}/>{locating ? "Localisation…" : "Ma position"}</button>
-          </div>
-          <PlaceSearch value={pickupText} onChangeText={t => { setPickupText(t); setPickup(null); }} onSelect={point => { setPickup(point); setPickupText(point.address); }} committedValue={pickup?.address} placeholder="Adresse de départ" icon={MapPin}/>
-        </div>
-        <label><strong>Destination</strong><PlaceSearch value={dropoffText} onChangeText={t => { setDropoffText(t); setDropoff(null); }} onSelect={point => { setDropoff(point); setDropoffText(point.address); }} committedValue={dropoff?.address} placeholder="Adresse d'arrivée" icon={MapPin}/></label>
+        <p>{selected.direction === "arrival" ? "Prise en charge à l'arrivée" : "Transfert pour le départ"} · {clock(selected.estimated || selected.scheduled)}</p>
+        <p>Choisissez quand vous souhaitez effectuer ce trajet.</p>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><button type="button" className={"btn "+(bookingMode === "now" ? "btn-primary":"btn-secondary")} onClick={()=>setBookingMode("now")}>Maintenant</button><button type="button" className={"btn "+(bookingMode === "later" ? "btn-primary":"btn-secondary")} onClick={()=>setBookingMode("later")}>Réserver à l’avance</button></div>
+        <div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}><strong>Départ</strong><button type="button" className="btn btn-secondary" style={{padding:"7px 10px",fontSize:13}} onClick={locatePickup} disabled={locating}><LocateFixed size={16}/>{locating ? "Localisation…" : "Ma position"}</button></div><PlaceSearch value={pickupText} onChangeText={t => { setPickupText(t); setPickup(null); }} onSelect={point => { setPickup(point); setPickupText(point.address); }} committedValue={pickup?.address} placeholder="Adresse de départ" icon={MapPin}/></div>
+        <label>Destination<PlaceSearch value={dropoffText} onChangeText={t => { setDropoffText(t); setDropoff(null); }} onSelect={point => { setDropoff(point); setDropoffText(point.address); }} committedValue={dropoff?.address} placeholder="Adresse d'arrivée" icon={MapPin}/></label>
         {bookingMode === "later" && <label style={{display:"grid",gap:8,fontWeight:600}}>Date et heure de prise en charge<input className="input" type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)}/></label>}
-        {errorMessage && <p role="alert" style={{color:"crimson"}}>{errorMessage}</p>}
-        <button type="button" className="btn btn-primary btn-full mt-2" disabled={!pickupText || !dropoffText || (bookingMode === "later" && (!scheduledAt || new Date(scheduledAt).getTime() <= Date.now()))} onClick={() => {
-          saveRideDraft({pickup,dropoff,pickupText,dropoffText,scheduledAt:bookingMode === "later" ? scheduledAt : null,transportType:selected.kind,transportNumber:selected.number});
-          window.location.assign("/dashboard");
-        }}>Rechercher</button>
+        {bookingMode === "now" && <label style={{display:"grid",gap:8,fontWeight:600}}>Véhicule<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={vehicleType} onChange={e => setVehicleType(e.target.value)}><option value="economy">Économique</option><option value="comfort">Confort</option><option value="xl">XL</option><option value="pet">Animaux</option></select></label>}
+        <label style={{display:"grid",gap:8,fontWeight:600}}>Paiement<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">Espèces</option><option value="wallet">Portefeuille</option><option value="card">Carte bancaire</option></select></label>
+        {errorMessage && <p role="alert" style={{ color: "crimson" }}>{errorMessage}</p>}
+        {bookingMode === "now" ? <button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || busy || selected.status === "cancelled" || selected.status === "completed"} onClick={requestDriver}>{busy ? "Recherche…" : "Chercher un chauffeur"}</button> : <><p className="small muted">La demande sera enregistrée pour plus tard. Aucun chauffeur ne sera recherché immédiatement.</p><button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || scheduleBusy} onClick={scheduleTransport}>{scheduleBusy ? "Enregistrement…" : "Enregistrer la réservation"}</button></>}
       </div>}
     </Modal>
   </div></RiderLayout>;
