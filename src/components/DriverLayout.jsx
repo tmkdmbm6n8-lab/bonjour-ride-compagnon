@@ -2,6 +2,7 @@
 
 import {
   Gauge,
+  CalendarDays,
   Route as RouteIcon,
   Wallet,
   MessagesSquare,
@@ -21,6 +22,7 @@ import { signOut } from "@/lib/archive-auth";
 
 const NAV = [
   { href: "/driver/dashboard", label: "Accueil", icon: Gauge },
+  { href: "/driver/reservations", label: "Réservations", icon: CalendarDays },
   { href: "/driver/private-clients", label: "Clients", icon: QrCode },
   { href: "/driver/discover", label: "Trafic", icon: RouteIcon },
   { href: "/driver/earnings", label: "Revenus", icon: Wallet },
@@ -30,7 +32,7 @@ const NAV = [
 
 const GoldContext = createContext(null);
 export const useDriverGold = () => useContext(GoldContext);
-const STANDARD_NAV = [NAV[0], ...NAV.slice(3, 5), { href: "/driver/private-clients", label: "SDGold", icon: Gem }, NAV[5]];
+const STANDARD_NAV = [NAV[0], NAV[1], ...NAV.slice(4, 6), { href: "/driver/private-clients", label: "SDGold", icon: Gem }, NAV[6]];
 
 // Cache persistant pour conserver le statut Gold entre les changements d'onglets
 let cachedGold = null;
