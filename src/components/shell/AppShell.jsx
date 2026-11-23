@@ -52,7 +52,7 @@ export default function AppShell({ nav, children, variant = "default" }) {
         </div>
 
         <nav className="sidebar-nav" aria-label="Navigation principale">
-          {nav.map(({ href, label, icon: Icon }) => {
+          {nav.map(({ href, label, icon: Icon, badge }) => {
             const active = navigationActive(href, pathname, search, nav);
             return (
               <Link
@@ -63,7 +63,10 @@ export default function AppShell({ nav, children, variant = "default" }) {
                 activeOptions={{ exact: true, includeSearch: true }}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon size={19} strokeWidth={2} />
+                <span style={{position:"relative",display:"inline-flex"}}>
+                  <Icon size={19} strokeWidth={2} />
+                  {Number(badge) > 0 && <span style={{position:"absolute",top:-7,right:-10,background:"#ff335c",color:"#fff",borderRadius:999,padding:"1px 5px",fontSize:10,fontWeight:800,lineHeight:1.2,boxShadow:"0 0 6px rgba(255,51,92,.8)"}}>{badge}</span>}
+                </span>
                 <span>{label}</span>
               </Link>
             );
