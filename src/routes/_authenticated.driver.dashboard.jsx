@@ -687,7 +687,7 @@ function DriverDashboard() {
             {reservationOffer.transport_type === "flight" ? <Plane size={20}/> : <TrainFront size={20}/>}
             <span>Réservation</span>
             <span style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:5,color:reservationOffer.payment_method === "cash" ? "#39ff88" : reservationOffer.payment_method === "card" ? "#31baff" : "#a8b2c3"}}>
-              {reservationOffer.payment_method === "cash" ? <Banknote size={23}/> : reservationOffer.payment_method === "card" ? <CreditCard size={23}/> : null}
+              {reservationOffer.payment_method === "cash" ? <Banknote size={23} aria-label="Paiement en espèces"/> : <CreditCard size={23} aria-label={reservationOffer.payment_method === "card" ? "Paiement par carte" : "Moyen de paiement non renseigné"}/>}
             </span>
           </div>
           <div style={{fontSize:21,fontWeight:750,marginBottom:18}}>{new Date(reservationOffer.scheduled_at).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"})}</div>
