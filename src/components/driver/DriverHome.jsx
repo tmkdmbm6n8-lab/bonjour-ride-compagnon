@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   FileText,
   ShieldCheck,
+  ChevronUp,
+  Radio,
 } from "lucide-react";
 import MapView from "@/components/ArchiveMap";
 import Modal from "@/components/ui/Modal";
@@ -22,6 +24,7 @@ import { KovaIcon } from "@/components/brand/KovaLogo";
 export default function DriverHome({
   loading,
   online,
+  waiting = true,
   busy,
   isConnected,
   needsVehicle,
@@ -70,6 +73,10 @@ export default function DriverHome({
   };
 
   const [helpOpen, setHelpOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  useEffect(() => {
+    if (!online || !waiting) setStatusOpen(false);
+  }, [online, waiting]);
   const [sosOpen, setSosOpen] = useState(false);
   const { position: localPosition } = useGeolocation({ watch: false });
   const mapCenter = position || localPosition || center;
@@ -220,18 +227,42 @@ export default function DriverHome({
           <Link href="/driver/profile" className="drv-go-btn vehicle-needed">
             <span>Véhicule requis</span>
           </Link>
+        ) : online ? (
+          <button
+            type="button"
+            className={`drv-online-status ${waiting ? "is-searching" : ""}`}
+            onClick={() => setStatusOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={statusOpen}
+          >
+            <span className="drv-online-signal" aria-hidden="true"><Radio size={22} /></span>
+            <span className="drv-online-copy"><strong>Vous êtes en ligne</strong><small>{waiting ? "En attente d’une course" : "Une course vous est proposée"}</small></span>
+            <ChevronUp size={20} aria-hidden="true" />
+          </button>
         ) : (
           <button
-            className={`drv-go-btn ${online ? "is-online" : "is-offline"}`}
+            className="drv-go-btn is-offline"
             onClick={onToggle}
             disabled={busy || loading}
-            aria-label={online ? "Passer hors ligne" : "Passer en ligne"}
+            aria-label="Passer en ligne"
           >
             <span className="drv-go-pulse" />
-            <span className="drv-go-text">{busy ? "…" : online ? "HORS LIGNE" : "GO"}</span>
+            <span className="drv-go-text">{busy ? "…" : "GO"}</span>
           </button>
         )}
       </div>
+
+      <Modal open={statusOpen && online && waiting} onClose={() => setStatusOpen(false)} title="Vous êtes en ligne" portal sheetOnMobile={false} className="drv-online-sheet" maxWidth={560}>
+        <div className="drv-online-sheet-waiting">
+          <span className="drv-online-signal" aria-hidden="true"><Radio size={30} /></span>
+          <h4>Prêt pour votre prochaine course</h4>
+          <p>Vous recevrez les nouvelles demandes ici.</p>
+        </div>
+        <button type="button" className="drv-go-btn is-online drv-online-stop" onClick={onToggle} disabled={busy || loading}>
+          <Power size={20} aria-hidden="true" />
+          {busy ? "Déconnexion…" : "Passer hors ligne"}
+        </button>
+      </Modal>
 
       <Modal open={sosOpen} onClose={() => setSosOpen(false)} title="SOS — Urgences en France" portal keyboardSafe sheetOnMobile={false}>
         <p className="drv-sos-intro">StrasDrive ne contacte pas les secours à votre place. Pour votre sécurité, arrêtez-vous dès que possible dans un endroit sûr.</p>
