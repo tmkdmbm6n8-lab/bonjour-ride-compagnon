@@ -83,8 +83,10 @@ function LoginForm() {
       setError(
         status === 429
           ? "Trop de tentatives de connexion — veuillez patienter quelques minutes et réessayer."
-          : status === 401 || status === 403
-            ? "Connexion refusée. Vérifiez vos identifiants et l'état de votre compte."
+          : status === 400 || status === 401
+            ? "Adresse e-mail ou mot de passe incorrect. Vérifiez vos informations et réessayez. Si vous avez oublié votre mot de passe, utilisez le lien ci-dessous pour le réinitialiser."
+            : status === 403
+              ? "Connexion refusée. Vérifiez l’état de votre compte ou contactez l’assistance."
             : status >= 500
               ? "Le service de connexion rencontre un problème technique. Réessayez plus tard."
               : status === 0
