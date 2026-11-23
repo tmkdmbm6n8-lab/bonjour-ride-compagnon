@@ -659,6 +659,7 @@ function DriverDashboard() {
             onWaybill={() => setWaybillOpen(true)}
             loading={loading}
             online={online}
+            waiting={!offer && !reservationOffer}
             busy={busy}
             isConnected={isConnected}
             needsVehicle={needsVehicle}
