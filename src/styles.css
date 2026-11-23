@@ -11548,3 +11548,8 @@ a.activity-pill:hover {
     padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
 }
+
+/* Remove the Android/WebView tap flash across the app. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
