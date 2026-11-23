@@ -28,6 +28,9 @@ export default function PassengerTraffic() {
   const [scheduledAt, setScheduledAt] = useState("");
   const [scheduledRequests, setScheduledRequests] = useState([]);
   const [scheduleBusy, setScheduleBusy] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState("");
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [success, setSuccess] = useState("");
@@ -150,7 +153,30 @@ export default function PassengerTraffic() {
     } catch(e) { setErrorMessage(e.message); }
     finally { setScheduleBusy(false); }
   }
+  function openEdit(req) {
+    const at = new Date(req.scheduled_at);
+    setEditError("");
+    setEditing({ id: req.id, pickupAddress: req.pickup_address, dropoffAddress: req.dropoff_address,
+      paymentMethod: req.payment_method || "cash",
+      scheduledAt: new Date(at.getTime() - at.getTimezoneOffset()*60000).toISOString().slice(0,16) });
+  }
+  async function saveEdit() {
+    if (!editing || editBusy) return;
+    const when = new Date(editing.scheduledAt);
+    if (!Number.isFinite(when.getTime()) || when.getTime() <= Date.now()) { setEditError("Choisissez une date et une heure futures."); return; }
+    setEditBusy(true); setEditError("");
+    try {
+      const response = await apiFetch("/api/riders/me/scheduled-requests", {method:"PATCH",body:JSON.stringify({ ...editing, scheduledAt: when.toISOString() })});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Modification impossible");
+      setScheduledRequests(current => current.map(item => item.id === result.request.id ? result.request : item));
+      setEditing(null);
+      setSuccess("Réservation modifiée. Elle doit être de nouveau acceptée par un chauffeur.");
+    } catch(e) { setEditError(e.message); }
+    finally { setEditBusy(false); }
+  }
   async function cancelScheduled(id) {
+    if (!window.confirm("Annuler cette réservation ?")) return;
     const response = await apiFetch("/api/riders/me/scheduled-requests", {method:"DELETE",body:JSON.stringify({id})});
     const result = await response.json();
     if (!response.ok) { setSuccess(result.error || "Annulation impossible"); return; }
@@ -195,7 +221,7 @@ export default function PassengerTraffic() {
         <p style={{display:"flex",gap:8,alignItems:"flex-start"}}><MapPin size={17} color="#39ff88"/>{req.pickup_address}</p>
         <p style={{display:"flex",gap:8,alignItems:"flex-start",marginTop:8}}><Flag size={17} color="#ff657c"/>{req.dropoff_address}</p>
         <p style={{fontSize:12,color:req.status === "confirmed" ? "#39ff88" : "#e9bd50",margin:"12px 0"}}>{req.status === "confirmed" ? "Chauffeur attribué" : "En attente d’un chauffeur"}</p>
-        {req.status === "pending" && <button className="btn btn-secondary" type="button" onClick={()=>cancelScheduled(req.id)}>Annuler la réservation</button>}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><button className="btn btn-primary" type="button" onClick={()=>openEdit(req)}>Modifier</button><button className="btn btn-secondary" type="button" onClick={()=>cancelScheduled(req.id)}>Annuler</button></div>
       </article>)}
     </section>}
     {(busy || createdRide) && <div className="overlay" role="dialog" aria-modal="true" aria-label="Recherche de chauffeur"><div className="modal modal-pad" style={{maxWidth:440,textAlign:"center"}}><div className="pulse-ring" style={{width:72,height:72,borderRadius:"50%",display:"grid",placeItems:"center",margin:"12px auto 24px",background:"var(--ink-950)"}}><Car size={30} color="#fff"/></div><h3>Recherche de votre chauffeur…</h3><p className="small muted mt-2">{busy ? "Préparation de votre demande…" : "Nous contactons les chauffeurs proches de votre point de prise en charge."}</p>{errorMessage && <p role="alert" style={{color:"crimson"}}>{errorMessage}</p>}<button type="button" className="btn btn-secondary btn-full mt-6" disabled={cancelling || cancelWhenReady} onClick={cancelSearch}>{cancelling ? "Annulation…" : cancelWhenReady ? "Annulation demandée…" : "Annuler la demande"}</button>{createdRide && <button type="button" className="btn btn-primary btn-full mt-3" onClick={() => window.location.assign("/dashboard")}>Suivre ma course sur la carte</button>}</div></div>}
@@ -219,18 +245,30 @@ export default function PassengerTraffic() {
         <div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}><strong>Départ</strong><button type="button" className="btn btn-secondary" style={{padding:"7px 10px",fontSize:13}} onClick={locatePickup} disabled={locating}><LocateFixed size={16}/>{locating ? "Localisation…" : "Ma position"}</button></div><PlaceSearch value={pickupText} onChangeText={t => { setPickupText(t); setPickup(null); }} onSelect={point => { setPickup(point); setPickupText(point.address); }} committedValue={pickup?.address} placeholder="Adresse de départ" icon={MapPin}/></div>
         <label>Destination<PlaceSearch value={dropoffText} onChangeText={t => { setDropoffText(t); setDropoff(null); }} onSelect={point => { setDropoff(point); setDropoffText(point.address); }} committedValue={dropoff?.address} placeholder="Adresse d'arrivée" icon={MapPin}/></label>
         {bookingMode === "later" && <label style={{display:"grid",gap:8,fontWeight:600}}>Date et heure de prise en charge<input className="input" type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)}/></label>}
-        {bookingMode === "now" && <label style={{display:"grid",gap:8,fontWeight:600}}>Catégorie de véhicule
+        <label style={{display:"grid",gap:8,fontWeight:600}}>Catégorie de véhicule
           <select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={vehicleType} onChange={e => setVehicleType(e.target.value)}>
-            <option value="economy">StrasDrive Go{Number.isFinite(Number(estimates?.economy)) && estimates?.economy != null ? " · " + money(estimates.economy) : ""}</option>
-            <option value="comfort">StrasDrive Confort{Number.isFinite(Number(estimates?.comfort)) && estimates?.comfort != null ? " · " + money(estimates.comfort) : ""}</option>
-            <option value="xl">StrasDrive XL{Number.isFinite(Number(estimates?.xl)) && estimates?.xl != null ? " · " + money(estimates.xl) : ""}</option>
-            <option value="pet">StrasDrive Pet{Number.isFinite(Number(estimates?.pet)) && estimates?.pet != null ? " · " + money(estimates.pet) : ""}</option>
+            <option value="economy">StrasDrive Go{Number.isFinite(Number(estimates?.economy?.total)) ? " · " + money(estimates.economy.total) : ""}</option>
+            <option value="comfort">StrasDrive Confort{Number.isFinite(Number(estimates?.comfort?.total)) ? " · " + money(estimates.comfort.total) : ""}</option>
+            <option value="xl">StrasDrive XL{Number.isFinite(Number(estimates?.xl?.total)) ? " · " + money(estimates.xl.total) : ""}</option>
+            <option value="pet">StrasDrive Pet{Number.isFinite(Number(estimates?.pet?.total)) ? " · " + money(estimates.pet.total) : ""}</option>
           </select>
           {estimating && <span className="small muted">Calcul des tarifs…</span>}
-        </label>}
+          {!estimating && (!pickup || !dropoff) && <span className="small muted">Indiquez le départ et la destination pour voir les prix.</span>}
+        </label>
         <label style={{display:"grid",gap:8,fontWeight:600}}>Paiement<select className="input" style={{width:"100%",minWidth:0,display:"block",fontWeight:500}} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">Espèces</option><option value="wallet">Portefeuille</option><option value="card">Carte bancaire</option></select></label>
         {errorMessage && <p role="alert" style={{ color: "crimson" }}>{errorMessage}</p>}
         {bookingMode === "now" ? <button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || busy || selected.status === "cancelled" || selected.status === "completed"} onClick={requestDriver}>{busy ? "Recherche…" : "Chercher un chauffeur"}</button> : <><p className="small muted">La demande sera enregistrée pour plus tard. Aucun chauffeur ne sera recherché immédiatement.</p><button type="button" className="btn btn-primary" disabled={!pickup || !dropoff || scheduleBusy} onClick={scheduleTransport}>{scheduleBusy ? "Enregistrement…" : "Enregistrer la réservation"}</button></>}
+      </div>}
+    </Modal>
+    <Modal portal keyboardSafe open={Boolean(editing)} onClose={() => { if (!editBusy) setEditing(null); }} title="Modifier la réservation" maxWidth={560}>
+      {editing && <div style={{display:"grid",gap:14}}>
+        <label style={{display:"grid",gap:8,fontWeight:600}}>Départ<input className="input" value={editing.pickupAddress} onChange={e=>setEditing(v=>({...v,pickupAddress:e.target.value}))}/></label>
+        <label style={{display:"grid",gap:8,fontWeight:600}}>Destination<input className="input" value={editing.dropoffAddress} onChange={e=>setEditing(v=>({...v,dropoffAddress:e.target.value}))}/></label>
+        <label style={{display:"grid",gap:8,fontWeight:600}}>Date et heure de prise en charge<input className="input" type="datetime-local" value={editing.scheduledAt} onChange={e=>setEditing(v=>({...v,scheduledAt:e.target.value}))}/></label>
+        <label style={{display:"grid",gap:8,fontWeight:600}}>Paiement<select className="input" value={editing.paymentMethod} onChange={e=>setEditing(v=>({...v,paymentMethod:e.target.value}))}><option value="cash">Espèces</option><option value="wallet">Portefeuille</option><option value="card">Carte bancaire</option></select></label>
+        <p className="small muted">Après modification, la réservation devra être acceptée de nouveau par un chauffeur.</p>
+        {editError && <p role="alert" style={{color:"crimson"}}>{editError}</p>}
+        <button type="button" className="btn btn-primary" disabled={editBusy} onClick={saveEdit}>{editBusy ? "Enregistrement…" : "Enregistrer les modifications"}</button>
       </div>}
     </Modal>
   </div></RiderLayout>;

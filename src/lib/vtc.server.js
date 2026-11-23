@@ -815,6 +815,16 @@ export async function handleVtc(input, context) {
       .order("scheduled_at",{ascending:true}).limit(100));
     return { reservations: rows };
   }
+  if (p === "/api/drivers/me/accepted-reservations/cancel" && method === "POST") {
+    if (!canDrive) throw new Error("Accès chauffeur requis");
+    const id = String(body.id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Réservation invalide");
+    // The driver withdraws: the reservation returns to pending so another driver can take it.
+    const released = required(await admin.from("rider_scheduled_requests").update({status:"pending",favorite_driver_id:null})
+      .eq("id",id).eq("favorite_driver_id",uid).eq("status","confirmed").select("id").maybeSingle());
+    if (!released) throw new Error("Cette réservation n’est plus annulable");
+    return { ok: true };
+  }
   if (p === "/api/drivers/me/advance-reservations/accept" && method === "POST") {
     if (!canDrive) throw new Error("Accès chauffeur requis");
     const id = String(body.id || "");
@@ -874,9 +884,27 @@ export async function handleVtc(input, context) {
     if (method === "DELETE") {
       const id = String(body.id || "");
       if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Identifiant invalide");
-      required(await db.from("rider_scheduled_requests").update({ status: "canceled" })
-        .eq("rider_id", uid).eq("id", id).eq("status", "pending"));
+      const canceled = required(await admin.from("rider_scheduled_requests").update({ status: "canceled" })
+        .eq("rider_id", uid).eq("id", id).in("status", ["pending", "confirmed"]).select("id").maybeSingle());
+      if (!canceled) throw new Error("Cette réservation ne peut plus être annulée");
       return { ok: true };
+    }
+    if (method === "PATCH") {
+      // Rider edits a saved reservation; it goes back to pending so a driver re-accepts the new details.
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Identifiant invalide");
+      const pickup = String(body.pickupAddress || "").trim().slice(0, 240);
+      const dropoff = String(body.dropoffAddress || "").trim().slice(0, 240);
+      if (pickup.length < 5 || dropoff.length < 5) throw new Error("Indiquez les deux adresses complètes");
+      const date = new Date(body.scheduledAt);
+      if (!Number.isFinite(date.getTime()) || date.getTime() <= Date.now()) throw new Error("Choisissez une date et une heure futures");
+      const patch = { pickup_address: pickup, dropoff_address: dropoff, scheduled_at: date.toISOString(),
+        payment_method: ["cash","card","wallet"].includes(body.paymentMethod) ? body.paymentMethod : null,
+        status: "pending", favorite_driver_id: null };
+      const row = required(await admin.from("rider_scheduled_requests").update(patch)
+        .eq("rider_id", uid).eq("id", id).eq("kind", "transport").in("status", ["pending", "confirmed"]).select("*").maybeSingle());
+      if (!row) throw new Error("Cette réservation ne peut plus être modifiée");
+      return { request: row };
     }
     throw new Error("Méthode non autorisée");
   }

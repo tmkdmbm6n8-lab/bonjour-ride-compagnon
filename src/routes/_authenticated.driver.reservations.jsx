@@ -8,6 +8,13 @@ function DriverReservations() {
   const [items,setItems] = useState([]);
   const [error,setError] = useState("");
   const [loading,setLoading] = useState(true);
+  async function cancel(id) {
+    if (!window.confirm("Annuler cette réservation ? Elle sera proposée à un autre chauffeur.")) return;
+    const response = await apiFetch("/api/drivers/me/accepted-reservations/cancel",{method:"POST",body:JSON.stringify({id})});
+    const data = await response.json();
+    if (!response.ok) { setError(data.error || "Annulation impossible"); return; }
+    setItems(current => current.filter(item => item.id !== id));
+  }
   useEffect(() => {
     let active = true;
     async function load() {
@@ -34,7 +41,8 @@ function DriverReservations() {
       <p style={{fontWeight:700,margin:"12px 0"}}>{new Date(item.scheduled_at).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"})}</p>
       <p style={{display:"flex",gap:8,alignItems:"flex-start"}}><MapPin size={17} color="#39ff88"/>{item.pickup_address}</p>
       <p style={{display:"flex",gap:8,alignItems:"flex-start",marginTop:8}}><Flag size={17} color="#ff657c"/>{item.dropoff_address}</p>
-      <p style={{fontSize:12,color:"#39ff88",marginTop:12}}>Acceptée</p>
+      <p style={{fontSize:12,color:"#39ff88",margin:"12px 0"}}>Acceptée</p>
+      <button type="button" className="btn btn-secondary" onClick={()=>cancel(item.id)}>Annuler la réservation</button>
     </article>)}</div>
   </main></DriverLayout>;
 }
