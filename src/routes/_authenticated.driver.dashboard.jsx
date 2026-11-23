@@ -686,8 +686,8 @@ function DriverDashboard() {
           <div style={{display:"flex",alignItems:"center",gap:9,color:"#facc15",fontWeight:700,marginBottom:18}}>
             {reservationOffer.transport_type === "flight" ? <Plane size={20}/> : <TrainFront size={20}/>}
             <span>Réservation</span>
-            <span style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:5,color:reservationOffer.payment_method === "cash" ? "#39ff88" : reservationOffer.payment_method === "card" ? "#31baff" : "#a8b2c3"}}>
-              {reservationOffer.payment_method === "cash" ? <Banknote size={23} aria-label="Paiement en espèces"/> : <CreditCard size={23} aria-label={reservationOffer.payment_method === "card" ? "Paiement par carte" : "Moyen de paiement non renseigné"}/>}
+            <span style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:5,color:reservationOffer.payment_method === "cash" ? "#39ff88" : reservationOffer.payment_method === "card" ? "#31baff" : "#facc15"}}>
+              {reservationOffer.payment_method === "cash" ? <Banknote size={24} strokeWidth={2.6} color="#39ff88" style={{filter:"drop-shadow(0 0 6px #39ff88)"}} aria-label="Paiement en espèces"/> : reservationOffer.payment_method === "card" ? <CreditCard size={24} strokeWidth={2.6} color="#31baff" style={{filter:"drop-shadow(0 0 6px #31baff)"}} aria-label="Paiement par carte"/> : <CreditCard size={24} strokeWidth={2.6} color="#facc15" aria-label="Moyen de paiement non renseigné"/>}
             </span>
           </div>
           <div style={{fontSize:21,fontWeight:750,marginBottom:18}}>{new Date(reservationOffer.scheduled_at).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"})}</div>
