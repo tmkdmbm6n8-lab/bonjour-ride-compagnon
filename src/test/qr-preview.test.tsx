@@ -33,7 +33,8 @@ it("shows the existing QR alone, then closes and restores native brightness afte
   const Page = Route.options.component;
   render(<Page />);
   expect(screen.queryByRole("img")).toBeNull();
-  expect(screen.queryByText("Vos clients privés")).toBeNull();
+  expect(screen.getByRole("heading", { name: "Vos clients privés" })).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Votre QR code permanent" })).toBeNull();
   await waitFor(() => expect(screen.getByRole("button", { name: "Afficher mon QR code" })).toBeEnabled());
   vi.useFakeTimers();
   fireEvent.click(screen.getByRole("button", { name: "Afficher mon QR code" }));

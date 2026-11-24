@@ -5,6 +5,7 @@ import { QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import DriverLayout from "@/components/DriverLayout";
 import useDriverData from "@/hooks/useDriverData";
+import PrivateClientsPanel from "@/components/private-clients/PrivateClientsPanel";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 
 const brightness = registerPlugin("QrBrightness");
@@ -85,6 +86,17 @@ function PrivateClientsPage() {
     return () => controller.abort();
   }, [goldActive, attempt, closePreview]);
 
+  async function changeClient(clientId, action, blocked) {
+    const response = await fetch(`/api/drivers/me/private-clients/${encodeURIComponent(clientId)}`, {
+      method: action === "remove" ? "DELETE" : "POST",
+      headers: { "Content-Type": "application/json" },
+      ...(action === "block" ? { body: JSON.stringify({ blocked }) } : {}),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.error) throw new Error(result.error || "Impossible de modifier ce client.");
+    await reload();
+  }
+
   return (
     <div className="driver-tab-page drv-cockpit-page">
       <header className="driver-account-heading">
@@ -102,6 +114,14 @@ function PrivateClientsPage() {
           <QrCode size={22} aria-hidden="true" />
         </button>
       </header>
+      {!error && (
+        <PrivateClientsPanel
+          clients={data?.clients ?? null}
+          goldActive={goldActive}
+          onRemove={(id) => changeClient(id, "remove")}
+          onBlock={(id, blocked) => changeClient(id, "block", blocked)}
+        />
+      )}
       {preview && canPreview && <QrPreview src={src} onClose={closePreview} />}
       {error && <p role="alert">{error} <button type="button" className="btn btn-secondary" onClick={reload}>Réessayer</button></p>}
       {qrError && (

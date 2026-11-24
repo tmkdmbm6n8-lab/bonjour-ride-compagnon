@@ -49,7 +49,7 @@ export default function PrivateClientsPanel({ clients, loadQr, goldActive, onRem
     finally { setBusy(null); }
   }
   return <div className="flex-col gap-4">
-    {goldActive && <PrivateClientsQr loadQr={loadQr} onQrChange={onQrChange} />}
+    {goldActive && loadQr && <PrivateClientsQr loadQr={loadQr} onQrChange={onQrChange} />}
     <section className="card card-pad" aria-labelledby="private-clients-list-title">
       <h2 id="private-clients-list-title">Vos clients privés</h2>
       {error && <p role="alert" className="small" style={{ color: 'var(--danger)' }}>{error}</p>}
