@@ -325,10 +325,10 @@ function RiderDashboard() {
   // ── Book ──
   async function handleBook() {
     if (!pickup || !dropoff || booking) return;
-    const bookedType = favoriteSelected && estimate?.favorite ? estimate.favorite.vehicleType : vehicleType;
+    const bookedType = favoriteChosen ? estimate.favorite.vehicleType : vehicleType;
     setBooking(true);
     try {
-      await book({ pickup, dropoff, vehicleType: bookedType, paymentMethod, favorite: favoriteSelected });
+      await book({ pickup, dropoff, vehicleType: bookedType, paymentMethod, favorite: Boolean(favoriteChosen) });
       setUnread(0);
       setLastMsg(null);
       toast("Recherche d’un chauffeur en cours…", "success");
@@ -654,7 +654,7 @@ function RiderDashboard() {
                   <FavoriteQuoteRow
                     favorite={estimate.favorite}
                     selected={Boolean(favoriteChosen)}
-                    onSelect={() => setFavoriteSelected(true)}
+                    onSelect={() => setFavoriteSelected((selected) => !selected)}
                   />
                   {(() => {
                     const types = ["economy", "comfort", "pet", "xl"].filter((type) => estimate.estimates[type]);
@@ -674,7 +674,7 @@ function RiderDashboard() {
                           disabled={index === 0} onClick={() => changeType(index - 1)}>
                           <ChevronLeft size={22} />
                         </button>
-                        <div className="vehicle-row selected rider-vehicle-carousel-card" aria-live="polite">
+                        <div className={`vehicle-row rider-vehicle-carousel-card${favoriteChosen ? "" : " selected"}`} aria-live="polite">
                           <Meta.icon size={25} style={{ color: "var(--gold-600)", flexShrink: 0 }} />
                           <span className="flex-1" style={{ minWidth: 0 }}>
                             <span className="small" style={{ display: "block", fontWeight: 700 }}>{VEHICLE_LABELS[type]}</span>

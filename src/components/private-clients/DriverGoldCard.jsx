@@ -79,7 +79,7 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
         <h2 id="driver-gold-status">StrasDrive <span>Gold <Crown className="driver-gold-crown" size={27} aria-hidden="true" /></span></h2>
       </header>
 
-      <p>Commission : 15 % pour les courses ordinaires, et 0 % pour une course effectuée avec votre propre client privé si votre abonnement Gold est payant et actif.</p>
+      <p>Commission standard : 10 %. Avec Gold payant actif, la commission passe à 5 % sur les courses ordinaires. Avec Gold payant actif ou inclus dans le statut prioritaire, elle est de 0 % sur les courses avec vos propres clients privés.</p>
       {gold.active ? (
         <div className="driver-gold-current">
           <strong>{gold.included ? "Accès inclus" : gold.status === "trialing" ? "Essai en cours" : "Abonnement actif"}</strong>
@@ -121,7 +121,7 @@ export default function DriverGoldCard({ gold, waitingForStripe }) {
           </div>
 
           <ul className="driver-gold-benefits">
-            <li><Percent size={18} aria-hidden="true" /><div><strong>0 % de commission sur vos clients privés</strong><p>0 % uniquement pour les courses avec vos propres clients privés, après un premier paiement vérifié et tant que Gold payant est actif. Pour les autres courses et pendant l’essai gratuit, le taux normal de 15 % reste applicable.</p></div></li>
+            <li><Percent size={18} aria-hidden="true" /><div><strong>0 % de commission sur vos clients privés</strong><p>0 % sur vos propres clients privés avec Gold payant actif ou Gold inclus dans le statut prioritaire. Pendant l’essai gratuit, la commission standard de 10 % s’applique.</p></div></li>
             <li><QrCode size={18} aria-hidden="true" /><div><strong>Développez votre propre clientèle privée</strong><p>Partagez votre QR code. Les passagers qui vous choisissent en favori vous retrouvent en tête de leur comparateur.</p></div></li>
             <li><Plane size={18} aria-hidden="true" /><div><strong>Des courses Gold avec un potentiel de retour</strong><p>Les arrivées d’avions et de trains en direct font ressortir les courses qui se terminent à moins de 5 km ou à 5 minutes de la gare ou de l’aéroport au bon moment. Ces courses aller sont réservées à Gold. Le retour dépend des réservations.</p></div></li>
           </ul>

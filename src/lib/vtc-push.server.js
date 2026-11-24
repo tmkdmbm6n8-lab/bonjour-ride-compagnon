@@ -1,3 +1,5 @@
+import { fareForDriver } from "./driver-ride-fare.server";
+import { favoriteDriverId } from "./private-clients.server";
 // Sends ride-offer notifications to drivers' phones through Firebase Cloud Messaging (connector gateway).
 import { buildOfferMessage, isStaleTokenError } from "./vtc-push";
 
@@ -34,7 +36,7 @@ export async function pushRideOffer(admin, ride, userIds) {
     const lovableKey = process.env.LOVABLE_API_KEY,
       connKey = process.env.FIREBASE_MESSAGING_API_KEY;
     if (!lovableKey || !connKey) return;
-    const { data: rows, error } = await admin.from("push_tokens").select("token").in("user_id", ids);
+    const { data: rows, error } = await admin.from("push_tokens").select("token,user_id").in("user_id", ids);
     if (error || !rows?.length) return;
     const headers = {
       Authorization: `Bearer ${lovableKey}`,
@@ -42,7 +44,17 @@ export async function pushRideOffer(admin, ride, userIds) {
       "Content-Type": "application/json",
     };
     const message = buildOfferMessage(ride);
-    const results = await Promise.all(rows.map((r) => sendOne(r.token, message, headers).then((x) => ({ ...x, token: r.token }))));
+    const favorite = ride.is_test ? null : await favoriteDriverId(admin, ride.rider_id);
+    const privateMessage = rows.some((row) => favorite && row.user_id === favorite)
+      ? buildOfferMessage({
+          ...ride,
+          fare: await fareForDriver(admin, ride, favorite).catch(() => null),
+        })
+      : message;
+    const results = await Promise.all(rows.map((row) =>
+      sendOne(row.token, row.user_id === favorite ? privateMessage : message, headers)
+        .then((result) => ({ ...result, token: row.token }))
+    ));
     const stale = results.filter((x) => x.stale).map((x) => x.token);
     if (stale.length) await admin.from("push_tokens").delete().in("token", stale);
   } catch (e) {

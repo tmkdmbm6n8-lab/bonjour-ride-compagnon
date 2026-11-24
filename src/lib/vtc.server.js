@@ -1,7 +1,7 @@
 import { addPickupWaiting, waitingRate } from "./ride-waiting";
-import { goldDispatchPool, hasPaidDriverGold, loadDriverGold } from "./driver-gold.server";
-import { restoreGoldCommission, waiveGoldCommission } from "./driver-gold-fare";
-import { favoriteDriverId } from "./private-clients.server";
+import { goldDispatchPool, loadDriverGold } from "./driver-gold.server";
+import { restoreGoldCommission } from "./driver-gold-fare";
+import { fareForDriver } from "./driver-ride-fare.server";
 import { accountRating } from "./account-ratings.server";
 import { recordOnlineTime } from "./driver-online-time.server";
 import { driverReportMessage } from "./driver-reports";
@@ -1385,10 +1385,7 @@ export async function handleVtc(input, context) {
       me = me || test.driver;
     }
     if (!r) return { offer: null };
-    const offerFare =
-      !r.is_test && (await hasPaidDriverGold(admin, uid).catch(() => false))
-        ? waiveGoldCommission(r.fare, (await favoriteDriverId(admin, r.rider_id)) === uid)
-        : r.fare;
+    const offerFare = await fareForDriver(admin, r, uid);
     const approachKm = distanceToPickupKm(r, me),
       approachMeters = Number.isFinite(approachKm) ? Math.round(approachKm * 1350) : null;
     let profit = null;
@@ -1506,9 +1503,7 @@ export async function handleVtc(input, context) {
           r.dispatch_phase === "private" && !r.route?.goldReturn ? await withDriverGold(admin, candidate) : candidate;
         if (!canSeeOffer(r, me, Date.now(), pool)) throw new Error("Cette demande n’est plus disponible");
       }
-      const fare = !r.is_test && (await hasPaidDriverGold(admin, uid))
-        ? waiveGoldCommission(r.fare, (await favoriteDriverId(admin, r.rider_id)) === uid)
-        : r.fare;
+      const fare = await fareForDriver(admin, r, uid);
       const claim = admin
         .from("rides")
         .update({
