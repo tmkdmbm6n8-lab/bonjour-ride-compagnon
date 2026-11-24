@@ -1,4 +1,4 @@
-import { moderateChatAttachment, moderateMessageText } from "./message-moderation.server";
+import { moderateMessageText } from "./message-moderation.server";
 import {
   getRideDecision,
   recordAdminDecision,
@@ -209,7 +209,6 @@ export async function sendChatAttachment(admin, ride, uid, body) {
   if (![ride.rider_id, ride.driver_id].includes(uid) || !CHAT_ACTIVE_STATUSES.includes(ride.status))
     throw new Error("Discussion fermée");
   const file = decodeChatAttachment(body);
-  await moderateChatAttachment(file);
   if (!bucketReady) {
     const bucket = await admin.storage.getBucket(CHAT_BUCKET);
     if (!bucket.error && bucket.data?.public) throw new Error("Le stockage de discussion doit être privé");
