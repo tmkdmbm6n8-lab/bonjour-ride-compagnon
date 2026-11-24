@@ -258,7 +258,7 @@ export default function DriverHome({
         <div className="drv-online-sheet-waiting">
           <span className="drv-online-signal" aria-hidden="true"><Radio size={30} /></span>
           <h4>Prêt pour votre prochaine course</h4>
-          <p>Vous recevrez les nouvelles demandes ici.</p>
+          <p>Vous recevrez les nouvelles demandes ici. Vos clients privés peuvent voir votre position approximative tant que vous êtes en ligne.</p>
         </div>
         <button type="button" className="drv-go-btn is-online drv-online-stop" onClick={onToggle} disabled={busy || loading}>
           <Power size={20} aria-hidden="true" />

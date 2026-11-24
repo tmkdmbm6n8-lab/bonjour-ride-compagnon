@@ -3,6 +3,7 @@ import { ScanLine } from "lucide-react";
 import FavoriteQrScanner from "@/components/private-clients/FavoriteQrScanner";
 import { useCallback, useEffect, useState } from "react";
 import RiderLayout from "@/components/RiderLayout";
+import FavoriteDriverLiveMap from "@/components/private-clients/FavoriteDriverLiveMap";
 import FavoriteDriverCard from "@/components/private-clients/FavoriteDriverCard";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { useToast } from "@/components/ui/Toast";
@@ -10,6 +11,7 @@ import { useToast } from "@/components/ui/Toast";
 function FavoritePage() {
   const toast = useToast();
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [mapDriverId, setMapDriverId] = useState(null);
   const [state, setState] = useState({ loading: true, driver: null, error: "" });
 
   const load = useCallback(async () => {
@@ -58,7 +60,10 @@ function FavoritePage() {
           </button>
         </div>
       ) : (
-        <FavoriteDriverCard driver={state.driver} onRemove={remove} />
+        <FavoriteDriverCard driver={state.driver} onRemove={remove} onOpenMap={() => setMapDriverId(state.driver?.id)} />
+      )}
+      {mapDriverId && mapDriverId === state.driver?.id && (
+        <FavoriteDriverLiveMap key={mapDriverId} driverId={mapDriverId} onClose={() => setMapDriverId(null)} />
       )}
     </div>
   );

@@ -93,30 +93,42 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
     const shouldTrack = enabled && (online || Boolean(ride));
     if (!shouldTrack || !navigator.geolocation) return undefined;
 
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const point = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          heading: pos.coords.heading,
-          speed: pos.coords.speed,
-        };
-        setPosition(point);
-
-        const now = Date.now();
-        if (now - lastPingRef.current >= PING_INTERVAL_MS) {
-          lastPingRef.current = now;
-          socketRef.current?.emit('driver:location', {
-            ...point,
-            rideId: rideRef.current?.id,
-          });
-        }
-      },
-      () => { /* watch errors are non-fatal; next fix retries */ },
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
-    );
+    let stopped = false;
+    let checking = false;
+    const options = { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 };
+    const sendFix = (pos) => {
+      if (stopped) return;
+      const point = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        heading: pos.coords.heading,
+        speed: pos.coords.speed,
+      };
+      setPosition(point);
+      const now = Date.now();
+      if (now - lastPingRef.current >= PING_INTERVAL_MS && socketRef.current) {
+        lastPingRef.current = now;
+        socketRef.current.emit('driver:location', { ...point, rideId: rideRef.current?.id });
+      }
+    };
+    watchIdRef.current = navigator.geolocation.watchPosition(sendFix, () => {}, options);
+    // Stationary drivers may receive no new watch event. Request a fresh fix,
+    // rather than keeping an old position alive while GPS is unavailable.
+    const heartbeat = online && typeof navigator.geolocation.getCurrentPosition === 'function'
+      ? setInterval(() => {
+          if (checking || document.hidden || Date.now() - lastPingRef.current < 12000) return;
+          checking = true;
+          navigator.geolocation.getCurrentPosition(
+            (pos) => { checking = false; sendFix(pos); },
+            () => { checking = false; },
+            options,
+          );
+        }, 12000)
+      : null;
 
     return () => {
+      stopped = true;
+      clearInterval(heartbeat);
       if (watchIdRef.current != null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;

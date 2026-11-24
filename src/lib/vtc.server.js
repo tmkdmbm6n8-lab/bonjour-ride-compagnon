@@ -787,6 +787,10 @@ export async function handleVtc(input, context) {
     }
     throw new Error("Méthode non autorisée");
   }
+  if (p === "/api/riders/me/favorite/location" && method === "GET") {
+    const { favoriteLiveLocation } = await import("./private-clients.server");
+    return favoriteLiveLocation(admin, uid);
+  }
   if (p === "/api/riders/me/favorite") {
     const pc = await import("./private-clients.server");
     if (method === "GET") return pc.favoriteCard(admin, uid);
@@ -1121,7 +1125,7 @@ export async function handleVtc(input, context) {
       online: body.online,
       patch: {
         is_online: body.online,
-        location: body.online ? body.location : null,
+        location: body.online ? { ...body.location, observedAt: new Date().toISOString() } : null,
         updated_at: new Date().toISOString(),
       },
     });
@@ -1162,6 +1166,7 @@ export async function handleVtc(input, context) {
             lat: body.lat,
             lng: body.lng,
             heading: Number.isFinite(body.heading) ? ((body.heading % 360) + 360) % 360 : null,
+            observedAt: new Date().toISOString(),
           },
           updated_at: new Date().toISOString(),
         })

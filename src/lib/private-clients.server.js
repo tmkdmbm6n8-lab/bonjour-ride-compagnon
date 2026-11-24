@@ -6,6 +6,9 @@ import { driverClass } from "./vtc-classes";
 import { passengerDisplayName } from "./passenger-name";
 import { accountRating } from "./account-ratings.server";
 
+import { isPairBlocked } from "./user-blocks.server";
+import { validLocation } from "./vtc-access";
+
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 const ACTIVE = ["accepted", "arrived", "in_progress"];
 
@@ -33,6 +36,34 @@ export async function favoriteDriverId(admin, riderId) {
     await admin.from("rider_favorite_drivers").select("driver_id").eq("rider_id", riderId).maybeSingle(),
   );
   return row?.driver_id || null;
+}
+
+const FAVORITE_LOCATION_TTL_MS = 35000;
+
+export async function favoriteLiveLocation(admin, riderId, now = Date.now()) {
+  const driverId = await favoriteDriverId(admin, riderId);
+  if (!driverId || await isPairBlocked(admin, riderId, driverId)) return { status: "unavailable" };
+
+  const driver = required(await admin.from("drivers")
+    .select("is_online,is_approved,location")
+    .eq("user_id", driverId)
+    .maybeSingle());
+  if (!driver?.is_approved || !driver.is_online) return { status: "offline", driverId };
+
+  const location = driver.location;
+  const age = now - Date.parse(location?.observedAt);
+  if (!validLocation(location) || !Number.isFinite(age) || age < 0 || age >= FAVORITE_LOCATION_TTL_MS)
+    return { status: "waiting", driverId };
+
+  return {
+    status: "online",
+    driverId,
+    position: {
+      lat: Number(location.lat.toFixed(3)),
+      lng: Number(location.lng.toFixed(3)),
+    },
+    expiresInMs: FAVORITE_LOCATION_TTL_MS - age,
+  };
 }
 
 async function driverIdentity(admin, driverId) {
