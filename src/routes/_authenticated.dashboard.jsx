@@ -691,12 +691,7 @@ function RiderDashboard() {
                           </span>
                           <span className="flex-col" style={{ alignItems: "flex-end", flexShrink: 0 }}>
                             <span className="small mono-nums" style={{ fontWeight: 700 }}>{money(fare.total)}</span>
-                            {estimate.showPriorityPriceSource === true && (
-                              <span className="tiny muted" data-testid="priority-fare-source" style={{display:"block",textAlign:"right"}}>
-                                Barème StrasDrive
-                              </span>
-                            )}
-                            {fare.discount > 0 && (
+                            {fare.discount > 0 && !fare.priceEndingDiscount && (
                               <span className="tiny muted mono-nums" style={{ textDecoration: "line-through" }}>
                                 {money(fare.originalTotal)}
                               </span>
