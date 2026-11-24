@@ -101,7 +101,6 @@ function PrivateClientsPage() {
     <div className="driver-tab-page drv-cockpit-page">
       <header className="driver-account-heading">
         <div>
-          <span className="sd-settings-brand">Espace chauffeur</span>
           <h1>Votre clientèle privée</h1>
         </div>
         <button
