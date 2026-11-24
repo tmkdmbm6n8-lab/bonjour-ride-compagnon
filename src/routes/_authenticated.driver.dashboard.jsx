@@ -506,7 +506,7 @@ function DriverDashboard() {
                     rate={ride.fare?.pickupWaitingRate}
                     disabled={actionBusy}
                     onNoShow={!ride.isTest && ride.payment?.method !== "cash" ? async () => {
-                      if (!window.confirm("Confirmer l’absence du passager et annuler la course ? Le passager sera facturé 7,27 €.")) return;
+                      if (!window.confirm("Confirmer l’absence du passager et annuler la course ? Le passager sera facturé selon le barème d’annulation.")) return;
                       setActionBusy(true);
                       try {
                         await cancelTrip("rider_no_show");

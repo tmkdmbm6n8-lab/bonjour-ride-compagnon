@@ -232,6 +232,7 @@ async function serialize(db, r, actor, raw = false) {
 
   const out = {
     ...r,
+    fare: r.fare ? { ...r.fare, approachTracking: undefined } : r.fare,
     pickup: pickupClean,
     dropoff: dropoffClean,
     rating: cleanRating,
@@ -1133,6 +1134,25 @@ export async function handleVtc(input, context) {
     const driver = required(await db.from("drivers").select("is_online").eq("user_id", uid).single());
     const ongoing = required(await db.from("rides").select("id").eq("driver_id", uid).in("status", active));
     if (!driver.is_online && !ongoing.length) return { ok: true, ignored: true };
+    // Track observed approach segments only while this driver is assigned.
+    if (ongoing.length) {
+      const { data: trip } = await admin.from("rides").select("id,fare")
+        .eq("driver_id", uid).eq("status", "accepted").eq("is_test", false).limit(1).maybeSingle();
+      if (trip?.fare) {
+        const previous = trip.fare.approachTracking;
+        const now = Date.now();
+        const seconds = previous ? (now - previous.at) / 1000 : 0;
+        const segment = previous && validLocation(previous)
+          ? haversineDistance(previous.lat, previous.lng, body.lat, body.lng) * 1000 : 0;
+        const plausible = seconds > 0 && seconds <= 120 && segment <= seconds * 45;
+        const meters = (previous?.meters || 0) + (plausible && segment >= 15 ? Math.floor(segment) : 0);
+        const { error } = await admin.from("rides").update({
+          fare: { ...trip.fare, approachTracking: { lat: body.lat, lng: body.lng, at: now, meters } },
+        }).eq("id", trip.id).eq("driver_id", uid).eq("status", "accepted")
+          .eq("fare", JSON.stringify(trip.fare));
+        if (error) console.error("Échec du suivi de l’approche", error.message);
+      }
+    }
     await recordOnlineTime(admin, uid);
     required(
       await db
@@ -1650,7 +1670,7 @@ export async function handleVtc(input, context) {
               offer_expires_at: null,
               dispatch_phase: null,
               accepted_at: null,
-              fare: restoreGoldCommission(r.fare),
+              fare: restoreGoldCommission({ ...r.fare, approachTracking: null }),
               declined: [...r.declined, uid],
             })
             .eq("id", id)
@@ -1668,6 +1688,15 @@ export async function handleVtc(input, context) {
           ? (await admin.from("drivers").select("location").eq("user_id", r.driver_id).single()).data?.location
           : null;
         const progress = evaluateDriverProgress(r, driverLoc);
+
+        if (!r.is_test && !r.payment?.intent_id && paymentMethodOf(r.payment?.method) !== "cash" &&
+          r.driver_id && r.fare?.total >= 14.55 && r.fare?.approachTracking?.meters > 10000) {
+          const result = await admin.rpc("cancel_ride_long_approach", { _ride: id, _rider: uid });
+          if (result.error?.code === "PGRST202") throw new Error("Le barème d’annulation longue approche n’est pas encore activé.");
+          required(result);
+          await closeRideChat(admin, id, { allowSearching: true });
+          return { ride: await serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid) };
+        }
 
         const cancelled = required(await admin.from("rides").update(patch)
           .eq("id", id).eq("status", r.status).select("id").maybeSingle());
