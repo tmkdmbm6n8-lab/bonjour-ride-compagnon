@@ -500,8 +500,8 @@ function DriverDashboard() {
                     <Flag size={18} /> Je suis arrivé
                   </button>
                 )}
-                {ride.status === "arrived" && ride.fare?.pickupWaitingRate > 0 && (
-                  <PickupWaitingTimer arrivedAt={ride.arrived_at} rate={ride.fare.pickupWaitingRate} />
+                {ride.status === "arrived" && (
+                  <PickupWaitingTimer arrivedAt={ride.arrived_at} rate={ride.fare?.pickupWaitingRate} />
                 )}
                 {ride.status === "arrived" && (
                   <button
