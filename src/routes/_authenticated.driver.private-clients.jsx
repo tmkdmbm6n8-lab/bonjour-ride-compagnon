@@ -2,14 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback } from "react";
 import QRCode from "qrcode";
 import DriverLayout from "@/components/DriverLayout";
-import DriverGoldCard from "@/components/private-clients/DriverGoldCard";
 import useDriverData from "@/hooks/useDriverData";
 import PrivateClientsPanel from "@/components/private-clients/PrivateClientsPanel";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 
 function PrivateClientsPage() {
-  const waitingForStripe = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("gold") === "return";
-  const { data, error, reload } = useDriverData("/api/drivers/me/private-clients", waitingForStripe ? 5000 : 15000);
+  const { data, error, reload } = useDriverData("/api/drivers/me/private-clients", 15000);
   const { clients = null, gold } = data || {};
 
   const changeClient = useCallback(async (clientId, action, blocked) => {
@@ -28,7 +26,7 @@ function PrivateClientsPage() {
     if (!res.ok || data.error || !data.token) throw new Error(data.error || "Impossible de créer le QR code");
     // Token in the fragment: it never reaches a server log or an analytics URL.
     const url = `${window.location.origin}/join#invite=${data.token}`;
-    const svg = await QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#0b0b0f", light: "#ffffff" } });
+    const svg = await QRCode.toString(url, { type: "svg", margin: 4, errorCorrectionLevel: "M", color: { dark: "#0b0b0f", light: "#ffffff" } });
     return {
       expiresAt: data.expiresAt,
       image: (
@@ -48,12 +46,17 @@ function PrivateClientsPage() {
       <header className="driver-account-heading">
         <div>
           <span className="sd-settings-brand">Espace chauffeur</span>
-          <h1>{gold?.active ? "Votre clientèle privée" : "SDGold"}</h1>
+          <h1>Votre clientèle privée</h1>
         </div>
       </header>
       {error && <p role="alert">{error} <button type="button" className="btn btn-secondary" onClick={reload}>Réessayer</button></p>}
       <div className="flex-col gap-4">
-        <DriverGoldCard gold={gold} waitingForStripe={waitingForStripe} />
+        {gold && !gold.active && !error && (
+          <section className="card card-pad">
+            <h2>Votre QR code permanent</h2>
+            <p className="small muted mt-2">Activez StrasDrive Gold dans Menu → Espace de conduite pour accéder à votre QR code.</p>
+          </section>
+        )}
         {(gold?.active || clients?.length > 0) && (
           <PrivateClientsPanel clients={clients} loadQr={loadQr} goldActive={gold?.active === true && !error} onRemove={(id) => changeClient(id, 'remove')} onBlock={(id, blocked) => changeClient(id, 'block', blocked)} />
         )}
