@@ -716,6 +716,7 @@ export type Database = {
           adjustment_consent: boolean
           created_at: string
           dropoff_address: string
+          estimated_price: number | null
           favorite_driver_id: string | null
           id: string
           kind: string
@@ -734,6 +735,7 @@ export type Database = {
           adjustment_consent?: boolean
           created_at?: string
           dropoff_address: string
+          estimated_price?: number | null
           favorite_driver_id?: string | null
           id?: string
           kind: string
@@ -752,6 +754,7 @@ export type Database = {
           adjustment_consent?: boolean
           created_at?: string
           dropoff_address?: string
+          estimated_price?: number | null
           favorite_driver_id?: string | null
           id?: string
           kind?: string
@@ -954,6 +957,191 @@ export type Database = {
         }
         Relationships: []
       }
+      uber_ai_road_routes: {
+        Row: {
+          compared_at: string | null
+          created_at: string
+          distance_band: string
+          dropoff_key: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id: number
+          pickup_key: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          road_distance_km: number
+        }
+        Insert: {
+          compared_at?: string | null
+          created_at?: string
+          distance_band: string
+          dropoff_key: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id?: never
+          pickup_key: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          road_distance_km: number
+        }
+        Update: {
+          compared_at?: string | null
+          created_at?: string
+          distance_band?: string
+          dropoff_key?: string
+          dropoff_lat?: number
+          dropoff_lng?: number
+          dropoff_name?: string
+          id?: never
+          pickup_key?: string
+          pickup_lat?: number
+          pickup_lng?: number
+          pickup_name?: string
+          road_distance_km?: number
+        }
+        Relationships: []
+      }
+      uber_benchmark_measurements: {
+        Row: {
+          id: number
+          observed_at: string
+          price_eur: number
+          product_name: string
+          route_id: number
+        }
+        Insert: {
+          id?: never
+          observed_at?: string
+          price_eur: number
+          product_name: string
+          route_id: number
+        }
+        Update: {
+          id?: never
+          observed_at?: string
+          price_eur?: number
+          product_name?: string
+          route_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uber_benchmark_measurements_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "uber_benchmark_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      uber_benchmark_routes: {
+        Row: {
+          created_at: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id: number
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+        }
+        Insert: {
+          created_at?: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id?: never
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+        }
+        Update: {
+          created_at?: string
+          dropoff_lat?: number
+          dropoff_lng?: number
+          dropoff_name?: string
+          id?: never
+          pickup_lat?: number
+          pickup_lng?: number
+          pickup_name?: string
+        }
+        Relationships: []
+      }
+      uber_price_observations: {
+        Row: {
+          context: Json
+          distance_km: number
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id: number
+          observed_at: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          price_eur: number
+          product_name: string
+          trip_seconds: number | null
+        }
+        Insert: {
+          context?: Json
+          distance_km: number
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id?: never
+          observed_at?: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          price_eur: number
+          product_name: string
+          trip_seconds?: number | null
+        }
+        Update: {
+          context?: Json
+          distance_km?: number
+          dropoff_lat?: number
+          dropoff_lng?: number
+          dropoff_name?: string
+          id?: never
+          observed_at?: string
+          pickup_lat?: number
+          pickup_lng?: number
+          pickup_name?: string
+          price_eur?: number
+          product_name?: string
+          trip_seconds?: number | null
+        }
+        Relationships: []
+      }
+      uber_random_used_addresses: {
+        Row: {
+          address_key: string
+          address_name: string
+          claimed_at: string
+          latitude: number
+          longitude: number
+        }
+        Insert: {
+          address_key: string
+          address_name: string
+          claimed_at?: string
+          latitude: number
+          longitude: number
+        }
+        Update: {
+          address_key?: string
+          address_name?: string
+          claimed_at?: string
+          latitude?: number
+          longitude?: number
+        }
+        Relationships: []
+      }
       user_blocks: {
         Row: {
           blocked_id: string
@@ -1133,6 +1321,51 @@ export type Database = {
         Args: { _actor: string; _request: string }
         Returns: Json
       }
+      cancel_ride_long_approach: {
+        Args: { _ride: string; _rider: string }
+        Returns: undefined
+      }
+      cancel_ride_no_show: {
+        Args: { _driver: string; _ride: string }
+        Returns: undefined
+      }
+      claim_uber_ai_road_route: {
+        Args: never
+        Returns: {
+          compared_at: string | null
+          created_at: string
+          distance_band: string
+          dropoff_key: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id: number
+          pickup_key: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          road_distance_km: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "uber_ai_road_routes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_uber_random_addresses: {
+        Args: {
+          p_dropoff_key: string
+          p_dropoff_lat: number
+          p_dropoff_lng: number
+          p_dropoff_name: string
+          p_pickup_key: string
+          p_pickup_lat: number
+          p_pickup_lng: number
+          p_pickup_name: string
+        }
+        Returns: boolean
+      }
       create_payout: {
         Args: {
           _amount: number
@@ -1184,6 +1417,15 @@ export type Database = {
         Returns: Json
       }
       settle_ride: { Args: { _actor: string; _id: string }; Returns: Json }
+      uber_benchmark_hourly_summary: {
+        Args: never
+        Returns: {
+          average: number
+          count: number
+          hour: string
+          product: string
+        }[]
+      }
       wallet_entry: {
         Args: {
           _amount: number
