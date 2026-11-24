@@ -8224,6 +8224,15 @@ a.activity-pill:hover {
   z-index: 1000;
 }
 
+/* Paint the page canvas when Safari shifts the visible area for the keyboard. */
+html:has(.mobile-ride-chat input:focus) {
+  color-scheme: dark;
+  background-color: #08090c;
+}
+body:has(.mobile-ride-chat input:focus) {
+  background-color: #08090c;
+}
+
 .modal-portal-root .modal-portal-overlay {
   z-index: 1000;
   overscroll-behavior: none;
