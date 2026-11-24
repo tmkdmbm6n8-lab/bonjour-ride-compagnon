@@ -49,6 +49,7 @@ function PrivacyPage() {
 
       <h2>4. Qui reçoit vos données</h2>
       <ul>
+        <li><strong>Modération des messages</strong> — lorsqu’elle est activée, la modération OpenAI analyse le texte du nouveau message avant son envoi pour détecter les attaques, menaces et propos haineux. L’application transmet uniquement ce texte, sans joindre l’historique de la conversation, le profil ni les pièces jointes.</li>
         <li><strong>L’autre participant à la course</strong> — le chauffeur voit votre nom, le lieu de départ et la destination ; le passager voit le nom, la photo, la note, le véhicule et la plaque du chauffeur. Le justificatif de réservation préalable accessible au chauffeur attribué comporte le nom et le téléphone du client pour les contrôles réglementaires. La discussion courante passe par l’application.</li>
         <li><strong>{HOST.name}</strong> ({HOST.address}) — hébergement de l’application et de la base de données, envoi des e-mails de confirmation de compte, mesure d’audience.</li>
         <li><strong>Firebase Cloud Messaging</strong> (Google, États-Unis / Irlande) — envoi des notifications de nouvelle course sur l’application Android des chauffeurs et des demandes de retrait aux administrateurs ayant activé les notifications Android : identifiant de notification du téléphone, montant de la course et adresse de prise en charge.</li>

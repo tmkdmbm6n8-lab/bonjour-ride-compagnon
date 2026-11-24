@@ -1,3 +1,4 @@
+import { moderateMessageText } from "./message-moderation.server";
 import {
   getRideDecision,
   recordAdminDecision,
@@ -197,7 +198,11 @@ export async function purgeRideChats(admin) {
 }
 export async function sendChatMessage(admin, ride, uid, body) {
   const from = ride.rider_id === uid ? "rider" : "driver";
-  await appendChat(admin, ride.id, uid, newChatMessage(body, from));
+  const message = newChatMessage(body, from);
+  if (![ride.rider_id, ride.driver_id].includes(uid) || !CHAT_ACTIVE_STATUSES.includes(ride.status))
+    throw new Error("Discussion fermée");
+  if (message.type === "text") await moderateMessageText(message.text);
+  await appendChat(admin, ride.id, uid, message);
 }
 let bucketReady = false;
 export async function sendChatAttachment(admin, ride, uid, body) {

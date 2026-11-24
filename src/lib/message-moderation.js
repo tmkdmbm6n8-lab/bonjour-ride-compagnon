@@ -1,3 +1,5 @@
+export const INAPPROPRIATE_MESSAGE = "Contenu inapproprié. Retirez les insultes avant d’envoyer votre message.";
+
 // Match whole words and common expressions, without altering the original draft.
 const blockedExpressions = [
   "connards?|connasses?|connes?|cons?",
@@ -14,6 +16,6 @@ export function rejectInappropriateMessage(text) {
     .replace(/[\p{M}\p{Cf}]/gu, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ");
   if (insults.test(normalized)) {
-    throw new Error("Contenu inapproprié. Retirez les insultes avant d’envoyer votre message.");
+    throw new Error(INAPPROPRIATE_MESSAGE);
   }
 }
