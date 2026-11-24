@@ -1,11 +1,12 @@
+'use client';
+
 import CloseControl from "@/components/ui/CloseControl";
 import ChatAttachments from "./ChatAttachments";
 import ChatMedia from "./ChatMedia";
 import { CHAT_NOTICE } from "@/lib/ride-chat";
 import {apiFetch as fetch} from '@/lib/archive-fetch';
-'use client';
-
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Send, MessageCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import useVisualViewport from '@/hooks/useVisualViewport';
@@ -39,14 +40,20 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
   const listRef = useRef(null);
   const toast = useToast();
   const [isPhone, setIsPhone] = useState(false);
-  useEffect(() => { setIsPhone(window.matchMedia('(max-width: 640px)').matches); }, []);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 640px), (pointer: coarse)');
+    const update = () => setIsPhone(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   const vv = useVisualViewport(open && isPhone);
 
   useEffect(() => {
     if (open && listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
-  }, [messages, open]);
+  }, [messages, open, vv?.height]);
 
   async function send(e) {
     e?.preventDefault();
@@ -74,18 +81,18 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
 
   if (!open) return null;
 
-  return (
+  const sheet = (
     <div
       className="card animate-in"
       style={{
-        position: vv ? 'fixed' : 'absolute',
-        ...(vv
-          ? { top: vv.top + 8, left: 8, right: 8, height: Math.min(520, vv.height - 16), zIndex: 'var(--z-sheet)' }
+        position: isPhone ? 'fixed' : 'absolute',
+        ...(isPhone
+          ? { top: (vv?.top ?? 0) + 8, left: 8, right: 8, height: vv ? Math.max(0, Math.min(520, vv.height - 16)) : 'min(520px, calc(100dvh - 16px))', zIndex: 'var(--z-sheet)' }
           : { bottom: 16, right: 16, width: 'min(380px, calc(100% - 32px))', height: 460 }),
         display: 'flex',
         flexDirection: 'column',
         boxShadow: 'var(--shadow-lg)',
-        ...(vv ? null : { zIndex: 25 }),
+        ...(isPhone ? null : { zIndex: 25 }),
         overflow: 'hidden',
       }}
       role="dialog"
@@ -93,7 +100,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
     >
       <div
         className="flex items-center justify-between"
-        style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}
+        style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}
       >
         <div className="flex items-center gap-2">
           <MessageCircle size={17} style={{ color: 'var(--gold-600)' }} />
@@ -110,14 +117,14 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
         </div>
       </div>
 
-      <p className="chat-retention-notice">{CHAT_NOTICE}</p>
-      <p className="tiny muted" style={{ padding: '0 14px 8px' }}>
-        Message abusif, menace ou harcèlement ?{' '}
-        <a href={`/contact?topic=safety&ride=${encodeURIComponent(rideId)}`}>
-          Signaler cette discussion à l’assistance
-        </a>.
-      </p>
-      <div ref={listRef} className="flex-1" style={{ overflowY: 'auto', padding: 14 }}>
+      <div ref={listRef} className="flex-1" style={{ minHeight: 0, overflowY: 'auto', padding: 14 }}>
+        <p className="chat-retention-notice">{CHAT_NOTICE}</p>
+        <p className="tiny muted" style={{ padding: '0 14px 8px' }}>
+          Message abusif, menace ou harcèlement ?{' '}
+          <a href={`/contact?topic=safety&ride=${encodeURIComponent(rideId)}`}>
+            Signaler cette discussion à l’assistance
+          </a>.
+        </p>
         {messages.length === 0 && (
           <p className="tiny muted text-center" style={{ paddingTop: 40 }}> Dites bonjour à votre interlocuteur. </p>
         )}
@@ -169,7 +176,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
       <form
         onSubmit={send}
         className="flex gap-2"
-        style={{ padding: 12, borderTop: '1px solid var(--border)' }}
+        style={{ flexShrink: 0, padding: 12, borderTop: '1px solid var(--border)' }}
       >
         <input
           className="input flex-1"
@@ -191,4 +198,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
       </form>
     </div>
   );
+
+  // A map or animated parent can trap position: fixed in its own bounds.
+  return isPhone ? createPortal(<div className="shell-dark">{sheet}</div>, document.body) : sheet;
 }
