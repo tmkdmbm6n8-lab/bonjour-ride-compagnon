@@ -1,4 +1,4 @@
-export const INAPPROPRIATE_MESSAGE = "Contenu inapproprié. Retirez les insultes avant d’envoyer votre message.";
+export const INAPPROPRIATE_MESSAGE = "Contenu inapproprié. Modifiez votre message avant de l’envoyer.";
 
 // Match whole words and common expressions, without altering the original draft.
 const blockedExpressions = [
@@ -7,6 +7,8 @@ const blockedExpressions = [
   "salopes?|salopards?|batards?|abrutis?|abruties?|debiles?|imbeciles?",
   "idiots?|idiotes?|bouffons?|bouffonnes?|trous? du cul",
   "va te faire foutre|nique ta mere|ntm",
+  "(?:te|vous|me) (?:baiser|sodomiser|penetrer|sucer|branler)",
+  "baise moi|sodomise moi|suce moi|branle moi",
   "fuck you|assholes?|bitches?|bastards?|motherfuckers?",
 ];
 const insults = new RegExp(`(?:^| )(?:${blockedExpressions.join("|")})(?=$| )`, "u");
