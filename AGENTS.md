@@ -35,8 +35,8 @@ use the editor.
 - Map display uses MapLibre with OpenFreeMap/OpenStreetMap without radar/police overlays. Address lookup and traffic-aware Google Routes remain server-side through the managed Google Maps connector. Guidance is external only: never launch GPS on acceptance or PIN validation; only the Démarrer le trajet button may open the selected GPS app.
 - The live leg (driver → pickup/destination) is computed server-side from `drivers.location` and cached in `rides.live_route` for 45 s, shared by rider and driver; keeps billed routing calls to about one per minute per active ride.
 
-- Any fare discount is a single rate constant in `src/lib/vtc-pricing.js` applied inside `calculateFare`; quotes and server-side booking charges share it, so setting it to 0 removes the discount everywhere.
-- Driver pay floors (per ride, per hour incl. approach, per km, net of commission) are constants in `src/lib/vtc-pricing.js`, applied only in `calculateFare` at booking; `settleDriverEarnings` just records real activity time, so neither the passenger price nor the platform commission changes after booking.
+- Pricing instruction (2026-11-24): passenger fares use the validated distance/time grid in `src/lib/vtc-pricing.js`: max(category minimum, base + km × rate + minutes × rate) + supplement. Pet adds €4 after the minimum. No automatic demand multiplier, discount, booking fee or driver-floor adjustment changes this passenger total. Existing commission and settlement remain separate.
+- Only versioned category rules may override the new defaults. Do not reactivate the retired learning/collection system. Public estimates, booking and card checkout share the same server tariff pipeline.
 - Legal pages (`/privacy`, `/terms`, `/mentions-legales`) must describe the app's real data flows and retention; company identifiers live in `src/lib/legal.js`, and retention is enforced by the nightly `purge_expired_personal_data` job, so change both together.
 - Ride dispatch rules, the pickup-zone check, the fair-share throttle and profitability labels live in `src/lib/vtc-dispatch.js` (pure, unit-tested); `vtc.server.js` only loads available drivers and applies the returned patch with a phase-guarded update, so accepts cannot double-assign.
 - The driver tabs' look (Accueil, Découvrir, Revenus, Inbox, Menu) is the `--drv-*` token block at the end of `src/styles.css`, which overrides the imported reference layer above it; keep it last so it wins.
@@ -61,8 +61,7 @@ use the editor.
 - Android (Capacitor) loads the published URL via `server.url`; `capacitor-shell/` is only redirect + offline page, since TanStack Start has no static index.html.
 - Ride-offer pushes go out from `assignOffer` only when its guarded update wins, to `newlyOfferedDriverIds` (`vtc-push.js`); tokens in service-role `push_tokens`. Each dispatch step notifies once, no send log.
 
-- User instruction (2026-11-17): never alter the pricing calculations, amounts, remuneration parameters, or the external link supplying prices. Preserve the quote/estimate integrations. Security and compliance work must not recalculate or adjust fares.
-- Run `npm run check:pricing` after any future change. Do not refresh the protected pricing baseline to conceal a change; obtain an explicit new user instruction before any alteration of the protected calculation/link.
+- The user's explicit pricing instruction of 2026-11-24 supersedes the previous freeze for this tariff replacement and retirement of external price integrations. Protect the new tariff baseline from unrelated changes. Run `npm run check:pricing` after future changes; do not refresh unrelated integrity hashes to hide failures.
 
 - Rider driver reports use authenticated `/api/rides/:id/report` and existing `contact_messages` safety storage. Server-signed messages prevent public contact messages counting toward suspension. Three distinct reported rides set only `drivers.is_approved/is_online/documents_override` false. The driver dashboard shows the suspension and support/passenger access; an active ride can still be completed. Reapproval remains an admin action. Never restrict the passenger profile or recalculate fares.
 

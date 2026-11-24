@@ -693,7 +693,7 @@ function RiderDashboard() {
                             <span className="small mono-nums" style={{ fontWeight: 700 }}>{money(fare.total)}</span>
                             {estimate.showPriorityPriceSource === true && (
                               <span className="tiny muted" data-testid="priority-fare-source" style={{display:"block",textAlign:"right"}}>
-                                {fare.isUberPrice ? "Prix Uber" : fare.priceSource === "ai" || fare.isAiPrice ? "Prix IA" : "Prix Admin"}
+                                Barème StrasDrive
                               </span>
                             )}
                             {fare.discount > 0 && (
@@ -1094,6 +1094,18 @@ function RiderDashboard() {
                   )}
                 </span>
               </div>
+              {completedRide.fare?.minimumFareSupplement > 0 && (
+                <div className="flex items-center justify-between small mt-1">
+                  <span className="muted">Application du prix minimum</span>
+                  <span className="mono-nums">{money(completedRide.fare.minimumFareSupplement)}</span>
+                </div>
+              )}
+              {completedRide.fare?.supplement > 0 && (
+                <div className="flex items-center justify-between small mt-1">
+                  <span className="muted">Supplément</span>
+                  <span className="mono-nums">{money(completedRide.fare.supplement)}</span>
+                </div>
+              )}
               {completedRide.fare?.surgeFare > 0 && (
                 <div className="flex items-center justify-between small mt-1">
                   <span className="muted">Majoration ({completedRide.fare.surgeMultiplier}×)</span>

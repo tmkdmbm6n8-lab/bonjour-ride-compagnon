@@ -1,6 +1,6 @@
 # Kova — premium ride-hailing platform
 
-A full-stack, realtime Uber-style platform: rider app, driver app and admin
+A full-stack, realtime VTC platform: rider app, driver app and admin
 console in one Next.js 16 codebase. No paid map APIs — maps, geocoding and
 routing all run on free, keyless services.
 
@@ -14,7 +14,7 @@ Kova is open source under the [MIT licence](LICENSE) and listed on
 | Web | Next.js 16 (App Router), React 19, vanilla CSS design system |
 | Realtime | Socket.IO on a custom Node server (`server.js`), JWT-authenticated namespaces |
 | Data | MongoDB (Mongoose), Redis (ioredis) |
-| Spatial | Uber H3 hex index in Redis for driver lookup + surge pricing |
+| Spatial | H3 hex index in Redis for driver lookup + surge pricing |
 | Maps | MapLibre GL + CARTO/OSM raster tiles (no API key) |
 | Geocoding | Photon (komoot) — search + reverse |
 | Routing | OSRM public API with haversine fallback |

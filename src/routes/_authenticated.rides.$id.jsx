@@ -112,6 +112,8 @@ function RideDetailPage() {
                 <Row label="Prise en charge" value={money(ride.fare.baseFare)} />
                 <Row label="Distance" value={money(ride.fare.distanceFare)} />
                 <Row label="Durée" value={money(ride.fare.timeFare)} />
+                {ride.fare.minimumFareSupplement > 0 && <Row label="Application du prix minimum" value={money(ride.fare.minimumFareSupplement)} />}
+                {ride.fare.supplement > 0 && <Row label="Supplément" value={money(ride.fare.supplement)} />}
                 {ride.fare.surgeFare > 0 && <Row label={`Majoration ${ride.fare.surgeMultiplier}×`} value={money(ride.fare.surgeFare)} />}
                 <Row label="Frais de réservation" value={money(ride.fare.bookingFee)} />
                 {ride.fare.driverFloorSupplement > 0 && <Row label="Complément rémunération minimale chauffeur" value={money(ride.fare.driverFloorSupplement)} />}

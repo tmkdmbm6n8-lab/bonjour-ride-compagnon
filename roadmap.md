@@ -30,7 +30,7 @@
 - [x] Carte : déplacement/zoom uniquement à deux doigts (Voyager et Conduire)
 - [x] Client : voir les chauffeurs proches et zoom automatique dessus après l'adresse
 - [x] Suggestions d'adresse en temps réel sous le champ
-- [x] Son de notification (style Uber, distinct par type)
+- [x] Son de notification (distinct par type)
 
 # Itinéraire en temps réel (demande du 14/11)
 - [x] Itinéraire calculé par Google Routes avec trafic en temps réel (OSRM en secours)

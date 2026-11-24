@@ -1,56 +1,40 @@
+// Validated distance/time tariff. Amounts are euros; durations are seconds.
+export const TARIFF_VERSION = "distance-time-2026-11-24";
 export const DEFAULT_PRICING = {
-  economy: {
-    baseFare: 2,
-    perKmRate: 1,
-    perMinRate: 0.15,
-    minimumFare: 4,
-    bookingFee: 0.5,
-    platformCommission: 10,
-    surgeMultiplierCap: 3,
-  },
-  comfort: {
-    baseFare: 3,
-    perKmRate: 1.5,
-    perMinRate: 0.25,
-    minimumFare: 6.5,
-    bookingFee: 0.75,
-    platformCommission: 10,
-    surgeMultiplierCap: 3,
-  },
-  pet: {
-    baseFare: 3.5,
-    perKmRate: 1.35,
-    perMinRate: 0.2,
-    minimumFare: 7,
-    bookingFee: 0.75,
-    platformCommission: 10,
-    surgeMultiplierCap: 3,
-  },
-  xl: {
-    baseFare: 4,
-    perKmRate: 1.8,
-    perMinRate: 0.3,
-    minimumFare: 8,
-    bookingFee: 0.75,
-    platformCommission: 10,
-    surgeMultiplierCap: 3,
-  },
+  economy: { baseFare: 1.90, perKmRate: 0.99, perMinRate: 0.29, minimumFare: 12, supplement: 0, bookingFee: 0, platformCommission: 10, surgeMultiplierCap: 1 },
+  comfort: { baseFare: 2.43, perKmRate: 1.27, perMinRate: 0.37, minimumFare: 18, supplement: 0, bookingFee: 0, platformCommission: 10, surgeMultiplierCap: 1 },
+  pet: { baseFare: 1.90, perKmRate: 0.99, perMinRate: 0.29, minimumFare: 12, supplement: 4, bookingFee: 0, platformCommission: 10, surgeMultiplierCap: 1 },
+  xl: { baseFare: 6.93, perKmRate: 1.49, perMinRate: 0.49, minimumFare: 16, supplement: 0, bookingFee: 0, platformCommission: 10, surgeMultiplierCap: 1 },
 };
-// Taux de remise appliqué au tarif calculé (0.20 = 20 %). Mettre à 0 pour retirer la remise.
+export const TARIFF_FIELDS = ['baseFare', 'perKmRate', 'perMinRate', 'minimumFare', 'supplement'];
+export function tariffRuleProblem(value) {
+  return TARIFF_FIELDS.some(key => typeof value?.[key] !== 'number' || !Number.isFinite(value[key]) || value[key] < 0 || value[key] > 10000)
+    ? 'Renseignez des montants compris entre 0 et 10 000 € pour chaque champ.' : null;
+}
+// Legacy database rules are ignored until explicitly saved for this tariff version.
+export function pricingRules(rows = []) {
+  return Object.fromEntries(Object.entries(DEFAULT_PRICING).map(([type, defaults]) => {
+    const saved = rows.find(row => row.vehicle_type === type)?.rule;
+    const fields = saved?.tariffVersion === TARIFF_VERSION && !tariffRuleProblem(saved)
+      ? Object.fromEntries(TARIFF_FIELDS.map(key => [key, saved[key]])) : {};
+    return [type, { ...defaults, ...fields }];
+  }));
+}
+// Le barème validé ne comporte pas de remise automatique.
 export const DISCOUNT_RATE = 0;
 
 // Rémunération minimale des chauffeurs (accord ARPE VTC), montants nets de commission.
 export const DRIVER_MIN_NET_PER_RIDE = 9; // € nets par course, quelle que soit la distance ou la durée
 export const DRIVER_MIN_NET_PER_HOUR = 30; // € nets par heure d'activité, temps d'approche compris
 export const DRIVER_MIN_NET_PER_KM = 1; // € nets par kilomètre parcouru
-// Temps d'approche estimé, inclus dans le devis passager. Le temps réel est vérifié à la fin de la course.
+// Temps d’approche de référence pour le suivi séparé de la rémunération.
 export const ESTIMATED_APPROACH_SECONDS = 300;
 
-const round2 = (n) => Math.round(n * 100) / 100;
+const round2 = (n) => Math.round((n + Number.EPSILON * Math.max(1, Math.abs(n))) * 100) / 100;
 const ceil2 = (n) => Math.ceil(Math.round(n * 1e6) / 1e4) / 100;
 const feeFor = (total, commission) => Math.round(total * commission) / 100;
 
-/** Planchers applicables au devis : 9 € par course et 1 €/km estimé. La garantie horaire est contrôlée par période. */
+/** Paramètres de suivi de rémunération, distincts du prix passager fixé au devis. */
 export function driverMinimumNet(meters, activitySeconds) {
   const km = Math.max(0, Number(meters) || 0) / 1000;
   // activitySeconds est conservé pour compatibilité, mais ne majore pas le devis.
@@ -65,47 +49,27 @@ export function minimumPassengerTotal(net, commission) {
   return total;
 }
 
-export function calculateFare(
-  rule,
-  meters,
-  seconds,
-  surge = 1,
-  discountRate = DISCOUNT_RATE,
-  approachSeconds = ESTIMATED_APPROACH_SECONDS,
-) {
-  const distanceFare = (meters / 1000) * rule.perKmRate,
-    timeFare = (seconds / 60) * rule.perMinRate;
+/** Prix TTC fixé au devis : max(minimum, base + kilomètres + minutes), puis supplément. */
+export function calculateFare(rule, meters, seconds) {
+  if (!Number.isFinite(meters) || meters < 0 || !Number.isFinite(seconds) || seconds < 0) throw new Error('Distance ou durée de trajet invalide');
+  if (tariffRuleProblem(rule)) throw new Error('Barème de tarification invalide');
+  const distanceFare = meters / 1000 * rule.perKmRate;
+  const timeFare = seconds / 60 * rule.perMinRate;
   const subtotal = rule.baseFare + distanceFare + timeFare;
-  const multiplier = Math.min(rule.surgeMultiplierCap, Math.max(1, surge));
-  const originalTotal = round2(Math.max(subtotal * multiplier, rule.minimumFare) + rule.bookingFee);
-  const rate = Math.min(1, Math.max(0, Number(discountRate) || 0));
-  const discounted = round2(originalTotal - round2(originalTotal * rate));
-  // Plancher de rémunération chauffeur : aucun tarif (ni remise) ne descend en dessous.
-  const minimumNet = driverMinimumNet(meters, seconds + Math.max(0, Number(approachSeconds) || 0));
-  const floorTotal = minimumPassengerTotal(minimumNet, rule.platformCommission);
-  const total = Math.max(discounted, floorTotal);
-  const discount = round2(Math.max(0, originalTotal - total));
-  const driverFloorSupplement = round2(Math.max(0, total - originalTotal));
-  const platformFee = feeFor(total, rule.platformCommission);
+  const minimumFareSupplement = Math.max(0, rule.minimumFare - subtotal);
+  const total = round2(Math.max(subtotal, rule.minimumFare) + rule.supplement);
+  if (!Number.isFinite(total)) throw new Error('Montant de trajet invalide');
+  const platformCommission = rule.platformCommission;
+  if (!Number.isFinite(platformCommission) || platformCommission < 0 || platformCommission >= 100) throw new Error('Commission invalide');
+  const platformFee = feeFor(total, platformCommission);
   return {
-    baseFare: rule.baseFare,
-    distanceFare,
-    timeFare,
-    surgeFare: subtotal * (multiplier - 1),
-    surgeMultiplier: multiplier,
-    bookingFee: rule.bookingFee,
-    originalTotal,
-    discountRate: discount > 0 ? rate : 0,
-    discount,
-    driverFloorSupplement,
-    driverMinimumNet: minimumNet,
-    approachSeconds: Math.max(0, Number(approachSeconds) || 0),
-    total,
-    estimatedTotal: total,
-    platformCommission: rule.platformCommission,
-    platformFee,
-    driverEarnings: round2(total - platformFee),
-    currency: "EUR",
+    baseFare: rule.baseFare, distanceFare, timeFare, minimumFare: rule.minimumFare,
+    minimumFareSupplement: round2(minimumFareSupplement), supplement: rule.supplement,
+    surgeFare: 0, surgeMultiplier: 1, bookingFee: 0,
+    originalTotal: total, discountRate: 0, discount: 0,
+    driverFloorSupplement: 0, total, estimatedTotal: total,
+    platformCommission, platformFee, driverEarnings: round2(total - platformFee),
+    currency: 'EUR', priceSource: 'tariff', tariffVersion: TARIFF_VERSION,
   };
 }
 

@@ -1,24 +1,62 @@
-import {describe,it,expect} from 'vitest';
-import {calculateFare,DEFAULT_PRICING,DISCOUNT_RATE,formatEuro,settleDriverEarnings,DRIVER_MIN_NET_PER_RIDE,DRIVER_MIN_NET_PER_HOUR,DRIVER_MIN_NET_PER_KM} from '@/lib/vtc-pricing';
-describe('Euro localization without changing amounts',()=>{
- it('formats 11.20 as euros with French decimals',()=>expect(formatEuro(11.20).replace(/\s/g,' ')).toBe('11,20 €'));
- it('keeps the original economy tariff before the driver floor',()=>{const fare=calculateFare(DEFAULT_PRICING.economy,4800,720);expect(fare.originalTotal).toBe(9.1);expect(fare.currency).toBe('EUR')});
+import { describe, expect, it } from 'vitest';
+import { calculateFare, DEFAULT_PRICING, DISCOUNT_RATE, formatEuro, settleDriverEarnings, pricingRules, TARIFF_VERSION, tariffRuleProblem } from '@/lib/vtc-pricing';
+
+describe('barème distance/durée validé', () => {
+  it.each([
+    ['economy', 17.60], ['comfort', 22.53], ['pet', 21.60], ['xl', 31.63],
+  ] as const)('calcule %s pour 10 km et 20 minutes', (type, expected) => {
+    expect(calculateFare(DEFAULT_PRICING[type], 10000, 1200).total).toBe(expected);
+  });
+  it.each([
+    ['economy', 12], ['comfort', 18], ['pet', 16], ['xl', 16],
+  ] as const)('applique le minimum de %s avant le supplément', (type, expected) => {
+    expect(calculateFare(DEFAULT_PRICING[type], 100, 30).total).toBe(expected);
+  });
+  it.each([
+    ['economy', 29.70], ['comfort', 38.04], ['pet', 33.70], ['xl', 50.15],
+  ] as const)('retrouve le trajet Strasbourg → Molsheim en %s', (type, expected) => {
+    const fare = calculateFare(DEFAULT_PRICING[type], 20513.6, 1550.1);
+    expect(fare.total).toBe(expected);
+    expect(fare.estimatedTotal).toBe(expected);
+    expect(fare.originalTotal).toBe(expected);
+    expect(fare.currency).toBe('EUR');
+  });
+  it('conserve les mètres et les secondes avant l’arrondi final', () => {
+    expect(calculateFare(DEFAULT_PRICING.economy, 20513.6, 1550.1).total).toBe(29.70);
+    expect(calculateFare(DEFAULT_PRICING.economy, 20500, 1560).total).toBe(29.74);
+  });
+  it('ne rajoute pas une majoration ou une ancienne remise au barème', () => {
+    const fare = (calculateFare as any)(DEFAULT_PRICING.economy, 10000, 1200, 3, 0.5);
+    expect(fare).toMatchObject({ total: 17.60, bookingFee: 0, surgeFare: 0, discount: 0, discountRate: 0 });
+    expect(DISCOUNT_RATE).toBe(0);
+  });
+  it.each(Object.keys(DEFAULT_PRICING))('conserve la commission existante et équilibre le paiement %s', type => {
+    const fare = calculateFare(DEFAULT_PRICING[type], 20513.6, 1550.1);
+    expect(fare.platformCommission).toBe(10);
+    expect(fare.platformFee).toBe(Math.round(fare.total * 10) / 100);
+    expect(Math.round((fare.platformFee + fare.driverEarnings) * 100)).toBe(Math.round(fare.total * 100));
+  });
+  it('conserve le prix accepté et les gains si la course dure plus longtemps', () => {
+    const fare = calculateFare(DEFAULT_PRICING.economy, 20513.6, 1550.1);
+    expect(settleDriverEarnings(fare, 25000, 3600)).toEqual({ ...fare, activitySeconds: 3600 });
+  });
+  it.each([[-1,60],[100,-1],[NaN,60],[100,Infinity]])('refuse une distance/durée invalide : %s, %s', (meters, seconds) => {
+    expect(() => calculateFare(DEFAULT_PRICING.economy, meters, seconds)).toThrow();
+  });
+  it('affiche les euros avec les décimales françaises', () => expect(formatEuro(29.7).replace(/\s/g,' ')).toBe('29,70 €'));
 });
-describe('Remise sur le tarif calculé',()=>{
- it('the default discount rate is 0 (no discount)',()=>expect(DISCOUNT_RATE).toBe(0));
- it('a 20 km ride keeps its normal price (27 €) with no discount',()=>{const fare=calculateFare(DEFAULT_PRICING.economy,20000,1800);expect(fare.discount).toBe(0);expect(fare.total).toBe(27)});
- it('a 20 % discount never goes below the driver floor',()=>{const fare=calculateFare(DEFAULT_PRICING.economy,4800,720,1,0.2);expect(fare.total).toBe(10.59);expect(fare.driverEarnings).toBeGreaterThanOrEqual(9)});
-});
-describe('Commissions et frais de réservation',()=>{
- it.each(['economy','comfort','pet','xl'] as const)('applies 15 % commission to %s',type=>{const fare=calculateFare(DEFAULT_PRICING[type],20000,1800);expect(fare.platformCommission).toBe(15);expect(fare.platformFee).toBe(Math.round(fare.total*15)/100)});
- it('keeps standard passenger booking fees at 0.50 €',()=>expect(calculateFare(DEFAULT_PRICING.economy,20000,1800).bookingFee).toBe(0.5));
-});
-describe('Rémunération minimale chauffeur (ARPE)',()=>{
- it('uses the agreed floors: 9 € per ride, 30 € per hour, 1 € per km',()=>{expect(DRIVER_MIN_NET_PER_RIDE).toBe(9);expect(DRIVER_MIN_NET_PER_HOUR).toBe(30);expect(DRIVER_MIN_NET_PER_KM).toBe(1)});
- it('pays at least 9 € net on a short ride, commission of 15 % included',()=>{const fare=calculateFare(DEFAULT_PRICING.economy,500,60,1,0,0);expect(fare.total).toBe(10.59);expect(fare.platformFee).toBe(1.59);expect(fare.driverEarnings).toBe(9)});
- it('does not force the monthly hourly guarantee into each quote',()=>{const fare=calculateFare(DEFAULT_PRICING.economy,10000,3300);expect(fare.driverMinimumNet).toBe(10);expect(fare.total).toBe(20.75);expect(fare.driverEarnings).toBe(17.64)});
- it('pays at least 1 € net per km',()=>{const fare=calculateFare({...DEFAULT_PRICING.economy,perKmRate:0.2,perMinRate:0},50000,600,1,0,0);expect(fare.driverEarnings).toBeGreaterThanOrEqual(50)});
- it('pays at least 9 € net on a short Pet ride, 15 % commission included',()=>{const fare=calculateFare(DEFAULT_PRICING.pet,500,60,1,0,0);expect(fare.platformCommission).toBe(15);expect(fare.driverEarnings).toBeGreaterThanOrEqual(9)});
- it('keeps the platform commission when a ride takes longer than planned (no top-up)',()=>{const fare=calculateFare(DEFAULT_PRICING.economy,4800,720);const settled=settleDriverEarnings(fare,4800,3600);expect(settled.total).toBe(10.59);expect(settled.platformFee).toBe(fare.platformFee);expect(settled.driverEarnings).toBe(fare.driverEarnings);expect(settled.platformTopUp).toBeUndefined()});
- it('does not change earnings when the floor is already met',()=>{const fare=calculateFare(DEFAULT_PRICING.economy,20000,1800);const settled=settleDriverEarnings(fare,20000,2100);expect(settled.driverEarnings).toBe(22.95);expect(settled.platformTopUp).toBeUndefined()});
+
+describe('activation des règles administrateur', () => {
+  it('ignore les anciennes règles pour activer immédiatement la nouvelle grille', () => {
+    const rules = pricingRules([{vehicle_type:'economy',rule:{baseFare:300,minimumFare:700,perKmRate:200,perMinRate:100}}]);
+    expect(calculateFare(rules.economy,10000,1200).total).toBe(17.60);
+    expect(Object.keys(rules)).toEqual(['economy','comfort','pet','xl']);
+  });
+  it('accepte uniquement une grille versionnée et ne permet pas de réintroduire une commission, remise ou majoration', () => {
+    const rules = pricingRules([{vehicle_type:'economy',rule:{...DEFAULT_PRICING.economy,tariffVersion:TARIFF_VERSION,perKmRate:1.2,platformCommission:90,bookingFee:50,surgeMultiplierCap:10}}]);
+    expect(calculateFare(rules.economy,10000,1200)).toMatchObject({total:19.70,platformCommission:10,bookingFee:0,surgeMultiplier:1});
+  });
+  it('refuse les montants vides, négatifs, infinis ou trop grands', () => {
+    for(const value of [null,-1,Infinity,10001]) expect(tariffRuleProblem({...DEFAULT_PRICING.pet,supplement:value})).not.toBeNull();
+  });
 });

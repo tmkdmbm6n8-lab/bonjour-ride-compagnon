@@ -64,9 +64,11 @@ import { mergeCameraAlerts } from "./vtc-speed-cameras";
 import { requireRadarReporter } from "./vtc-road-alerts.server";
 import {
   DEFAULT_PRICING,
+  TARIFF_VERSION,
+  TARIFF_FIELDS,
+  tariffRuleProblem,
+  pricingRules,
   calculateFare,
-  minimumPassengerTotal,
-  driverMinimumNet,
   settleDriverEarnings,
   paymentMethodOf,
   bookingPaymentProblem,
@@ -316,178 +318,13 @@ async function liveRoute(admin, r) {
   return value;
 }
 // === src/lib/vtc.server.js (autour de la ligne 229) ===
-async function estimates(db, a, b) {
+export async function estimates(db, a, b) {
   const route = await routeBetween(a, b);
-  const rows = required(await db.from("pricing_rules").select("*"));
-  const rules = { ...DEFAULT_PRICING };
-  for (const row of rows) {
-    if (row.vehicle_type !== "uber_discount" && row.vehicle_type !== "uber_cookie" && row.vehicle_type !== "uber_hourly_checks" && row.vehicle_type !== "uber_ai_learning" && row.vehicle_type !== "pricing_source_mode") {
-      rules[row.vehicle_type] = row.rule;
-    }
-  }
-
-  // Commission contractuelle unique des chauffeurs sans Gold, même si une ancienne règle DB indique 15 %.
-  for (const type of Object.keys(DEFAULT_PRICING)) rules[type] = { ...DEFAULT_PRICING[type], ...(rules[type] || {}), platformCommission: 10 };
-
-  // Configuration de la réduction Uber (20 % par défaut, activée par défaut)
-  const discountSetting = rows.find((r) => r.vehicle_type === "uber_discount")?.rule;
-  const isDiscountActive = discountSetting ? Boolean(discountSetting.enabled) : true;
-  const discountRate = discountSetting && Number.isFinite(discountSetting.rate) ? discountSetting.rate : 0.2; // 20 %
-
-  // Explicit source policy: automatic (Uber first), Uber only, or learned AI only.
-  const sourceMode = rows.find(r => r.vehicle_type === "pricing_source_mode")?.rule?.mode || "auto";
-  const mode = ["auto", "uber", "ai"].includes(sourceMode) ? sourceMode : "auto";
-  let uberList = [];
-  // AI mode must not call Uber or use live Uber fares for customer quotes.
-  if (mode !== "ai") {
-    try {
-      const { uberProducts } = await import("./vtc-uber.server");
-      const cookieRow = rows.find(r => r.vehicle_type === "uber_cookie");
-      const result = await uberProducts(a, b, cookieRow?.rule?.cookie || null);
-      if (Array.isArray(result)) uberList = result.filter(p => Number.isFinite(Number(p.price)) && Number(p.price) > 0);
-    } catch (error) {
-      console.warn("[pricing] Uber unavailable:", error?.message || error);
-    }
-    if (uberList.length) {
-      try {
-        const { recordClientUberQuote } = await import("./vtc-pricing-learning.server");
-        await recordClientUberQuote(db, a, b, uberList, route);
-      } catch (error) {
-        console.error("[pricing-ai] Failed to record live Uber client quote:", error?.message || error);
-      }
-    }
-  }
-
-  // 3. Correspondance avec les gammes StrasDrive (Go, Comfort, Pet, XL)
-  const findProduct = (keywords) => {
-    for (const kw of keywords) {
-      const match = uberList.find((p) => p.name?.toLowerCase().includes(kw.toLowerCase()));
-      if (match) return match;
-    }
-    return null;
-  };
-
-  const uberX = findProduct(["uberx", "electric", "wait & save"]);
-  const uberComfort = findProduct(["comfort"]);
-  const uberPet = findProduct(["pet", "uber pet", "animal"]);
-  const uberXL = findProduct(["uberxl", "xl"]);
-
-  const finalEstimates = {};
-
-  const applyUberPrice = (type, product) => {
-    let rawPrice = product?.price;
-
-    // Si Uber Pet n'est pas actif dans la ville, barème officiel Uber : UberX + 4,00 €
-    if (!rawPrice && type === "pet" && uberX?.price) {
-      rawPrice = Math.round((uberX.price + 4.0) * 100) / 100;
-    }
-
-    if (rawPrice && Number.isFinite(rawPrice) && rawPrice > 0) {
-      const commRate = Number(rules[type]?.platformCommission ?? DEFAULT_PRICING[type].platformCommission);
-
-      // Calcul du prix réduit de 20 %
-      let price = rawPrice;
-      if (isDiscountActive) {
-        price = Math.round(rawPrice * (1 - discountRate) * 100) / 100;
-      }
-
-      // ── Plancher légal ARPE : 9,00 € nets min par course pour le chauffeur ──
-      // Avec 10 % de commission, le prix payé par le client ne descend jamais sous 10,59 €
-      const minNetDriver = driverMinimumNet(route.distanceMeters, route.durationSeconds);
-      const minLegalPrice = minimumPassengerTotal(minNetDriver, commRate);
-      if (price < minLegalPrice) {
-        price = minLegalPrice;
-      }
-
-      price = Math.round(price * 100) / 100;
-      const platformFee = Math.round(price * commRate) / 100;
-      const driverEarnings = Math.round((price - platformFee) * 100) / 100;
-
-      finalEstimates[type] = {
-        total: price,
-        estimatedTotal: price,
-        originalTotal: rawPrice, // Le prix Uber de référence avant réduction
-        platformCommission: commRate,
-        platformFee,
-        driverEarnings,
-        uberProduct: product ? product.name : type === "pet" ? "Uber Pet" : null,
-        isUberPrice: true,
-        discountRate: isDiscountActive ? discountRate : 0,
-      };
-    }
-  };
-
-  if (mode !== "ai") {
-    applyUberPrice("economy", uberX);
-    applyUberPrice("comfort", uberComfort);
-    applyUberPrice("pet", uberPet);
-    applyUberPrice("xl", uberXL);
-  }
-
-  // In AI mode, or for missing Uber categories in automatic mode, predict each
-  // category independently. Never present an untrained model as a valid fare.
-  const aiNames = { economy: "UberX", comfort: "Comfort", pet: "Uber Pet", xl: "UberXL" };
-  let aiUsed = false;
-  if (mode !== "uber") {
-    const { predictLearnedPrice } = await import("./vtc-pricing-learning.server");
-    const distanceKm = Number(route.distanceMeters) / 1000;
-    for (const type of Object.keys(DEFAULT_PRICING)) {
-      // Never replace a valid Uber quote with an AI prediction.
-      if (finalEstimates[type]) continue;
-      let prediction;
-      try {
-        prediction = await predictLearnedPrice(db, { distanceKm, productName: aiNames[type] });
-      } catch (error) {
-        console.error("[pricing-ai] Prediction failed:", type, error?.message || error);
-      }
-      if (!prediction?.ready || !Number.isFinite(prediction.price) || prediction.price <= 0) continue;
-      const commRate = Number(rules[type]?.platformCommission ?? 10);
-      const commission = Math.min(95, Math.max(0, commRate));
-      const rawPrice = prediction.price;
-      let price = isDiscountActive ? rawPrice * (1 - discountRate) : rawPrice;
-      const minLegalPrice = minimumPassengerTotal(driverMinimumNet(route.distanceMeters, route.durationSeconds), commission);
-      price = Math.round(Math.max(price, minLegalPrice) * 100) / 100;
-      const platformFee = Math.round(price * commission) / 100;
-      finalEstimates[type] = {
-        total: price, estimatedTotal: price, originalTotal: rawPrice,
-        platformCommission: commission,
-        platformFee, driverEarnings: Math.round((price-platformFee)*100)/100,
-        uberProduct: aiNames[type], isUberPrice: false, isAiPrice: true,
-        priceSource: "ai", predictionSamples: prediction.samples,
-        discountRate: isDiscountActive ? discountRate : 0,
-      };
-      aiUsed = true;
-    }
-  }
-  // Système de secours local : activé UNIQUEMENT en mode « Automatique · Uber → IA ».
-  // En mode « Uber uniquement » ou « IA uniquement », aucun secours local n'est calculé.
-  let localUsed = false;
-  if (mode === "auto") {
-    for (const type of Object.keys(DEFAULT_PRICING)) {
-      if (finalEstimates[type]) continue;
-      const rule = { ...DEFAULT_PRICING[type], ...(rules[type] || {}) };
-      const fare = calculateFare(rule, route.distanceMeters, route.durationSeconds);
-      if (!Number.isFinite(fare.total) || fare.total <= 0) continue;
-      finalEstimates[type] = { ...fare, isUberPrice: false, isAiPrice: false, priceSource: "local", estimatedFromLocalRules: true };
-      localUsed = true;
-    }
-  }
-
-  // Si aucun tarif valide n'a pu être obtenu selon le mode choisi, lever une erreur explicite
-  if (!Object.keys(finalEstimates).length) {
-    if (mode === "uber") {
-      throw new Error("Tarifs Uber indisponibles : aucun prix en direct n'a pu être obtenu.");
-    }
-    if (mode === "ai") {
-      throw new Error("Tarifs IA indisponibles : prévisions non disponibles pour ce trajet.");
-    }
-    throw new Error("Tarifs indisponibles : impossible de calculer un trajet valide.");
-  }
-  const uberUsed = Object.values(finalEstimates).some(x => x.isUberPrice);
-  return { route, estimates: finalEstimates, source: localUsed ? (uberUsed || aiUsed ? "mixed" : "local") : aiUsed ? (uberUsed ? "mixed" : "ai") : "uber", pricingMode: mode };
-
+  const rows = required(await db.from("pricing_rules").select("vehicle_type,rule").in("vehicle_type", Object.keys(DEFAULT_PRICING)));
+  const rules = pricingRules(rows);
+  const fares = Object.fromEntries(Object.entries(rules).map(([type, rule]) => [type, calculateFare(rule, route.distanceMeters, route.durationSeconds)]));
+  return { route, estimates: fares, source: "strasdrive", pricingMode: "tariff", tariffVersion: TARIFF_VERSION };
 }
-
 export async function handleVtc(input, context) {
   const { path, method = "GET", body = {} } = input;
   const url = new URL(path, "http://app");
@@ -1946,24 +1783,6 @@ export async function handleVtc(input, context) {
     await pushRideOffer(admin, testRide, [d.user_id]);
     return { ok: true, rideId: r.id, expiresInSeconds: TEST_OFFER_SECONDS, driverOnline: Boolean(d.is_online) };
   }
-  if (p === "/api/admin/uber-benchmark") {
-    if (method !== "GET") throw new Error("Méthode non autorisée");
-    const { benchmarkStatus } = await import("./vtc-uber-benchmark.server");
-    return benchmarkStatus(admin);
-  }
-  if (p === "/api/admin/pricing-ai-compare") {
-    if (method !== "POST") throw new Error("Méthode non autorisée");
-    const { compareRandomUberAi } = await import("./vtc-pricing-learning.server");
-    return compareRandomUberAi(admin,{maxDistanceKm:Number(body.maxDistanceKm)});
-  }
-  if (p === "/api/admin/pricing-ai-observations") {
-    if (method !== "GET") throw new Error("Méthode non autorisée");
-    const { learningObservationsPage } = await import("./vtc-pricing-learning.server");
-    return learningObservationsPage(admin, {
-      offset: Number(q.get("offset") || 0),
-      limit: Number(q.get("limit") || 500),
-    });
-  }
   if (p === "/api/admin/address-search-provider") {
     if (method === "GET") {
       const row = required(await admin.from("pricing_rules").select("rule").eq("vehicle_type", "address_search_provider").maybeSingle());
@@ -1971,7 +1790,7 @@ export async function handleVtc(input, context) {
     }
     if (method === "PUT") {
       const provider = String(body.provider || "");
-      if (!["osm", "google"].includes(provider)) throw new Error("Fournisseur d'adresses invalide");
+      if (!["auto", "osm", "google"].includes(provider)) throw new Error("Fournisseur d'adresses invalide");
       required(await admin.from("pricing_rules").upsert({
         vehicle_type: "address_search_provider", is_active: false,
         rule: { provider, updatedAt: new Date().toISOString() },
@@ -1980,120 +1799,19 @@ export async function handleVtc(input, context) {
     }
     throw new Error("Méthode non autorisée");
   }
-  if (p === "/api/admin/pricing-source") {
-    if (method === "GET") {
-      const row = required(await admin.from("pricing_rules").select("rule").eq("vehicle_type","pricing_source_mode").maybeSingle());
-      return { mode: row?.rule?.mode || "auto" };
-    }
-    if (method === "PUT") {
-      const mode = String(body.mode || "");
-      if (!["auto","uber","ai"].includes(mode)) throw new Error("Mode de tarification invalide");
-      required(await admin.from("pricing_rules").upsert({
-        vehicle_type:"pricing_source_mode", is_active:false,
-        rule:{mode,updatedAt:new Date().toISOString()}
-      },{onConflict:"vehicle_type"}));
-      return {ok:true,mode};
-    }
-    throw new Error("Méthode non autorisée");
-  }
-  if (p === "/api/admin/pricing-ai") {
-    const { learningStatus, runLearningSample, predictLearnedPrice } = await import("./vtc-pricing-learning.server");
-    if (method === "GET") return learningStatus(admin);
-    if (method === "PUT") {
-      const radiusKm = Math.max(1, Math.min(200, Number(body.radiusKm) || 100));
-      const enabled = body.enabled === true;
-      const requestedRate = Number(body.testsPerSecond ?? 0.2);
-      if (!Number.isFinite(requestedRate) || requestedRate <= 0) throw new Error("La cadence doit être un nombre positif");
-      required(await admin.from("pricing_rules").upsert({
-        vehicle_type: "uber_ai_learning", is_active: false,
-        rule: { enabled, radiusKm, testsPerSecond: requestedRate, updatedAt: new Date().toISOString() },
-      }, { onConflict: "vehicle_type" }));
-      return { ok: true, enabled, radiusKm, testsPerSecond: requestedRate };
-    }
-    if (method === "POST") {
-      if (body.action === "sample") return runLearningSample(admin);
-      if (body.action === "predict") {
-        const distanceKm=Number(body.distanceKm);
-        if (!Number.isFinite(distanceKm)||distanceKm<=0||distanceKm>500) throw new Error("Distance invalide");
-        return predictLearnedPrice(admin,{distanceKm,productName:String(body.productName||"UberX")});
-      }
-    }
-    throw new Error("Méthode non autorisée");
-  }
   if (p === "/api/admin/pricing") {
     if (method === "PUT") {
-      if (body.vehicleType === "uber_cookie_inspect") {
-        const result = required(await admin.from("pricing_rules").select("rule").eq("vehicle_type", "uber_cookie").limit(1));
-        const stored = result?.[0]?.rule?.cookie;
-        const cookie = stored || process.env.UBER_COOKIE || "";
-        return { ok: true, cookie, source: stored ? "Base de données" : cookie ? "Variable UBER_COOKIE" : "Aucun", updatedAt: result?.[0]?.rule?.updatedAt || null };
-      }
-      if (body.vehicleType === "uber_cookie") {
-        const cookie = String(body.cookie || "").trim();
-        const { testUberCookie } = await import("./vtc-uber.server");
-        const check = await testUberCookie(cookie);
-        if (!check.ok) throw new Error(check.error || "Session refusée par Uber");
-        required(await admin.from("pricing_rules").upsert({
-          vehicle_type: "uber_cookie",
-          is_active: false,
-          rule: { cookie, updatedAt: new Date().toISOString() },
-        }, { onConflict: "vehicle_type" }));
-        return { ok: true, count: check.count, products: check.products };
-      }
-      if (body.vehicleType === "uber_hourly_checks") {
-        const enabled = body.enabled === true;
-        required(await admin.from("pricing_rules").upsert({
-          vehicle_type: "uber_hourly_checks",
-          is_active: false,
-          rule: { enabled, updatedAt: new Date().toISOString() },
-        }, { onConflict: "vehicle_type" }));
-        return { ok: true, enabled };
-      }
-      if (body.vehicleType === "uber_hourly_check_now") {
-        const { runUberFareCheck } = await import("./vtc-uber-check.server");
-        return runUberFareCheck(admin, { force: true });
-      }
-      // Configuration spéciale pour la réduction Uber
-      if (body.vehicleType === "uber_discount") {
-        const enabled = Boolean(body.enabled);
-        const rate = Number.isFinite(Number(body.rate)) ? Number(body.rate) : 0.2;
-        required(
-          await admin
-            .from("pricing_rules")
-            .upsert({ vehicle_type: "uber_discount", rule: { enabled, rate } }, { onConflict: "vehicle_type" }),
-        );
-        return { rule: { vehicleType: "uber_discount", enabled, rate } };
-      }
-
-      if (
-        !DEFAULT_PRICING[body.vehicleType] ||
-        Object.values(DEFAULT_PRICING[body.vehicleType]).some(
-          (_, i) => !Number.isFinite(body[Object.keys(DEFAULT_PRICING[body.vehicleType])[i]]),
-        )
-      )
-        throw new Error("Tarif invalide");
-      required(await admin.from("pricing_rules").upsert({ vehicle_type: body.vehicleType, rule: body }));
-      return { rule: body };
+      const type = body.vehicleType;
+      if (!Object.hasOwn(DEFAULT_PRICING, type) || body.tariffVersion !== TARIFF_VERSION) throw new Error("Barème invalide : rechargez la page de tarification.");
+      const problem = tariffRuleProblem(body);
+      if (problem) throw new Error(problem);
+      const rule = { ...DEFAULT_PRICING[type], ...Object.fromEntries(TARIFF_FIELDS.map(key => [key, body[key]])), tariffVersion: TARIFF_VERSION };
+      required(await admin.from("pricing_rules").upsert({ vehicle_type: type, rule }, { onConflict: "vehicle_type" }));
+      return { rule: { ...rule, vehicleType: type } };
     }
-    const allRows = required(await admin.from("pricing_rules").select("*"));
-    const cookieRow = allRows.find((r) => r.vehicle_type === "uber_cookie");
-    const hourlyRow = allRows.find((r) => r.vehicle_type === "uber_hourly_checks");
-    const backgroundRow = allRows.find((r) => r.vehicle_type === "uber_background_status");
-    const logRow = allRows.find((r) => r.vehicle_type === "uber_check_log");
-    return {
-      uberCheckLog: Array.isArray(logRow?.rule?.entries) ? logRow.rule.entries.slice(0, 500) : [],
-      rules: allRows.filter((r) => r.vehicle_type !== "uber_cookie" && r.vehicle_type !== "uber_hourly_checks" && r.vehicle_type !== "uber_check_log").map((r) => ({
-        ...r.rule,
-        vehicleType: r.vehicle_type,
-        city: r.city,
-      })),
-      uberHourlyChecks: hourlyRow?.rule || { enabled: false },
-      uberBackgroundStatus: backgroundRow?.rule || null,
-      uberCookieStatus: {
-        hasCustomCookie: Boolean(cookieRow?.rule?.cookie),
-        updatedAt: cookieRow?.rule?.updatedAt || null,
-      },
-    };
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    const rows = required(await admin.from("pricing_rules").select("vehicle_type,rule").in("vehicle_type", Object.keys(DEFAULT_PRICING)));
+    return { mode: "tariff", tariffVersion: TARIFF_VERSION, rules: Object.entries(pricingRules(rows)).map(([vehicleType, rule]) => ({ ...rule, vehicleType })) };
   }
 
   if (p === "/api/admin/drivers/documents") {

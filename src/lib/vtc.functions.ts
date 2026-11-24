@@ -34,8 +34,7 @@ export const homeEstimate=createServerFn({method:'POST'}).inputValidator(input=>
  if(!okPoint(input?.pickup)||!okPoint(input?.dropoff)) throw new Error('Adresses invalides');
  return {pickup:{lat:input.pickup.lat,lng:input.pickup.lng},dropoff:{lat:input.dropoff.lat,lng:input.dropoff.lng}};
 }).handler(async({data})=>{
- // Use the same server-side pricing pipeline as bookings: configured Uber cookie,
- // discount, AI model and labelled local fallback. Never show raw Uber prices.
+ // Public estimates and bookings use the same distance/time tariff.
  const {publicVtc}=await import('./vtc.server');
  const est=await publicVtc({path:'/api/rides/estimate',body:data});
  return {source:'strasdrive',route:est.route,estimates:est.estimates};

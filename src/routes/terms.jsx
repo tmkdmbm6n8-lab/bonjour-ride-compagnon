@@ -27,8 +27,8 @@ function TermsPage() {
 
       <h2>3. Prix, réservation et annulation (passagers)</h2>
       <ul>
-        <li>Le prix total TTC de la course est affiché avant la réservation, pour chaque gamme. Il dépend de la distance, de la durée estimée, de la demande et inclut la rémunération minimale due au chauffeur. Il ne change pas pendant la course.</li>
-        <li>Si le tarif calculé est inférieur à ce minimum, un « complément de rémunération minimale chauffeur » est ajouté et affiché avant la validation.</li>
+        <li>Le prix total TTC de la course est affiché avant la réservation, pour chaque gamme. Il est calculé à partir d’un prix de base, de la distance et de la durée estimée, avec un minimum par catégorie. Le supplément Pet de 4 € est ajouté après application du minimum. Le prix accepté ne change pas pendant la course.</li>
+        <li>Le barème ne comporte ni majoration automatique liée à la demande, ni remise automatique. Les frais de réservation sont nuls.</li>
         <li>L’annulation est gratuite tant que le chauffeur n’est pas arrivé au point de prise en charge. Après son arrivée, des frais d’annulation de {formatEuro(3)} sont débités, dont {formatEuro(2.76)} reversés au chauffeur.</li>
         <li>Au départ, le passager communique au chauffeur un code PIN à usage unique. Ne montez jamais dans un véhicule qui ne correspond pas à celui affiché.</li>
         <li>Les contrats de transport de passagers relèvent de l’exclusion prévue à l’article L221-2, 9°, du Code de la consommation. Le délai général de rétractation de quatorze jours ne s’applique donc pas à la course ; les règles d’annulation indiquées ici restent applicables. Les droits éventuellement applicables à une recharge de portefeuille sont distincts.</li>
@@ -56,13 +56,13 @@ function TermsPage() {
       </ul>
 
       <h2>6. Rémunération minimale des chauffeurs</h2>
-      <p> Le calcul à la réservation utilise les paramètres suivants de rémunération nette chauffeur et retient le montant le plus élevé : </p>
+      <p> Les paramètres de suivi de la rémunération nette chauffeur sont les suivants : </p>
       <ul>
         <li>{formatEuro(DRIVER_MIN_NET_PER_RIDE)} nets par course, quelle que soit la distance ou la durée ;</li>
         <li>{formatEuro(DRIVER_MIN_NET_PER_HOUR)} nets par heure d’activité, temps d’approche compris ;</li>
         <li>{formatEuro(DRIVER_MIN_NET_PER_KM)} net par kilomètre parcouru.</li>
       </ul>
-      <p> Le prix passager est calculé pour couvrir ce minimum, avec un temps d’approche estimé. Le prix annoncé au passager reste fixe et le calcul ne régularise pas automatiquement les minima selon la durée réelle. Les paramètres de calcul ne valent pas attestation du respect de toutes les garanties applicables aux chauffeurs ; toute régularisation légalement due demeure à la charge de son débiteur et doit être traitée par l’exploitant. La rémunération est créditée sur le portefeuille du chauffeur dès la fin de la course. </p>
+      <p> Ces paramètres de suivi sont distincts du barème passager. Le prix annoncé au passager reste fixe et le calcul ne régularise pas automatiquement les minima selon la durée réelle. Les paramètres de calcul ne valent pas attestation du respect de toutes les garanties applicables aux chauffeurs ; toute régularisation légalement due demeure à la charge de son débiteur et doit être traitée par l’exploitant. La rémunération est créditée sur le portefeuille du chauffeur dès la fin de la course. </p>
 
       <h2>7. Comportement</h2>
       <ul>
