@@ -1621,6 +1621,19 @@ export async function handleVtc(input, context) {
         required(await admin.from("rides").update(patch)
           .eq("id", id).eq("driver_id", uid).eq("status", previous));
       }
+    } else if (action === "cancel_no_show") {
+      if (r.driver_id !== uid) throw new Error("Accès refusé");
+      const result = await admin.rpc("cancel_ride_no_show", { _ride: id, _driver: uid });
+      if (result.error?.code === "PGRST202") throw new Error("La compensation pour absence n’est pas encore activée.");
+      required(result);
+      if (r.payment?.intent_id) {
+        try {
+          const { cancelRideHold } = await import("./vtc-card-hold.server.js");
+          await cancelRideHold(admin, { paymentIntentId: r.payment.intent_id });
+        } catch (error) {
+          console.error("Impossible de libérer l’empreinte après absence du passager", error);
+        }
+      }
     } else if (action === "cancel") {
       if (!participant || !["searching", "accepted", "arrived"].includes(r.status))
         throw new Error("Annulation impossible");
@@ -1656,6 +1669,10 @@ export async function handleVtc(input, context) {
           : null;
         const progress = evaluateDriverProgress(r, driverLoc);
 
+        const cancelled = required(await admin.from("rides").update(patch)
+          .eq("id", id).eq("status", r.status).select("id").maybeSingle());
+        if (!cancelled) throw new Error("La course a déjà changé de statut.");
+
         // Frais d'annulation de 3 € uniquement si le chauffeur est arrivé ET n'est pas en faute
         if (
           r.status === "arrived" &&
@@ -1668,9 +1685,9 @@ export async function handleVtc(input, context) {
             required(
               await admin.rpc("wallet_entry", { _user: r.driver_id, _amount: 2.76, _type: "ride_earning", _ride: id }),
             );
-          patch.fare = { ...r.fare, cancellationFee: 3 };
+          required(await admin.from("rides").update({ fare: { ...r.fare, cancellationFee: 3 } })
+            .eq("id", id).eq("status", "cancelled"));
         }
-        required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
         if (r.payment?.method === "card" && r.payment?.intent_id) {
           try {
             const { cancelRideHold } = await import("./vtc-card-hold.server.js");
@@ -1732,7 +1749,7 @@ export async function handleVtc(input, context) {
           .eq("id", id),
       );
     } else throw new Error("Action inconnue");
-    if (action === "cancel") await closeRideChat(admin, id, { allowSearching: true });
+    if (action === "cancel" || action === "cancel_no_show") await closeRideChat(admin, id, { allowSearching: true });
     return { ride: await serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid) };
   }
   if (p === "/api/admin/test-ride" && method === "POST") {

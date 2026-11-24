@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FREE_WAIT_SECONDS, pickupWaiting } from "@/lib/ride-waiting";
 import { money } from "@/components/ui/bits";
 
-export default function PickupWaitingTimer({ arrivedAt, rate = 0 }) {
+export default function PickupWaitingTimer({ arrivedAt, rate = 0, onNoShow, disabled }) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -27,6 +27,11 @@ export default function PickupWaitingTimer({ arrivedAt, rate = 0 }) {
         <strong>{money(wait.cents / 100)}</strong>
       </div>
       </>}
+      {onNoShow && wait.seconds >= FREE_WAIT_SECONDS + 300 && (
+        <button type="button" className="btn btn-secondary btn-full" onClick={onNoShow} disabled={disabled}>
+          Annuler et recevoir la compensation
+        </button>
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ export function assertRideActionMethod(action, method) {
     "start",
     "complete",
     "cancel",
+    "cancel_no_show",
     "rate",
     "invoice",
     "report",

@@ -501,7 +501,23 @@ function DriverDashboard() {
                   </button>
                 )}
                 {ride.status === "arrived" && (
-                  <PickupWaitingTimer arrivedAt={ride.arrived_at} rate={ride.fare?.pickupWaitingRate} />
+                  <PickupWaitingTimer
+                    arrivedAt={ride.arrived_at}
+                    rate={ride.fare?.pickupWaitingRate}
+                    disabled={actionBusy}
+                    onNoShow={!ride.isTest && ride.payment?.method !== "cash" ? async () => {
+                      if (!window.confirm("Confirmer l’absence du passager et annuler la course ? Le passager sera facturé 7,27 €.")) return;
+                      setActionBusy(true);
+                      try {
+                        await cancelTrip("rider_no_show");
+                        toast("Course annulée. Compensation créditée.", "success");
+                      } catch (error) {
+                        toast(error.message, "error");
+                      } finally {
+                        setActionBusy(false);
+                      }
+                    } : undefined}
+                  />
                 )}
                 {ride.status === "arrived" && (
                   <button

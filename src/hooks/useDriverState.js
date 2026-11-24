@@ -310,7 +310,7 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
   }, [act]);
 
   const cancelTrip = useCallback(async (reason) => {
-    await act(rideRef.current.id, 'cancel', { reason });
+    await act(rideRef.current.id, reason === 'rider_no_show' ? 'cancel_no_show' : 'cancel', { reason });
     setRide(null);
   }, [act]);
 
