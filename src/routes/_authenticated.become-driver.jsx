@@ -96,5 +96,5 @@ function BecomeDriverPage() {
 
 export const Route = createFileRoute("/_authenticated/become-driver")({
   component: () => <RiderLayout><BecomeDriverPage /></RiderLayout>,
-  head: () => ({ meta: [{ title: "Devenir chauffeur · StrasDrive" }] }),
+  head: () => ({ meta: [{"title": "Devenir chauffeur · StrasDrive"}, {"name": "description", "content": "Déposez votre candidature pour devenir chauffeur VTC StrasDrive."}, {"property": "og:title", "content": "Devenir chauffeur · StrasDrive"}, {"property": "og:description", "content": "Déposez votre candidature pour devenir chauffeur VTC StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }),
 });

@@ -43,4 +43,4 @@ function ContentReports() {
     </div>)}
   </div>;
 }
-export const Route = createFileRoute('/_authenticated/admin/content-reports')({ component: () => <AdminLayout><ContentReports /></AdminLayout> });
+export const Route = createFileRoute('/_authenticated/admin/content-reports')({head: () => ({ meta: [{"title": "Modération des contenus · StrasDrive"}, {"name": "description", "content": "Traitement administratif des contenus signalés dans les courses StrasDrive."}, {"property": "og:title", "content": "Modération des contenus · StrasDrive"}, {"property": "og:description", "content": "Traitement administratif des contenus signalés dans les courses StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }),  component: () => <AdminLayout><ContentReports /></AdminLayout> });

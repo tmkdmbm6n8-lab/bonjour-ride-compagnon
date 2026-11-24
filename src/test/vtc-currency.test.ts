@@ -30,7 +30,7 @@ describe('barème distance/durée validé', () => {
     expect(fare).toMatchObject({ total: 17.60, bookingFee: 0, surgeFare: 0, discount: 0, discountRate: 0 });
     expect(DISCOUNT_RATE).toBe(0);
   });
-  it.each(Object.keys(DEFAULT_PRICING))('conserve la commission existante et équilibre le paiement %s', type => {
+  it.each(['economy', 'comfort', 'pet', 'xl'] as const)('conserve la commission existante et équilibre le paiement %s', type => {
     const fare = calculateFare(DEFAULT_PRICING[type], 20513.6, 1550.1);
     expect(fare.platformCommission).toBe(10);
     expect(fare.platformFee).toBe(Math.round(fare.total * 10) / 100);
@@ -49,12 +49,12 @@ describe('barème distance/durée validé', () => {
 describe('activation des règles administrateur', () => {
   it('ignore les anciennes règles pour activer immédiatement la nouvelle grille', () => {
     const rules = pricingRules([{vehicle_type:'economy',rule:{baseFare:300,minimumFare:700,perKmRate:200,perMinRate:100}}]);
-    expect(calculateFare(rules.economy,10000,1200).total).toBe(17.60);
+    expect(calculateFare(rules['economy'],10000,1200).total).toBe(17.60);
     expect(Object.keys(rules)).toEqual(['economy','comfort','pet','xl']);
   });
   it('accepte uniquement une grille versionnée et ne permet pas de réintroduire une commission, remise ou majoration', () => {
     const rules = pricingRules([{vehicle_type:'economy',rule:{...DEFAULT_PRICING.economy,tariffVersion:TARIFF_VERSION,perKmRate:1.2,platformCommission:90,bookingFee:50,surgeMultiplierCap:10}}]);
-    expect(calculateFare(rules.economy,10000,1200)).toMatchObject({total:19.70,platformCommission:10,bookingFee:0,surgeMultiplier:1});
+    expect(calculateFare(rules['economy'],10000,1200)).toMatchObject({total:19.70,platformCommission:10,bookingFee:0,surgeMultiplier:1});
   });
   it('refuse les montants vides, négatifs, infinis ou trop grands', () => {
     for(const value of [null,-1,Infinity,10001]) expect(tariffRuleProblem({...DEFAULT_PRICING.pet,supplement:value})).not.toBeNull();

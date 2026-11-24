@@ -1,4 +1,11 @@
 # StrasDrive — import fidèle de l’archive
+## Corrections demandées le 24 novembre
+- [x] Valider la protection des paiements sans modifier les tarifs (5 contrôles réussis).
+- [x] Corriger les résultats d’adresse vides et le contrôle des QR expirés.
+- [x] Restaurer Découvrir et sortir du chargement en cas d’échec Gold.
+- [x] Corriger les erreurs de vérification existantes (96 tests réussis, build OK).
+- [ ] Vérifier le parcours sur un compte chauffeur réel — la session temporaire fournie ne permet pas de charger les pages connectées ; aucun compte chauffeur autorisé disponible.
+
 - [x] Importer le code source sans secrets ni fichiers générés ; conserver une copie originale non exécutée.
 - [x] Restaurer les écrans et les styles d’origine dans l’aperçu Lovable.
 - [x] Traduire les textes en français et afficher les euros, sans conversion des montants.

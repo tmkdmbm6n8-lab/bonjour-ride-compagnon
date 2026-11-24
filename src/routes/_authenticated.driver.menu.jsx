@@ -153,7 +153,7 @@ function DriverMenuPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/driver/menu")({
-  head: () => ({ meta: [{ title: "Menu chauffeur · StrasDrive" }] }),
+  head: () => ({ meta: [{"title": "Menu chauffeur · StrasDrive"}, {"name": "description", "content": "Votre profil, documents, préférences et assistance chauffeur StrasDrive."}, {"property": "og:title", "content": "Menu chauffeur · StrasDrive"}, {"property": "og:description", "content": "Votre profil, documents, préférences et assistance chauffeur StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }),
   component: () => (
     <DriverLayout>
       <DriverMenuPage />

@@ -81,6 +81,6 @@ function AdminPricingPage() {
   </div>;
 }
 export const Route = createFileRoute('/_authenticated/admin/pricing')({
-  head: () => ({ meta: [{title:'Tarification · StrasDrive'},{name:'description',content:'Barème distance et durée des courses StrasDrive.'}] }),
+  head: () => ({ meta: [{"title": "Tarification · StrasDrive"}, {"name": "description", "content": "Barème distance et durée des courses StrasDrive."}, {"property": "og:title", "content": "Tarification · StrasDrive"}, {"property": "og:description", "content": "Barème distance et durée des courses StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }),
   component: () => <AdminLayout><AdminPricingPage /></AdminLayout>,
 });

@@ -264,12 +264,7 @@ function RidesPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/rides")({
-  head: () => ({
-    meta: [
-      { title: "Activité · StrasDrive" },
-      { name: "description", content: "Retrouvez vos courses et les détails de vos trajets StrasDrive." },
-    ],
-  }),
+  head: () => ({ meta: [{"title": "Activité · StrasDrive"}, {"name": "description", "content": "Retrouvez vos courses et les détails de vos trajets StrasDrive."}, {"property": "og:title", "content": "Activité · StrasDrive"}, {"property": "og:description", "content": "Retrouvez vos courses et les détails de vos trajets StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }),
   component: () => (
     <RiderLayout>
       <RidesPage />

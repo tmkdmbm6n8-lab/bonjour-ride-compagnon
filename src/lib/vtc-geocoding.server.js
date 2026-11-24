@@ -170,7 +170,8 @@ export async function geoSearch(q, fetcher = fetch, provider = "auto") {
   }
   if (!googleGeocodingPaused()) {
     try {
-      return { results: (await googleSearch(query, fetcher)).slice(0, limit), provider: "google" };
+      const results = (await googleSearch(query, fetcher)).slice(0, limit);
+      return results.length === 0 ? { results: [] } : { results, provider: "google" };
     } catch (error) {
       console.warn("[geo] Google indisponible, bascule sur le secours:", error?.message || error);
     }

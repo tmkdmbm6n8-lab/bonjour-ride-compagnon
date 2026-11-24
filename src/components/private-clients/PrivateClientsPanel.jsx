@@ -14,6 +14,7 @@ function PrivateClientsQr({ loadQr }) {
     loadQr().then((result) => {
       if (!cancelled) {
         if (!result?.image) setError('Impossible de charger le QR code.');
+        else if (result.expiresAt && result.expiresAt <= Date.now()) setError('Le QR code a expiré.');
         else setQr(result);
       }
     }).catch((err) => { if (!cancelled) setError(err?.message || 'Impossible de charger le QR code.'); });

@@ -61,4 +61,4 @@ function DriverReservations() {
     </article>)}</div>
   </main></DriverLayout>;
 }
-export const Route = createFileRoute("/_authenticated/driver/reservations")({component:DriverReservations});
+export const Route = createFileRoute("/_authenticated/driver/reservations")({head: () => ({ meta: [{"title": "Réservations chauffeur · StrasDrive"}, {"name": "description", "content": "Consultez et confirmez vos réservations à venir et leurs modifications sur StrasDrive."}, {"property": "og:title", "content": "Réservations chauffeur · StrasDrive"}, {"property": "og:description", "content": "Consultez et confirmez vos réservations à venir et leurs modifications sur StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }), component:DriverReservations});

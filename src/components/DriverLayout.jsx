@@ -32,10 +32,12 @@ const NAV = [
 
 const GoldContext = createContext(null);
 export const useDriverGold = () => useContext(GoldContext);
-const STANDARD_NAV = [NAV[0], NAV[1], ...NAV.slice(4, 6), { href: "/driver/private-clients", label: "SDGold", icon: Gem }, NAV[6]];
+const GoldLoadContext = createContext({ loading: true, error: "", reload: () => {} });
+export const useDriverGoldLoad = () => useContext(GoldLoadContext);
+const STANDARD_NAV = [NAV[0], NAV[1], { href: "/driver/discover", label: "Découvrir", icon: RouteIcon }, ...NAV.slice(4, 6), { href: "/driver/private-clients", label: "SDGold", icon: Gem }, NAV[6]];
 
 export default function DriverLayout({ children }) {
-  const { data: goldData } = useDriverData("/api/drivers/me/gold", 15000);
+  const { data: goldData, error: goldError, reload: reloadGold } = useDriverData("/api/drivers/me/gold", 15000);
   const { live } = useSession();
   const gold = goldData?.gold;
   const isSuspended = live?.suspended && !live?.hasDriverRide;
@@ -101,9 +103,11 @@ export default function DriverLayout({ children }) {
 
   return (
     <GoldContext.Provider value={gold}>
+      <GoldLoadContext.Provider value={{ loading: !goldData && !goldError, error: goldError || (goldData && !gold ? "Votre abonnement n’a pas pu être chargé." : ""), reload: reloadGold }}>
       <AppShell nav={navWithBadges} variant="driver">
         {children}
       </AppShell>
+      </GoldLoadContext.Provider>
     </GoldContext.Provider>
   );
 }

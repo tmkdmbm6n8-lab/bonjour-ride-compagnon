@@ -5,7 +5,7 @@ import { Route as DiscoverRoute } from "@/routes/_authenticated.driver.discover"
 import { Route as EarningsRoute } from "@/routes/_authenticated.driver.earnings";
 import { Route as InboxRoute } from "@/routes/_authenticated.driver.inbox";
 import { Route as MenuRoute } from "@/routes/_authenticated.driver.menu";
-const fixtures = vi.hoisted(() => ({ data: {} as Record<string, any>, request: vi.fn() }));
+const fixtures = vi.hoisted(() => ({ data: {} as Record<string, any>, errors: {} as Record<string, string>, reload: vi.fn(), request: vi.fn() }));
 vi.mock("@/lib/archive-fetch", () => ({ apiFetch: (...args: any[]) => fixtures.request(...args) }));
 vi.mock("@/lib/native-push", () => ({ registerDriverPush: vi.fn() }));
 vi.mock("@/components/shell/AppShell", () => ({
@@ -33,8 +33,8 @@ vi.mock("@/lib/archive-navigation", () => ({
 vi.mock("@/hooks/useDriverData", () => ({
   default: (path: string) => ({
     data: fixtures.data[path.split("?")[0] as string] || null,
-    error: "",
-    reload: vi.fn(),
+    error: fixtures.errors[path] || "",
+    reload: fixtures.reload,
   }),
 }));
 vi.mock("@/lib/archive-auth", () => ({
@@ -56,21 +56,44 @@ vi.mock("@/hooks/useVisualViewport", () => ({ default: () => null }));
 afterEach(() => {
   cleanup();
   fixtures.data = {};
+  fixtures.errors = {};
+  fixtures.reload.mockReset();
   fixtures.request.mockReset();
   localStorage.clear();
 });
 describe("onglets chauffeur", () => {
+  it("permet de relancer le chargement Gold après une erreur sans afficher les flux réservés", () => {
+    fixtures.errors['/api/drivers/me/gold'] = 'Connexion indisponible';
+    const Component = DiscoverRoute.options.component as any;
+    render(<Component />);
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByRole('tab')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+    expect(fixtures.reload).toHaveBeenCalledTimes(1);
+  });
+  it("ne donne pas les flux Gold à un abonnement inactif ou absent", () => {
+    fixtures.data['/api/drivers/me/gold'] = { gold: { active: false } };
+    const Component = DiscoverRoute.options.component as any;
+    const { rerender } = render(<Component />);
+    expect(screen.queryByRole('tab')).toBeNull();
+    fixtures.data['/api/drivers/me/gold'] = {};
+    rerender(<Component />);
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByRole('tab')).toBeNull();
+  });
   it("sépare Découvrir, Inbox et Menu des préférences de conduite", () => {
     render(
       <DriverLayout>
         <div />
       </DriverLayout>,
     );
-    expect(screen.getByRole("link", { name: /Gold|SDGold|Découvrir/i }).getAttribute("href")).toBe("/driver/discover");
+    expect(screen.getByRole("link", { name: "Découvrir" }).getAttribute("href")).toBe("/driver/discover");
+    expect(screen.getByRole("link", { name: "SDGold" }).getAttribute("href")).toBe("/driver/private-clients");
     expect(screen.getByRole("link", { name: "Inbox" }).getAttribute("href")).toBe("/driver/inbox");
     expect(screen.getByRole("link", { name: "Menu" }).getAttribute("href")).toBe("/driver/menu");
   });
   it("ne remplace pas une date non publiée par de faux vols", () => {
+    fixtures.data["/api/drivers/me/gold"] = { gold: { active: true } };
     fixtures.data["/api/drivers/me/discover"] = {
       day: "2026-11-15",
       items: [],
@@ -142,7 +165,9 @@ describe("onglets chauffeur", () => {
     };
     const Component = InboxRoute.options.component as any;
     render(<Component />);
-    fireEvent.click(screen.getByText("Mon versement").closest("button")!);
+    const threadButton = screen.getByText("Mon versement").closest("button");
+    if (!threadButton) throw new Error('Conversation button missing');
+    fireEvent.click(threadButton);
     expect(screen.getByRole("dialog", { name: "Mon versement" })).toBeTruthy();
     expect(screen.getByText("StrasDrive Régulation")).toBeTruthy();
   });
@@ -169,14 +194,16 @@ describe("onglets chauffeur", () => {
     expect(screen.queryByText('Passagers')).toBeNull();
     expect(screen.queryByText('Message passager invisible')).toBeNull();
     expect(screen.queryByRole('button',{name:'Supprimer Conversation à supprimer'})).toBeNull();
-    const swipe=screen.getByText('Conversation à supprimer').closest('button')!.parentElement!;
+    const swipe=screen.getByText('Conversation à supprimer').closest('button')?.parentElement;
+    if (!swipe) throw new Error('Conversation swipe container missing');
     fireEvent.keyDown(swipe,{key:'ArrowLeft'});
     fireEvent.click(screen.getByRole('button',{name:'Supprimer Conversation à supprimer'}));
     expect(screen.getByRole('dialog',{name:'Supprimer cette conversation ?'})).toBeTruthy();
     expect(fixtures.request.mock.calls.filter(([,options])=>options?.method==='DELETE')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button',{name:'Annuler'}));
     expect(screen.getByText('Conversation à supprimer')).toBeTruthy();
-    const again=screen.getByText('Conversation à supprimer').closest('button')!.parentElement!;
+    const again=screen.getByText('Conversation à supprimer').closest('button')?.parentElement;
+    if (!again) throw new Error('Conversation swipe container missing');
     fireEvent.keyDown(again,{key:'ArrowLeft'});
     fireEvent.click(screen.getByRole('button',{name:'Supprimer Conversation à supprimer'}));
     fireEvent.click(screen.getByRole('button',{name:/^Supprimer$/}));

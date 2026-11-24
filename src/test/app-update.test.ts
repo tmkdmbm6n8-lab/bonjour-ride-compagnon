@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { canApplyAppUpdate } from '../lib/app-update';
 import { accountRealtimeChanged } from '../lib/account-live';
-const idle = () => ({ pathname: '/driver/dashboard', status: 'authenticated', live: { checkedAt: Date.now(), hasActiveRide: false }, dirty: false, idleMs: 20000, focusedTag: 'BODY' });
+const idle = () => ({ pathname: '/driver/dashboard', status: 'authenticated', live: { checkedAt: Date.now(), hasActiveRide: false }, dialogOpen: false, dirty: false, idleMs: 20000, focusedTag: 'BODY' });
 describe('safe automatic deployments', () => {
  it('updates only an idle, confirmed inactive session', () => expect(canApplyAppUpdate(idle())).toBe(true));
  it('never interrupts an active trip or an unconfirmed/stale ride state', () => {
