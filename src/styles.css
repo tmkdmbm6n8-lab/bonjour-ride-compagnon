@@ -8224,6 +8224,15 @@ a.activity-pill:hover {
   z-index: 1000;
 }
 
+/* Give the chat the full visible area while typing, right down to Safari's toolbar. */
+.mobile-ride-chat:has(form input:focus) {
+  height: calc(var(--ride-chat-visible-height, 100dvh) - 8px) !important;
+  bottom: auto;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+
 /* Paint the page canvas when Safari shifts the visible area for the keyboard. */
 html:has(.mobile-ride-chat input:focus) {
   color-scheme: dark;
