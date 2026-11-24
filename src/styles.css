@@ -11683,3 +11683,23 @@ a.activity-pill:hover {
 .driver-incoming-progress { position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg,#10a34c,#32e67c); transition: width .25s linear; }
 .driver-incoming-actions button:disabled { opacity: .5; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .driver-incoming-progress { transition: none; } }
+
+.pickup-wait-timer {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.pickup-wait-timer progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--gold-600, #ca9d43);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pickup-wait-timer progress::-webkit-progress-value {
+    transition: width 1s linear;
+  }
+}

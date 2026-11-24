@@ -1,3 +1,4 @@
+import PickupWaitingTimer from "@/components/ride/PickupWaitingTimer";
 import CloseControl from "@/components/ui/CloseControl";
 import { ShieldAlert } from "lucide-react";
 import RidePauseButton from "@/components/driver/RidePauseButton";
@@ -491,6 +492,9 @@ function DriverDashboard() {
                   >
                     <Flag size={18} /> Je suis arrivé
                   </button>
+                )}
+                {ride.status === "arrived" && ride.fare?.pickupWaitingRate > 0 && (
+                  <PickupWaitingTimer arrivedAt={ride.arrived_at} rate={ride.fare.pickupWaitingRate} />
                 )}
                 {ride.status === "arrived" && (
                   <button

@@ -1,3 +1,4 @@
+import { addPickupWaiting, waitingRate } from "./ride-waiting";
 import { goldDispatchPool, hasPaidDriverGold, loadDriverGold } from "./driver-gold.server";
 import { restoreGoldCommission, waiveGoldCommission } from "./driver-gold-fare";
 import { favoriteDriverId } from "./private-clients.server";
@@ -1200,7 +1201,7 @@ export async function handleVtc(input, context) {
     const fare = quote.estimates[b.vehicleType];
     if (!fare) throw new Error("Tarif indisponible pour cette gamme, réessayez");
     if (quote.route.distanceMeters < 100) throw new Error("Le trajet doit faire au moins 100 m");
-    return { fare, route: quote.route };
+    return { fare: { ...fare, pickupWaitingEnabled: true }, route: quote.route };
   };
   // "Book my favorite driver": the server picks the driver and his class; the ride is first offered to him alone.
   const resolveFavorite = async () => {
@@ -1580,8 +1581,13 @@ export async function handleVtc(input, context) {
     if (action === "arrive" || action === "start" || action === "complete") {
       const previous = { arrive: "accepted", start: "arrived", complete: "in_progress" }[action];
       if (r.driver_id !== uid || r.status !== previous) throw new Error("Action non autorisée");
+      let arrivalFare = r.fare;
       if (action === "arrive" || (action === "start" && !r.is_test)) {
-        const loc = required(await admin.from("drivers").select("location").eq("user_id", uid).single()).location;
+        const driver = required(await admin.from("drivers").select("location,vehicle_class").eq("user_id", uid).single());
+        const loc = driver.location;
+        if (action === "arrive" && !r.is_test && r.fare?.pickupWaitingEnabled && !r.payment?.intent_id) {
+          arrivalFare = { ...r.fare, pickupWaitingRate: waitingRate(r.vehicle_type, driver.vehicle_class) };
+        }
         const zone =
           action === "arrive"
             ? pickupZoneProblem(loc, r.pickup, ARRIVAL_ZONE_METERS)
@@ -1603,18 +1609,18 @@ export async function handleVtc(input, context) {
         const fare = { ...settleDriverEarnings(r.fare, r.route.distanceMeters, activitySeconds), completedAt: new Date().toISOString() };
         required(await admin.from("rides").update({ fare }).eq("id", id).eq("status", "in_progress"));
         required(await admin.rpc("settle_ride", { _id: id, _actor: uid }));
-      } else
-        required(
-          await admin
-            .from("rides")
-            .update({
-              status: action === "arrive" ? "arrived" : "in_progress",
-              ...(action === "arrive" ? { arrived_at: new Date().toISOString() } : {}),
-              ...(action === "start" ? { fare: { ...r.fare, startedAt: new Date().toISOString(), acceptedAt: r.accepted_at } } : {}),
-            })
-            .eq("id", id)
-            .eq("status", previous),
-        );
+      } else {
+        const now = new Date().toISOString();
+        const patch = action === "arrive"
+          ? { status: "arrived", arrived_at: now, fare: arrivalFare }
+          : { status: "in_progress", fare: {
+              ...addPickupWaiting(r.fare, r.arrived_at, now),
+              startedAt: now,
+              acceptedAt: r.accepted_at,
+            } };
+        required(await admin.from("rides").update(patch)
+          .eq("id", id).eq("driver_id", uid).eq("status", previous));
+      }
     } else if (action === "cancel") {
       if (!participant || !["searching", "accepted", "arrived"].includes(r.status))
         throw new Error("Annulation impossible");

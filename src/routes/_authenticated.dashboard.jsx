@@ -1,3 +1,4 @@
+import { waitingRate } from "@/lib/ride-waiting";
 import CloseControl from "@/components/ui/CloseControl";
 import ReportDriverButton from "@/components/ride/ReportDriverButton";
 import RideSafety from '@/components/ride/RideSafety';
@@ -708,6 +709,16 @@ function RiderDashboard() {
                   })()}
                 </div>
 
+                {selectedFare && (
+                  <p className="tiny muted">
+                    Deux minutes d’attente gratuites après l’arrivée du chauffeur. Ensuite,{" "}
+                    {(favoriteChosen ? estimate.favorite.vehicleType : vehicleType) === "pet"
+                      ? "0,72 € à 0,98 € par minute selon la catégorie du véhicule"
+                      : `${money(waitingRate(favoriteChosen ? estimate.favorite.vehicleType : vehicleType) / 100)} par minute`}.
+                    {paymentMethod === "card" && " Le supplément est prélevé sur le portefeuille StrasDrive."}
+                  </p>
+                )}
+
                 {selectedFare?.discount > 0 && (
                   <div className="flex items-center justify-between mt-4 tiny">
                     <span style={{ fontWeight: 600 }}>
@@ -1115,6 +1126,12 @@ function RiderDashboard() {
                 <div className="flex items-center justify-between small mt-1">
                   <span className="muted">Complément rémunération minimale chauffeur</span>
                   <span className="mono-nums">{money(completedRide.fare.driverFloorSupplement)}</span>
+                </div>
+              )}
+              {completedRide.fare?.pickupWaiting?.amount > 0 && (
+                <div className="flex items-center justify-between small mt-1">
+                  <span className="muted">Attente à la prise en charge</span>
+                  <span className="mono-nums">{money(completedRide.fare.pickupWaiting.amount)}</span>
                 </div>
               )}
               {completedRide.fare?.discount > 0 && (
