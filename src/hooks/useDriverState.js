@@ -292,13 +292,15 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
   }, [offer, act]);
 
   const arrive = useCallback(async () => {
-    const data = await act(rideRef.current.id, 'arrive');
-    setRide((r) => ({ ...r, status: data.ride.status }));
+    const rideId = rideRef.current.id;
+    const data = await act(rideId, 'arrive');
+    setRide((current) => current?.id === rideId ? data.ride : current);
   }, [act]);
 
   const start = useCallback(async (pin) => {
-    const data = await act(rideRef.current.id, 'start', { pin });
-    setRide((r) => ({ ...r, status: data.ride.status }));
+    const rideId = rideRef.current.id;
+    const data = await act(rideId, 'start', { pin });
+    setRide((current) => current?.id === rideId ? data.ride : current);
   }, [act]);
 
   const complete = useCallback(async () => {
