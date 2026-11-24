@@ -8219,6 +8219,11 @@ a.activity-pill:hover {
 }
 
 /* Critical ride confirmations sit outside the dock, above navigation on iOS. */
+/* The chat composer must sit above the active-ride navigation (z-index: 50). */
+.mobile-ride-chat {
+  z-index: 1000;
+}
+
 .modal-portal-root .modal-portal-overlay {
   z-index: 1000;
   overscroll-behavior: none;

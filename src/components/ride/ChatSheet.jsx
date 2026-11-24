@@ -83,11 +83,11 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
 
   const sheet = (
     <div
-      className="card animate-in"
+      className={isPhone ? 'card mobile-ride-chat' : 'card animate-in'}
       style={{
         position: isPhone ? 'fixed' : 'absolute',
         ...(isPhone
-          ? { top: (vv?.top ?? 0) + 8, left: 8, right: 8, height: vv ? Math.max(0, Math.min(520, vv.height - 16)) : 'min(520px, calc(100dvh - 16px))', zIndex: 'var(--z-sheet)' }
+          ? { top: (vv?.top ?? 0) + 8, left: 8, right: 8, height: vv ? Math.max(0, Math.min(520, vv.height - 16)) : 'min(520px, calc(100dvh - 16px))' }
           : { bottom: 16, right: 16, width: 'min(380px, calc(100% - 32px))', height: 460 }),
         display: 'flex',
         flexDirection: 'column',
