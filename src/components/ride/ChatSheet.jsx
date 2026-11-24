@@ -93,7 +93,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
       style={{
         position: isPhone ? 'fixed' : 'absolute',
         ...(isPhone
-          ? { top: (vv?.top ?? 0) + 8, left: 8, right: 8, height: vv ? Math.max(0, Math.min(520, vv.height - 16)) : 'min(520px, calc(100dvh - 16px))' }
+          ? { top: (vv?.top ?? 0) + 8, left: 8, right: 8, '--ride-chat-visible-height': vv ? `${vv.height}px` : '100dvh', height: vv ? Math.max(0, Math.min(520, vv.height - 16)) : 'min(520px, calc(100dvh - 16px))' }
           : { bottom: 16, right: 16, width: 'min(380px, calc(100% - 32px))', height: 460 }),
         display: 'flex',
         flexDirection: 'column',
