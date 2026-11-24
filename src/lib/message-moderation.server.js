@@ -1,6 +1,6 @@
 import { INAPPROPRIATE_MESSAGE } from "./message-moderation";
 
-const CATEGORIES = ["harassment", "harassment/threatening", "hate", "hate/threatening"];
+const CATEGORIES = ["harassment", "harassment/threatening", "hate", "hate/threatening", "sexual", "sexual/minors"];
 
 export async function moderateMessageText(text) {
   const key = process.env.OPENAI_MODERATION_API_KEY?.trim();
