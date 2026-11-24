@@ -122,7 +122,7 @@ async function permanentDriverToken(driverId) {
   const bytes = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("strasdrive:private-qr:v1:" + driverId)));
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/, "");
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /** Driver: the same QR code on every visit, without a time limit. */
