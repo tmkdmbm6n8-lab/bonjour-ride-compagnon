@@ -32,13 +32,14 @@ it("shows the existing QR alone, then closes and restores native brightness afte
   });
   const Page = Route.options.component;
   render(<Page />);
-  await screen.findByRole("img", { name: "QR code à scanner par votre client" });
+  expect(screen.queryByRole("img")).toBeNull();
+  expect(screen.queryByText("Vos clients privés")).toBeNull();
   await waitFor(() => expect(screen.getByRole("button", { name: "Afficher mon QR code" })).toBeEnabled());
   vi.useFakeTimers();
   fireEvent.click(screen.getByRole("button", { name: "Afficher mon QR code" }));
   const preview = screen.getByLabelText("QR code d’invitation");
   expect(preview.children).toHaveLength(1);
-  expect(preview.firstElementChild.src).toBe(screen.getAllByRole("img")[0].src);
+  expect(preview.firstElementChild.src).toMatch(/^data:image\/svg\+xml/);
   expect(native.start).toHaveBeenCalledOnce();
   act(() => vi.advanceTimersByTime(4999));
   expect(preview.isConnected).toBe(true);

@@ -10523,18 +10523,33 @@ body:has(.mobile-ride-chat input:focus) {
   inset: 0;
   display: grid;
   place-items: center;
-  width: 100%;
-  height: 100%;
+  width: min(440px, calc(100vw - 40px), calc(100dvh - 48px));
   max-width: none;
   max-height: none;
-  margin: 0;
-  padding: 16px;
-  border: 0;
-  background: #fff;
+  margin: auto;
+  padding: 12px;
+  border: 1px solid #8e733d;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #332a1b, #15151a 65%);
+  box-shadow: 0 24px 70px #0009;
+  animation: private-qr-present 240ms cubic-bezier(.2, .75, .25, 1) both;
 }
 
-.private-qr-preview::backdrop { background: #fff; }
-.private-qr-preview img { width: min(440px, 85vw, 85dvh); height: auto; }
+.private-qr-preview::backdrop {
+  background: #08090cbd;
+  backdrop-filter: blur(12px);
+}
+
+.private-qr-preview img { display: block; width: 100%; height: auto; border-radius: 17px; }
+
+@keyframes private-qr-present {
+  from { opacity: 0; transform: translateY(28px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .private-qr-preview[open] { animation: none; }
+}
 
 .driver-account-heading > :first-child {
   min-width: 0;
