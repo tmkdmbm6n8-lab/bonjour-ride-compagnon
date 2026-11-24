@@ -1,3 +1,4 @@
+import { rejectInappropriateMessage } from "./message-moderation";
 import { newSupportThread, parseSupportThread, supportOwnedBy, supportShape, supportHiddenForOwner } from "./vtc-support";
 function required(result) {
   if (result.error) throw new Error(result.error.message);
@@ -39,7 +40,9 @@ export async function sendSupportMessage(admin, { uid, email, name, role, body }
   const text = typeof body.text === "string" ? body.text.trim() : "";
   if (!text || text.length > 4000)
     throw new Error("Le message doit contenir entre 1 et 4 000 caractères");
+  rejectInappropriateMessage(text);
   if (!body.id) {
+    if (typeof body.subject === "string") rejectInappropriateMessage(body.subject.slice(0, 160));
     if (!["driver", "rider"].includes(role) || !email)
       throw new Error("Compte et adresse e-mail requis");
     const thread = newSupportThread(uid, body.subject, text, new Date().toISOString(), role);
