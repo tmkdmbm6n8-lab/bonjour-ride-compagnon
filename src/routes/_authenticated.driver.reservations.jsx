@@ -42,7 +42,6 @@ function DriverReservations() {
   return <DriverLayout><main className="driver-tab-page drv-cockpit-page">
     <header className="driver-account-heading">
       <div>
-        <span className="sd-settings-brand">Espace chauffeur</span>
         <h1>Réservations</h1>
       </div>
     </header>
