@@ -8,8 +8,8 @@ describe('barème distance/durée validé', () => {
     expect(calculateFare(DEFAULT_PRICING[type], 10000, 1200).total).toBe(expected);
   });
   it.each([
-    ['economy', 12], ['comfort', 18], ['pet', 16], ['xl', 16],
-  ] as const)('applique le minimum de %s avant le supplément', (type, expected) => {
+    ['economy', 11.98], ['comfort', 17.98], ['pet', 15.98], ['xl', 15.98],
+  ] as const)('applique le minimum de %s puis le supplément et la finition au centime', (type, expected) => {
     expect(calculateFare(DEFAULT_PRICING[type], 100, 30).total).toBe(expected);
   });
   it.each([

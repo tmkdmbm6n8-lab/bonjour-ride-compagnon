@@ -716,7 +716,7 @@ function RiderDashboard() {
                 {selectedFare?.discount > 0 && (
                   <div className="flex items-center justify-between mt-4 tiny">
                     <span style={{ fontWeight: 600 }}>
-                      Remise de {Math.round(selectedFare.discountRate * 100)} % appliquée
+                      {selectedFare.priceEndingDiscount > 0 ? 'Ajustement du prix' : `Remise de ${Math.round(selectedFare.discountRate * 100)} % appliquée`}
                     </span>
                     <span className="mono-nums">−{money(selectedFare.discount)}</span>
                   </div>
@@ -1124,7 +1124,7 @@ function RiderDashboard() {
               )}
               {completedRide.fare?.discount > 0 && (
                 <div className="flex items-center justify-between small mt-1">
-                  <span className="muted">Remise ({Math.round((completedRide.fare.discountRate || 0) * 100)} %)</span>
+                  <span className="muted">{completedRide.fare.priceEndingDiscount > 0 ? 'Ajustement du prix' : `Remise (${Math.round((completedRide.fare.discountRate || 0) * 100)} %)`}</span>
                   <span className="mono-nums">−{money(completedRide.fare.discount)}</span>
                 </div>
               )}

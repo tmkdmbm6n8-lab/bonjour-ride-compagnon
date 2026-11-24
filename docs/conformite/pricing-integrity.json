@@ -1,5 +1,5 @@
 {
-  "src/lib/vtc-pricing.js": "c2a73e847ca39efb95ba77884fb4a747a559d6a12cef8c3795bac06fb753117a",
+  "src/lib/vtc-pricing.js": "2ce9e3ced5375a9ac88394114c3f1196e9edb4c2675ceff89c2173c338536de9",
   "src/lib/vtc-checkout.js": "b0a56bfc7a83e106e4561c9a8c0936a17f86197a1ee9ba8719bf8fff6e751b3b",
   "src/lib/vtc-routing.js": "f05ac84b81cb576e748f037ea01d65fe9c8b605386337501abef416241c7d0c2",
   "vtc.server.js:estimates": "1867c9ecc9efb327156445b63e2967e899f4c5eedbe5be313899cc81ab9e0d9e",

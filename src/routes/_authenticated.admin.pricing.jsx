@@ -57,7 +57,7 @@ function AdminPricingPage() {
     <section className="card card-pad">
       <h2>Règle de calcul</h2>
       <p className="mt-3">Maximum entre le minimum et « base + kilomètres × prix/km + minutes × prix/minute », puis ajout du supplément.</p>
-      <p className="small muted mt-2">Le supplément Pet de 4 € s’ajoute après le minimum : son prix minimum final est de 16 €. Les secondes et les mètres sont conservés jusqu’à l’arrondi final au centime.</p>
+      <p className="small muted mt-2">Le supplément Pet de 4 € s’ajoute après le minimum : son minimum de barème est de 16 €, avant l’ajustement éventuel de 0,02 €. Les secondes et les mètres sont conservés jusqu’à l’arrondi final au centime. Un tarif entier reçoit une réduction de 0,02 € si les minimums chauffeurs le permettent : 12,00 € devient 11,98 €. Les tarifs comportant déjà des centimes restent inchangés.</p>
     </section>
     <div className="grid gap-4" style={{gridTemplateColumns:'repeat(auto-fit,minmax(250px,1fr))'}}>
       {rules.map(rule => <section key={rule.vehicleType} className="card card-pad">

@@ -1,0 +1,17 @@
+import {describe,it,expect} from 'vitest';
+import {calculateFare,DEFAULT_PRICING,settleDriverEarnings,formatEuro,bookingPaymentProblem,cashDriverWalletEntry,pricingRules,TARIFF_VERSION} from '@/lib/vtc-pricing';
+import {waiveGoldCommission} from '@/lib/driver-gold-fare';
+import {toCents} from '@/lib/vtc-checkout';
+import {money} from '@/components/ui/bits';
+function quote(baseFare:number,overrides:any={}){return calculateFare({...DEFAULT_PRICING.economy,baseFare,minimumFare:0,perKmRate:0,perMinRate:0,...overrides},1000,300);}
+describe('prix avec centimes pour les nouvelles courses',()=>{
+ it.each([[12,11.98],[18,17.98],[20,19.98],[30,29.98]])('transforme le prix entier %s € en %s €',(base,expected)=>{const f=quote(base);expect(f.total).toBe(expected);expect(f.estimatedTotal).toBe(expected);expect(f.originalTotal).toBe(base);expect(f.discount).toBe(.02);expect(f.priceEndingDiscount).toBe(.02);});
+ it.each([11.98,12.01,17.77,29.70,99.99])('conserve exactement le prix %s €',price=>{const f=quote(price);expect(f.total).toBe(price);expect(f.originalTotal).toBe(price);expect(f.discount).toBe(0);});
+ it.each(['economy','comfort','pet','xl'])('applique la règle après le minimum et supplément de %s',type=>{const f=calculateFare(DEFAULT_PRICING[type],100,30);const base=type==='economy'?12:type==='comfort'?18:16;expect(f.originalTotal).toBe(base);expect(f.total).toBe(base-.02);expect(Math.round((f.baseFare+f.distanceFare+f.timeFare+f.minimumFareSupplement+f.supplement-f.discount)*100)).toBe(Math.round(f.total*100));});
+ it('honore les barèmes enregistrés, sans réinitialiser les tarifs administrateur',()=>{const rule={...DEFAULT_PRICING.economy,minimumFare:13,tariffVersion:TARIFF_VERSION};const loaded=pricingRules([{vehicle_type:'economy',rule}]);expect(calculateFare(loaded.economy,100,30).total).toBe(12.98);});
+ it('conserve l’arrondi au centime, sans arrondir à l’euro ou déduire deux fois',()=>{expect(quote(11.979).total).toBe(11.98);expect(quote(12.004).total).toBe(11.98);expect(quote(12.006).total).toBe(12.01);});
+ it('préserve le minimum chauffeur et les montants nuls',()=>{expect(quote(10).total).toBe(10);expect(quote(9,{platformCommission:0}).total).toBe(9);expect(quote(0).total).toBe(0);const f=calculateFare({...DEFAULT_PRICING.economy,baseFare:20,perKmRate:0,perMinRate:0},18000,300);expect(f.total).toBe(20);expect(f.driverEarnings).toBe(18);});
+ it('garde la commission et des écritures au centime pour tous les paiements',()=>{const f=quote(12);expect(f.platformCommission).toBe(10);expect(f.platformFee).toBe(1.20);expect(f.driverEarnings).toBe(10.78);expect(toCents(f.total)).toBe(1198);expect(bookingPaymentProblem('wallet',11.97,f.total)).not.toBe(null);expect(bookingPaymentProblem('wallet',11.98,f.total)).toBe(null);expect(cashDriverWalletEntry(f)).toBe(-1.20);expect(waiveGoldCommission(f).total).toBe(11.98);expect(waiveGoldCommission(f,true).platformCommission).toBe(0);});
+ it('ne change pas une course confirmée ou terminée, y compris un ancien prix rond',()=>{const f=quote(12);const before=JSON.stringify(f);expect(settleDriverEarnings(f,2000,600).total).toBe(11.98);expect(JSON.stringify(f)).toBe(before);const old={...f,total:12,estimatedTotal:12,discount:0};expect(settleDriverEarnings(old,2000,600).total).toBe(12);});
+ it('affiche les centimes réels dans les deux formateurs de prix',()=>{for(const formatter of [formatEuro,money]){expect(formatter(11.98).replace(/\s/g,' ')).toBe('11,98 €');expect(formatter(17.77).replace(/\s/g,' ')).toBe('17,77 €');}});
+});

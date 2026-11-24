@@ -26,6 +26,12 @@ describe('pipeline commun des devis et réservations', () => {
     expect(db.from).toHaveBeenCalledWith('pricing_rules');
     expect(db.filter).toHaveBeenCalledWith('vehicle_type',['economy','comfort','pet','xl']);
   });
+  it('renvoie les minimums avec centimes dans les quatre devis serveur', async () => {
+    vi.stubGlobal('fetch',vi.fn(async () => Response.json({routes:[{distanceMeters:100,duration:'30s',staticDuration:'30s',polyline:{encodedPolyline:'_p~iF~ps|U_ulLnnqC_mqNvxq`@'}}]})));
+    const quote=await estimates(database(),pickup,dropoff);
+    expect(Object.fromEntries(Object.entries(quote.estimates).map(([key,fare]:any)=>[key,fare.total]))).toEqual({economy:11.98,comfort:17.98,pet:15.98,xl:15.98});
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
   it('refuse les coordonnées invalides avant tout devis', async () => {
     await expect(estimates(database(),{lat:NaN,lng:7},dropoff)).rejects.toThrow('Adresses invalides');
     expect(fetch).not.toHaveBeenCalled();

@@ -20,7 +20,7 @@ export function pricingRules(rows = []) {
     return [type, { ...defaults, ...fields }];
   }));
 }
-// Le barème validé ne comporte pas de remise automatique.
+// Aucune remise proportionnelle : seuls les prix entiers peuvent recevoir un ajustement de 0,02 €.
 export const DISCOUNT_RATE = 0;
 
 // Rémunération minimale des chauffeurs (accord ARPE VTC), montants nets de commission.
@@ -57,16 +57,22 @@ export function calculateFare(rule, meters, seconds) {
   const timeFare = seconds / 60 * rule.perMinRate;
   const subtotal = rule.baseFare + distanceFare + timeFare;
   const minimumFareSupplement = Math.max(0, rule.minimumFare - subtotal);
-  const total = round2(Math.max(subtotal, rule.minimumFare) + rule.supplement);
-  if (!Number.isFinite(total)) throw new Error('Montant de trajet invalide');
+  const originalTotal = round2(Math.max(subtotal, rule.minimumFare) + rule.supplement);
+  if (!Number.isFinite(originalTotal)) throw new Error('Montant de trajet invalide');
   const platformCommission = rule.platformCommission;
   if (!Number.isFinite(platformCommission) || platformCommission < 0 || platformCommission >= 100) throw new Error('Commission invalide');
+  // Leave cent amounts untouched. Apply the price ending once, only on new quotes,
+  // and never reduce the driver's net earnings below the existing configured floor.
+  const candidate = round2(originalTotal - 0.02);
+  const priceEndingDiscount = originalTotal > 0 && Math.round(originalTotal * 100) % 100 === 0 &&
+    round2(candidate - feeFor(candidate, platformCommission)) >= driverMinimumNet(meters, seconds) ? 0.02 : 0;
+  const total = round2(originalTotal - priceEndingDiscount);
   const platformFee = feeFor(total, platformCommission);
   return {
     baseFare: rule.baseFare, distanceFare, timeFare, minimumFare: rule.minimumFare,
     minimumFareSupplement: round2(minimumFareSupplement), supplement: rule.supplement,
     surgeFare: 0, surgeMultiplier: 1, bookingFee: 0,
-    originalTotal: total, discountRate: 0, discount: 0,
+    originalTotal, priceEndingDiscount, discountRate: originalTotal > 0 ? priceEndingDiscount / originalTotal : 0, discount: priceEndingDiscount,
     driverFloorSupplement: 0, total, estimatedTotal: total,
     platformCommission, platformFee, driverEarnings: round2(total - platformFee),
     currency: 'EUR', priceSource: 'tariff', tariffVersion: TARIFF_VERSION,
