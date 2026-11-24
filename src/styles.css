@@ -10514,6 +10514,28 @@ body:has(.mobile-ride-chat input:focus) {
   gap: 16px;
   margin-bottom: 12px;
 }
+.private-qr-launch {
+  flex-shrink: 0;
+}
+
+.private-qr-preview[open] {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 16px;
+  border: 0;
+  background: #fff;
+}
+
+.private-qr-preview::backdrop { background: #fff; }
+.private-qr-preview img { width: min(440px, 85vw, 85dvh); height: auto; }
+
 .driver-account-heading > :first-child {
   min-width: 0;
 }

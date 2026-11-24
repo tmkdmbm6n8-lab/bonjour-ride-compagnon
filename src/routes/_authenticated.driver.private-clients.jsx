@@ -1,14 +1,56 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import { QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import DriverLayout from "@/components/DriverLayout";
 import useDriverData from "@/hooks/useDriverData";
 import PrivateClientsPanel from "@/components/private-clients/PrivateClientsPanel";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 
+const brightness = registerPlugin("QrBrightness");
+const QR_PREVIEW_MS = 5000;
+
+function QrPreview({ src, onClose }) {
+  const dialog = useRef(null);
+
+  useEffect(() => {
+    const element = dialog.current;
+    element.showModal();
+    const timer = window.setTimeout(onClose, QR_PREVIEW_MS);
+    const native = Capacitor.isPluginAvailable("QrBrightness");
+    if (native) void brightness.start().catch(() => {});
+    const onVisibility = () => { if (document.hidden) onClose(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (native) void brightness.stop().catch(() => {});
+      element.close();
+    };
+  }, [onClose]);
+
+  return (
+    <dialog
+      ref={dialog}
+      className="private-qr-preview"
+      aria-label="QR code d’invitation"
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onClick={onClose}
+    >
+      <img src={src} alt="QR code à scanner par votre client" />
+    </dialog>
+  );
+}
+
 function PrivateClientsPage() {
   const { data, error, reload } = useDriverData("/api/drivers/me/private-clients", 15000);
   const { clients = null, gold } = data || {};
+  const [qr, setQr] = useState(null);
+  const [preview, setPreview] = useState(false);
+  const closePreview = useCallback(() => setPreview(false), []);
+  const canPreview = gold?.active === true && !error && Boolean(qr?.src);
+  useEffect(() => { if (!canPreview) closePreview(); }, [canPreview, closePreview]);
 
   const changeClient = useCallback(async (clientId, action, blocked) => {
     const res = await fetch(`/api/drivers/me/private-clients/${encodeURIComponent(clientId)}`, {
@@ -27,11 +69,13 @@ function PrivateClientsPage() {
     // Token in the fragment: it never reaches a server log or an analytics URL.
     const url = `${window.location.origin}/join#invite=${data.token}`;
     const svg = await QRCode.toString(url, { type: "svg", margin: 4, errorCorrectionLevel: "M", color: { dark: "#0b0b0f", light: "#ffffff" } });
+    const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     return {
+      src,
       expiresAt: data.expiresAt,
       image: (
         <img
-          src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
+          src={src}
           alt="QR code à scanner par votre client"
           width={240}
           height={240}
@@ -48,7 +92,17 @@ function PrivateClientsPage() {
           <span className="sd-settings-brand">Espace chauffeur</span>
           <h1>Votre clientèle privée</h1>
         </div>
+        <button
+          type="button"
+          className="sd-close-control private-qr-launch"
+          aria-label="Afficher mon QR code"
+          disabled={!canPreview}
+          onClick={() => setPreview(true)}
+        >
+          <QrCode size={22} aria-hidden="true" />
+        </button>
       </header>
+      {preview && canPreview && <QrPreview src={qr.src} onClose={closePreview} />}
       {error && <p role="alert">{error} <button type="button" className="btn btn-secondary" onClick={reload}>Réessayer</button></p>}
       <div className="flex-col gap-4">
         {gold && !gold.active && !error && (
@@ -58,7 +112,7 @@ function PrivateClientsPage() {
           </section>
         )}
         {(gold?.active || clients?.length > 0) && (
-          <PrivateClientsPanel clients={clients} loadQr={loadQr} goldActive={gold?.active === true && !error} onRemove={(id) => changeClient(id, 'remove')} onBlock={(id, blocked) => changeClient(id, 'block', blocked)} />
+          <PrivateClientsPanel clients={clients} loadQr={loadQr} onQrChange={setQr} goldActive={gold?.active === true && !error} onRemove={(id) => changeClient(id, 'remove')} onBlock={(id, blocked) => changeClient(id, 'block', blocked)} />
         )}
       </div>
     </div>

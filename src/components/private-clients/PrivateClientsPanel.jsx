@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Avatar } from '@/components/ui/bits';
 
 // The QR token is stable for each driver and never refreshes on a timer.
-function PrivateClientsQr({ loadQr }) {
+function PrivateClientsQr({ loadQr, onQrChange }) {
   const [qr, setQr] = useState(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
@@ -21,6 +21,11 @@ function PrivateClientsQr({ loadQr }) {
     return () => { cancelled = true; };
   }, [loadQr, retry]);
 
+  useEffect(() => {
+    onQrChange?.(qr);
+    return () => onQrChange?.(null);
+  }, [qr, onQrChange]);
+
   return <section className="card card-pad" aria-labelledby="private-clients-qr-title">
     <h2 id="private-clients-qr-title">Votre QR code permanent</h2>
     <p className="small muted mt-2">Ce QR code personnel ne change pas et n'expire pas. Vous pouvez l'imprimer ou le partager pour inviter vos clients à vous choisir comme chauffeur favori.</p>
@@ -28,7 +33,7 @@ function PrivateClientsQr({ loadQr }) {
   </section>;
 }
 
-export default function PrivateClientsPanel({ clients, loadQr, goldActive, onRemove, onBlock }) {
+export default function PrivateClientsPanel({ clients, loadQr, goldActive, onRemove, onBlock, onQrChange }) {
   const [expanded, setExpanded] = useState(null);
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState('');
@@ -44,7 +49,7 @@ export default function PrivateClientsPanel({ clients, loadQr, goldActive, onRem
     finally { setBusy(null); }
   }
   return <div className="flex-col gap-4">
-    {goldActive && <PrivateClientsQr loadQr={loadQr} />}
+    {goldActive && <PrivateClientsQr loadQr={loadQr} onQrChange={onQrChange} />}
     <section className="card card-pad" aria-labelledby="private-clients-list-title">
       <h2 id="private-clients-list-title">Vos clients privés</h2>
       {error && <p role="alert" className="small" style={{ color: 'var(--danger)' }}>{error}</p>}

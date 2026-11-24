@@ -20,6 +20,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(QrBrightnessPlugin.class);
         super.onCreate(savedInstanceState);
         getBridge().addWebViewListener(new WebViewListener() {
             @Override

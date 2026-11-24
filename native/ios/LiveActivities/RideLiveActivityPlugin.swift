@@ -1,11 +1,13 @@
 import ActivityKit
 import Capacitor
 import Foundation
+import UIKit
 
 // Register this controller from SceneDelegate in the iOS project.
 class RideLiveActivityViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(RideLiveActivityPlugin())
+        bridge?.registerPluginInstance(QrBrightnessPlugin())
     }
 }
 
@@ -69,5 +71,60 @@ public class RideLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             call.resolve()
         }
+    }
+}
+
+@objc(QrBrightnessPlugin)
+public class QrBrightnessPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "QrBrightnessPlugin"
+    public let jsName = "QrBrightness"
+    public let pluginMethods = [
+        CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stop", returnType: CAPPluginReturnPromise)
+    ]
+    private var savedBrightness: CGFloat?
+    private var screen: UIScreen?
+    private var restoreTimer: Timer?
+
+    public override func load() {
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(restoreBrightness),
+            name: UIApplication.willResignActiveNotification, object: nil
+        )
+    }
+
+    @objc func start(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard UIApplication.shared.applicationState == .active,
+                  let activeScreen = self.bridge?.viewController?.view.window?.screen else {
+                call.resolve()
+                return
+            }
+            if self.savedBrightness == nil {
+                self.screen = activeScreen
+                self.savedBrightness = activeScreen.brightness
+            }
+            activeScreen.brightness = 1
+            self.restoreTimer?.invalidate()
+            self.restoreTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { [weak self] _ in
+                self?.restoreBrightness()
+            }
+            call.resolve()
+        }
+    }
+
+    @objc func stop(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            self.restoreBrightness()
+            call.resolve()
+        }
+    }
+
+    @objc private func restoreBrightness() {
+        restoreTimer?.invalidate()
+        restoreTimer = nil
+        if let savedBrightness { screen?.brightness = savedBrightness }
+        savedBrightness = nil
+        screen = nil
     }
 }
