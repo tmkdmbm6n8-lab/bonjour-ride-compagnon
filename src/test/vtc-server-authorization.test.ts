@@ -111,6 +111,14 @@ describe("autorisations réelles du gestionnaire serveur", () => {
     await expect(handleVtc({ path: "/api/admin/monitoring", method: "GET" }, context())).rejects.toThrow("Accès administrateur requis");
     expect(fake.reads).not.toContain("admin:drivers");
   });
+  it.each(["rider", "driver"])("refuse lecture et mutation dynamique au rôle %s", async role => {
+    fake.role = role;
+    for (const method of ["GET", "PUT", "PATCH"]) {
+      await expect(handleVtc({path:"/api/admin/dynamic-pricing",method,body:{enabled:true,expectedRevision:0}},context())).rejects.toThrow("Accès administrateur requis");
+    }
+    expect(fake.writes).toEqual([]);
+    expect(fake.reads).not.toContain("admin:pricing_rules");
+  });
   it("refuse un client dans les fonctions administrateur avant toute écriture", async () => {
     await expect(
       handleVtc({ path: "/api/admin/users", method: "DELETE", body: {} }, context()),

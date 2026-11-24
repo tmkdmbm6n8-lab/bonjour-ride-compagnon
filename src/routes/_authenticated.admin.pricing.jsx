@@ -1,3 +1,4 @@
+import DynamicPricingPanel from '@/components/admin/DynamicPricingPanel';
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
@@ -11,7 +12,7 @@ const FIELDS = [
   ['perMinRate', 'Par minute (€)'], ['minimumFare', 'Prix minimum (€)'],
   ['supplement', 'Supplément après minimum (€)'],
 ];
-function AdminPricingPage() {
+function ClassicPricingPanel() {
   const toast = useToast();
   const [rules, setRules] = useState(null);
   const [error, setError] = useState('');
@@ -79,6 +80,17 @@ function AdminPricingPage() {
       </select></label>
     </section>
   </div>;
+}
+function AdminPricingPage() {
+  const [tab,setTab]=useState('classic');
+  return <>
+    <div className="pricing-admin-tabs" role="tablist" aria-label="Tarification">
+      <button type="button" role="tab" id="pricing-tab-classic" aria-controls="pricing-panel-classic" aria-selected={tab==='classic'} onClick={()=>setTab('classic')}>Barème classique</button>
+      <button type="button" role="tab" id="pricing-tab-dynamic" aria-controls="pricing-panel-dynamic" aria-selected={tab==='dynamic'} onClick={()=>setTab('dynamic')}>Tarification dynamique</button>
+    </div>
+    <div role="tabpanel" id="pricing-panel-classic" aria-labelledby="pricing-tab-classic" hidden={tab!=='classic'}><ClassicPricingPanel/></div>
+    <div role="tabpanel" id="pricing-panel-dynamic" aria-labelledby="pricing-tab-dynamic" hidden={tab!=='dynamic'}><DynamicPricingPanel/></div>
+  </>;
 }
 export const Route = createFileRoute('/_authenticated/admin/pricing')({
   head: () => ({ meta: [{title:'Tarification · StrasDrive'},{name:'description',content:'Barème distance et durée des courses StrasDrive.'}] }),

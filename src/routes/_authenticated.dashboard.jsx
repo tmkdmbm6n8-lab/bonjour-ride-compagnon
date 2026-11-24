@@ -1122,7 +1122,13 @@ function RiderDashboard() {
                   <span className="mono-nums">{money(completedRide.fare.driverFloorSupplement)}</span>
                 </div>
               )}
-              {completedRide.fare?.discount > 0 && (
+              {completedRide.fare?.dynamicPricing && (
+                <div className="flex items-center justify-between small mt-1">
+                  <span className="muted">Ajustement selon la demande</span>
+                  <span className="mono-nums">{completedRide.fare.dynamicPricing.amount > 0 ? '+' : completedRide.fare.dynamicPricing.amount < 0 ? '−' : ''}{money(Math.abs(completedRide.fare.dynamicPricing.amount))}</span>
+                </div>
+              )}
+              {!completedRide.fare?.dynamicPricing && completedRide.fare?.discount > 0 && (
                 <div className="flex items-center justify-between small mt-1">
                   <span className="muted">Remise ({Math.round((completedRide.fare.discountRate || 0) * 100)} %)</span>
                   <span className="mono-nums">−{money(completedRide.fare.discount)}</span>

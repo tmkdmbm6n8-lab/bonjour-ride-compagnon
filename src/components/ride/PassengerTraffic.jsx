@@ -1,3 +1,4 @@
+import { parisFormInstant, parisFormValue, nextWeeklyDeparture } from '@/lib/scheduled-pricing';
 import { useEffect, useRef, useState } from "react";
 import { 
   Plane, TrainFront, RefreshCw, Clock, MapPin, Car, LocateFixed, 
@@ -6,7 +7,7 @@ import {
 import RiderLayout from "@/components/RiderLayout";
 import Modal from "@/components/ui/Modal";
 import PlaceSearch from "@/components/maps/PlaceSearch";
-import { Loading, money } from "@/components/ui/bits";
+import { Loading, money, VEHICLE_LABELS } from "@/components/ui/bits";
 import useDriverData from "@/hooks/useDriverData";
 import { apiFetch } from "@/lib/archive-fetch";
 import { clock, parisDay } from "@/lib/vtc-dates";
@@ -88,6 +89,10 @@ export default function PassengerTraffic() {
       setEstimating(false);
       return;
     }
+    const departureAt = bookingType === 'recurring'
+      ? nextWeeklyDeparture(Number(recurringWeekday),recurringTime)
+      : parisFormInstant(scheduledAt);
+    if (!departureAt) { setEstimates(null); setEstimating(false); return; }
     let cancelled = false;
     setEstimates(null);
     setEstimating(true);
@@ -98,7 +103,8 @@ export default function PassengerTraffic() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             pickup: { lat: pickup.lat, lng: pickup.lng },
-            dropoff: { lat: dropoff.lat, lng: dropoff.lng }
+            dropoff: { lat: dropoff.lat, lng: dropoff.lng },
+            scheduledAt: departureAt
           })
         });
         const d = await res.json();
@@ -110,7 +116,7 @@ export default function PassengerTraffic() {
       }
     })();
     return () => { cancelled = true; };
-  }, [pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng]);
+  }, [pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng, scheduledAt, bookingType, recurringWeekday, recurringTime]);
 
   // Clic sur un Vol ou un Train : Remplissage intelligent automatique
   function selectTransportItem(item) {
@@ -127,14 +133,14 @@ export default function PassengerTraffic() {
       const pickupTime = new Date(targetDate.getTime() + 20 * 60000);
       setPickup({ ...hub, address: hub.name });
       setPickupText(hub.name);
-      setScheduledAt(new Date(pickupTime.getTime() - pickupTime.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+      setScheduledAt(parisFormValue(pickupTime));
     } else {
       // Départ : Arrivée = Hub. Prise en charge intelligente = 1h45 avant vol ou 40 min avant train
       const marginMinutes = item.kind === "flight" ? 105 : 40;
       const pickupTime = new Date(targetDate.getTime() - marginMinutes * 60000);
       setDropoff({ ...hub, address: hub.name });
       setDropoffText(hub.name);
-      setScheduledAt(new Date(pickupTime.getTime() - pickupTime.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+      setScheduledAt(parisFormValue(pickupTime));
     }
 
     // Scroll doux vers le formulaire pour finaliser
@@ -202,7 +208,7 @@ export default function PassengerTraffic() {
           estimatedPrice
         };
       } else {
-        const when = new Date(scheduledAt);
+        const when = new Date(parisFormInstant(scheduledAt) || NaN);
         if (!Number.isFinite(when.getTime()) || when.getTime() <= Date.now()) {
           throw new Error("Veuillez sélectionner une date et heure de départ future.");
         }
@@ -218,6 +224,7 @@ export default function PassengerTraffic() {
         };
       }
 
+      payload = {...payload,vehicleType,pickup,dropoff};
       const response = await apiFetch("/api/riders/me/scheduled-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -253,15 +260,17 @@ export default function PassengerTraffic() {
       dropoffAddress: req.dropoff_address,
       paymentMethod: req.payment_method || "cash",
       estimatedPrice: req.estimated_price,
+      vehicleType: "",
       scheduledAt: Number.isFinite(at.getTime())
-        ? new Date(at.getTime() - at.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+        ? parisFormValue(at)
         : ""
     });
   }
 
   async function saveEdit() {
     if (!editing || editBusy) return;
-    const when = new Date(editing.scheduledAt);
+    const when = new Date(parisFormInstant(editing.scheduledAt) || NaN);
+    if (!editing.vehicleType) { setEditError("Sélectionnez la catégorie pour recalculer le prix."); return; }
     if (!Number.isFinite(when.getTime()) || when.getTime() <= Date.now()) {
       setEditError("Choisissez une date et une heure futures.");
       return;
@@ -783,7 +792,14 @@ export default function PassengerTraffic() {
                 <input className="input" value={editing.dropoffAddress} onChange={e => setEditing(v => ({ ...v, dropoffAddress: e.target.value }))} />
               </label>
               <label style={{ display: "grid", gap: 6, fontWeight: 600 }}>
-                Date et heure de prise en charge
+                Catégorie pour le nouveau devis
+                <select className="input" value={editing.vehicleType} onChange={e => setEditing(v => ({...v,vehicleType:e.target.value}))}>
+                  <option value="">Sélectionner la catégorie</option>
+                  {Object.entries(VEHICLE_LABELS).filter(([key])=>['economy','comfort','pet','xl'].includes(key)).map(([key,label])=><option key={key} value={key}>{label}</option>)}
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: 6, fontWeight: 600 }}>
+                Date et heure de prise en charge (heure de Paris)
                 <input className="input" type="datetime-local" value={editing.scheduledAt} onChange={e => setEditing(v => ({ ...v, scheduledAt: e.target.value }))} />
               </label>
               <label style={{ display: "grid", gap: 6, fontWeight: 600 }}>
