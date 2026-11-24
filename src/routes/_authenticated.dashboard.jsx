@@ -860,6 +860,24 @@ function RiderDashboard() {
                 </button>
               </div>
             )}
+            <div className="rider-active-chat flex gap-2 mb-3">
+              <button
+                type="button"
+                className={`btn flex-1 ${unread > 0 ? "chat-btn-unread" : "btn-secondary"}`}
+                onClick={() => {
+                  setChatOpen(true);
+                  setUnread(0);
+                  setLastMsg(null);
+                }}
+                style={{ position: "relative" }}
+              >
+                <MessageCircle size={17} />{" "}
+                {unread > 0 ? (unread > 1 ? `${unread} nouveaux messages` : "Nouveau message") : "Message au conducteur"}
+                {unread > 0 && <span className="chat-unread-badge mono-nums">{unread}</span>}
+              </button>
+
+            </div>
+
             <div className="flex items-center justify-between mb-3 wrap gap-2">
               <span className={`badge badge-dot ${ride.status === "in_progress" ? "badge-info" : "badge-gold"}`}>
                 {ride.status === "accepted" &&
@@ -994,23 +1012,6 @@ function RiderDashboard() {
                   {money(ride.fare?.total)}
                 </span>
               </div>
-            </div>
-
-            <div className="rider-active-chat flex gap-2 mt-4">
-              <button
-                className={`btn flex-1 ${unread > 0 ? "chat-btn-unread" : "btn-secondary"}`}
-                onClick={() => {
-                  setChatOpen(true);
-                  setUnread(0);
-                  setLastMsg(null);
-                }}
-                style={{ position: "relative" }}
-              >
-                <MessageCircle size={17} />{" "}
-                {unread > 0 ? (unread > 1 ? `${unread} nouveaux messages` : "Nouveau message") : "Discussion"}
-                {unread > 0 && <span className="chat-unread-badge mono-nums">{unread}</span>}
-              </button>
-
             </div>
 
             {ride.status === "arrived" && (
