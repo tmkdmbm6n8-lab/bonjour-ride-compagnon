@@ -160,6 +160,13 @@ function DriverDashboard() {
 
   async function handleArrive() {
     if (actionBusy || !ride) return;
+    if (position) {
+      const problem = pickupZoneProblem(position, ride.pickup, ARRIVAL_ZONE_METERS);
+      if (problem) {
+        setArrivalNotice(problem);
+        return;
+      }
+    }
     setActionBusy(true);
     try {
       if (!navigator.geolocation) throw new Error("Position GPS introuvable — activez la localisation");
