@@ -117,8 +117,7 @@ function RideDetailPage() {
                 {ride.fare.surgeFare > 0 && <Row label={`Majoration ${ride.fare.surgeMultiplier}×`} value={money(ride.fare.surgeFare)} />}
                 <Row label="Frais de réservation" value={money(ride.fare.bookingFee)} />
                 {ride.fare.driverFloorSupplement > 0 && <Row label="Complément rémunération minimale chauffeur" value={money(ride.fare.driverFloorSupplement)} />}
-                {ride.fare.dynamicPricing?.amount !== undefined && <Row label="Ajustement selon la demande" value={`${ride.fare.dynamicPricing.amount > 0 ? '+' : ride.fare.dynamicPricing.amount < 0 ? '−' : ''}${money(Math.abs(ride.fare.dynamicPricing.amount))}`} />}
-                {!ride.fare.dynamicPricing && ride.fare.discount > 0 && <Row label="Remise" value={`−${money(ride.fare.discount)}`} />}
+                {ride.fare.discount > 0 && <Row label="Remise" value={`−${money(ride.fare.discount)}`} />}
                 <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8 }}>
                   <Row label={<b>Total ({paymentMethodLabel(ride.payment?.method)})</b>} value={<b>{money(ride.fare.total)}</b>} />
                 </div>

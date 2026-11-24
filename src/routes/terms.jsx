@@ -28,7 +28,7 @@ function TermsPage() {
       <h2>3. Prix, réservation et annulation (passagers)</h2>
       <ul>
         <li>Le prix total TTC de la course est affiché avant la réservation, pour chaque gamme. Il est calculé à partir d’un prix de base, de la distance et de la durée estimée, avec un minimum par catégorie. Le supplément Pet de 4 € est ajouté après application du minimum. Le prix accepté ne change pas pendant la course.</li>
-        <li>Si la tarification dynamique est activée, un ajustement selon la zone de départ, le jour, l’heure de Paris et la catégorie peut réduire ou majorer le barème, dans le respect des minimums chauffeurs. Pour une réservation programmée, le créneau de départ prévu est utilisé. Hors des zones configurées ou si le système est désactivé ou indisponible, seul le barème classique s’applique. Les frais de réservation sont nuls.</li>
+        <li>Le barème ne comporte ni majoration automatique liée à la demande, ni remise automatique. Les frais de réservation sont nuls.</li>
         <li>L’annulation est gratuite tant que le chauffeur n’est pas arrivé au point de prise en charge. Après son arrivée, des frais d’annulation de {formatEuro(3)} sont débités, dont {formatEuro(2.76)} reversés au chauffeur.</li>
         <li>Au départ, le passager communique au chauffeur un code PIN à usage unique. Ne montez jamais dans un véhicule qui ne correspond pas à celui affiché.</li>
         <li>Les contrats de transport de passagers relèvent de l’exclusion prévue à l’article L221-2, 9°, du Code de la consommation. Le délai général de rétractation de quatorze jours ne s’applique donc pas à la course ; les règles d’annulation indiquées ici restent applicables. Les droits éventuellement applicables à une recharge de portefeuille sont distincts.</li>

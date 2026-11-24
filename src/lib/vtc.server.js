@@ -1,6 +1,3 @@
-import { applyDynamicPricing } from './dynamic-pricing';
-import { loadDynamicSettings, handleDynamicSettings } from './dynamic-pricing.server';
-import { plannedDeparture, nextWeeklyDeparture } from './scheduled-pricing';
 import { goldDispatchPool, hasPaidDriverGold, loadDriverGold } from "./driver-gold.server";
 import { restoreGoldCommission, waiveGoldCommission } from "./driver-gold-fare";
 import { favoriteDriverId } from "./private-clients.server";
@@ -321,15 +318,11 @@ async function liveRoute(admin, r) {
   return value;
 }
 // === src/lib/vtc.server.js (autour de la ligne 229) ===
-export async function estimates(db, a, b, { departureAt = new Date().toISOString() } = {}) {
+export async function estimates(db, a, b) {
   const route = await routeBetween(a, b);
   const rows = required(await db.from("pricing_rules").select("vehicle_type,rule").in("vehicle_type", Object.keys(DEFAULT_PRICING)));
   const rules = pricingRules(rows);
-  const config = await loadDynamicSettings(db);
-  const fares = Object.fromEntries(Object.entries(rules).map(([type, rule]) => {
-    const fare = calculateFare(rule, route.distanceMeters, route.durationSeconds);
-    return [type, applyDynamicPricing(fare, {config,pickup:a,category:type,departureAt,meters:route.distanceMeters,seconds:route.durationSeconds})];
-  }));
+  const fares = Object.fromEntries(Object.entries(rules).map(([type, rule]) => [type, calculateFare(rule, route.distanceMeters, route.durationSeconds)]));
   return { route, estimates: fares, source: "strasdrive", pricingMode: "tariff", tariffVersion: TARIFF_VERSION };
 }
 export async function handleVtc(input, context) {
@@ -368,8 +361,6 @@ export async function handleVtc(input, context) {
       buildId: typeof __STRASDRIVE_BUILD_ID__ === "string" ? __STRASDRIVE_BUILD_ID__ : null,
     };
   }
-
-  if (p === "/api/admin/dynamic-pricing") return handleDynamicSettings(admin, {method,body});
 
   // Gestion des cartes du passager : identité issue de la session, jamais du corps de requête.
   if (p === "/api/rider/cards" && method === "GET") {
@@ -656,7 +647,7 @@ export async function handleVtc(input, context) {
     return speedCameras(q.get("bbox"));
   }
   if (p === "/api/rides/estimate") {
-    const quote = await estimates(admin, body.pickup, body.dropoff, body.scheduledAt ? {departureAt:plannedDeparture(body.scheduledAt)} : {});
+    const quote = await estimates(admin, body.pickup, body.dropoff);
     const { favoriteForQuote } = await import("./private-clients.server");
     const favorite = await favoriteForQuote(admin, uid, validPoint(body.pickup), quote, {
       loadPool: () => dispatchPool(admin),
@@ -725,19 +716,6 @@ export async function handleVtc(input, context) {
   if (p === "/api/riders/me/transport-board" && method === "GET") {
     return discoverBoard(q.get("day") || parisDay());
   }
-  const scheduledRequestPrice = async (requestBody, date, pickupAddress, dropoffAddress) => {
-    const type = requestBody.vehicleType;
-    if (!Object.hasOwn(DEFAULT_PRICING,type)) throw new Error("Sélectionnez la catégorie pour recalculer le prix de la réservation.");
-    const find = async (point,address) => {
-      if (validPoint(point)) return point;
-      const result = await geoSearch(new URLSearchParams({q:address}));
-      return result.results?.find(validPoint) || null;
-    };
-    const [a,b] = await Promise.all([find(requestBody.pickup,pickupAddress),find(requestBody.dropoff,dropoffAddress)]);
-    if (!a || !b) throw new Error("Sélectionnez des adresses précises pour calculer la réservation.");
-    const quote = await estimates(admin,a,b,{departureAt:plannedDeparture(date.toISOString())});
-    return quote.estimates[type].total;
-  };
   if (p === "/api/riders/me/scheduled-requests") {
     if (method === "GET") {
       const rows = required(await db.from("rider_scheduled_requests").select("*")
@@ -758,14 +736,14 @@ export async function handleVtc(input, context) {
           !Number.isFinite(date.getTime()) || date.getTime() < Date.now())
           throw new Error("Numéro de vol/train ou date invalide");
         Object.assign(payload, { transport_type: body.transportType, transport_number: number,
-          scheduled_at: date.toISOString(), payment_method: ["cash","card","wallet"].includes(body.paymentMethod) ? body.paymentMethod : null, estimated_price: await scheduledRequestPrice(body,date,pickup,dropoff), adjustment_consent: body.adjustmentConsent === true });
+          scheduled_at: date.toISOString(), payment_method: ["cash","card","wallet"].includes(body.paymentMethod) ? body.paymentMethod : null, estimated_price: body.estimatedPrice != null && body.estimatedPrice !== "" && Number.isFinite(Number(body.estimatedPrice)) && Number(body.estimatedPrice) >= 0 ? Number(body.estimatedPrice) : null, adjustment_consent: body.adjustmentConsent === true });
       } else {
         const day = Number(body.weekday);
         const time = String(body.localTime || "");
-        if (!Number.isInteger(day) || day < 0 || day > 6 || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time))
+        if (!Number.isInteger(day) || day < 0 || day > 6 || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time))
           throw new Error("Jour ou heure invalide");
         // Do not preselect or prioritize a favorite: the rider chooses among driver proposals.
-        Object.assign(payload, { weekday: day, local_time: time, favorite_driver_id: null, estimated_price: await scheduledRequestPrice(body,new Date(nextWeeklyDeparture(day,time)),pickup,dropoff) });
+        Object.assign(payload, { weekday: day, local_time: time, favorite_driver_id: null });
       }
       const row = required(await db.from("rider_scheduled_requests").insert(payload).select("*").single());
       return { request: row };
@@ -795,7 +773,10 @@ export async function handleVtc(input, context) {
         payment_method:["cash","card","wallet"].includes(body.paymentMethod) ? body.paymentMethod : null,
         status:existing.favorite_driver_id ? "modified_pending" : "pending"
       };
-      patch.estimated_price = await scheduledRequestPrice(body,date,pickup,dropoff);
+      if (body.estimatedPrice !== null && body.estimatedPrice !== undefined && body.estimatedPrice !== "" &&
+          Number.isFinite(Number(body.estimatedPrice)) && Number(body.estimatedPrice) >= 0) {
+        patch.estimated_price = Number(body.estimatedPrice);
+      }
       const row = required(await admin.from("rider_scheduled_requests").update(patch)
         .eq("rider_id",uid).eq("id",id).eq("kind","transport")
         .eq("status",existing.status).select("*").maybeSingle());
@@ -2183,7 +2164,7 @@ export async function publicVtc(input) {
   }
   if (url.pathname === "/api/rides/estimate") {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    return estimates(supabaseAdmin, input.body?.pickup, input.body?.dropoff, input.body?.scheduledAt ? {departureAt:plannedDeparture(input.body.scheduledAt)} : {});
+    return estimates(supabaseAdmin, input.body?.pickup, input.body?.dropoff);
   }
   if (url.pathname === "/api/private-clients/scan") {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
