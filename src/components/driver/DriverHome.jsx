@@ -88,6 +88,7 @@ export default function DriverHome({
       {/* ── Carte plein écran ── */}
       <div className="drv-cockpit-map">
         <MapView
+          viewCacheKey="driver-home"
           center={mapCenter}
           zoom={14}
           userPosition={position || localPosition || undefined}
