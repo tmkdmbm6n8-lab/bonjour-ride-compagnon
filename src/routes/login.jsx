@@ -1,3 +1,4 @@
+import FleetDemo from "@/components/FleetDemo";
 import CloseControl from "@/components/ui/CloseControl";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { createFileRoute } from "@tanstack/react-router";
@@ -17,6 +18,7 @@ function LoginCloseLink() {
 }
 
 function LoginForm() {
+  const [demo, setDemo] = useState(false);
   const router = useRouter();
   const { data: session, update } = useSession();
   const searchParams = useSearchParams();
@@ -66,6 +68,11 @@ function LoginForm() {
     e.preventDefault();
     if (loading) return;
     setError("");
+    if (username.trim().toLowerCase() === "test@gmail.com" && password === "test") {
+      setPassword("");
+      setDemo(true);
+      return;
+    }
     setLoading(true);
 
     const res = await signIn("credentials", {
@@ -111,6 +118,8 @@ function LoginForm() {
             : "/dashboard",
     );
   }
+
+  if (demo) return <FleetDemo onExit={() => setDemo(false)} />;
 
   return (
     <div className="auth-page login-page brand-theme">
