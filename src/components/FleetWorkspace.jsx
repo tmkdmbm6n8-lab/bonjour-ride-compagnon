@@ -1,3 +1,5 @@
+import FleetManager, { FleetReviews } from "./FleetManager";
+import "@/styles/fleet-desk.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { signOut, useSession } from "@/lib/archive-auth";
@@ -33,7 +35,7 @@ export function FleetActivation() {
       <label className="field">E-mail du compte gérant confirmé<input className="input" type="email" name="email" required /></label>
       <button disabled={busy} className="btn btn-primary">Activer la flotte</button>
       <p role="status">{message}</p>
-    </form></details>;
+    </form><FleetReviews /></details>;
 }
 
 export default function FleetWorkspace() {
@@ -87,7 +89,7 @@ function FleetAccount() {
   const vehicles = fleet?.vehicles || [];
   const drivers = fleet?.drivers || [];
   const mine = vehicles.find(v => v.driver === fleet?.me);
-  const online = drivers.filter(d => d.online);
+  if (manager) return <>{error && <p role="alert">{error}</p>}<FleetManager fleet={fleet} act={act} busy={busy} submit={submit}/></>;
   return <>
     <h1>{fleet?.name || "Ma flotte"}</h1>
     {error && <p role="alert" className="input-error-msg">{error}</p>}
@@ -96,14 +98,6 @@ function FleetAccount() {
     {fleet?.role === "invited" && <section className="card card-pad"><h2>Invitation à rejoindre {fleet.name}</h2>
       <div className="flex wrap gap-2"><button disabled={busy} className="btn btn-primary" onClick={() => act("accept")}>Accepter</button>
       <button disabled={busy} className="btn btn-secondary" onClick={() => act("decline")}>Refuser</button></div></section>}
-    {manager && <section className="card card-pad"><h2>Aujourd’hui</h2><p>{fleet.today.count} courses terminées</p><p>Montant des courses · {money(fleet.today.gross)}</p><p>Revenus chauffeurs · {money(fleet.today.net)}</p></section>}
-    {manager && <section className="card card-pad flex-col gap-3"><h2>Chauffeurs</h2>
-      <p>{online.length} en ligne · {vehicles.filter(v => !v.taken).length} véhicules disponibles</p>
-      {online.some(d => d.location) && <MapView center={city} drivers={online} style={{ height: 250 }} />}
-      {drivers.map(d => <div className="flex wrap items-center justify-between gap-2" key={d.id}><span>{d.name} · {d.accepted ? d.online ? "En ligne" : "Hors ligne" : "Invitation en attente"}</span>
-      <button disabled={busy} className="btn btn-secondary btn-sm" onClick={() => act("remove",{driver:d.id})}>Retirer</button></div>)}
-      <form onSubmit={submit("invite")} className="flex-col gap-2"><label className="field">E-mail du chauffeur<input className="input" name="email" type="email" required /></label>
-      <button disabled={busy} className="btn btn-secondary">Inviter le chauffeur</button></form></section>}
     {joined && <section className="card card-pad flex-col gap-3"><h2>Véhicules</h2>
       {!vehicles.length && <p>Aucun véhicule enregistré.</p>}
       {vehicles.map(v => <div key={v.id} className="flex wrap justify-between items-center gap-2">
