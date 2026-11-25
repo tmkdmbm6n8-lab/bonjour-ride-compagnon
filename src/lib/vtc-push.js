@@ -5,6 +5,8 @@ import { formatEuro } from "./vtc-pricing";
 /** Android channel shown as a heads-up banner with sound; created by the app on first launch. */
 export const OFFER_CHANNEL_ID = "ride_offers";
 export const OFFER_PATH = "/driver/dashboard";
+export const APPLE_BUNDLE_ID = "fr.strasdrive.app";
+export const isApnsHexToken = token => /^[0-9a-f]{64,200}$/i.test(String(token || "").trim());
 
 /** Drivers who can see the ride after a dispatch step but could not before: each gets exactly one push per step. */
 export function newlyOfferedDriverIds(before, after, pool, now = Date.now()) {
@@ -29,7 +31,8 @@ export function buildOfferMessage(ride, now = Date.now()) {
   const ttl = Math.max(1, offerSecondsLeft(ride, now));
   return {
     notification: { title, body },
-    data: { type: "ride_offer", rideId: String(ride?.id || ""), path: OFFER_PATH },
+    data: { type: "ride_offer", rideId: String(ride?.id || ""), path: ride?.id ? `${OFFER_PATH}?offer=${encodeURIComponent(ride.id)}` : OFFER_PATH },
+    apns: { headers: { "apns-priority": "10", "apns-push-type": "alert", "apns-topic": APPLE_BUNDLE_ID, "apns-expiration": String(Math.floor(now / 1000) + ttl) }, payload: { aps: { alert: { title, body }, sound: "default", category: "RIDE_OFFER" } } },
     android: {
       priority: "high",
       ttl: `${ttl}s`,
@@ -50,10 +53,16 @@ export function buildOfferMessage(ride, now = Date.now()) {
 
 /** A device token the provider reports as dead must be deleted, never retried. */
 export function isStaleTokenError(status, bodyText = "") {
+  if (/not a valid FCM registration token/i.test(bodyText)) return false;
   return status === 404 || (status === 400 && /INVALID_ARGUMENT|registration token/i.test(bodyText)) || /UNREGISTERED/.test(bodyText);
 }
 
 export function validPushToken(token) {
   const t = String(token || "");
   return t.length >= 20 && t.length <= 4096 && !/\s/.test(t) ? t : null;
+}
+
+export function buildDirectApnsPayload(ride, now = Date.now()) {
+ const message = buildOfferMessage(ride, now);
+ return { ...message.apns.payload, ...message.data };
 }
