@@ -25,7 +25,9 @@ const PIN_SVG =
 const SQUARE_SVG =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 
+const savedViews = new Map();
 export default function MapView({
+  viewCacheKey,
   center = { lat: 40.7128, lng: -74.006 },
   zoom = 13,
   pickup,
@@ -63,11 +65,12 @@ export default function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined;
 
+    const saved = viewCacheKey && savedViews.get(viewCacheKey);
     const map = new MLMap({
       container: containerRef.current,
       style: "/map-dark.json",
-      center: [center.lng, center.lat],
-      zoom,
+      center: saved?.center || [center.lng, center.lat],
+      zoom: saved?.zoom ?? zoom,
       pitch: 0,
       attributionControl: false,
       cooperativeGestures: false, // un seul doigt suffit pour parcourir la carte
@@ -98,6 +101,7 @@ export default function MapView({
     mapRef.current = map;
 
     return () => {
+      if (viewCacheKey) savedViews.set(viewCacheKey, { center: map.getCenter().toArray(), zoom: map.getZoom() });
       ro.disconnect();
       cancelAnimationFrame(animRef.current);
       markersRef.current = { pickup: null, dropoff: null, driver: null, user: null };
