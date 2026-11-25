@@ -957,6 +957,236 @@ export type Database = {
         }
         Relationships: []
       }
+      sd_fleet_drivers: {
+        Row: {
+          accepted: boolean
+          driver_id: string
+          fleet_id: string
+          previous_vehicle: Json | null
+        }
+        Insert: {
+          accepted?: boolean
+          driver_id: string
+          fleet_id: string
+          previous_vehicle?: Json | null
+        }
+        Update: {
+          accepted?: boolean
+          driver_id?: string
+          fleet_id?: string
+          previous_vehicle?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_drivers_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleet_files: {
+        Row: {
+          content: string
+          expiry: string | null
+          filename: string
+          fleet_id: string
+          kind: string
+          reason: string | null
+          review: string
+          submitted_at: string
+        }
+        Insert: {
+          content: string
+          expiry?: string | null
+          filename: string
+          fleet_id: string
+          kind: string
+          reason?: string | null
+          review?: string
+          submitted_at?: string
+        }
+        Update: {
+          content?: string
+          expiry?: string | null
+          filename?: string
+          fleet_id?: string
+          kind?: string
+          reason?: string | null
+          review?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_files_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleet_news: {
+        Row: {
+          created_at: string
+          fleet_id: string | null
+          id: number
+          message: string
+          read_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          fleet_id?: string | null
+          id?: never
+          message: string
+          read_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          fleet_id?: string | null
+          id?: never
+          message?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_news_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleet_shifts: {
+        Row: {
+          driver_id: string
+          ended_at: string | null
+          fleet_id: string
+          id: number
+          started_at: string
+          vehicle: string
+        }
+        Insert: {
+          driver_id: string
+          ended_at?: string | null
+          fleet_id: string
+          id?: never
+          started_at?: string
+          vehicle: string
+        }
+        Update: {
+          driver_id?: string
+          ended_at?: string | null
+          fleet_id?: string
+          id?: never
+          started_at?: string
+          vehicle?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_shifts_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleet_trips: {
+        Row: {
+          fleet_id: string
+          ride_id: string
+          vehicle_label: string | null
+        }
+        Insert: {
+          fleet_id: string
+          ride_id: string
+          vehicle_label?: string | null
+        }
+        Update: {
+          fleet_id?: string
+          ride_id?: string
+          vehicle_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_trips_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sd_fleet_trips_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: true
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleet_vehicles: {
+        Row: {
+          driver_id: string | null
+          fleet_id: string
+          id: string
+          model: string
+          plate: string
+        }
+        Insert: {
+          driver_id?: string | null
+          fleet_id: string
+          id?: string
+          model: string
+          plate: string
+        }
+        Update: {
+          driver_id?: string | null
+          fleet_id?: string
+          id?: string
+          model?: string
+          plate?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_vehicles_fleet_id_driver_id_fkey"
+            columns: ["fleet_id", "driver_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleet_drivers"
+            referencedColumns: ["fleet_id", "driver_id"]
+          },
+          {
+            foreignKeyName: "sd_fleet_vehicles_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleets: {
+        Row: {
+          cash_max_per_ride: number | null
+          id: string
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          cash_max_per_ride?: number | null
+          id?: string
+          name: string
+          owner_id: string
+        }
+        Update: {
+          cash_max_per_ride?: number | null
+          id?: string
+          name?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
       uber_ai_road_routes: {
         Row: {
           compared_at: string | null
@@ -1414,6 +1644,13 @@ export type Database = {
       }
       request_withdrawal: {
         Args: { _debit: number; _driver: string; _fee: number }
+        Returns: Json
+      }
+      sd_fleet: { Args: { action?: string; payload?: Json }; Returns: Json }
+      sd_fleet_desk: { Args: { action: string; p?: Json }; Returns: Json }
+      sd_refresh_shift: { Args: { who: string }; Returns: undefined }
+      sd_review_fleet_file: {
+        Args: { action: string; p?: Json }
         Returns: Json
       }
       settle_ride: { Args: { _actor: string; _id: string }; Returns: Json }
