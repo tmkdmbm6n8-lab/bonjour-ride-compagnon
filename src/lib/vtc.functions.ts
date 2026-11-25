@@ -16,7 +16,7 @@ export const contactRequest=createServerFn({method:'POST'}).inputValidator(input
     typeof data.email!=='string'||data.email.length>254||!/^\S+@\S+\.\S+$/.test(data.email)||
     typeof data.message!=='string'||data.message.length<10||data.message.length>2000)
    throw new Error('Vérifiez votre nom, votre e-mail et votre message.');
- const allowedTopics=['general','ride_issue','driver_support','payments','safety','data_request'];
+ const allowedTopics=['general','ride_issue','driver_support','payments','safety','data_request','fleet_application'];
  const {error}=await supabaseAdmin.from('contact_messages').insert({name:data.name.trim(),email:data.email.toLowerCase(),topic:allowedTopics.includes(data.topic)?data.topic:'general',message:data.message});
  if(error) throw new Error('Votre message n’a pas pu être envoyé.');
  return {ok:true};
