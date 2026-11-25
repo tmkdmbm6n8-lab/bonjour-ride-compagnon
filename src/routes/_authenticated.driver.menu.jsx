@@ -65,6 +65,7 @@ function DriverMenuPage() {
 
       {/* ── Grille 2x2 des outils essentiels ── */}
       <h2 className="drv-grid-title">Espace de conduite</h2>
+      <Link href="/contact?topic=fleet" className="btn btn-secondary mb-4">Ma flotte et mon véhicule</Link>
       <div className="drv-tiles-grid">
         <button type="button" className="drv-tile" onClick={() => setGoldOpen(true)}>
           <div className="drv-tile-icon"><Crown size={22} /></div>
