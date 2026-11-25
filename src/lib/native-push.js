@@ -45,11 +45,11 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
     await PushNotifications.addListener("pushNotificationActionPerformed", ({ notification }) => {
       if (notification?.data?.type === "ride_offer" && /^\/driver(?:\/|$)/.test(window.location.pathname)) {
         publishRefresh();
-        return;
       }
-      const path = notification?.data?.path || OFFER_PATH;
+      const data = notification?.data || {};
+      const path = data.path || (data.rideId ? `${OFFER_PATH}?offer=${encodeURIComponent(data.rideId)}` : OFFER_PATH);
       // Reject protocol-relative URLs (//host), backslashes and control characters from push payloads.
-      if (typeof path === "string" && /^\/(?!\/)[^\\\x00-\x1F\x7F]*$/.test(path) && window.location.pathname !== path) window.location.assign(path);
+      if (typeof path === "string" && /^\/(?!\/)[^\\\x00-\x1F\x7F]*$/.test(path) && window.location.pathname + window.location.search !== path) window.location.assign(path);
     });
     let perm = await PushNotifications.checkPermissions();
     if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale")
