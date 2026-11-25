@@ -16,7 +16,16 @@ it.each([
   ["favorite on free trial", "driver", false, false, 10, 10.78],
 ] as const)("%s preserves passenger price and applies the matching commission", async (_, favorite, included, paid, rate, earnings) => {
   vi.mocked(favoriteDriverId).mockResolvedValue(favorite);
-  vi.mocked(loadDriverGold).mockResolvedValue({ active: true, included });
+  vi.mocked(loadDriverGold).mockResolvedValue({
+    active: true,
+    included,
+    status: included ? "included" : paid ? "active" : "trialing",
+    endsAt: null,
+    trialAvailable: false,
+    canManage: !included,
+    cancelAtPeriodEnd: false,
+    unavailable: false,
+  });
   vi.mocked(hasPaidDriverGold).mockResolvedValue(paid);
   const result = await fareForDriver({}, { fare, rider_id: "rider" }, "driver");
   expect(result).toMatchObject({ total: 11.98, platformCommission: rate, driverEarnings: earnings });

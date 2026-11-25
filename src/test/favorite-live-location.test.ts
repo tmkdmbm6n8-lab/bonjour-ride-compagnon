@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { favoriteLiveLocation } from "@/lib/private-clients.server";
 
 const now = Date.parse("2026-11-25T10:00:00Z");
-const live = {
+type TestDriver = {
+  is_online: boolean;
+  is_approved: boolean;
+  location: { lat: number; lng: number; heading: number; observedAt: string | undefined };
+};
+const live: TestDriver = {
   is_online: true,
   is_approved: true,
   location: { lat: 48.581234, lng: 7.751678, heading: 42, observedAt: new Date(now - 2000).toISOString() },
