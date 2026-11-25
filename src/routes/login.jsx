@@ -290,6 +290,10 @@ function LoginForm() {
           </Link>
         </p>
 
+        <a href="/contact?topic=fleet_application" className="btn btn-secondary btn-full mt-3">
+          Sociétés VTC
+        </a>
+
         <LegalFooter className="login-legal mt-6" />
       </div>
     </div>
