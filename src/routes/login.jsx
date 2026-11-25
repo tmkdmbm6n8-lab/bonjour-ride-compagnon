@@ -1,4 +1,4 @@
-import FleetDemo from "@/components/FleetDemo";
+import { supabase } from "@/integrations/supabase/client";
 import CloseControl from "@/components/ui/CloseControl";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { createFileRoute } from "@tanstack/react-router";
@@ -13,12 +13,17 @@ import { KovaLogo } from "@/components/brand/KovaLogo";
 import LegalFooter from "@/components/shell/LegalFooter";
 import { lovable } from '@/integrations/lovable/index';
 
+async function destination(callback, fallback) {
+  if (callback && callback.startsWith("/") && !callback.startsWith("//")) return callback;
+  const { data } = await supabase.rpc("sd_fleet", { action: "owner" });
+  return data === true ? "/contact?topic=fleet" : fallback;
+}
+
 function LoginCloseLink() {
   return <CloseControl href="/" className="signup-close" label="Fermer la connexion" title="Retour à l’accueil" />;
 }
 
 function LoginForm() {
-  const [demo, setDemo] = useState(false);
   const router = useRouter();
   const { data: session, update } = useSession();
   const searchParams = useSearchParams();
@@ -42,7 +47,9 @@ function LoginForm() {
           : session.user.role === "admin"
             ? "/admin/dashboard"
             : "/dashboard");
-      router.push(target);
+      let active = true;
+      destination(safeCallback, target).then(path => { if (active) router.push(path); });
+      return () => { active = false; };
     }
   }, [session, router, searchParams]);
 
@@ -68,11 +75,6 @@ function LoginForm() {
     e.preventDefault();
     if (loading) return;
     setError("");
-    if (username.trim().toLowerCase() === "test@gmail.com" && password === "test") {
-      setPassword("");
-      setDemo(true);
-      return;
-    }
     setLoading(true);
 
     const res = await signIn("credentials", {
@@ -108,18 +110,14 @@ function LoginForm() {
     const me = await fetch("/api/users/me");
     const account = await me.json();
     await update();
-    await router.push(
-      callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")
-        ? callbackUrl
-        : account.user?.role === "driver"
+    await router.push(await destination(callbackUrl,
+      account.user?.role === "driver"
           ? "/driver/dashboard"
           : account.user?.role === "admin"
             ? "/admin/dashboard"
             : "/dashboard",
-    );
+    ));
   }
-
-  if (demo) return <FleetDemo onExit={() => setDemo(false)} />;
 
   return (
     <div className="auth-page login-page brand-theme">
