@@ -1,7 +1,7 @@
 import { useDriverGold } from "@/components/DriverLayout";
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { apiFetch } from "@/lib/archive-fetch";
+import useDriverData from "@/hooks/useDriverData";
 import Link from "@/lib/archive-navigation";
 import {
   PawPrint,
@@ -40,8 +40,9 @@ export default function DriverHome({
   onWaybill,
 }) {
   const gold = useDriverGold();
-  const [today, setToday] = useState(null);
-  const [lastRide, setLastRide] = useState(null);
+  const { data: earnings } = useDriverData("/api/drivers/me/earnings", 30000);
+  const today = earnings?.today;
+  const lastRide = earnings?.recentRides?.[0]?.fare?.driverEarnings;
   const [earningsView, setEarningsView] = useState("today"); // "today" | "last"
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -81,21 +82,6 @@ export default function DriverHome({
   const { position: localPosition } = useGeolocation({ watch: false });
   const mapCenter = position || localPosition || center;
 
-  useEffect(() => {
-    let alive = true;
-    apiFetch("/api/drivers/me/earnings")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!alive || !d) return;
-        setToday(d.today || null);
-        const last = d.recentRides?.[0]?.fare?.driverEarnings;
-        setLastRide(typeof last === "number" ? last : null);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [online]);
 
   return (
     <div className={`drv-cockpit-root ${online ? "is-online" : ""}`}>
@@ -211,10 +197,10 @@ export default function DriverHome({
             {earningsView === "today"
               ? today
                 ? money(today.earnings)
-                : "0,00 €"
+                : earnings ? "0,00 €" : "—"
               : lastRide != null
                 ? money(lastRide)
-                : "0,00 €"}
+                : earnings ? "0,00 €" : "—"}
           </strong>
         </div>
       </div>
