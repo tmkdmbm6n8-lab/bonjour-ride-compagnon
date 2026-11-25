@@ -39,7 +39,7 @@ export default function SiteHeader() {
             <>
               <Link href="/signup" className="btn btn-secondary btn-sm site-start-btn">
                 {" "}
-                Commencer{" "}
+                S’inscrire{" "}
               </Link>
               <Link href="/login" className="btn btn-gold btn-sm" style={{ color: '#0b0c10' }}>
                 {" "}
