@@ -273,7 +273,7 @@ function SignupForm() {
 
         {/* Bouton Sociétés VTC */}
         <a href="/contact?topic=fleet_application" className="btn btn-secondary btn-full mb-4">
-          Gérer votre flotte
+          Créer votre flotte
         </a>
 
         {/* Boutons d'inscription OAuth Google et Apple */}
