@@ -26,6 +26,7 @@ const SQUARE_SVG =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 
 const savedViews = new Map();
+const retainedMaps = new Map();
 export default function MapView({
   viewCacheKey,
   center = { lat: 40.7128, lng: -74.006 },
@@ -66,8 +67,13 @@ export default function MapView({
     if (!containerRef.current || mapRef.current) return undefined;
 
     const saved = viewCacheKey && savedViews.get(viewCacheKey);
-    const map = new MLMap({
-      container: containerRef.current,
+    const retained = viewCacheKey && retainedMaps.get(viewCacheKey);
+    if (retained) { clearTimeout(retained.timer); retainedMaps.delete(viewCacheKey); }
+    const host = retained?.host || document.createElement("div");
+    host.style.cssText = "width:100%;height:100%;";
+    containerRef.current.appendChild(host);
+    const map = retained?.map || new MLMap({
+      container: host,
       style: "/map-dark.json",
       center: saved?.center || [center.lng, center.lat],
       zoom: saved?.zoom ?? zoom,
@@ -92,7 +98,8 @@ export default function MapView({
     map.on("load", applyRoute);
     map.on("style.load", applyRoute);
     map.on("idle", applyRoute);
-    map.on("click", (e) => onClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
+    const click = (e) => onClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+    map.on("click", click);
 
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(containerRef.current);
@@ -104,10 +111,18 @@ export default function MapView({
       if (viewCacheKey) savedViews.set(viewCacheKey, { center: map.getCenter().toArray(), zoom: map.getZoom() });
       ro.disconnect();
       cancelAnimationFrame(animRef.current);
+      Object.values(markersRef.current).forEach(marker => marker?.remove());
       markersRef.current = { pickup: null, dropoff: null, driver: null, user: null };
+      driverDotsRef.current.forEach(marker => marker.remove());
       driverDotsRef.current.clear();
+      map.off("dragstart", markUserMove); map.off("zoomstart", markUserMove);
+      map.off("load", applyRoute); map.off("style.load", applyRoute); map.off("idle", applyRoute); map.off("click", click);
       try {
-        map.remove();
+        if (viewCacheKey) {
+          host.remove();
+          const timer = setTimeout(() => { retainedMaps.delete(viewCacheKey); map.remove(); }, 300000);
+          retainedMaps.set(viewCacheKey, { map, host, timer });
+        } else map.remove();
       } catch (err) {
         console.warn("[MapView] map.remove() failed:", err?.message);
       }
