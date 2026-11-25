@@ -308,7 +308,7 @@ function LandingPage() {
             </div>
             <Link href="/signup?role=driver" className="btn btn-gold btn-lg">
               {" "}
-              Commencer à conduire <ArrowRight size={18} />
+              S’inscrire <ArrowRight size={18} />
             </Link>
           </div>
         </div>
