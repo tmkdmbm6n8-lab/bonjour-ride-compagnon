@@ -125,9 +125,20 @@ function FleetPage() {
   );
 }
 
+function ContactRoute() {
+  const params = useSearchParams();
+  if (params.get('topic') === 'fleet_application') {
+    return (
+      <div className="landing-page brand-theme">
+        <PublicLayout><FleetPage /></PublicLayout>
+      </div>
+    );
+  }
+  return <PublicLayout><ContactPage /></PublicLayout>;
+}
+
 function ContactPage() {
   const params = useSearchParams();
-  if (params.get('topic') === 'fleet_application') return <FleetPage />;
   const topic = ['ride_issue','payments','safety','driver_support','data_request'].includes(params.get('topic')) ? params.get('topic') : 'general';
   const rideId = (params.get('ride') || '').slice(0,80).replace(/[^a-zA-Z0-9-]/g,'');
   const context = rideId ? `Référence de course : ${rideId}\n\nDécrivez votre demande : ` : '';
@@ -153,4 +164,4 @@ function ContactPage() {
   );
 }
 
-export const Route=createFileRoute('/contact')({head:()=>({meta:[{title:"Contact · StrasDrive"},{name:'description',content:"StrasDrive — contact, service de mise en relation VTC et tarifs en euros."},{property:'og:title',content:"Contact · StrasDrive"},{property:'og:description',content:"StrasDrive — contact, service de mise en relation VTC et tarifs en euros."},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:() => <PublicLayout><ContactPage/></PublicLayout>});
+export const Route=createFileRoute('/contact')({head:()=>({meta:[{title:"Contact · StrasDrive"},{name:'description',content:"StrasDrive — contact, service de mise en relation VTC et tarifs en euros."},{property:'og:title',content:"Contact · StrasDrive"},{property:'og:description',content:"StrasDrive — contact, service de mise en relation VTC et tarifs en euros."},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:ContactRoute});
