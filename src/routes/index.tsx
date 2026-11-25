@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useSession } from "@/lib/archive-auth";
 import Link from "@/lib/archive-navigation";
@@ -101,9 +101,69 @@ const STEPS = [
   },
 ];
 
+function StartupLogo({ ready, onDone }: { ready: boolean; onDone: () => void }) {
+  const uid = useId().replace(/:/g, "");
+  const road = useRef<SVGPathElement>(null);
+  const arrow = useRef<SVGGElement>(null);
+  const progress = useRef(0);
+  const done = useRef(onDone);
+  done.current = onDone;
+  useEffect(() => {
+    const path = road.current;
+    const marker = arrow.current;
+    if (!path || !marker) return;
+    const length = path.getTotalLength();
+    const start = Math.max(0, length - 5.2);
+    const initial = progress.current;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let frame = 0;
+    let began: number | undefined;
+    const tick = (now: number) => {
+      began ??= now;
+      const elapsed = now - began;
+      const value = ready
+        ? initial + (1 - initial) * Math.min(1, elapsed / 160)
+        : Math.min(0.92, initial + (0.92 - initial) * (1 - Math.exp(-elapsed / 900)));
+      progress.current = reduced ? (ready ? 1 : 0) : value;
+      const at = start * (1 - progress.current);
+      const point = path.getPointAtLength(at);
+      const ahead = path.getPointAtLength(Math.max(0, at - 0.15));
+      const behind = path.getPointAtLength(Math.min(length, at + 0.15));
+      const angle = Math.atan2(ahead.y - behind.y, ahead.x - behind.x) * 180 / Math.PI + 90;
+      marker.setAttribute("transform", `translate(${point.x} ${point.y}) rotate(${angle})`);
+      if (ready && progress.current >= 1) { done.current(); return; }
+      if (!reduced) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [ready]);
+  return (
+    <div role="status" aria-label="Ouverture de StrasDrive" style={{ minHeight: "100dvh", display: "grid", placeItems: "center", background: "#0b0c10" }}>
+      <svg width="128" height="128" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id={uid+"tile"} x1="8" y1="2" x2="40" y2="46" gradientUnits="userSpaceOnUse"><stop stopColor="#292524"/><stop offset="1" stopColor="#0C0A09"/></linearGradient>
+          <linearGradient id={uid+"road"} x1="14" y1="8" x2="34" y2="40" gradientUnits="userSpaceOnUse"><stop stopColor="#FAFAF9"/><stop offset="1" stopColor="#E7E5E4"/></linearGradient>
+          <linearGradient id={uid+"arrow"} x1="0" y1="-3.5" x2="0" y2="3" gradientUnits="userSpaceOnUse"><stop stopColor="#EAB308"/><stop offset="1" stopColor="#A16207"/></linearGradient>
+          <radialGradient id={uid+"glow"}><stop stopColor="#EAB308" stopOpacity=".35"/><stop offset="1" stopColor="#EAB308" stopOpacity="0"/></radialGradient>
+        </defs>
+        <rect width="48" height="48" rx="14" fill={`url(#${uid}tile)`}/>
+        <rect x=".5" y=".5" width="47" height="47" rx="13.5" stroke="#FAFAF9" strokeOpacity=".08"/>
+        <path ref={road} d="M29.2 15A6 6 0 1 0 24 24A6 6 0 1 1 18.8 33" stroke={`url(#${uid}road)`} strokeWidth="8" strokeLinecap="round"/>
+        <path d="M29.2 15A6 6 0 1 0 24 24A6 6 0 0 1 25.55 35.8" stroke="#44403C" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2.2 2.4"/>
+        <g ref={arrow} transform="translate(22.96 35.91) rotate(100)">
+          <circle r="6" fill={`url(#${uid}glow)`}/>
+          <path d="M0 -3.5L2.9 3L0 1.5L-2.9 3Z" fill={`url(#${uid}arrow)`} stroke="#0C0A09" strokeWidth=".7" strokeLinejoin="round"/>
+          <path d="M0 -2.3L1.2 .6L0 .1Z" fill="#FEF9C3" fillOpacity=".55"/>
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 function LandingPage() {
   const { data: session, status } = useSession() as { data: { user?: { role?: string } } | null; status: string };
   const [nativeApp, setNativeApp] = useState<boolean | null>(null);
+  const [startupDone, setStartupDone] = useState(false);
   useEffect(() => {
     setNativeApp(Capacitor.isNativePlatform());
   }, []);
@@ -121,16 +181,8 @@ function LandingPage() {
   }, []);
 
   // Restore the verified session before showing the public landing page.
-  if (nativeApp === null || (nativeApp && status === "loading")) {
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        style={{ minHeight: "100dvh", display: "grid", placeItems: "center", background: "#0b0c10", color: "#f3f4f6" }}
-      >
-        Ouverture de StrasDrive…
-      </div>
-    );
+  if (nativeApp === null || (nativeApp && (status === "loading" || !startupDone))) {
+    return <StartupLogo ready={nativeApp === true && status !== "loading"} onDone={() => setStartupDone(true)} />;
   }
   if (nativeApp && session?.user) {
     const destination =
