@@ -78,10 +78,6 @@ function FleetPage() {
         <div className="flex justify-center mb-6"><a href="/" aria-label="Accueil StrasDrive"><KovaLogo size={38} /></a></div>
         <h1 className="text-center" style={{ fontSize: "1.5rem" }}>Sociétés VTC</h1>
         <p className="text-center small muted mt-1 mb-6">Vous exploitez un véhicule ou une flotte ? Présentez votre société pour rejoindre le programme pilote StrasDrive.</p>
-        <div className="flex wrap gap-3 mt-4 mb-6">
-          <a href="#demande-societe" className="btn btn-primary">Inscrire ma société</a>
-          <a href="/login" className="btn btn-secondary">Se connecter</a>
-        </div>
         <section id="demande-societe" aria-labelledby="fleet-request-title">
           <h2 id="fleet-request-title">Demande d’inscription</h2>
           {status === "sent" ? (
