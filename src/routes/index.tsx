@@ -141,13 +141,10 @@ function StartupLogo({ ready, onDone }: { ready: boolean; onDone: () => void }) 
     <div role="status" aria-label="Ouverture de StrasDrive" style={{ minHeight: "100dvh", display: "grid", placeItems: "center", background: "#0b0c10" }}>
       <svg width="128" height="128" viewBox="0 0 48 48" fill="none" aria-hidden="true">
         <defs>
-          <linearGradient id={uid+"tile"} x1="8" y1="2" x2="40" y2="46" gradientUnits="userSpaceOnUse"><stop stopColor="#292524"/><stop offset="1" stopColor="#0C0A09"/></linearGradient>
           <linearGradient id={uid+"road"} x1="14" y1="8" x2="34" y2="40" gradientUnits="userSpaceOnUse"><stop stopColor="#FAFAF9"/><stop offset="1" stopColor="#E7E5E4"/></linearGradient>
           <linearGradient id={uid+"arrow"} x1="0" y1="-3.5" x2="0" y2="3" gradientUnits="userSpaceOnUse"><stop stopColor="#EAB308"/><stop offset="1" stopColor="#A16207"/></linearGradient>
           <radialGradient id={uid+"glow"}><stop stopColor="#EAB308" stopOpacity=".35"/><stop offset="1" stopColor="#EAB308" stopOpacity="0"/></radialGradient>
         </defs>
-        <rect width="48" height="48" rx="14" fill={`url(#${uid}tile)`}/>
-        <rect x=".5" y=".5" width="47" height="47" rx="13.5" stroke="#FAFAF9" strokeOpacity=".08"/>
         <path ref={road} d="M29.2 15A6 6 0 1 0 24 24A6 6 0 1 1 18.8 33" stroke={`url(#${uid}road)`} strokeWidth="8" strokeLinecap="round"/>
         <path d="M29.2 15A6 6 0 1 0 24 24A6 6 0 0 1 25.55 35.8" stroke="#44403C" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2.2 2.4"/>
         <g ref={arrow} transform="translate(22.96 35.91) rotate(100)">
