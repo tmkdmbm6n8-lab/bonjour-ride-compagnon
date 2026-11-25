@@ -4,6 +4,7 @@ import { useSearchParams } from '@/lib/archive-navigation';
 import {createFileRoute} from '@tanstack/react-router';
 import PublicLayout from '@/components/PublicLayout';
 import { Mail, MessageSquare, LifeBuoy } from 'lucide-react';
+import { KovaLogo } from "@/components/brand/KovaLogo";
 import ContactForm from '@/components/ContactForm';
 
 
@@ -72,51 +73,54 @@ function FleetPage() {
   }
 
   return (
-    <div className="prose-page" style={{ maxWidth: 920 }}>
-      <h1>Sociétés VTC</h1>
-      <p>Vous exploitez un véhicule ou une flotte ? Présentez votre société pour rejoindre le programme pilote StrasDrive.</p>
-      <div className="flex wrap gap-3 mt-4 mb-6">
-        <a href="#demande-societe" className="btn btn-primary">Inscrire ma société</a>
-        <a href="/login" className="btn btn-secondary">Se connecter</a>
+    <div className="auth-page brand-theme">
+      <div className="auth-card animate-in">
+        <div className="flex justify-center mb-6"><a href="/" aria-label="Accueil StrasDrive"><KovaLogo size={38} /></a></div>
+        <h1 className="text-center" style={{ fontSize: "1.5rem" }}>Sociétés VTC</h1>
+        <p className="text-center small muted mt-1 mb-6">Vous exploitez un véhicule ou une flotte ? Présentez votre société pour rejoindre le programme pilote StrasDrive.</p>
+        <div className="flex wrap gap-3 mt-4 mb-6">
+          <a href="#demande-societe" className="btn btn-primary">Inscrire ma société</a>
+          <a href="/login" className="btn btn-secondary">Se connecter</a>
+        </div>
+        <section id="demande-societe" aria-labelledby="fleet-request-title">
+          <h2 id="fleet-request-title">Demande d’inscription</h2>
+          {status === "sent" ? (
+            <p role="status">Votre demande a été transmise. L’équipe StrasDrive vous recontactera par e-mail.</p>
+          ) : (
+            <>
+              <p className="small muted">L’équipe examine votre demande et vous contacte pour la suite du parcours.</p>
+              <form onSubmit={submit} className="flex-col gap-3 mt-4">
+                <label className="field">Raison sociale
+                  <input className="input" name="legalName" autoComplete="organization" minLength={2} maxLength={150} required />
+                </label>
+                <label className="field">SIRET
+                  <input className="input" name="siret" inputMode="numeric" maxLength={20} required />
+                </label>
+                <label className="field">Nom du contact
+                  <input className="input" name="name" autoComplete="name" minLength={2} maxLength={100} required />
+                </label>
+                <label className="field">E-mail professionnel
+                  <input className="input" name="email" type="email" autoComplete="email" maxLength={254} required />
+                </label>
+                <label className="field">Nombre de véhicules
+                  <input className="input" name="vehicles" type="number" min={1} max={10000} step={1} required />
+                </label>
+                <label className="field">Précisions (facultatif)
+                  <textarea className="input" name="details" maxLength={1200} rows={3} />
+                </label>
+                <div hidden aria-hidden="true">
+                  <label>Laisser vide <input name="company" tabIndex={-1} autoComplete="off" /></label>
+                </div>
+                {error && <p role="alert" className="input-error-msg">{error}</p>}
+                <button type="submit" className="btn btn-primary btn-lg btn-full" disabled={status === "sending"}>
+                  {status === "sending" ? "Envoi…" : "Envoyer ma demande"}
+                </button>
+                <a href="/privacy" className="small">Politique de confidentialité</a>
+              </form>
+            </>
+          )}
+        </section>
       </div>
-      <section className="card card-pad" id="demande-societe" aria-labelledby="fleet-request-title">
-        <h2 id="fleet-request-title">Demande d’inscription</h2>
-        {status === "sent" ? (
-          <p role="status">Votre demande a été transmise. L’équipe StrasDrive vous recontactera par e-mail.</p>
-        ) : (
-          <>
-            <p className="small muted">L’équipe examine votre demande et vous contacte pour la suite du parcours.</p>
-            <form onSubmit={submit} className="flex-col gap-3 mt-4">
-              <label className="field">Raison sociale
-                <input className="input" name="legalName" autoComplete="organization" minLength={2} maxLength={150} required />
-              </label>
-              <label className="field">SIRET
-                <input className="input" name="siret" inputMode="numeric" maxLength={20} required />
-              </label>
-              <label className="field">Nom du contact
-                <input className="input" name="name" autoComplete="name" minLength={2} maxLength={100} required />
-              </label>
-              <label className="field">E-mail professionnel
-                <input className="input" name="email" type="email" autoComplete="email" maxLength={254} required />
-              </label>
-              <label className="field">Nombre de véhicules
-                <input className="input" name="vehicles" type="number" min={1} max={10000} step={1} required />
-              </label>
-              <label className="field">Précisions (facultatif)
-                <textarea className="input" name="details" maxLength={1200} rows={3} />
-              </label>
-              <div hidden aria-hidden="true">
-                <label>Laisser vide <input name="company" tabIndex={-1} autoComplete="off" /></label>
-              </div>
-              {error && <p role="alert" className="input-error-msg">{error}</p>}
-              <button type="submit" className="btn btn-primary" disabled={status === "sending"}>
-                {status === "sending" ? "Envoi…" : "Envoyer ma demande"}
-              </button>
-              <a href="/privacy" className="small">Politique de confidentialité</a>
-            </form>
-          </>
-        )}
-      </section>
     </div>
   );
 }
