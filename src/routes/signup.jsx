@@ -271,6 +271,11 @@ function SignupForm() {
         </h1>
         <p className="text-center muted small mt-1 mb-6">Inscription gratuite, prêt en quelques secondes</p>
 
+        {/* Bouton Sociétés VTC */}
+        <a href="/contact?topic=fleet_application" className="btn btn-secondary btn-full mb-4">
+          Sociétés VTC
+        </a>
+
         {/* Boutons d'inscription OAuth Google et Apple */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
           <button
