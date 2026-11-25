@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { apiFetch } from '@/lib/archive-fetch';
 import { useSearchParams } from '@/lib/archive-navigation';
 import {createFileRoute} from '@tanstack/react-router';
 import PublicLayout from '@/components/PublicLayout';
@@ -24,8 +26,104 @@ const CHANNELS = [
   },
 ];
 
+function FleetPage() {
+  const [status, setStatus] = useState("idle");
+  const [error, setError] = useState("");
+
+  async function submit(event) {
+    event.preventDefault();
+    if (status !== "idle") return;
+    const form = new FormData(event.currentTarget);
+    const field = (name) => String(form.get(name) || "").trim();
+    const company = field("legalName");
+    const siret = field("siret").replace(/\s/g, "");
+    const name = field("name");
+    const email = field("email");
+    if (company.length < 2 || name.length < 2 || !/^\d{14}$/.test(siret)) {
+      setError("Vérifiez le nom de la société, le contact et le SIRET à 14 chiffres.");
+      return;
+    }
+    setStatus("sending");
+    setError("");
+    try {
+      const response = await apiFetch("/api/contact", {
+        method: "POST",
+        body: JSON.stringify({
+          topic: "fleet_application",
+          name,
+          email,
+          company: field("company"),
+          message: [
+            `Société : ${company}`,
+            `SIRET : ${siret}`,
+            `Nombre de véhicules : ${field("vehicles")}`,
+            field("details"),
+          ].filter(Boolean).join("\n"),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || result.ok !== true)
+        throw new Error(result.error || "Impossible d’envoyer la demande.");
+      setStatus("sent");
+    } catch (err) {
+      setError(err.message || "Impossible d’envoyer la demande.");
+      setStatus("idle");
+    }
+  }
+
+  return (
+    <div className="prose-page" style={{ maxWidth: 920 }}>
+      <h1>Sociétés VTC</h1>
+      <p>Vous exploitez un véhicule ou une flotte ? Présentez votre société pour rejoindre le programme pilote StrasDrive.</p>
+      <div className="flex wrap gap-3 mt-4 mb-6">
+        <a href="#demande-societe" className="btn btn-primary">Inscrire ma société</a>
+        <a href="/login" className="btn btn-secondary">Se connecter</a>
+      </div>
+      <section className="card card-pad" id="demande-societe" aria-labelledby="fleet-request-title">
+        <h2 id="fleet-request-title">Demande d’inscription</h2>
+        {status === "sent" ? (
+          <p role="status">Votre demande a été transmise. L’équipe StrasDrive vous recontactera par e-mail.</p>
+        ) : (
+          <>
+            <p className="small muted">L’équipe examine votre demande et vous contacte pour la suite du parcours.</p>
+            <form onSubmit={submit} className="flex-col gap-3 mt-4">
+              <label className="field">Raison sociale
+                <input className="input" name="legalName" autoComplete="organization" minLength={2} maxLength={150} required />
+              </label>
+              <label className="field">SIRET
+                <input className="input" name="siret" inputMode="numeric" maxLength={20} required />
+              </label>
+              <label className="field">Nom du contact
+                <input className="input" name="name" autoComplete="name" minLength={2} maxLength={100} required />
+              </label>
+              <label className="field">E-mail professionnel
+                <input className="input" name="email" type="email" autoComplete="email" maxLength={254} required />
+              </label>
+              <label className="field">Nombre de véhicules
+                <input className="input" name="vehicles" type="number" min={1} max={10000} step={1} required />
+              </label>
+              <label className="field">Précisions (facultatif)
+                <textarea className="input" name="details" maxLength={1200} rows={3} />
+              </label>
+              <div hidden aria-hidden="true">
+                <label>Laisser vide <input name="company" tabIndex={-1} autoComplete="off" /></label>
+              </div>
+              {error && <p role="alert" className="input-error-msg">{error}</p>}
+              <button type="submit" className="btn btn-primary" disabled={status === "sending"}>
+                {status === "sending" ? "Envoi…" : "Envoyer ma demande"}
+              </button>
+              <a href="/privacy" className="small">Politique de confidentialité</a>
+            </form>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function ContactPage() {
   const params = useSearchParams();
+  if (params.get('topic') === 'fleet_application') return <FleetPage />;
   const topic = ['ride_issue','payments','safety','driver_support','data_request'].includes(params.get('topic')) ? params.get('topic') : 'general';
   const rideId = (params.get('ride') || '').slice(0,80).replace(/[^a-zA-Z0-9-]/g,'');
   const context = rideId ? `Référence de course : ${rideId}\n\nDécrivez votre demande : ` : '';
