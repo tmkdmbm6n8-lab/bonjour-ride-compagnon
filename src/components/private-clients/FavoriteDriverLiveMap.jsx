@@ -1,18 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import Modal from "@/components/ui/Modal";
 import { apiFetch } from "@/lib/archive-fetch";
 import { watchRefresh } from "@/lib/live-refresh";
 
 const MapView = lazy(() => import("@/components/maps/MapView"));
-const messages = {
-  loading: "Recherche de la position…",
-  offline: "Votre chauffeur est hors ligne.",
-  waiting: "En attente d’une position GPS récente.",
-  unavailable: "La position de ce chauffeur est indisponible.",
-};
+const STRASBOURG = { lat: 48.5734, lng: 7.7521 };
 
-export default function FavoriteDriverLiveMap({ driverId, onClose }) {
-  const [location, setLocation] = useState({ status: "loading" });
+export default function FavoriteDriverLiveMap({ driverId }) {
+  const [position, setPosition] = useState(null);
 
   useEffect(() => {
     let expiry;
@@ -23,27 +17,22 @@ export default function FavoriteDriverLiveMap({ driverId, onClose }) {
         const data = await response.json();
         if (!isCurrent() || signal.aborted || document.hidden) return;
         clearTimeout(expiry);
-        if (!response.ok || (data.driverId && data.driverId !== driverId)) {
-          setLocation({ status: "unavailable" });
+        const remaining = data.expiresInMs - (Date.now() - started);
+        if (!response.ok || data.driverId !== driverId || data.status !== "online" ||
+            !data.position || !Number.isFinite(remaining) || remaining <= 0) {
+          setPosition(null);
           return;
         }
-        if (data.status === "online") {
-          const remaining = data.expiresInMs - (Date.now() - started);
-          if (!Number.isFinite(remaining) || remaining <= 0 || !data.position) {
-            setLocation({ status: "waiting" });
-            return;
-          }
-          expiry = setTimeout(() => setLocation({ status: "waiting" }), remaining);
-        }
-        setLocation(data);
+        expiry = setTimeout(() => setPosition(null), remaining);
+        setPosition(data.position);
       } catch {
-        if (isCurrent() && !signal.aborted) setLocation({ status: "unavailable" });
+        if (isCurrent() && !signal.aborted) setPosition(null);
       }
     }, 5000);
     const clearOnHide = () => {
       if (!document.hidden) return;
       clearTimeout(expiry);
-      setLocation({ status: "loading" });
+      setPosition(null);
     };
     document.addEventListener("visibilitychange", clearOnHide);
     return () => {
@@ -54,21 +43,14 @@ export default function FavoriteDriverLiveMap({ driverId, onClose }) {
   }, [driverId]);
 
   return (
-    <Modal open onClose={onClose} title="Votre chauffeur sur la carte" portal sheetOnMobile={false} maxWidth={620}>
-      {location.status === "online" ? (
-        <>
-          <p className="small muted mb-2">En ligne · position approximative</p>
-          <div style={{ height: "min(52dvh, 420px)", overflow: "hidden", borderRadius: 14 }}>
-            <Suspense fallback={<p role="status">Chargement de la carte…</p>}>
-              <MapView
-                center={location.position}
-                followPosition={location.position}
-                drivers={[{ id: driverId, location: location.position }]}
-              />
-            </Suspense>
-          </div>
-        </>
-      ) : <p className="small muted" role="status">{messages[location.status] || messages.unavailable}</p>}
-    </Modal>
+    <div className="mt-4" style={{ height: "clamp(200px, 34dvh, 320px)", overflow: "hidden", borderRadius: 14 }}>
+      <Suspense fallback={null}>
+        <MapView
+          center={position ?? STRASBOURG}
+          followPosition={position}
+          drivers={position ? [{ id: driverId, location: position }] : []}
+        />
+      </Suspense>
+    </div>
   );
 }

@@ -11,7 +11,6 @@ import { useToast } from "@/components/ui/Toast";
 function FavoritePage() {
   const toast = useToast();
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [mapDriverId, setMapDriverId] = useState(null);
   const [state, setState] = useState({ loading: true, driver: null, error: "" });
 
   const load = useCallback(async () => {
@@ -60,10 +59,9 @@ function FavoritePage() {
           </button>
         </div>
       ) : (
-        <FavoriteDriverCard driver={state.driver} onRemove={remove} onOpenMap={() => setMapDriverId(state.driver?.id)} />
-      )}
-      {mapDriverId && mapDriverId === state.driver?.id && (
-        <FavoriteDriverLiveMap key={mapDriverId} driverId={mapDriverId} onClose={() => setMapDriverId(null)} />
+        <FavoriteDriverCard driver={state.driver} onRemove={remove}>
+          {state.driver?.id && <FavoriteDriverLiveMap key={state.driver.id} driverId={state.driver.id} />}
+        </FavoriteDriverCard>
       )}
     </div>
   );
