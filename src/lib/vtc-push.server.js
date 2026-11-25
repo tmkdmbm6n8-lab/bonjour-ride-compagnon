@@ -25,10 +25,44 @@ async function sendApple(token, message) {
     }
     const host = APNS_ENV === "sandbox" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
     const payload = {...message.data, aps:{alert:message.notification,sound:"default",...message.apns?.payload?.aps}};
-    const response = await fetch("https://"+host+"/3/device/"+token,{method:"POST",headers:{authorization:"bearer "+jwtCache.value,"apns-topic":APPLE_BUNDLE_ID,"apns-push-type":"alert","apns-priority":"10","apns-expiration":message.apns?.headers?.["apns-expiration"] || "0","content-type":"application/json"},body:JSON.stringify(payload),signal:AbortSignal.timeout(SEND_TIMEOUT_MS)});
-    log({provider:"apns",status:response.status,outcome:response.ok?"success":"failed"});
-    return {ok:response.ok,stale:response.status===410};
-  } catch(e) { log({provider:"apns",outcome:"network_or_configuration_error"}); return {ok:false}; }
+    const { connect } = await import("node:http2");
+    const response = await new Promise((resolve, reject) => {
+      const client = connect("https://" + host);
+      let timer;
+      let settled = false;
+      const finish = (error, result) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        client.destroy();
+        if (error) reject(error); else resolve(result);
+      };
+      client.on("error", error => finish(error));
+      timer = setTimeout(() => finish(new Error("APNs timeout")), SEND_TIMEOUT_MS);
+      try {
+        const req = client.request({
+          ":method": "POST", ":path": "/3/device/" + token,
+          authorization: "bearer " + jwtCache.value,
+          "apns-topic": APPLE_BUNDLE_ID, "apns-push-type": "alert",
+          "apns-priority": "10", "apns-expiration": message.apns?.headers?.["apns-expiration"] || "0",
+          "content-type": "application/json"
+        });
+        let status = 0, body = "";
+        req.setEncoding("utf8");
+        req.on("response", headers => { status = Number(headers[":status"]); });
+        req.on("data", chunk => { body += chunk; });
+        req.on("error", error => finish(error));
+        req.on("end", () => finish(null, {status, body}));
+        req.end(JSON.stringify(payload));
+      } catch (error) { finish(error); }
+    });
+    let reason;
+    try { reason = JSON.parse(response.body).reason; } catch {}
+    const ok = response.status === 200;
+    log({provider:"apns",environment:APNS_ENV || "production",status:response.status,reason,outcome:ok?"success":"failed"});
+    console.info("[APNs]", response.status, reason || "accepted");
+    return {ok,stale:response.status===410};
+  } catch(e) { log({provider:"apns",outcome:"network_or_configuration_error",code:e?.code || e?.name}); console.error("[APNs] transport error", e?.code || e?.name); return {ok:false}; }
 }
 async function sendOne(token, message, headers) {
   if (isApnsHexToken(token)) return sendApple(token,message);
