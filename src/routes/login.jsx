@@ -129,7 +129,7 @@ function LoginForm() {
         <p className="text-center muted small mt-1 mb-6"> Connectez-vous pour poursuivre votre voyage </p>
 
         <a href="/contact?topic=fleet_application" className="btn btn-secondary btn-full mb-4">
-          Sociétés VTC
+          Gérer votre flotte
         </a>
 
         {searchParams.get("suspended") && (
