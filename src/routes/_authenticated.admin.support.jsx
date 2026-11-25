@@ -16,6 +16,7 @@ const TOPIC_LABEL = {
   general: 'Général',
   ride_issue: 'Problème de course',
   driver_support: 'Assistance chauffeurs',
+  fleet_application: 'Inscription société VTC',
   driver_conversation: 'Conversation chauffeur',
   payments: 'Paiements',
   safety: 'Sécurité',
@@ -27,6 +28,7 @@ const TOPIC_TONE = {
   ride_issue: 'badge-warning',
   payments: 'badge-info',
   driver_support: 'badge-gold',
+  fleet_application: 'badge-gold',
   data_request: 'badge-neutral',
   general: 'badge-neutral',
 };
