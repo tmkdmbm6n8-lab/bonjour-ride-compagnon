@@ -5,6 +5,7 @@ import {createFileRoute} from '@tanstack/react-router';
 import PublicLayout from '@/components/PublicLayout';
 import { Mail, MessageSquare, LifeBuoy } from 'lucide-react';
 import { KovaLogo } from "@/components/brand/KovaLogo";
+import FleetWorkspace from "@/components/FleetWorkspace";
 import ContactForm from '@/components/ContactForm';
 
 
@@ -123,6 +124,7 @@ function FleetPage() {
 
 function ContactRoute() {
   const params = useSearchParams();
+  if (params.get('topic') === 'fleet') return <FleetWorkspace />;
   if (params.get('topic') === 'fleet_application') {
     return (
       <div className="landing-page brand-theme">
