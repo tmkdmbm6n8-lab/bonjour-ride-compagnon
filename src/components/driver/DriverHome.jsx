@@ -86,6 +86,17 @@ export default function DriverHome({
   return (
     <div className={`drv-cockpit-root ${online ? "is-online" : ""}`}>
       <style>{`
+        .drv-online-status.sd-online-signature { position: relative; isolation: isolate; overflow: hidden; border-radius: 12px; justify-content: flex-start; gap: 12px; box-shadow: none; animation: none; }
+        .drv-online-status.sd-online-signature::before { content: none; animation: none; }
+        .drv-online-status.sd-online-signature::after { content: ""; position: absolute; inset: auto 0 0; width: 100%; height: 1px; border: 0; background: linear-gradient(90deg, transparent, currentColor, transparent); pointer-events: none; animation: sdSignatureEdge 8s ease-in-out infinite; }
+        .sd-online-signature .sd-signature-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; animation: sdSignatureDot 6s ease-in-out infinite; }
+        .sd-online-signature .drv-online-copy { flex: 1; text-align: left; }
+        .sd-online-signature .drv-online-copy strong { font-weight: 550; font-size: 14px; }
+        .sd-online-signature .drv-online-copy small { font-size: 11px; }
+        @keyframes sdSignatureEdge { 0%,100% { transform: scaleX(.3); opacity: .3; } 50% { transform: scaleX(1); opacity: .8; } }
+        @keyframes sdSignatureDot { 0%,100% { opacity: .65; } 50% { opacity: 1; box-shadow: 0 0 8px color-mix(in srgb, currentColor 27%, transparent); } }
+        @media (prefers-reduced-motion: reduce) { .drv-online-status.sd-online-signature::after, .sd-online-signature .sd-signature-dot { animation: none !important; } }
+
         .drv-go-btn.sd-go-dynamic { position: relative; top: -8px; isolation: isolate; overflow: visible; animation: none; }
         .sd-go-dynamic .drv-go-text { position: relative; z-index: 2; }
         .sd-go-beacon { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: 1; }
@@ -235,12 +246,12 @@ export default function DriverHome({
         ) : online ? (
           <button
             type="button"
-            className={`drv-online-status ${waiting ? "is-searching" : ""}`}
+            className={`drv-online-status sd-online-signature ${waiting ? "is-searching" : ""}`}
             onClick={() => setStatusOpen(true)}
             aria-haspopup="dialog"
             aria-expanded={statusOpen}
           >
-            <span className="drv-online-signal" aria-hidden="true"><Radio size={22} /></span>
+            <span className="sd-signature-dot" aria-hidden="true" />
             <span className="drv-online-copy"><strong>Vous êtes en ligne</strong><small>{waiting ? "En attente d’une course" : "Une course vous est proposée"}</small></span>
             <ChevronUp size={20} aria-hidden="true" />
           </button>
