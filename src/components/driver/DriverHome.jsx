@@ -130,15 +130,15 @@ export default function DriverHome({
         .sd-availability-chevron { transition: transform 450ms ease; }
         .sd-availability-open .sd-availability-chevron { transform: rotate(180deg); }
         @media (max-width: 900px) {
-          .sd-availability-content { height: calc(100dvh - var(--shell-nav-height, 84px) - max(16px, env(safe-area-inset-top, 0px)) - 72px); }
+          .sd-availability-content { height: max(0px, calc(50dvh - var(--shell-nav-height, 84px) - 72px)); }
           .sd-availability-panel:not(:has(.drv-online-stop)) { display: none; }
           .sd-availability-panel { grid-template-rows: 0fr; }
           .sd-availability-content { height: auto; }
           .sd-availability-content::before { content: ""; flex: 1 0 0; }
           .sd-availability-content::after { content: ""; flex: 1 0 0; }
           .sd-availability-panel { max-height: 0; overflow: hidden; transition: max-height 450ms cubic-bezier(.22,.61,.36,1), grid-template-rows 450ms cubic-bezier(.22,.61,.36,1); }
-          .sd-availability-open .sd-availability-panel { max-height: calc(100dvh - var(--shell-nav-height, 84px) - max(16px, env(safe-area-inset-top, 0px)) - 72px); }
-          .sd-availability-content { min-height: 0; height: calc(100dvh - var(--shell-nav-height, 84px) - max(16px, env(safe-area-inset-top, 0px)) - 72px); }
+          .sd-availability-open .sd-availability-panel { max-height: max(0px, calc(50dvh - var(--shell-nav-height, 84px) - 72px)); }
+          .sd-availability-content { min-height: 0; height: max(0px, calc(50dvh - var(--shell-nav-height, 84px) - 72px)); }
         }
         @media (prefers-reduced-motion: reduce) { .sd-availability-panel, .sd-availability-chevron { transition: none !important; } .sd-availability-content .sd-signature-dot { animation: none !important; } }
         .drv-go-btn.sd-go-dynamic { position: relative; top: -8px; isolation: isolate; overflow: visible; animation: none; }
