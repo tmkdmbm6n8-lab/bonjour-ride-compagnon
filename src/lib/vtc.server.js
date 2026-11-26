@@ -86,6 +86,7 @@ import {
 import {
   approximateRoute,
   routeFromGoogle,
+  routeFromOsrm,
   googleRouteRequest,
   GOOGLE_ROUTE_FIELDS,
   liveTarget,
@@ -307,6 +308,19 @@ async function routeBetween(a, b) {
   // Google only; an outage yields an explicitly approximate estimate without a road line.
   return (await googleRoute(a, b)) || approximateRoute(haversineDistance(a.lat, a.lng, b.lat, b.lng));
 }
+// Use OSM road geometry for navigation only, without changing fare estimates.
+async function osmNavigationRoute(a, b) {
+  const base = process.env.OSRM_BASE_URL;
+  if (!base) return null;
+  try {
+    const url = new URL(base.replace(/\/+$/, "") + "/route/v1/driving/" + a.lng + "," + a.lat + ";" + b.lng + "," + b.lat);
+    url.searchParams.set("overview", "full");
+    url.searchParams.set("geometries", "geojson");
+    url.searchParams.set("steps", "false");
+    const response = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    return response.ok ? routeFromOsrm(await response.json()) : null;
+  } catch { return null; }
+}
 /** Live leg driver → pickup/destination, shared by rider and driver through rides.live_route. */
 async function liveRoute(admin, r) {
   const target = liveTarget(r);
@@ -314,7 +328,9 @@ async function liveRoute(admin, r) {
   if (liveRouteFresh(r.live_route, r.status)) return r.live_route;
   const d = required(await admin.from("drivers").select("location").eq("user_id", r.driver_id).single());
   if (!validPoint(d.location) || !validPoint(target)) return null;
-  const route = await routeBetween(d.location, target);
+  const [original, osm] = await Promise.all([routeBetween(d.location, target), osmNavigationRoute(d.location, target)]);
+  // Keep the displayed geometry and distance from the same itinerary.
+  const route = osm || original;
   const value = { ...route, status: r.status, target: target.kind, at: new Date().toISOString() };
   required(await admin.from("rides").update({ live_route: value }).eq("id", r.id).eq("status", r.status));
   return value;
