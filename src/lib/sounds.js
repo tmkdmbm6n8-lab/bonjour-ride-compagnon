@@ -2,32 +2,54 @@
 // so the driver and the rider can tell them apart without looking at the screen.
 
 let ctx = null;
-
+let resumePending = null;
 function audio() {
   if (typeof window === 'undefined') return null;
-  if (!ctx) {
+  if (!ctx || ctx.state === 'closed') {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     ctx = new AC();
+    resumePending = null;
   }
-  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   return ctx;
 }
-
-// Browsers only allow sound after a first touch/click: unlock on the first interaction.
-if (typeof window !== 'undefined') {
-  const unlock = () => {
+function resumeAudio(c) {
+  if (c.state === 'running') return Promise.resolve(true);
+  if (resumePending?.context === c) return resumePending.promise;
+  const promise = new Promise(resolve => {
+    const timer = setTimeout(() => resolve(false), 500);
+    Promise.resolve().then(() => c.resume()).then(() => {
+      clearTimeout(timer); resolve(c.state === 'running');
+    }, error => {
+      clearTimeout(timer); console.warn('[StrasDrive audio] resume', error); resolve(false);
+    });
+  });
+  resumePending = { context: c, promise };
+  promise.then(() => { if (resumePending?.promise === promise) resumePending = null; });
+  return promise;
+}
+function unlock() {
+  try {
     const c = audio();
-    if (c) {
-      const b = c.createBuffer(1, 1, 22050);
-      const s = c.createBufferSource();
-      s.buffer = b; s.connect(c.destination); s.start(0);
-    }
-    window.removeEventListener('pointerdown', unlock);
-    window.removeEventListener('keydown', unlock);
-  };
-  window.addEventListener('pointerdown', unlock);
+    if (!c || c.state === 'running') return;
+    // Call resume synchronously within the user gesture for iOS.
+    c.resume().catch(error => console.warn('[StrasDrive audio] unlock', error));
+    const b = c.createBuffer(1, 1, 22050);
+    const source = c.createBufferSource();
+    source.buffer = b; source.connect(c.destination);
+    source.onended = () => source.disconnect();
+    source.start(0);
+  } catch (error) { console.warn('[StrasDrive audio] unlock', error); }
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', unlock, { passive: true });
+  window.addEventListener('touchend', unlock, { passive: true });
   window.addEventListener('keydown', unlock);
+  window.addEventListener('pageshow', unlock);
+  window.addEventListener('focus', unlock);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') unlock();
+  });
 }
 
 function tone(c, freq, at, dur, { type = 'sine', gain = 0.22 } = {}) {
@@ -97,11 +119,31 @@ function driverAlertBus(c, gain) {
 }
 
 export function playSound(kind) {
-  const melody = MELODIES[kind];
-  if (!melody) return;
+  if (!MELODIES[kind]) return;
   try { navigator.vibrate?.(VIBRATIONS[kind] || 0); } catch { /* unsupported */ }
-  const c = audio();
-  if (!c) return;
+  let cancelled = false, stop;
+  const attempt = async () => {
+    try {
+      let c = audio();
+      if (!c) return;
+      if (c.state !== 'running' && !await resumeAudio(c)) {
+        if (cancelled) return;
+        // Retry interrupted contexts; replace only a closed context.
+        c = audio();
+        if (!c || !await resumeAudio(c)) {
+          console.warn('[StrasDrive audio] unavailable', kind, c?.state);
+          return;
+        }
+      }
+      if (!cancelled) stop = renderSound(kind, c);
+    } catch (error) { console.warn('[StrasDrive audio] playback', kind, error); }
+  };
+  void attempt();
+  return () => { cancelled = true; if (typeof stop === 'function') stop(); };
+}
+
+function renderSound(kind, c) {
+  const melody = MELODIES[kind];
   const t0 = c.currentTime + 0.02;
   if (kind === 'offer') {
     const bus = driverAlertBus(c, 0.85 * 4);
@@ -152,7 +194,7 @@ export function playSound(kind) {
 /** Ring repeatedly (incoming ride request) until the returned stop() is called. */
 export function startRinging(kind = 'offer', everyMs = 1800) {
   let cancel = playSound(kind);
-  const id = setInterval(() => { cancel = playSound(kind); }, kind === 'offer' ? 2990 : everyMs);
+  const id = setInterval(() => { if (typeof cancel === 'function') cancel(); cancel = playSound(kind); }, kind === 'offer' ? 2990 : everyMs);
   return () => { clearInterval(id); if (typeof cancel === 'function') cancel(); };
 }
 
@@ -160,6 +202,7 @@ export function startRinging(kind = 'offer', everyMs = 1800) {
 export function playRadarBeep(kind = 'radar') {
   const c = audio();
   if (!c) return;
+  if (c.state !== 'running') { void resumeAudio(c); return; }
   const t0 = c.currentTime + 0.01;
   // Carillon doux à deux notes (sinus), bien plus agréable qu'un bip carré.
   const [a, b] = kind === 'police' ? [659, 880] : [784, 1047];
