@@ -54,8 +54,8 @@ function tone(c, freq, at, dur, { type = 'sine', gain = 0.22 } = {}) {
 
 // [frequency Hz, start offset s, duration s]
 export const MELODIES = {
-  'driver-online': [[261.63, 0, 0.7], [392, 0.15, 0.7], [523.25, 0.30, 0.7], [659.25, 0.45, 0.7]],
-  'driver-offline': [[523.25, 0, 0.7], [392, 0.15, 0.7], [261.63, 0.30, 0.7]],
+  'driver-online': [[261.63, 0, 0.7], [392, 0.15, 0.7], [523.25, 0.30, 0.7], [659.25, 0.45, 0.9]],
+  'driver-offline': [[523.25, 0, 0.7], [392, 0.15, 0.7], [261.63, 0.30, 0.55]],
   offer: [[110, 0, 0.55], [165, 0.15, 0.55], [262, 0.30, 0.55], [440, 0.45, 0.35]],
   'driver-found': [[784, 0, 0.22], [1175, 0.2, 0.5]],
   arrived: [[1047, 0, 0.2], [1047, 0.24, 0.2], [1319, 0.48, 0.55]],
@@ -104,21 +104,22 @@ export function playSound(kind) {
     return () => { clearTimeout(cleanup); master.gain.setTargetAtTime(0, c.currentTime, .015); setTimeout(() => master.disconnect(), 100); };
   }
   if (kind === 'driver-online' || kind === 'driver-offline') {
-    // Luxe preview: three sine layers, identical frequencies and envelopes.
-    for (const [f, at, dur] of melody) {
+    function note(f, at, dur, volume = 1) {
       const start = t0 + at;
-      for (const [harmonic, volume] of [[1, 0.12], [2, 0.025], [0.5, 0.045]]) {
-        const o = c.createOscillator();
-        const g = c.createGain();
+      for (const [harmonic, gain] of [[1, .12], [2, .025], [.5, .045]]) {
+        const o = c.createOscillator(), g = c.createGain();
         o.type = 'sine';
         o.frequency.value = f * harmonic;
-        g.gain.setValueAtTime(0.0001, start);
-        g.gain.exponentialRampToValueAtTime(volume, start + 0.035);
-        g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+        g.gain.setValueAtTime(.0001, start);
+        g.gain.exponentialRampToValueAtTime(Math.max(.00011, gain * volume), start + .035);
+        g.gain.exponentialRampToValueAtTime(.0001, start + dur);
         o.connect(g); g.connect(c.destination);
-        o.start(start); o.stop(start + dur + 0.02);
+        o.onended = () => { o.disconnect(); g.disconnect(); };
+        o.start(start); o.stop(start + dur + .02);
       }
     }
+    for (const [f, at, dur] of melody) note(f, at, dur);
+    if (kind === 'driver-online') note(659.25, .45 + .33, .9, .04);
     return;
   }
   for (const [f, at, dur] of melody) tone(c, f, t0 + at, dur, { type: kind === 'offer' ? 'triangle' : 'sine', gain: kind === 'message' ? 0.16 : 0.24 });
