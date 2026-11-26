@@ -86,20 +86,14 @@ export default function DriverHome({
   return (
     <div className={`drv-cockpit-root ${online ? "is-online" : ""}`}>
       <style>{`
-        .drv-go-btn.sd-go-dynamic { position: relative; isolation: isolate; overflow: visible; }
+        .drv-go-btn.sd-go-dynamic { position: relative; isolation: isolate; overflow: visible; animation: none; }
         .sd-go-dynamic .drv-go-text { position: relative; z-index: 2; }
         .sd-go-beacon { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: 1; }
-        .sd-go-beacon i { position: absolute; width: 14%; height: 3px; border-radius: 8px; background: currentColor; box-shadow: 0 0 8px currentColor; left: 43%; bottom: 9%; opacity: .25; animation: sdGoBeacon 2.4s ease-in-out infinite; }
-        .sd-go-beacon i:first-child { left: 25%; animation-delay: -.32s; }
-        .sd-go-beacon i:last-child { left: 61%; animation-delay: .32s; }
-        .sd-go-dynamic:not(:disabled) { animation: sdGoBreath 2.4s ease-in-out infinite; }
-        .sd-go-dynamic.sd-go-connecting { animation: none; }
-        .sd-go-connecting .sd-go-beacon i { animation: sdGoBeacon .65s ease-in-out infinite; }
-        .sd-go-connecting .sd-go-beacon i:first-child { animation-delay: -.18s; }
-        .sd-go-connecting .sd-go-beacon i:last-child { animation-delay: .18s; }
-        @keyframes sdGoBeacon { 0%,100% { opacity:.25; transform:scaleX(.7); } 50% { opacity:1; transform:scaleX(1.2); } }
-        @keyframes sdGoBreath { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.18); } }
-        @media (prefers-reduced-motion: reduce) { .drv-go-btn.sd-go-dynamic, .sd-go-beacon i { animation:none !important; opacity:1; } }
+        .sd-go-beacon i { position: absolute; inset: -9px; border: 2px solid currentColor; border-radius: inherit; opacity: 0; animation: sdGoSonar 8s linear infinite; }
+        .sd-go-beacon i:nth-child(2) { animation-delay: 4s; }
+        .sd-go-connecting .sd-go-beacon i { animation: none; opacity: 0; }
+        @keyframes sdGoSonar { 0% { transform: scale(.85); opacity: 0; } 20% { opacity: .8; } 100% { transform: scale(1.45); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { .drv-go-btn.sd-go-dynamic, .sd-go-beacon i { animation: none !important; } .sd-go-beacon i { opacity: 0; } }
       `}</style>
       {/* ── Carte plein écran ── */}
       <div className="drv-cockpit-map">
@@ -252,7 +246,7 @@ export default function DriverHome({
             aria-label={busy ? "Connexion en cours" : "Passer en ligne"}
             aria-busy={busy}
           >
-            <span className="sd-go-beacon" aria-hidden="true"><i /><i /><i /></span>
+            <span className="sd-go-beacon" aria-hidden="true"><i /><i /></span>
             <span className="drv-go-text">{busy ? "…" : "GO"}</span>
           </button>
         )}
