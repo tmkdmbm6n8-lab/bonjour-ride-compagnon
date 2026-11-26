@@ -54,6 +54,8 @@ function tone(c, freq, at, dur, { type = 'sine', gain = 0.22 } = {}) {
 
 // [frequency Hz, start offset s, duration s]
 export const MELODIES = {
+  'driver-online': [[523, 0, 0.12], [784, 0.11, 0.16], [1047, 0.24, 0.22]],
+  'driver-offline': [[698, 0, 0.15], [440, 0.14, 0.25]],
   offer: [[659, 0, 0.18], [831, 0.16, 0.18], [988, 0.32, 0.18], [1319, 0.48, 0.42]],
   'driver-found': [[784, 0, 0.22], [1175, 0.2, 0.5]],
   arrived: [[1047, 0, 0.2], [1047, 0.24, 0.2], [1319, 0.48, 0.55]],
