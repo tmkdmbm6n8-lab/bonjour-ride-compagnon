@@ -95,8 +95,8 @@ export default function DriverHome({
           .drv-cockpit-bottom-bar > .drv-online-status.sd-online-signature { width: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; background: #0c0d12; box-shadow: none; padding-inline: max(20px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-right, 0px)); }
         }
         .drv-online-status.sd-online-signature::before { content: none; animation: none; }
-        .drv-online-status.sd-online-signature::after { content: ""; position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: linear-gradient(110deg, transparent 10%, color-mix(in srgb, currentColor 13%, transparent) 50%, transparent 90%); pointer-events: none; opacity: 0; animation: sdSignatureEdge 8s linear infinite; }
-        .sd-online-signature .sd-signature-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; animation: sdSignatureDot 6s ease-in-out infinite; }
+        .drv-online-status.sd-online-signature::after { content: ""; position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: linear-gradient(110deg, transparent 10%, color-mix(in srgb, var(--gold-500, #eab308) 10%, transparent) 50%, transparent 90%); pointer-events: none; opacity: 0; animation: sdSignatureEdge 8s linear infinite; }
+        .sd-online-signature .sd-signature-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--gold-500, #eab308); color: var(--gold-500, #eab308); animation: sdSignatureDot 6s ease-in-out infinite; }
         .sd-online-signature .drv-online-copy { flex: 1; text-align: left; }
         .sd-online-signature .drv-online-copy strong { font-weight: 550; font-size: 14px; }
         .sd-online-signature .drv-online-copy small { font-size: 11px; }
@@ -125,7 +125,7 @@ export default function DriverHome({
         .sd-availability-content .drv-online-sheet-waiting { margin: 0; padding: 24px 24px 0; }
         .sd-availability-content .drv-online-sheet-waiting p { max-width: 320px; margin-inline: auto; color: #94a3b8; font-size: 12px; }
         .sd-availability-content .drv-online-sheet-waiting h4 { font-size: 15px; font-weight: 550; color: #f1f7f5; }
-        .sd-availability-content .sd-signature-dot { display: block; width: 7px; height: 7px; border-radius: 50%; background: #f1f7f5; margin: 0 auto 16px; animation: sdSignatureDot 6s ease-in-out infinite; }
+        .sd-availability-content .sd-signature-dot { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold-500, #eab308); color: var(--gold-500, #eab308); margin: 0 auto 16px; animation: sdSignatureDot 6s ease-in-out infinite; }
         .sd-availability-content .drv-online-stop { margin: 0 auto 32px; }
         .sd-availability-chevron { transition: transform 450ms ease; }
         .sd-availability-open .sd-availability-chevron { transform: rotate(180deg); }
