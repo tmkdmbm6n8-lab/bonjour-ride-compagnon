@@ -76,17 +76,18 @@ function tone(c, freq, at, dur, { type = 'sine', gain = 0.22 } = {}) {
 
 // [frequency Hz, start offset s, duration s]
 export const MELODIES = {
+  'ui-click': [[240,0,.32,.45]],
   'offer-accepted': [[440,0,.7],[660,.08,.7]],
   'offer-dismissed': [[110,0,.35],[220,.12,.4]],
   'driver-online': [[261.63, 0, 0.7], [392, 0.15, 0.7], [523.25, 0.30, 0.7], [659.25, 0.45, 0.9]],
   'driver-offline': [[523.25, 0, 0.7], [392, 0.15, 0.7], [261.63, 0.30, 0.55]],
   offer: [[110, 0, 0.55], [165, 0.15, 0.55], [262, 0.30, 0.55], [440, 0.45, 0.35]],
-  'driver-found': [[784, 0, 0.22], [1175, 0.2, 0.5]],
-  arrived: [[1047, 0, 0.2], [1047, 0.24, 0.2], [1319, 0.48, 0.55]],
-  started: [[880, 0, 0.18], [1109, 0.16, 0.4]],
-  message: [[1568, 0, 0.09], [1976, 0.11, 0.14]],
-  cancelled: [[784, 0, 0.25], [523, 0.24, 0.45]],
-  completed: [[784, 0, 0.18], [988, 0.16, 0.18], [1175, 0.32, 0.5]],
+  'driver-found': [[349,0,0.7],[523,0.12,0.85]],
+  'arrived': [[349,0,0.7],[523,0.12,0.7],[659,0.36,0.85]],
+  'started': [[262,0,0.55],[349,0.12,0.55],[523,0.24,0.85]],
+  'message': [[440,0,0.15],[660,0.06,0.32]],
+  'cancelled': [[440,0,0.18],[349,0.14,0.18],[174.5,0.28,0.55]],
+  'completed': [[196,0,0.8],[392,0.1,0.8],[294,0.35,1]],
 };
 
 const VIBRATIONS = {
@@ -122,7 +123,7 @@ function driverAlertBus(c, gain) {
 
 export function playSound(kind) {
   if (!MELODIES[kind]) return;
-  try { navigator.vibrate?.(VIBRATIONS[kind] || 0); } catch { /* unsupported */ }
+  try { if (kind !== 'ui-click') navigator.vibrate?.(VIBRATIONS[kind] || 0); } catch { /* unsupported */ }
   let cancelled = false, stop;
   const attempt = async () => {
     try {
@@ -147,6 +148,37 @@ export function playSound(kind) {
 function renderSound(kind, c) {
   const melody = MELODIES[kind];
   const t0 = c.currentTime + 0.02;
+  if (['driver-found','arrived','started','cancelled','message','completed','ui-click'].includes(kind)) {
+    const click = kind === 'ui-click', msg = kind === 'message';
+    const deep = kind === 'cancelled' || kind === 'completed';
+    const master = c.createGain(), comp = c.createDynamicsCompressor(), out = c.createGain();
+    master.gain.value = click || msg ? 1.8 : 1.65;
+    comp.threshold.value = click || msg ? -5 : -4; comp.ratio.value = 12;
+    out.gain.value = click ? .5 : 1;
+    master.connect(comp); comp.connect(out); out.connect(c.destination);
+    const layers = click ? [[1,.2],[.5,.07]] : msg ? [[1,.19],[.5,.12],[2,.025]] : deep ? [[1,.18],[.5,.12],[2,.025]] : [[1,.16],[.5,.075],[2,.025],[1.5,.025]];
+    const attack = click ? .02 : msg ? .008 : deep ? .025 : .035;
+    function note(f,a,d,glide=1,vol=1) {
+      for (const [h,amp] of layers) {
+        const o=c.createOscillator(), g=c.createGain(), at=t0+a;
+        o.type='sine'; o.frequency.setValueAtTime(f*h*glide,at);
+        if(glide!==1) o.frequency.exponentialRampToValueAtTime(f*h,at+Math.min(.12,d*.6));
+        g.gain.setValueAtTime(.00001,at);
+        g.gain.exponentialRampToValueAtTime(amp*vol,at+attack);
+        g.gain.exponentialRampToValueAtTime(.00001,at+d);
+        o.connect(g); g.connect(master); o.start(at); o.stop(at+d+.03);
+        o.onended=()=>{o.disconnect();g.disconnect();};
+      }
+    }
+    for(const n of melody) note(...n);
+    if(!click&&!msg) {
+      const [f,a,d]=melody[melody.length-1];
+      note(f,a+.33,d,1,kind==='cancelled'?.05:.08);
+      if(kind!=='cancelled') note(f,a+.66,d,1,.008);
+    }
+    setTimeout(()=>{master.disconnect();comp.disconnect();out.disconnect();},click||msg?1000:3000);
+    return;
+  }
   if (kind === 'offer-accepted' || kind === 'offer-dismissed') {
     const master = c.createGain();
     master.gain.value = .95;
@@ -234,3 +266,14 @@ export function startRinging(kind = 'offer', everyMs = 1800) {
 export function playRadarBeep() {
   // Intentionally silent.
 }
+
+ // Delegated UI feedback: actual interactive controls only, not map gestures or text.
+ if (typeof document !== 'undefined') {
+   document.addEventListener('click', event => {
+     if (event.defaultPrevented && !event.target?.closest?.('a,button,[role="button"]')) return;
+     const el = event.target?.closest?.('button,a[href],[role="button"],[role="tab"],[role="switch"],[role="menuitem"],input[type="checkbox"],input[type="radio"],select,summary');
+     if (!el || el.closest('[disabled],[aria-disabled="true"],[data-no-click-sound],.sd-close-control,.drv-go-btn:not(.vehicle-needed),.driver-incoming-accept,.driver-incoming-refuse,.driver-desktop-status button,.mapboxgl-map,.leaflet-container,.maplibregl-map')) return;
+     if (/^(retour|fermer|accepter|refuser|passer hors ligne|passer en ligne)$/i.test((el.getAttribute('aria-label')||el.textContent||'').trim())) return;
+     playSound('ui-click');
+   }, true);
+ }
