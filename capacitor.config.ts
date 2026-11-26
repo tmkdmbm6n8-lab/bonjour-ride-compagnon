@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   appName: 'StrasDrive',
   webDir: 'capacitor-shell',
   server: {
-    url: 'https://bonjour-ride-compagnon.lovable.app',
+    url: 'https://strasdrive.fr',
     cleartext: false,
     androidScheme: 'https',
     errorPath: 'offline.html',
@@ -16,7 +16,7 @@ const config: CapacitorConfig = {
     allowMixedContent: false,
   },
   ios: {
-    contentInset: 'always',
+    contentInset: 'never',
     scheme: 'StrasDrive',
     allowsLinkPreview: false,
     scrollEnabled: true,
