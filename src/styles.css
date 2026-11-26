@@ -133,6 +133,13 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* App mobile : fond sombre unique pendant tout le démarrage et les
+   changements d'écran, pour éviter le flash blanc entre le logo et l'accueil. */
+html.capacitor-native,
+html.capacitor-native body {
+  background: #0e0f12;
+}
+
 img,
 svg {
   display: block;

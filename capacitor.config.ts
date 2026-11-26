@@ -18,6 +18,7 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: 'never',
+    backgroundColor: '#0e0f12',
     scheme: 'StrasDrive',
     allowsLinkPreview: false,
     scrollEnabled: true,
