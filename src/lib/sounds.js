@@ -54,8 +54,8 @@ function tone(c, freq, at, dur, { type = 'sine', gain = 0.22 } = {}) {
 
 // [frequency Hz, start offset s, duration s]
 export const MELODIES = {
-  'driver-online': [[523, 0, 0.12], [784, 0.11, 0.16], [1047, 0.24, 0.22]],
-  'driver-offline': [[698, 0, 0.15], [440, 0.14, 0.25]],
+  'driver-online': [[261.63, 0, 0.7], [392, 0.15, 0.7], [523.25, 0.30, 0.7], [659.25, 0.45, 0.7]],
+  'driver-offline': [[523.25, 0, 0.7], [392, 0.15, 0.7], [261.63, 0.30, 0.7]],
   offer: [[659, 0, 0.18], [831, 0.16, 0.18], [988, 0.32, 0.18], [1319, 0.48, 0.42]],
   'driver-found': [[784, 0, 0.22], [1175, 0.2, 0.5]],
   arrived: [[1047, 0, 0.2], [1047, 0.24, 0.2], [1319, 0.48, 0.55]],
@@ -80,6 +80,24 @@ export function playSound(kind) {
   const c = audio();
   if (!c) return;
   const t0 = c.currentTime + 0.02;
+  if (kind === 'driver-online' || kind === 'driver-offline') {
+    // Luxe preview: three sine layers, identical frequencies and envelopes.
+    for (const [f, at, dur] of melody) {
+      const start = t0 + at;
+      for (const [harmonic, volume] of [[1, 0.12], [2, 0.025], [0.5, 0.045]]) {
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.type = 'sine';
+        o.frequency.value = f * harmonic;
+        g.gain.setValueAtTime(0.0001, start);
+        g.gain.exponentialRampToValueAtTime(volume, start + 0.035);
+        g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+        o.connect(g); g.connect(c.destination);
+        o.start(start); o.stop(start + dur + 0.02);
+      }
+    }
+    return;
+  }
   for (const [f, at, dur] of melody) tone(c, f, t0 + at, dur, { type: kind === 'offer' ? 'triangle' : 'sine', gain: kind === 'message' ? 0.16 : 0.24 });
 }
 
