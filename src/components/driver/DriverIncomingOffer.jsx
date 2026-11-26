@@ -24,6 +24,8 @@ export default function DriverIncomingOffer() {
   const [reservation, setReservation] = useState(null);
   const [busy, setBusy] = useState(false);
   const pendingAction = useRef(false);
+  const previousOffer = useRef(null);
+  const ringing = useRef(null);
   const handled = useRef(new Set());
   const [now, setNow] = useState(Date.now());
   const allowed = enabled && !loading && !ride && !profile?.isReportSuspended;
@@ -66,7 +68,9 @@ export default function DriverIncomingOffer() {
   }, [key]);
   useEffect(() => {
     if (!key) return;
-    return startRinging('offer');
+    const stop = startRinging('offer');
+    ringing.current = stop;
+    return () => { stop(); if (ringing.current === stop) ringing.current = null; };
   }, [key]);
   useEffect(() => {
     const activity = enabled && !loading ? driverOfferActivity(offer) : null;
@@ -74,8 +78,17 @@ export default function DriverIncomingOffer() {
     else void stopLiveActivity('driver_offer');
   }, [enabled, loading, offer?.rideId, offer?.receivedAt, offer?.expiresInSeconds]);
 
+  // Detect a visible offer disappearing, not unrelated socket events.
+  useEffect(() => {
+    const previous = previousOffer.current;
+    previousOffer.current = key;
+    if (previous && previous !== key && allowed && !pendingAction.current) {
+      playSound('offer-dismissed');
+    }
+  }, [key, allowed]);
   const dismiss = async () => {
     if (!incoming || pendingAction.current) return;
+    ringing.current?.();
     if (isReservation) { remember(incoming.id); setReservation(null); }
     else await decline();
     // No navigation: the underlying page and its scroll position stay intact.
@@ -93,14 +106,22 @@ export default function DriverIncomingOffer() {
         if (!response.ok) throw new Error(result.error || 'Réservation indisponible');
         remember(incoming.id); setReservation(null);
         router.push(`/driver/reservations?accepted=${encodeURIComponent(incoming.id)}`);
+        ringing.current?.();
+        previousOffer.current = null;
+        playSound('offer-accepted');
         toast('Réservation acceptée', 'success', 5000);
       } else {
         const acceptedRide = await accept();
         if (!acceptedRide) return;
         router.push('/driver/dashboard');
-        playSound('driver-found');
+        ringing.current?.();
+        previousOffer.current = null;
+        playSound('offer-accepted');
       }
-    } catch (error) { toast(error.message || 'Cette demande n’est plus disponible', 'error', 4500); }
+    } catch (error) {
+      if (previousOffer.current !== key) playSound('offer-dismissed');
+      toast(error.message || 'Cette demande n’est plus disponible', 'error', 4500);
+    }
     finally { pendingAction.current = false; setBusy(false); }
   };
   if (!incoming) return null;
@@ -117,7 +138,7 @@ export default function DriverIncomingOffer() {
         <span className={`driver-incoming-payment ${payment === 'cash' ? 'is-cash' : ''}`} aria-label={payment === 'cash' ? 'Paiement en espèces' : payment === 'card' ? 'Paiement par carte' : 'Paiement portefeuille'}>
           {payment === 'cash' ? <Banknote size={25} /> : <CreditCard size={25} />}
         </span>
-        <CloseControl onClick={dismiss} disabled={busy} label="Fermer la demande" />
+        <CloseControl silent onClick={dismiss} disabled={busy} label="Fermer la demande" />
       </header>
       <div className="driver-incoming-price"><span>{isReservation ? 'Tarif estimé' : 'Net chauffeur'}</span><strong>{price != null && Number.isFinite(Number(price)) ? money(Number(price)) : 'Non disponible'}</strong></div>
       {scheduledAt && <p className="driver-incoming-date">{new Date(scheduledAt).toLocaleString('fr-FR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Paris'})}</p>}
