@@ -76,6 +76,8 @@ function tone(c, freq, at, dur, { type = 'sine', gain = 0.22 } = {}) {
 
 // [frequency Hz, start offset s, duration s]
 export const MELODIES = {
+  'offer-accepted': [[440,0,.7],[660,.08,.7]],
+  'offer-dismissed': [[110,0,.35],[220,.12,.4]],
   'driver-online': [[261.63, 0, 0.7], [392, 0.15, 0.7], [523.25, 0.30, 0.7], [659.25, 0.45, 0.9]],
   'driver-offline': [[523.25, 0, 0.7], [392, 0.15, 0.7], [261.63, 0.30, 0.55]],
   offer: [[110, 0, 0.55], [165, 0.15, 0.55], [262, 0.30, 0.55], [440, 0.45, 0.35]],
@@ -145,6 +147,36 @@ export function playSound(kind) {
 function renderSound(kind, c) {
   const melody = MELODIES[kind];
   const t0 = c.currentTime + 0.02;
+  if (kind === 'offer-accepted' || kind === 'offer-dismissed') {
+    const master = c.createGain();
+    master.gain.value = .95;
+    const limiter = c.createDynamicsCompressor();
+    limiter.threshold.value = -4; limiter.knee.value = 5; limiter.ratio.value = 16;
+    master.connect(limiter); limiter.connect(c.destination);
+    const zen = kind === 'offer-accepted';
+    function voice(f, at, d, v, h, glide = 1) {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f*h*glide, at);
+      o.frequency.exponentialRampToValueAtTime(f*h, at+Math.min(.12,d*.6));
+      g.gain.setValueAtTime(.0001, at);
+      g.gain.exponentialRampToValueAtTime(v, at+.012);
+      g.gain.exponentialRampToValueAtTime(v*.35, at+d*.45);
+      g.gain.exponentialRampToValueAtTime(.0001, at+d);
+      o.connect(g); g.connect(master);
+      o.onended = () => { o.disconnect(); g.disconnect(); };
+      o.start(at); o.stop(at+d+.03);
+    }
+    for (const [f,a,d] of melody) {
+      const at = t0+a;
+      voice(f,at,d,.38,1,zen?1:1.5);
+      voice(f,at,d,.15,.5);
+      voice(f,at,d*.65,.09,2);
+      if (zen) voice(f,at,d*.8,.08,1.5);
+    }
+    setTimeout(() => { master.disconnect(); limiter.disconnect(); }, 1500);
+    return;
+  }
   if (kind === 'offer') {
     const bus = driverAlertBus(c, 0.85 * 4);
     const { master } = bus;
