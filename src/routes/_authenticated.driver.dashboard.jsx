@@ -261,6 +261,7 @@ function DriverDashboard() {
         : null
     : null;
   const navigating = Boolean(legTarget);
+  const { position: navigationFix } = useGeolocation({ watch: navigating, maxAge: 0 });
   const needsVehicle = profile && !profile.vehicle?.plate;
   const center = position || { lat: 48.5734, lng: 7.7521 }; // Strasbourg par défaut
 
@@ -346,7 +347,7 @@ function DriverDashboard() {
             <MapView
               center={center}
               zoom={16.5}
-              userPosition={position || undefined}
+              userPosition={(navigating ? navigationFix || position : position) || undefined}
               pickup={ride ? { lat: ride.pickup.lat, lng: ride.pickup.lng } : undefined}
               dropoff={
                 ride && ride.status === "in_progress" ? { lat: ride.dropoff.lat, lng: ride.dropoff.lng } : undefined
@@ -354,7 +355,7 @@ function DriverDashboard() {
               routeGeometry={driverRoute}
               fit
               fitTo={[position, ride.status === "in_progress" ? ride.dropoff : ride.pickup].filter(Boolean)}
-              navigationMode={false}
+              navigationMode={navigating}
             />
           </div>
 
