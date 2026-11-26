@@ -86,7 +86,7 @@ export default function DriverHome({
   return (
     <div className={`drv-cockpit-root ${online ? "is-online" : ""}`}>
       <style>{`
-        .drv-go-btn.sd-go-dynamic { position: relative; isolation: isolate; overflow: visible; animation: none; }
+        .drv-go-btn.sd-go-dynamic { position: relative; top: -8px; isolation: isolate; overflow: visible; animation: none; }
         .sd-go-dynamic .drv-go-text { position: relative; z-index: 2; }
         .sd-go-beacon { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: 1; }
         .sd-go-beacon i { position: absolute; inset: -9px; border: 2px solid currentColor; border-radius: inherit; opacity: 0; animation: sdGoSonar 8s linear infinite; }
