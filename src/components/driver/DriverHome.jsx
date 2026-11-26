@@ -93,6 +93,7 @@ export default function DriverHome({
         .sd-go-beacon i:nth-child(2) { animation-delay: 4s; }
         .sd-go-connecting .sd-go-beacon i { animation: none; opacity: 0; }
         .drv-go-btn.drv-online-stop:not(:disabled) { animation: sdOfflineBreath 8s ease-in-out infinite; }
+        .drv-go-btn.drv-online-stop { width: 72px; min-width: 72px; max-width: 72px; height: 72px; min-height: 72px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-inline: auto; flex: 0 0 72px; }
         @keyframes sdOfflineBreath {
           0%,100% { filter: drop-shadow(0 0 4px color-mix(in srgb, currentColor 13%, transparent)); }
           50% { filter: drop-shadow(0 0 18px color-mix(in srgb, currentColor 53%, transparent)); }
@@ -264,9 +265,8 @@ export default function DriverHome({
           <h4>Prêt pour votre prochaine course</h4>
           <p>Vous recevrez les nouvelles demandes ici. Vos clients privés peuvent voir votre position approximative tant que vous êtes en ligne.</p>
         </div>
-        <button type="button" className="drv-go-btn is-online drv-online-stop" onClick={onToggle} disabled={busy || loading}>
-          <Power size={20} aria-hidden="true" />
-          {busy ? "Déconnexion…" : "Passer hors ligne"}
+        <button type="button" className="drv-go-btn is-online drv-online-stop" onClick={onToggle} disabled={busy || loading} aria-label={busy ? "Déconnexion en cours" : "Passer hors ligne"} aria-busy={busy} title="Passer hors ligne">
+          <Power size={32} aria-hidden="true" />
         </button>
       </Modal>
 
