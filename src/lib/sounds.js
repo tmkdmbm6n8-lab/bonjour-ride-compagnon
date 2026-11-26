@@ -56,7 +56,7 @@ function tone(c, freq, at, dur, { type = 'sine', gain = 0.22 } = {}) {
 export const MELODIES = {
   'driver-online': [[261.63, 0, 0.7], [392, 0.15, 0.7], [523.25, 0.30, 0.7], [659.25, 0.45, 0.7]],
   'driver-offline': [[523.25, 0, 0.7], [392, 0.15, 0.7], [261.63, 0.30, 0.7]],
-  offer: [[659, 0, 0.18], [831, 0.16, 0.18], [988, 0.32, 0.18], [1319, 0.48, 0.42]],
+  offer: [[110, 0, 0.55], [165, 0.15, 0.55], [262, 0.30, 0.55], [440, 0.45, 0.35]],
   'driver-found': [[784, 0, 0.22], [1175, 0.2, 0.5]],
   arrived: [[1047, 0, 0.2], [1047, 0.24, 0.2], [1319, 0.48, 0.55]],
   started: [[880, 0, 0.18], [1109, 0.16, 0.4]],
@@ -80,6 +80,29 @@ export function playSound(kind) {
   const c = audio();
   if (!c) return;
   const t0 = c.currentTime + 0.02;
+  if (kind === 'offer') {
+    const master = c.createGain();
+    master.gain.value = 0.85;
+    master.connect(c.destination);
+    function note(f, offset, volume, dur) {
+      if (volume < 0.001) return;
+      const at = t0 + offset;
+      for (const [h, v] of [[1, .16], [.5, .07], [2, .035], [1.5, .025]]) {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = 'sine';
+        o.frequency.value = f * h;
+        g.gain.setValueAtTime(.00001, at);
+        g.gain.exponentialRampToValueAtTime(Math.max(.00002, v * volume), at + .015);
+        g.gain.exponentialRampToValueAtTime(.00001, at + dur);
+        o.connect(g); g.connect(master);
+        o.start(at); o.stop(at + dur + .03);
+      }
+    }
+    for (const [f, at, dur] of melody) note(f, at, 1, dur);
+    for (let i = 0; i < 3; i++) note(440, .45 + (i + 1) * .33, .08 * Math.pow(.1, i), .35);
+    const cleanup = setTimeout(() => master.disconnect(), 2000);
+    return () => { clearTimeout(cleanup); master.gain.setTargetAtTime(0, c.currentTime, .015); setTimeout(() => master.disconnect(), 100); };
+  }
   if (kind === 'driver-online' || kind === 'driver-offline') {
     // Luxe preview: three sine layers, identical frequencies and envelopes.
     for (const [f, at, dur] of melody) {
@@ -103,9 +126,9 @@ export function playSound(kind) {
 
 /** Ring repeatedly (incoming ride request) until the returned stop() is called. */
 export function startRinging(kind = 'offer', everyMs = 1800) {
-  playSound(kind);
-  const id = setInterval(() => playSound(kind), everyMs);
-  return () => clearInterval(id);
+  let cancel = playSound(kind);
+  const id = setInterval(() => { cancel = playSound(kind); }, kind === 'offer' ? 2990 : everyMs);
+  return () => { clearInterval(id); if (typeof cancel === 'function') cancel(); };
 }
 
 /** Bip court d'approche radar / police (sonar). */
