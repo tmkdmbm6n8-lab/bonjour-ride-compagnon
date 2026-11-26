@@ -7,19 +7,7 @@
   display: grid;
   min-height: 100dvh;
   place-items: center;
-  background: #000000;
-}
-.native-startup-logo svg {
-  width: 88px;
-  height: 88px;
-  animation: native-startup-in 320ms ease-out both;
-}
-@keyframes native-startup-in {
-  from { opacity: 0; transform: scale(.96); }
-  to { opacity: 1; transform: scale(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .native-startup-logo svg { animation: none; }
+  background: #0e0f12;
 }
 .native-startup-unresolved > .native-startup-logo,
 .capacitor-native .native-startup-unresolved > .landing-page {
