@@ -7059,6 +7059,18 @@ a.activity-pill:hover {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  animation: sd-rider-gps-glow 2s ease-in-out infinite;
+}
+
+@keyframes sd-rider-gps-glow {
+  0%, 100% { box-shadow: 0 0 5px #e9be7033; }
+  50% { box-shadow: 0 0 20px #e9be70aa; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-rider .modern-map .marker-dot-simple {
+    animation: none;
+  }
 }
 
 .shell-rider .modern-map .marker-dot-simple svg {
