@@ -23,7 +23,8 @@ describe('route rendering during an active ride', () => {
     map.sources.set('route', { setData: vi.fn() });
     expect(drawRoute(map, geometry)).toBe(true);
     expect(map.layers.get('route-line')).toMatchObject({ type: 'line', source: 'route' });
-    expect(map.layers.size).toBe(4);
+    expect(map.layers.size).toBe(1);
+    expect(map.layers.get('route-line')).toMatchObject({ paint: { 'line-width': 5, 'line-color': '#d4af37' }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
   });
 
   it('retries after an incomplete layer installation', () => {
