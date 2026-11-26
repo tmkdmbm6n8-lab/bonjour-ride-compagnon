@@ -95,8 +95,8 @@ export default function DriverHome({
           .drv-cockpit-bottom-bar > .drv-online-status.sd-online-signature { width: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; background: #0c0d12; box-shadow: none; padding-inline: max(20px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-right, 0px)); }
         }
         .drv-online-status.sd-online-signature::before { content: none; animation: none; }
-        .drv-online-status.sd-online-signature::after { content: ""; position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: linear-gradient(110deg, transparent 10%, color-mix(in srgb, var(--gold-500, #eab308) 10%, transparent) 50%, transparent 90%); pointer-events: none; opacity: 0; animation: sdSignatureEdge 2s linear infinite alternate; }
-        .sd-online-signature .sd-signature-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--gold-500, #eab308); color: var(--gold-500, #eab308); animation: sdSignatureDot 1.5s ease-in-out infinite; }
+        .drv-online-status.sd-online-signature::after { content: ""; position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: linear-gradient(110deg, transparent 10%, color-mix(in srgb, var(--gold-500, #eab308) 10%, transparent) 50%, transparent 90%); pointer-events: none; opacity: 0; animation: sdSignatureEdge 1s linear infinite alternate; }
+        .sd-online-signature .sd-signature-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--gold-500, #eab308); color: var(--gold-500, #eab308); animation: sdSignatureDot .75s ease-in-out infinite; }
         .sd-online-signature .drv-online-copy { flex: 1; text-align: left; }
         .sd-online-signature .drv-online-copy strong { font-weight: 550; font-size: 14px; }
         .sd-online-signature .drv-online-copy small { font-size: 11px; }
