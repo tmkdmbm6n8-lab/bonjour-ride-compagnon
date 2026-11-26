@@ -1,17 +1,25 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>StrasDrive — hors connexion</title>
-<style>body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0e0f12;color:#f3efe4;font-family:system-ui,sans-serif;text-align:center;padding:24px}
+<style>body{box-sizing:border-box;margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0e0f12;color:#f3efe4;font-family:system-ui,sans-serif;text-align:center;padding:24px}
 h1{color:#d4af37;font-size:22px;margin:0}p{margin:0;opacity:.75}button{background:#d4af37;color:#0e0f12;border:0;border-radius:999px;padding:12px 26px;font-weight:700;font-size:16px}</style>
 </head><body><h1>Connexion interrompue</h1><p>La page n'a pas pu se charger. Vérifiez votre réseau ou réessayez.</p>
-<button onclick="location.replace('https://bonjour-ride-compagnon.lovable.app')">Réessayer</button>
-<button onclick="location.replace('https://bonjour-ride-compagnon.lovable.app/login')">Retour à la connexion</button>
+<button onclick="location.replace('https://strasdrive.fr')">Réessayer</button>
+<button onclick="location.replace('https://strasdrive.fr/login')">Retour à la connexion</button>
 <script>
 // A failed navigation (including cancelled OAuth) is not proof of network loss.
 let recovering = false;
+const heading = document.querySelector('h1');
+const message = document.querySelector('p');
+function updateNetworkMessage() {
+  heading.textContent = navigator.onLine ? 'Chargement interrompu' : 'Pas de connexion';
+  message.textContent = navigator.onLine ? 'Réessayez ou revenez à la connexion.' : 'StrasDrive se reconnectera lorsque votre réseau sera disponible.';
+}
+updateNetworkMessage();
+window.addEventListener('offline', updateNetworkMessage);
 window.addEventListener('online', () => {
   if (recovering) return;
   recovering = true;
-  location.replace('https://bonjour-ride-compagnon.lovable.app');
+  location.replace('https://strasdrive.fr');
 });
 </script></body></html>
