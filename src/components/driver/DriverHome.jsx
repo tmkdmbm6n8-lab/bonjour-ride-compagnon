@@ -75,6 +75,8 @@ export default function DriverHome({
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const availabilityTouch = useRef(0);
+  useEffect(() => { if (!statusOpen) return; const close = e => { if (e.key === "Escape") setStatusOpen(false); }; window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, [statusOpen]);
   useEffect(() => {
     if (!online || !waiting) setStatusOpen(false);
   }, [online, waiting]);
@@ -116,6 +118,29 @@ export default function DriverHome({
         }
         @media (prefers-reduced-motion: reduce) { .modal-portal-root .drv-online-sheet .sd-signature-dot { animation: none !important; } }
 
+        .drv-cockpit-bottom-bar:has(> .sd-online-signature) { flex-direction: column; background: #0c0d12; pointer-events: auto; }
+        .sd-availability-panel { width: 100%; display: grid; grid-template-rows: 0fr; transition: grid-template-rows 450ms cubic-bezier(.22,.61,.36,1); background: #0c0d12; }
+        .sd-availability-content { min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+        .sd-availability-open .sd-availability-panel { grid-template-rows: 1fr; }
+        .sd-availability-content .drv-online-sheet-waiting { margin: 0; padding: 24px 24px 0; }
+        .sd-availability-content .drv-online-sheet-waiting p { max-width: 320px; margin-inline: auto; color: #94a3b8; font-size: 12px; }
+        .sd-availability-content .drv-online-sheet-waiting h4 { font-size: 15px; font-weight: 550; color: #f1f7f5; }
+        .sd-availability-content .sd-signature-dot { display: block; width: 7px; height: 7px; border-radius: 50%; background: #f1f7f5; margin: 0 auto 16px; animation: sdSignatureDot 6s ease-in-out infinite; }
+        .sd-availability-content .drv-online-stop { margin: 0 auto 32px; }
+        .sd-availability-chevron { transition: transform 450ms ease; }
+        .sd-availability-open .sd-availability-chevron { transform: rotate(180deg); }
+        @media (max-width: 900px) {
+          .sd-availability-content { height: calc(100dvh - var(--shell-nav-height, 84px) - max(16px, env(safe-area-inset-top, 0px)) - 72px); }
+          .sd-availability-panel:not(:has(.drv-online-stop)) { display: none; }
+          .sd-availability-panel { grid-template-rows: 0fr; }
+          .sd-availability-content { height: auto; }
+          .sd-availability-content::before { content: ""; flex: 1 0 0; }
+          .sd-availability-content::after { content: ""; flex: 1 0 0; }
+          .sd-availability-panel { max-height: 0; overflow: hidden; transition: max-height 450ms cubic-bezier(.22,.61,.36,1), grid-template-rows 450ms cubic-bezier(.22,.61,.36,1); }
+          .sd-availability-open .sd-availability-panel { max-height: calc(100dvh - var(--shell-nav-height, 84px) - max(16px, env(safe-area-inset-top, 0px)) - 72px); }
+          .sd-availability-content { min-height: 0; height: calc(100dvh - var(--shell-nav-height, 84px) - max(16px, env(safe-area-inset-top, 0px)) - 72px); }
+        }
+        @media (prefers-reduced-motion: reduce) { .sd-availability-panel, .sd-availability-chevron { transition: none !important; } .sd-availability-content .sd-signature-dot { animation: none !important; } }
         .drv-go-btn.sd-go-dynamic { position: relative; top: -8px; isolation: isolate; overflow: visible; animation: none; }
         .sd-go-dynamic .drv-go-text { position: relative; z-index: 2; }
         .sd-go-beacon { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: 1; }
@@ -255,7 +280,7 @@ export default function DriverHome({
       </div>
 
       {/* ── Bouton GO compact flottant en bas ── */}
-      <div className="drv-cockpit-bottom-bar">
+      <div className={`drv-cockpit-bottom-bar ${statusOpen && online && waiting && !loading && !needsVehicle ? "sd-availability-open" : ""}`}>
         {loading ? (
           <div className="drv-status-loading" role="status">Vérification du statut…</div>
         ) : needsVehicle ? (
@@ -266,13 +291,15 @@ export default function DriverHome({
           <button
             type="button"
             className={`drv-online-status sd-online-signature ${waiting ? "is-searching" : ""}`}
-            onClick={() => setStatusOpen(true)}
-            aria-haspopup="dialog"
+            onClick={() => waiting && setStatusOpen(v => !v)}
+            onTouchStart={e => { availabilityTouch.current = e.touches[0].clientY; }}
+            onTouchEnd={e => { const dy = e.changedTouches[0].clientY - availabilityTouch.current; if (waiting && Math.abs(dy) > 45) { e.preventDefault(); setStatusOpen(dy < 0); } }}
+            aria-controls="sd-availability-panel"
             aria-expanded={statusOpen}
           >
             <span className="sd-signature-dot" aria-hidden="true" />
             <span className="drv-online-copy"><strong>Vous êtes en ligne</strong><small>{waiting ? "En attente d’une course" : "Une course vous est proposée"}</small></span>
-            <ChevronUp size={20} aria-hidden="true" />
+            <ChevronUp size={20} className="sd-availability-chevron" aria-hidden="true" />
           </button>
         ) : (
           <button
@@ -286,9 +313,9 @@ export default function DriverHome({
             <span className="drv-go-text">{busy ? "…" : "GO"}</span>
           </button>
         )}
-      </div>
-
-      <Modal open={statusOpen && online && waiting} onClose={() => setStatusOpen(false)} title="Vous êtes en ligne" portal sheetOnMobile={false} className="drv-online-sheet" maxWidth={560}>
+        {online && waiting && !loading && !needsVehicle && (
+          <div id="sd-availability-panel" className="sd-availability-panel" inert={!statusOpen} aria-hidden={!statusOpen}>
+            <div className="sd-availability-content">
         <div className="drv-online-sheet-waiting">
           <span className="sd-signature-dot" aria-hidden="true" />
           <h4>Prêt pour votre prochaine course</h4>
@@ -297,7 +324,12 @@ export default function DriverHome({
         <button type="button" className="drv-go-btn is-online drv-online-stop" onClick={onToggle} disabled={busy || loading} aria-label={busy ? "Déconnexion en cours" : "Passer hors ligne"} aria-busy={busy} title="Passer hors ligne">
           <Power size={32} aria-hidden="true" />
         </button>
-      </Modal>
+            </div>
+          </div>
+        )}
+      </div>
+
+
 
       <Modal open={sosOpen} onClose={() => setSosOpen(false)} title="SOS — Urgences en France" portal keyboardSafe sheetOnMobile={false}>
         <p className="drv-sos-intro">StrasDrive ne contacte pas les secours à votre place. Pour votre sécurité, arrêtez-vous dès que possible dans un endroit sûr.</p>
