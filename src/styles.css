@@ -6978,8 +6978,7 @@ a.activity-pill:hover {
 .modern-map .maplibregl-ctrl-attrib a {
   color: #d5dfe6;
 }
-.modern-map .marker-driver,
-.modern-map .marker-pin {
+.modern-map .marker-driver {
   background: #17212d;
   color: #f4cf85;
   border: 2px solid #e9be70;
@@ -6987,14 +6986,25 @@ a.activity-pill:hover {
     0 3px 12px #080f1c80,
     0 0 0 4px #f4cf8512;
 }
+.modern-map .marker-pin {
+  width: 16px;
+  height: 16px;
+  box-shadow: none;
+  border: 2px solid #d4af37;
+  background: #17212d;
+  color: #d4af37;
+}
 .modern-map .marker-pin.pickup {
-  background: #f4cf85;
-  color: #17212d;
+  background: #17212d;
+  color: #d4af37;
 }
 .modern-map .marker-pin.dropoff {
-  background: #edf3f7;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: #d4af37;
   color: #17212d;
-  border-color: #fff;
+  border-color: #17212d;
 }
 .driver-dark-map.modern-map .maplibregl-marker:not(.marker-pin):not(.marker-car),
 .driver-dark-map .modern-map .maplibregl-marker:not(.marker-pin):not(.marker-car) {
