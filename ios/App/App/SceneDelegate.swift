@@ -17,9 +17,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         controller.webView?.backgroundColor = background
         controller.webView?.scrollView.backgroundColor = background
         // Keep the existing static launch artwork above the remote WebView.
-        let splash = UIImageView(image: UIImage(named: "Splash"))
+        let splash = UIView()
+        let logo = UIImageView(image: UIImage(named: "Splash"))
+        logo.contentMode = .scaleAspectFit
+        logo.translatesAutoresizingMaskIntoConstraints = false
+        splash.addSubview(logo)
+        NSLayoutConstraint.activate([
+            logo.centerXAnchor.constraint(equalTo: splash.centerXAnchor),
+            logo.centerYAnchor.constraint(equalTo: splash.centerYAnchor),
+            logo.widthAnchor.constraint(equalToConstant: 128),
+            logo.heightAnchor.constraint(equalToConstant: 128)
+        ])
         splash.backgroundColor = background
-        splash.contentMode = .scaleAspectFill
         splash.clipsToBounds = true
         splash.translatesAutoresizingMaskIntoConstraints = false
         controller.view.addSubview(splash)
