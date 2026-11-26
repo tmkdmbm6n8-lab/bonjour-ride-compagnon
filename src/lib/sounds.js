@@ -230,14 +230,7 @@ export function startRinging(kind = 'offer', everyMs = 1800) {
   return () => { clearInterval(id); if (typeof cancel === 'function') cancel(); };
 }
 
-/** Bip court d'approche radar / police (sonar). */
-export function playRadarBeep(kind = 'radar') {
-  const c = audio();
-  if (!c) return;
-  if (c.state !== 'running') { void resumeAudio(c); return; }
-  const t0 = c.currentTime + 0.01;
-  // Carillon doux à deux notes (sinus), bien plus agréable qu'un bip carré.
-  const [a, b] = kind === 'police' ? [659, 880] : [784, 1047];
-  tone(c, a, t0, 0.22, { gain: 0.09 });
-  tone(c, b, t0 + 0.14, 0.3, { gain: 0.08 });
+/** Radar and police audio disabled; retain compatibility with navigation callers. */
+export function playRadarBeep() {
+  // Intentionally silent.
 }
