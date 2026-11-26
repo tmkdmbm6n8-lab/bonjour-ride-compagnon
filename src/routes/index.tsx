@@ -106,7 +106,6 @@ function StartupLogo({ ready, onDone }: { ready: boolean; onDone: () => void }) 
   const road = useRef<SVGPathElement>(null);
   const arrow = useRef<SVGGElement>(null);
   const progress = useRef(0);
-  const holdUntil = useRef<number | null>(null);
   const done = useRef(onDone);
   done.current = onDone;
   useEffect(() => {
@@ -120,11 +119,6 @@ function StartupLogo({ ready, onDone }: { ready: boolean; onDone: () => void }) 
     let frame = 0;
     let began: number | undefined;
     const tick = (now: number) => {
-      holdUntil.current ??= now + 2000;
-      if (now < holdUntil.current) {
-        frame = requestAnimationFrame(tick);
-        return;
-      }
       began ??= now;
       const elapsed = now - began;
       const value = ready
