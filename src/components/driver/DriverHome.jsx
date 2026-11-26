@@ -87,6 +87,11 @@ export default function DriverHome({
     <div className={`drv-cockpit-root ${online ? "is-online" : ""}`}>
       <style>{`
         .drv-online-status.sd-online-signature { position: relative; isolation: isolate; overflow: hidden; border-radius: 12px; justify-content: flex-start; gap: 12px; box-shadow: none; animation: none; }
+        @media (max-width: 900px) {
+          .shell-driver:has(.drv-cockpit-bottom-bar > .sd-online-signature) > .sidebar { border-top: 0 !important; backdrop-filter: none; -webkit-backdrop-filter: none; }
+          .drv-cockpit-bottom-bar:has(> .sd-online-signature) { bottom: var(--shell-nav-height, calc(84px + env(safe-area-inset-bottom, 0px))); left: 0; right: 0; }
+          .drv-cockpit-bottom-bar > .drv-online-status.sd-online-signature { width: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; background: #0c0d12; box-shadow: none; padding-inline: max(20px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-right, 0px)); }
+        }
         .drv-online-status.sd-online-signature::before { content: none; animation: none; }
         .drv-online-status.sd-online-signature::after { content: ""; position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: linear-gradient(110deg, transparent 10%, color-mix(in srgb, currentColor 13%, transparent) 50%, transparent 90%); pointer-events: none; opacity: 0; animation: sdSignatureEdge 8s linear infinite; }
         .sd-online-signature .sd-signature-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; animation: sdSignatureDot 6s ease-in-out infinite; }
