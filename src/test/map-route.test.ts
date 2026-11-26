@@ -24,7 +24,7 @@ describe('route rendering during an active ride', () => {
     expect(drawRoute(map, geometry)).toBe(true);
     expect(map.layers.get('route-line')).toMatchObject({ type: 'line', source: 'route' });
     expect(map.layers.size).toBe(1);
-    expect(map.layers.get('route-line')).toMatchObject({ paint: { 'line-width': 5, 'line-color': '#d4af37' }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+    expect(map.layers.get('route-line')).toMatchObject({ paint: { 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 10, 1.5, 13, 2.5, 15, 4, 16, 6, 17, 9, 18, 14, 19, 22, 20, 32, 22, 60], 'line-color': '#d4af37' }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
   });
 
   it('retries after an incomplete layer installation', () => {
