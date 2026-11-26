@@ -92,13 +92,12 @@ export default function DriverHome({
         .sd-go-beacon i { position: absolute; inset: -9px; border: 2px solid currentColor; border-radius: inherit; opacity: 0; animation: sdGoSonar 8s linear infinite; }
         .sd-go-beacon i:nth-child(2) { animation-delay: 4s; }
         .sd-go-connecting .sd-go-beacon i { animation: none; opacity: 0; }
-        .drv-go-btn.drv-online-stop:not(:disabled) { animation: sdOfflineBreath 8s ease-in-out infinite; }
         .drv-go-btn.drv-online-stop { width: 72px; min-width: 72px; max-width: 72px; height: 72px; min-height: 72px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-inline: auto; flex: 0 0 72px; }
-        @keyframes sdOfflineBreath {
-          0%,100% { filter: drop-shadow(0 0 4px color-mix(in srgb, currentColor 13%, transparent)); }
-          50% { filter: drop-shadow(0 0 18px color-mix(in srgb, currentColor 53%, transparent)); }
-        }
-        @media (prefers-reduced-motion: reduce) { .drv-go-btn.drv-online-stop { animation: none !important; } }
+        .drv-go-btn.drv-online-stop { position: relative; overflow: visible; animation: none; }
+        .drv-go-btn.drv-online-stop::after { content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 3px solid currentColor; border-left-color: transparent; border-right-color: transparent; pointer-events: none; animation: sdOfflineOrbit 8s ease-in-out infinite; }
+        .drv-go-btn.drv-online-stop:disabled::after { animation-play-state: paused; }
+        @keyframes sdOfflineOrbit { 0%,100% { transform: rotate(-60deg); } 50% { transform: rotate(120deg); } }
+        @media (prefers-reduced-motion: reduce) { .drv-go-btn.drv-online-stop::after { animation: none !important; } }
         @keyframes sdGoSonar { 0% { transform: scale(.85); opacity: 0; } 20% { opacity: .8; } 100% { transform: scale(1.45); opacity: 0; } }
         @media (prefers-reduced-motion: reduce) { .drv-go-btn.sd-go-dynamic, .sd-go-beacon i { animation: none !important; } .sd-go-beacon i { opacity: 0; } }
       `}</style>
