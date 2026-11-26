@@ -102,6 +102,20 @@ export default function DriverHome({
         @keyframes sdSignatureDot { 0%,100% { opacity: .65; } 50% { opacity: 1; box-shadow: 0 0 8px color-mix(in srgb, currentColor 27%, transparent); } }
         @media (prefers-reduced-motion: reduce) { .drv-online-status.sd-online-signature::after, .sd-online-signature .sd-signature-dot { animation: none !important; } }
 
+        /* Signature availability sheet: same surface and typography as the online strip. */
+        .modal-portal-root .drv-online-sheet { background: #0c0d12 !important; border: 0 !important; box-shadow: none !important; color: #f1f7f5; border-radius: 12px 12px 0 0; }
+        .modal-portal-root .drv-online-sheet .modal-header { border: 0; box-shadow: none; padding: 16px 20px; }
+        .modal-portal-root .drv-online-sheet .modal-header h3 { font-size: 14px !important; font-weight: 550; color: #f1f7f5; }
+        .modal-portal-root .drv-online-sheet .modal-body { min-height: 0; overflow-y: auto; gap: 16px; }
+        .modal-portal-root .drv-online-sheet .drv-online-sheet-waiting { padding: 12px 0 16px; }
+        .modal-portal-root .drv-online-sheet .drv-online-sheet-waiting .sd-signature-dot { display: block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; color: #f1f7f5; margin: 0 auto 16px; animation: sdSignatureDot 6s ease-in-out infinite; }
+        .modal-portal-root .drv-online-sheet .drv-online-sheet-waiting h4 { font-size: 15px; font-weight: 550; color: #f1f7f5; }
+        .modal-portal-root .drv-online-sheet .drv-online-sheet-waiting p { color: #94a3b8; font-size: 12px; line-height: 1.6; max-width: 320px; margin-inline: auto; }
+        @media (max-width: 900px) {
+          .modal-portal-root .drv-online-sheet { width: 100%; max-width: 100% !important; border-radius: 0 !important; }
+        }
+        @media (prefers-reduced-motion: reduce) { .modal-portal-root .drv-online-sheet .sd-signature-dot { animation: none !important; } }
+
         .drv-go-btn.sd-go-dynamic { position: relative; top: -8px; isolation: isolate; overflow: visible; animation: none; }
         .sd-go-dynamic .drv-go-text { position: relative; z-index: 2; }
         .sd-go-beacon { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: 1; }
@@ -276,7 +290,7 @@ export default function DriverHome({
 
       <Modal open={statusOpen && online && waiting} onClose={() => setStatusOpen(false)} title="Vous êtes en ligne" portal sheetOnMobile={false} className="drv-online-sheet" maxWidth={560}>
         <div className="drv-online-sheet-waiting">
-          <span className="drv-online-signal" aria-hidden="true"><Radio size={30} /></span>
+          <span className="sd-signature-dot" aria-hidden="true" />
           <h4>Prêt pour votre prochaine course</h4>
           <p>Vous recevrez les nouvelles demandes ici. Vos clients privés peuvent voir votre position approximative tant que vous êtes en ligne.</p>
         </div>
