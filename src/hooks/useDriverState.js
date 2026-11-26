@@ -1,3 +1,4 @@
+import { playSound } from '@/lib/sounds';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
@@ -236,6 +237,7 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
       }
       setPosition(location);
       setOnline(true);
+      try { playSound('driver-online'); } catch { /* audio must not affect availability */ }
       // Announce immediately so the H3 index has a fresh ping
       socketRef.current?.emit('driver:location', { ...location });
     } finally {
@@ -260,6 +262,7 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
       if (!res.ok) throw new Error(data.error || 'Impossible de passer hors ligne');
       socketRef.current?.emit('driver:offline');
       setOnline(false);
+      try { playSound('driver-offline'); } catch { /* audio must not affect availability */ }
     } finally {
       availabilityAction.current = false;
       ++availabilityRevision.current;
