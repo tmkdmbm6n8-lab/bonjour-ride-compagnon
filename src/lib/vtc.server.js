@@ -350,7 +350,11 @@ export async function handleVtc(input, context) {
   const q = url.searchParams;
   const db = context.supabase,
     uid = context.userId;
-  const roles = required(await db.from("user_roles").select("role").eq("user_id", uid));
+  const [rolesResult, profileResult] = await Promise.all([
+    db.from("user_roles").select("role").eq("user_id", uid),
+    db.from("profiles").select("*").eq("id", uid).maybeSingle(),
+  ]);
+  const roles = required(rolesResult);
   const role = roles.some((r) => r.role === "admin")
     ? "admin"
     : roles.some((r) => r.role === "driver")
@@ -361,7 +365,7 @@ export async function handleVtc(input, context) {
   if (p.startsWith("/api/drivers/me") && !canDrive) throw new Error("Accès chauffeur requis");
   // RLS has verified the role; privileged operations below use only the verified caller identity.
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-  const profile = required(await db.from("profiles").select("*").eq("id", uid).maybeSingle());
+  const profile = required(profileResult);
   if (!profile) throw new Error("ACCOUNT_UNAVAILABLE");
 
   if (p === "/api/users/me/live" && method === "GET") {
@@ -654,7 +658,9 @@ export async function handleVtc(input, context) {
         if (typeof body[k] === "string") payload[k] = body[k].slice(0, 100);
       required(await db.from("profiles").update(payload).eq("id", uid));
     }
-    const fresh = required(await db.from("profiles").select("*").eq("id", uid).single());
+    const fresh = method === "PATCH"
+      ? required(await db.from("profiles").select("*").eq("id", uid).single())
+      : profile;
     const mode = q.get("view") === "driver" && canDrive ? "driver" : "rider";
     const rating = await accountRating(admin, uid, mode);
     return { user: { ...profileShape(fresh, context.claims.email), rating, role, canDrive } };

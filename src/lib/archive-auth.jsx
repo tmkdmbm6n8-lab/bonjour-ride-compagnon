@@ -4,17 +4,29 @@ import {createContext,useContext,useEffect,useState,useCallback,useRef} from 're
 import {supabase} from '@/integrations/supabase/client';
 import {apiFetch} from './archive-fetch';
 import {clearRideDraft} from './ride-draft';
+// The route guard and provider can start together on a protected deep link.
+let pendingUserVerification;
+export function verifySessionUser() {
+ if (typeof window === 'undefined') return supabase.auth.getUser();
+ if (pendingUserVerification) return pendingUserVerification;
+ const verification = supabase.auth.getUser().finally(() => {
+  if (pendingUserVerification === verification) pendingUserVerification = null;
+ });
+ pendingUserVerification = verification;
+ return verification;
+}
 const AuthContext=createContext({data:null,status:'loading',live:null,update:async()=>{}});
 export function SessionProvider({children}) {
  const updateRequest=useRef(0);
  const [data,setData]=useState(null),[status,setStatus]=useState('loading'),[live,setLive]=useState(null);
  const update=useCallback(async()=>{
   const request=++updateRequest.current;
-  const {data:{user},error}=await supabase.auth.getUser();
-  if(error){setStatus(current=>current==='loading'?'unauthenticated':current);return null;}
+  const {data:{user},error}=await verifySessionUser();
   if(request!==updateRequest.current)return null;
+  if(error){setStatus(current=>current==='loading'?'unauthenticated':current);return null;}
   if(!user){setData(null);setLive(null);setStatus('unauthenticated');return null;}
   const res=await apiFetch('/api/users/me');
+  if(request!==updateRequest.current)return null;
   if(!res.ok){setStatus(current=>current==='loading'?'unauthenticated':current);return null;}
   const j=await res.json(),value={user:j.user};
   if(request!==updateRequest.current)return null;
@@ -24,6 +36,7 @@ export function SessionProvider({children}) {
   let active=true;
   update().catch(()=>{if(active)setStatus('unauthenticated');});
   const {data:{subscription}}=supabase.auth.onAuthStateChange(event=>{
+   if(['SIGNED_IN','SIGNED_OUT','USER_UPDATED'].includes(event)) pendingUserVerification = null;
    if(event==='SIGNED_OUT'){++updateRequest.current;setData(null);setLive(null);setStatus('unauthenticated');}
    else if(['SIGNED_IN','USER_UPDATED'].includes(event))setTimeout(()=>{if(active)void update().catch(()=>{});},0);
   });

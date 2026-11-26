@@ -11,7 +11,7 @@ vi.mock('@/lib/archive-fetch',()=>({apiFetch:mock.fetch}));
 vi.mock('@/lib/native-push',()=>({unregisterDriverPush:mock.unregister}));
 vi.mock('@/lib/live-activity-native',()=>({stopLiveActivitiesForSignOut:mock.stopActivities}));
 vi.mock('@/lib/ride-draft',()=>({clearRideDraft:vi.fn()}));
-import { SessionProvider, useSession } from '../lib/archive-auth';
+import { SessionProvider, useSession, verifySessionUser } from '../lib/archive-auth';
 function Probe(){const session=useSession();return <div data-testid="session">{JSON.stringify(session)}</div>;}
 let value:any;
 async function flush(ms=0){await act(async()=>{await vi.advanceTimersByTimeAsync(ms);});}
@@ -28,6 +28,12 @@ describe('live account enforcement across screens',()=>{
   mock.fetch.mockImplementation(async(path:string)=>({ok:true,json:async()=>path==='/api/users/me'?{user:{id:'driver-a',role:'driver',canDrive:true}}:{...value}}));
  });
  afterEach(()=>{cleanup();vi.useRealTimers();});
+ it('shares concurrent verification and checks again after it settles',async()=>{
+  await Promise.all([verifySessionUser(), verifySessionUser()]);
+  expect(mock.getUser).toHaveBeenCalledTimes(1);
+  await verifySessionUser();
+  expect(mock.getUser).toHaveBeenCalledTimes(2);
+ });
  it('refreshes a suspension outside the dashboard and signs out locally',async()=>{
   render(<SessionProvider><Probe/></SessionProvider>);await flush();
   value={...value,suspended:true,revision:'suspended'};

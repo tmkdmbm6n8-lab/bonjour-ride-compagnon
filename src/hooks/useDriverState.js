@@ -20,7 +20,8 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
   const [ride, setRide] = useState(null); // active serialized ride
   const [position, setPosition] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadingRide, setLoadingRide] = useState(true);
 
   const watchIdRef = useRef(null);
   const lastPingRef = useRef(0);
@@ -37,35 +38,26 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
 
   const notify = useCallback((type, data) => onEventRef.current?.(type, data), []);
 
-  // ── Initial load: profile + active ride ──
+  // ── Initial active ride; the profile poll already runs immediately ──
   useEffect(() => {
     if (!enabled) {
-      setProfile(null); setOffer(null); setRide(null); setOnline(false); setPosition(null); setLoading(true);
+      setProfile(null); setOffer(null); setRide(null); setOnline(false); setPosition(null); setLoadingRide(true); setLoadingProfile(true);
       return;
     }
-    setLoading(true);
+    setLoadingRide(true);
+    setLoadingProfile(true);
     setProfile(null); setOffer(null); setRide(null); setOnline(false);
     let ignore = false;
     (async () => {
       try {
-        const [profileRes, activeRes] = await Promise.all([
-          fetch('/api/drivers/me'),
-          fetch('/api/rides/active?view=driver'),
-        ]);
-        if (profileRes.ok) {
-          const { driver } = await profileRes.json();
-          if (!ignore) {
-            setProfile(driver);
-            setOnline(Boolean(driver.isOnline));
-          }
-        }
+        const activeRes = await fetch('/api/rides/active?view=driver');
         if (activeRes.ok) {
           const { ride: active } = await activeRes.json();
           if (!ignore && active) setRide(active);
         }
       } catch { /* offline — retry on action */ }
       finally {
-        if (!ignore) setLoading(false);
+        if (!ignore) setLoadingRide(false);
       }
     })();
     return () => { ignore = true; };
@@ -86,6 +78,7 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
           if (driver.isReportSuspended) setOffer(null);
         }
       } catch { /* retain last known status while offline */ }
+      finally { if (active()) setLoadingProfile(false); }
     }, 5000);
   }, [enabled, userId]);
 
@@ -330,7 +323,7 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
   }, [act]);
 
   return {
-    loading,
+    loading: loadingProfile || loadingRide,
     profile,
     setProfile,
     online,

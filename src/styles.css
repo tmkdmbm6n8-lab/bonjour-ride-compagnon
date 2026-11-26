@@ -3,6 +3,20 @@
    Ink & stone palette · gold accent · soft depth · quiet motion
    ═══════════════════════════════════════════════════════════════ */
 
+.native-startup-logo {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  background: #0e0f12;
+}
+.native-startup-unresolved > .native-startup-logo,
+.capacitor-native .native-startup-unresolved > .landing-page {
+  display: none;
+}
+.capacitor-native .native-startup-unresolved > .native-startup-logo {
+  display: grid;
+}
+
 :root {
   /* ── Ink (brand neutrals) ── */
   --ink-950: #0c0a09;

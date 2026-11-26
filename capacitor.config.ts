@@ -13,6 +13,7 @@ const config: CapacitorConfig = {
     errorPath: 'offline.html',
   },
   android: {
+    backgroundColor: '#0e0f12',
     allowMixedContent: false,
   },
   ios: {
