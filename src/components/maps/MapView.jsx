@@ -26,6 +26,9 @@ const PIN_SVG =
 const SQUARE_SVG =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 
+const USER_SVG =
+  '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+
 const savedViews = new Map();
 const retainedMaps = new Map();
 export default function MapView({
@@ -164,7 +167,7 @@ export default function MapView({
   // Position only: turn-by-turn guidance belongs to the selected external GPS app.
   useEffect(() => {
     if (navigationMode) { syncMarker("user", null); return; }
-    syncMarker("user", userPosition, () => el("marker-dot-simple", ""));
+    syncMarker("user", userPosition, () => el("marker-dot-simple", USER_SVG));
   }, [userPosition?.lat, userPosition?.lng, navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The first GPS fix must be visible, including while the driver is offline.
