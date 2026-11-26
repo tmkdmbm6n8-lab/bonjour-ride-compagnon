@@ -88,12 +88,12 @@ export default function DriverHome({
       <style>{`
         .drv-online-status.sd-online-signature { position: relative; isolation: isolate; overflow: hidden; border-radius: 12px; justify-content: flex-start; gap: 12px; box-shadow: none; animation: none; }
         .drv-online-status.sd-online-signature::before { content: none; animation: none; }
-        .drv-online-status.sd-online-signature::after { content: ""; position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: radial-gradient(ellipse at center, color-mix(in srgb, currentColor 13%, transparent), color-mix(in srgb, currentColor 5.5%, transparent) 35%, transparent 72%); pointer-events: none; opacity: 0; animation: sdSignatureEdge 12s linear infinite; }
+        .drv-online-status.sd-online-signature::after { content: ""; position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: linear-gradient(110deg, transparent 10%, color-mix(in srgb, currentColor 13%, transparent) 50%, transparent 90%); pointer-events: none; opacity: 0; animation: sdSignatureEdge 8s linear infinite; }
         .sd-online-signature .sd-signature-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; animation: sdSignatureDot 6s ease-in-out infinite; }
         .sd-online-signature .drv-online-copy { flex: 1; text-align: left; }
         .sd-online-signature .drv-online-copy strong { font-weight: 550; font-size: 14px; }
         .sd-online-signature .drv-online-copy small { font-size: 11px; }
-        @keyframes sdSignatureEdge { 0% { transform: translateX(-100%); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translateX(100%); opacity: 0; } }
+        @keyframes sdSignatureEdge { 0% { transform: translateX(-110%); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateX(110%); opacity: 0; } }
         @keyframes sdSignatureDot { 0%,100% { opacity: .65; } 50% { opacity: 1; box-shadow: 0 0 8px color-mix(in srgb, currentColor 27%, transparent); } }
         @media (prefers-reduced-motion: reduce) { .drv-online-status.sd-online-signature::after, .sd-online-signature .sd-signature-dot { animation: none !important; } }
 
