@@ -7055,7 +7055,7 @@ a.activity-pill:hover {
   background: #17212d !important;
   color: #e9be70 !important;
   border: 2.5px solid #e9be70 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 6px rgba(233, 190, 112, 0.18) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 6px rgba(233, 190, 112, 0.18);
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
