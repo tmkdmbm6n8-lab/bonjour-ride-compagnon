@@ -81,7 +81,7 @@ export default function DriverHome({
     if (!online || !waiting) setStatusOpen(false);
   }, [online, waiting]);
   const [sosOpen, setSosOpen] = useState(false);
-  const { position: localPosition } = useGeolocation({ watch: false });
+  const { position: localPosition } = useGeolocation({ watch: online, maxAge: online ? 0 : undefined });
   const mapCenter = position || localPosition || center;
 
 
@@ -162,7 +162,8 @@ export default function DriverHome({
           viewCacheKey="driver-home"
           center={mapCenter}
           zoom={14}
-          userPosition={position || localPosition || undefined}
+          userPosition={(online ? localPosition || position : position || localPosition) || undefined}
+          navigationMode={online}
           followPosition={online && position ? position : undefined}
         />
       </div>
