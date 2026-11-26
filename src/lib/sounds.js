@@ -73,6 +73,29 @@ const VIBRATIONS = {
   cancelled: [400],
 };
 
+// Dedicated alert bus: boost only the three approved driver sounds.
+function driverAlertBus(c, gain) {
+  const master = c.createGain();
+  master.gain.value = gain;
+  // Soft peak ceiling; linear below 0.8, smooth saturation above it.
+  const limiter = c.createWaveShaper();
+  const curve = new Float32Array(4097);
+  for (let i = 0; i < curve.length; i++) {
+    const x = 2 * i / (curve.length - 1) - 1;
+    const a = Math.abs(x);
+    curve[i] = Math.sign(x) * (a <= .8 ? a : .8 + .15 * Math.tanh((a - .8) / .15));
+  }
+  limiter.curve = curve;
+  limiter.oversample = '2x';
+  master.connect(limiter); limiter.connect(c.destination);
+  let closed = false;
+  return { master, disconnect() {
+    if (closed) return;
+    closed = true;
+    master.disconnect(); limiter.disconnect();
+  } };
+}
+
 export function playSound(kind) {
   const melody = MELODIES[kind];
   if (!melody) return;
@@ -81,9 +104,8 @@ export function playSound(kind) {
   if (!c) return;
   const t0 = c.currentTime + 0.02;
   if (kind === 'offer') {
-    const master = c.createGain();
-    master.gain.value = 0.85;
-    master.connect(c.destination);
+    const bus = driverAlertBus(c, 0.85 * 4);
+    const { master } = bus;
     function note(f, offset, volume, dur) {
       if (volume < 0.001) return;
       const at = t0 + offset;
@@ -100,10 +122,11 @@ export function playSound(kind) {
     }
     for (const [f, at, dur] of melody) note(f, at, 1, dur);
     for (let i = 0; i < 3; i++) note(440, .45 + (i + 1) * .33, .08 * Math.pow(.1, i), .35);
-    const cleanup = setTimeout(() => master.disconnect(), 2000);
-    return () => { clearTimeout(cleanup); master.gain.setTargetAtTime(0, c.currentTime, .015); setTimeout(() => master.disconnect(), 100); };
+    const cleanup = setTimeout(() => bus.disconnect(), 2000);
+    return () => { clearTimeout(cleanup); master.gain.setTargetAtTime(0, c.currentTime, .015); setTimeout(() => bus.disconnect(), 100); };
   }
   if (kind === 'driver-online' || kind === 'driver-offline') {
+    const bus = driverAlertBus(c, 3);
     function note(f, at, dur, volume = 1) {
       const start = t0 + at;
       for (const [harmonic, gain] of [[1, .12], [2, .025], [.5, .045]]) {
@@ -113,13 +136,14 @@ export function playSound(kind) {
         g.gain.setValueAtTime(.0001, start);
         g.gain.exponentialRampToValueAtTime(Math.max(.00011, gain * volume), start + .035);
         g.gain.exponentialRampToValueAtTime(.0001, start + dur);
-        o.connect(g); g.connect(c.destination);
+        o.connect(g); g.connect(bus.master);
         o.onended = () => { o.disconnect(); g.disconnect(); };
         o.start(start); o.stop(start + dur + .02);
       }
     }
     for (const [f, at, dur] of melody) note(f, at, dur);
     if (kind === 'driver-online') note(659.25, .45 + .33, .9, .04);
+    setTimeout(() => bus.disconnect(), 2000);
     return;
   }
   for (const [f, at, dur] of melody) tone(c, f, t0 + at, dur, { type: kind === 'offer' ? 'triangle' : 'sine', gain: kind === 'message' ? 0.16 : 0.24 });
