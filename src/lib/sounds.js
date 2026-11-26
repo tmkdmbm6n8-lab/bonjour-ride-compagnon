@@ -3,6 +3,15 @@
 
 let ctx = null;
 let resumePending = null;
+let failedContext = null;
+function replaceAudio(c) {
+  if (ctx !== c) return audio();
+  ctx = null;
+  resumePending = null;
+  failedContext = null;
+  try { if (c.state !== 'closed') void c.close().catch(() => {}); } catch { /* interrupted */ }
+  return audio();
+}
 function audio() {
   if (typeof window === 'undefined') return null;
   if (!ctx || ctx.state === 'closed') {
@@ -18,7 +27,7 @@ function resumeAudio(c) {
   if (resumePending?.context === c) return resumePending.promise;
   const promise = new Promise(resolve => {
     const timer = setTimeout(() => resolve(false), 500);
-    Promise.resolve().then(() => c.resume()).then(() => {
+    Promise.resolve(c.resume()).then(() => {
       clearTimeout(timer); resolve(c.state === 'running');
     }, error => {
       clearTimeout(timer); console.warn('[StrasDrive audio] resume', error); resolve(false);
@@ -28,12 +37,14 @@ function resumeAudio(c) {
   promise.then(() => { if (resumePending?.promise === promise) resumePending = null; });
   return promise;
 }
-function unlock() {
+function unlock(event) {
   try {
-    const c = audio();
+    let c = audio();
+    if (!c) return;
+    if (failedContext === c && event?.isTrusted && ['pointerdown','touchend','keydown'].includes(event.type)) c = replaceAudio(c);
     if (!c || c.state === 'running') return;
     // Call resume synchronously within the user gesture for iOS.
-    c.resume().catch(error => console.warn('[StrasDrive audio] unlock', error));
+    void resumeAudio(c).then(ok => { if (ctx === c) failedContext = ok ? null : c; });
     const b = c.createBuffer(1, 1, 22050);
     const source = c.createBufferSource();
     source.buffer = b; source.connect(c.destination);
@@ -131,14 +142,16 @@ export function playSound(kind) {
       if (!c) return;
       if (c.state !== 'running' && !await resumeAudio(c)) {
         if (cancelled) return;
-        // Retry interrupted contexts; replace only a closed context.
-        c = audio();
+        // Recreate a persistently suspended/interrupted context while visible.
+        if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+        c = replaceAudio(c);
         if (!c || !await resumeAudio(c)) {
+          if (c && ctx === c) failedContext = c;
           console.warn('[StrasDrive audio] unavailable', kind, c?.state);
           return;
         }
       }
-      if (!cancelled) stop = renderSound(kind, c);
+      if (!cancelled && ctx === c && c.state === 'running') { failedContext = null; stop = renderSound(kind, c); }
     } catch (error) { console.warn('[StrasDrive audio] playback', kind, error); }
   };
   void attempt();
