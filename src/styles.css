@@ -7043,6 +7043,28 @@ a.activity-pill:hover {
   box-shadow: 0 0 0 7px #8cc8f025 !important;
 }
 
+.modern-map .marker-dot-simple svg {
+  display: none;
+}
+
+/* Repère de géolocalisation client avec icône compte */
+.shell-rider .modern-map .marker-dot-simple {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  color: #17212d !important;
+  border: 2.5px solid #3b82f6 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 6px rgba(59, 130, 246, 0.22) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.shell-rider .modern-map .marker-dot-simple svg {
+  display: block;
+}
+
 /* Desktop passenger workspace: keep these changes separate from the mobile UI. */
 .rider-desktop-intro {
   display: none;
