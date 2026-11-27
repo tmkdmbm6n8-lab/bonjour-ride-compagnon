@@ -204,6 +204,26 @@ function businessFailure(error: unknown): Response {
   return jsonResponse({ error: message }, 400);
 }
 
+async function nativeAuth(request: Request, path: string): Promise<Response> {
+  try {
+    const body = await jsonBody(request);
+    const url = process.env["SUPABASE_URL"];
+    const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+    if (!url || !key) return jsonResponse({error:"Service indisponible"},503);
+    const client = createClient<Database>(url,key,{global:{fetch:createSupabaseFetch(key)},auth:{persistSession:false,autoRefreshToken:false}});
+    const login = path === "/api/auth/login";
+    const parsed = login ? z.object({email:z.string().email().max(254),password:z.string().min(1).max(4096)}).safeParse(body) : z.object({refreshToken:z.string().min(1).max(8192)}).safeParse(body);
+    if (!parsed.success) return jsonResponse({error:"Requête invalide"},400);
+    const result = "email" in parsed.data ? await client.auth.signInWithPassword(parsed.data) : await client.auth.refreshSession({refresh_token:parsed.data.refreshToken});
+    if (result.error || !result.data.session || !result.data.user) return jsonResponse({error:"Connexion refusée"},result.error?.status === 429 ? 429 : 401);
+    const s = result.data.session;
+    return jsonResponse({accountId:result.data.user.id,accessToken:s.access_token,refreshToken:s.refresh_token,expiresAt:(s.expires_at ?? Math.floor(Date.now()/1000)+s.expires_in)*1000});
+  } catch(error) {
+    if(error instanceof NativeApiError) return jsonResponse({error:error.message},error.status);
+    return jsonResponse({error:"Service indisponible"},503);
+  }
+}
+
 export async function handleNativeApiRequest(request: Request): Promise<Response> {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: nativeHeaders() });
   try {
