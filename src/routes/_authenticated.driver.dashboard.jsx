@@ -89,6 +89,7 @@ function DriverDashboard() {
           }
         });
       }
+      if (type === "offline-sync-refused") toast(data?.error || "Une action hors connexion n’a pas pu être validée", "error", 5000);
       if (type === "rider-cancelled" || type === "offer-withdrawn") playSound("cancelled");
     },
     [toast],
@@ -103,6 +104,8 @@ function DriverDashboard() {
     ride,
     busy,
     isConnected,
+    networkDown,
+    pendingSync,
     goOnline,
     goOffline,
     arrive,
@@ -322,6 +325,11 @@ function DriverDashboard() {
 
   return (
     <>
+      {(networkDown || pendingSync > 0) && (
+        <div className="sd-offline-banner" role="status">
+          {networkDown ? "Pas de connexion — vos actions sont enregistrées et seront synchronisées automatiquement" : "Synchronisation en cours…"}
+        </div>
+      )}
       {profile?.isReportSuspended && !ride ? (
         <section className="driver-suspension-screen" role="status">
           <ShieldAlert size={48} aria-hidden="true" />

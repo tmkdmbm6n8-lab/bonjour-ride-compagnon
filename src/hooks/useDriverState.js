@@ -5,6 +5,7 @@ import {apiFetch as fetch} from '@/lib/archive-fetch';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSocket } from '@/context/SocketProvider';
 import { watchRefresh } from '@/lib/live-refresh';
+import { enqueue, flushQueue, isNetworkFailure, readQueue, QUEUEABLE_ACTIONS, OPTIMISTIC_STATUS } from '@/lib/offline-queue';
 
 const PING_INTERVAL_MS = 3500;
 
@@ -263,7 +264,10 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
     }
   }, []);
 
-  const act = useCallback(async (rideId, action, body) => {
+  const [pendingSync, setPendingSync] = useState(0);
+  const [networkDown, setNetworkDown] = useState(false);
+
+  const send = useCallback(async (rideId, action, body) => {
     const res = await fetch(`/api/rides/${rideId}/${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -280,6 +284,46 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
     }[action] || 'Impossible d’effectuer cette action'));
     return data;
   }, []);
+
+  // Without network, ride steps succeed on screen at once and are replayed later.
+  const act = useCallback(async (rideId, action, body) => {
+    try {
+      const data = await send(rideId, action, body);
+      setNetworkDown(false);
+      return data;
+    } catch (error) {
+      if (!QUEUEABLE_ACTIONS.includes(action) || !isNetworkFailure(error)) throw error;
+      enqueue(rideId, action, body);
+      setNetworkDown(true);
+      setPendingSync(readQueue().length);
+      const current = rideRef.current;
+      const status = OPTIMISTIC_STATUS[action] || 'completed';
+      return { ride: { ...(current || { id: rideId }), status, offline: true } };
+    }
+  }, [send]);
+
+  useEffect(() => {
+    if (!enabled || typeof window === 'undefined') return undefined;
+    let running = false;
+    const flush = async () => {
+      if (running || !readQueue().length) { setPendingSync(readQueue().length); return; }
+      running = true;
+      try {
+        const results = await flushQueue((item) => send(item.rideId, item.action, item.body));
+        for (const r of results) if (!r.ok) notify('offline-sync-refused', { action: r.item.action, error: r.error?.message });
+        const left = readQueue().length;
+        setPendingSync(left);
+        if (!left) setNetworkDown(false);
+      } finally { running = false; }
+    };
+    const down = () => setNetworkDown(true);
+    flush();
+    window.addEventListener('online', flush);
+    window.addEventListener('offline', down);
+    const timer = setInterval(flush, 15000);
+    if (navigator.onLine === false) setNetworkDown(true);
+    return () => { window.removeEventListener('online', flush); window.removeEventListener('offline', down); clearInterval(timer); };
+  }, [enabled, send]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const accept = useCallback(async () => {
     if (!offer) return;
@@ -332,6 +376,8 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
     ride,
     busy,
     isConnected,
+    networkDown,
+    pendingSync,
     goOnline,
     goOffline,
     accept,

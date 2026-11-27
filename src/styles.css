@@ -11828,3 +11828,6 @@ body:has(.mobile-ride-chat input:focus) {
     transition: width 1s linear;
   }
 }
+
+/* Bandeau discret hors connexion (non bloquant) */
+.sd-offline-banner { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 9999; padding: 6px 12px; text-align: center; font-size: 13px; background: var(--drv-surface, #17212d); color: var(--drv-gold, #eab308); pointer-events: none; }
