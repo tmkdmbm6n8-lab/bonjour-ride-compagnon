@@ -73,7 +73,7 @@
 - [x] Autoriser les vraies offres et éviter deux alertes sur un même appareil, sans supprimer le secours classique.
 - [x] Corriger la remontée du jeton de fermeture et fermer les activités périmées au retour dans l’app (code et tests).
 - [x] Vérifier les tests et documenter séparément la synchronisation Xcode et la publication.
-- [ ] Adapter le widget réellement installé affichant « Course » — fichier Swift du Mac demandé ; présentation de remplacement préparée.
+- [x] Adapter le widget réellement installé affichant « Course » — fichier Swift reçu ; remplacement préparé avec le même nom, gain et compte à rebours.
 - [ ] Validation sur iPhone depuis l’écran d’accueil après publication autorisée et synchronisation Xcode — test utilisateur requis.
 
 # Vocaux façon Snapchat (17/11)

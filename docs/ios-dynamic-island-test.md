@@ -29,11 +29,11 @@ Dans Xcode :
 1. Sélectionner le projet **App**, puis la cible principale **App**.
 2. Dans **Signing & Capabilities**, vérifier **Push Notifications** et **Live Activities**.
 3. Vérifier que le paquet **CapacitorLiveActivity** est présent après synchronisation, et que le module `LiveActivityPlugin` est accessible à la cible principale. Le nouvel observateur dans `AppDelegate.swift` doit être conservé si le Mac possède ses propres modifications.
-4. Dans la cible du widget, remplacer l’ancienne présentation `GenericAttributes` qui affiche « Course » / « Départ → Arrivée » par `native/ios/LiveActivities/StrasDriveOfferWidget.swift`. Conserver la définition existante de `GenericAttributes` (avec `id`, `staticValues`, `ContentState.values`). Ne pas ajouter une deuxième présentation pour ce même type. Dans le `WidgetBundle` existant, remplacer l’ancien widget par `StrasDriveOfferWidget()`.
+4. Dans la cible du widget, ouvrir le fichier fourni par l’utilisateur contenant `struct StrasDriveLiveActivityLiveActivity: Widget`. Remplacer tout son contenu par celui de `native/ios/LiveActivities/StrasDriveOfferWidget.swift`. Le remplacement conserve ce même nom : ne pas modifier le `WidgetBundle` existant. Conserver intact le fichier séparé définissant `GenericAttributes` (avec `id`, `staticValues`, `ContentState.values`). Ne pas ajouter une deuxième présentation pour ce même type.
 5. Choisir l’iPhone réel, puis cliquer sur **Run (▶️)**.
 6. Si iOS le demande, autoriser les notifications et les activités en direct.
 
-La source du widget réellement installé sur le Mac/iPhone n’est pas dans ce dépôt : cette étape est nécessaire si ses textes sont codés en dur. Le serveur ne peut pas remplacer ces textes. La source Swift fournie n’a pas pu être compilée dans Xcode depuis l’environnement Lovable.
+Le fichier du widget installé a été fourni le 27 novembre : sa vue compacte contient littéralement `Text("Course")` et ses adresses utilisent des valeurs de secours absentes du message serveur. Le remplacement affiche le gain envoyé et le compte à rebours, sans fausses adresses. Le serveur ne peut pas remplacer les textes codés en dur dans l’application installée. La source Swift n’a pas pu être compilée dans Xcode depuis l’environnement Lovable ; Run sur le Mac et la vérification sur l’iPhone restent nécessaires. Le compte à rebours ne ferme pas lui-même l’activité : cette fermeture dépend toujours de l’ordre Apple et du jeton de mise à jour.
 
 Le démarrage à distance d’une activité exige iOS 17.2 ou plus récent. Le simulateur ne permet pas ce test.
 

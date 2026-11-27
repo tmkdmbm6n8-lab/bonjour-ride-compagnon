@@ -5,8 +5,9 @@ import WidgetKit
 // Replace the existing GenericAttributes widget implementation with this file in Xcode.
 // Keep its existing GenericAttributes definition, shared with capacitor-live-activity.
 // Do not add this alongside a second ActivityConfiguration for GenericAttributes.
+// Preserve the installed widget's name so its WidgetBundle needs no modification.
 @available(iOS 16.2, *)
-struct StrasDriveOfferWidget: Widget {
+struct StrasDriveLiveActivityLiveActivity: Widget {
     private func amount(_ context: ActivityViewContext<GenericAttributes>) -> String {
         context.state.values["earnings"] ?? context.state.values["title"] ?? "Nouvelle course"
     }
