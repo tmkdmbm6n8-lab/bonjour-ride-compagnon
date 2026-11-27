@@ -1864,6 +1864,12 @@ export async function handleVtc(input, context) {
       );
     } else throw new Error("Action inconnue");
     if (action === "cancel" || action === "cancel_no_show") await closeRideChat(admin, id, { allowSearching: true });
+    // A rider cancelling during search closes every driver's offer bubble right away.
+    if (action === "cancel" && r.status === "searching" && r.driver_id !== uid) {
+      await endRideOfferLiveActivities(admin, id).catch((error) => {
+        console.error("Fermeture Live Activity après annulation", error?.message || error);
+      });
+    }
     return { ride: await serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid) };
   }
   if (p === "/api/admin/test-ride" && method === "POST") {
