@@ -9,7 +9,25 @@ let pendingUserVerification;
 export function verifySessionUser() {
  if (typeof window === 'undefined') return supabase.auth.getUser();
  if (pendingUserVerification) return pendingUserVerification;
- const verification = supabase.auth.getUser().finally(() => {
+ const verification = (async () => {
+  // Sans réseau, on utilise immédiatement la session enregistrée sur le téléphone
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+   const { data: { session } } = await supabase.auth.getSession();
+   return { data: { user: session?.user ?? null }, error: null };
+  }
+  try {
+   const res = await supabase.auth.getUser();
+   // Si l'appel réseau échoue (perte de connexion), repli sur la session locale
+   if (res.error && !res.data?.user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) return { data: { user: session.user }, error: null };
+   }
+   return res;
+  } catch {
+   const { data: { session } } = await supabase.auth.getSession();
+   return { data: { user: session?.user ?? null }, error: null };
+  }
+ })().finally(() => {
   if (pendingUserVerification === verification) pendingUserVerification = null;
  });
  pendingUserVerification = verification;
