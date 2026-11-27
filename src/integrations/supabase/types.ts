@@ -425,6 +425,48 @@ export type Database = {
           },
         ]
       }
+      live_activity_start_tokens: {
+        Row: {
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      live_activity_update_tokens: {
+        Row: {
+          activity_id: string
+          ride_id: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          ride_id: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          ride_id?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payouts: {
         Row: {
           amount: number
