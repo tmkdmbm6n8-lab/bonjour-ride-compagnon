@@ -31,7 +31,7 @@ export default function AppUpdateWatcher() {
       const safe = canApplyAppUpdate({ ...state.current, dirty: dirty.current,
         idleMs: Date.now() - interaction.current, focusedTag: document.activeElement?.tagName,
         dialogOpen: Boolean(document.querySelector('[aria-modal="true"]')) });
-      if (!safe) return;
+      if (!safe || navigator.onLine === false) return;
       // Mixed versions during rollout must never cause a reload loop.
       try {
         const last = JSON.parse(sessionStorage.getItem('strasdrive:last-auto-update') || 'null');

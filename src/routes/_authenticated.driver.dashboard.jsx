@@ -290,7 +290,8 @@ function DriverDashboard() {
             : "StrasDrive Pet désactivé",
           "success",
         );
-        window.location.reload();
+        // Saved offline: the phone keeps it and sends it later; reloading without network would show the offline screen.
+        if (!data.offline && navigator.onLine !== false) window.location.reload();
       }
     } catch {
       toast("Erreur de connexion", "error");
