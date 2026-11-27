@@ -17,7 +17,7 @@ describe('offline cache', () => {
   });
   it('keeps the queue on network failure and clears on sign-out', async () => {
     queueSetting('/api/drivers/me/classes', 'PATCH', { acceptsClasses: ['go'] });
-    await flushSettings(() => Promise.reject(new TypeError('x')), (e) => e instanceof TypeError);
+    await flushSettings(() => Promise.reject(new TypeError('x')), (e: unknown) => e instanceof TypeError);
     expect(readSettingsQueue()).toHaveLength(1);
     clearOfflineData(); expect(readSettingsQueue()).toHaveLength(0);
   });
