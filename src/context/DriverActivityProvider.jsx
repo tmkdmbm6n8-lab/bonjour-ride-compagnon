@@ -4,7 +4,8 @@ import { useSession } from '@/lib/archive-auth';
 import { usePathname } from '@/lib/archive-navigation';
 import useDriverState from '@/hooks/useDriverState';
 import DriverIncomingOffer from '@/components/driver/DriverIncomingOffer';
-const DriverActivityContext = createContext(null);
+// Kept across hot reloads: a recreated context left the offer popup without its provider.
+const DriverActivityContext = globalThis.__sdDriverActivityContext || (globalThis.__sdDriverActivityContext = createContext(null));
 
 /** A single controller survives every driver-tab navigation. */
 export function DriverActivityProvider({ children }) {
