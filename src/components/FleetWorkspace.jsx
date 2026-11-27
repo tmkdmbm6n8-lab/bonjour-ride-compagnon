@@ -4,14 +4,27 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { signOut, useSession } from "@/lib/archive-auth";
 import MapView from "@/components/maps/MapView";
+import { recallRead, rememberRead } from "@/lib/offline-cache";
+import { warmOfflinePages } from "@/lib/offline-shell";
 
 export const fleetUrl = "/contact?topic=fleet";
 const money = value => Number(value).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 const city = { lat: 48.583, lng: 7.747 };
 
+const FLEET_VIEW_KEY = "/fleet/view";
+
 async function request(action, payload = {}) {
-  const { data, error } = await supabase.rpc("sd_fleet", { action, payload });
-  if (error) throw new Error(error.message);
+  let result;
+  try { result = await supabase.rpc("sd_fleet", { action, payload }); }
+  catch (e) { result = { error: e }; }
+  const { data, error } = result;
+  if (error) {
+    // Without network the fleet desk keeps showing its last saved view.
+    const saved = action === "view" ? recallRead(FLEET_VIEW_KEY) : undefined;
+    if (saved !== undefined && (navigator.onLine === false || /fetch|network|load failed|offline/i.test(String(error.message)))) return saved;
+    throw new Error(error.message);
+  }
+  if (action === "view") rememberRead(FLEET_VIEW_KEY, data);
   return data;
 }
 
@@ -63,6 +76,7 @@ function FleetAccount() {
       if (version === sequence.current) setFleet(result);
     } catch (e) { if (version === sequence.current) setError(e.message); }
   }, []);
+  useEffect(() => { void warmOfflinePages(["/", fleetUrl]); }, []);
   useEffect(() => {
     refresh();
     const timer = setInterval(refresh, 5000);

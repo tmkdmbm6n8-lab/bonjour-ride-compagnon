@@ -88,3 +88,7 @@ export function prefetchDriverAssets(router) {
 export function prefetchRiderAssets(router) {
   return prefetchSpace('rider', router, RIDER_PAGES, RIDER_DATA_ENDPOINTS);
 }
+
+export function prefetchAdminScreens(router, pages) {
+  return prefetchSpace('admin', router, [...new Set(pages)], ['/api/users/me']);
+}

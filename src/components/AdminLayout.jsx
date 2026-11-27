@@ -4,7 +4,9 @@ import { LayoutDashboard, Route, Car, Users, DollarSign, Inbox, MessagesSquare, 
 
 import { useEffect } from 'react';
 import { registerDriverPush } from '@/lib/native-push';
+import { useRouter } from '@tanstack/react-router';
 import AppShell from '@/components/shell/AppShell';
+import { prefetchAdminScreens } from '@/lib/offline-prefetch';
 
 const NAV = [
   { href: '/admin/dashboard', label: 'Vue d’ensemble', icon: LayoutDashboard },
@@ -20,7 +22,10 @@ const NAV = [
 ];
 
 export default function AdminLayout({ children }) {
+  const router = useRouter();
   useEffect(() => { registerDriverPush({ audience: 'admin' }); }, []);
+  // Admin tabs stay openable without network.
+  useEffect(() => { const t = setTimeout(() => { void prefetchAdminScreens(router, NAV.map((n) => n.href.split('?')[0])); }, 300); return () => clearTimeout(t); }, [router]);
   return (
     <>
       <AppShell nav={NAV} variant="admin">{children}</AppShell>
