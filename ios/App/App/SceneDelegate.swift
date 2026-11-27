@@ -61,6 +61,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
         let script = """
         (() => {
+          // Local offline page (no network at launch): show it right away instead of waiting 15 s.
+          if (location.protocol !== 'https:' || document.querySelector('[data-native-ready]')) return document.readyState !== 'loading';
           const logo = document.querySelector('.native-startup-logo');
           if (!logo || document.querySelector('.native-startup-unresolved')) return false;
           const rect = logo.getBoundingClientRect();

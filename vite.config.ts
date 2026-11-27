@@ -21,6 +21,8 @@ export default defineConfig({
         manifest: false,
         filename: "sw.js",
         devOptions: { enabled: false },
+        // Browser files live in dist/client: without this, precache URLs start with client/ and 404, so the worker never installs.
+        outDir: "dist/client",
         workbox: {
           globPatterns: ["**/*.{js,css,svg,woff2,json}"],
           maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
@@ -33,11 +35,7 @@ export default defineConfig({
               urlPattern: ({ request, url }) =>
                 request.mode === "navigate" && !url.pathname.startsWith("/~oauth") && !url.pathname.startsWith("/api/"),
               handler: "NetworkFirst",
-              options: {
-                cacheName: "sd-pages",
-                networkTimeoutSeconds: 4,
-                expiration: { maxEntries: 40, maxAgeSeconds: 14 * 24 * 3600 },
-              },
+              options: { networkTimeoutSeconds: 4 },
             },
             {
               urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/assets/"),

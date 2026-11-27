@@ -2,7 +2,10 @@
 
 import { Navigation, Heart, CalendarClock, Repeat2, Wallet, Menu } from "lucide-react";
 
+import { useEffect } from "react";
+import { useRouter } from "@tanstack/react-router";
 import AppShell from "@/components/shell/AppShell";
+import { prefetchRiderAssets } from "@/lib/offline-prefetch";
 import "@/styles/rider-mobile.css";
 
 const NAV = [
@@ -15,6 +18,12 @@ const NAV = [
 ];
 
 export default function RiderLayout({ children }) {
+  const router = useRouter();
+  // Loads every rider tab and its data in the background so the app keeps working without network.
+  useEffect(() => {
+    const timer = setTimeout(() => { void prefetchRiderAssets(router); }, 300);
+    return () => clearTimeout(timer);
+  }, [router]);
   return (
     <AppShell nav={NAV} variant="rider">
       {children}

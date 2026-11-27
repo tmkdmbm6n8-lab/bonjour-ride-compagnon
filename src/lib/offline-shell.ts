@@ -17,6 +17,28 @@ async function unregisterAppWorkers() {
   );
 }
 
+let registration: Promise<ServiceWorkerRegistration | null> = Promise.resolve(null);
+
+/**
+ * Saves the given pages in the worker's page cache (the same one the worker
+ * fills on navigation), refreshed on every connected opening, so the app can
+ * start with the phone in airplane mode on any of them.
+ */
+export async function warmOfflinePages(paths: string[]) {
+  if (typeof window === "undefined" || typeof caches === "undefined") return;
+  const reg = await registration.catch(() => null);
+  if (!reg) return;
+  try {
+    const cache = await caches.open(`workbox-runtime-${reg.scope}`);
+    for (const path of new Set(paths)) {
+      try {
+        const res = await fetch(path, { credentials: "same-origin", headers: { Accept: "text/html" } });
+        if (res.ok && (res.headers.get("content-type") || "").includes("text/html")) await cache.put(new URL(path, location.origin).href, res);
+      } catch { /* offline: keep the saved copy */ }
+    }
+  } catch { /* cache storage unavailable */ }
+}
+
 export function registerOfflineShell() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
   const host = window.location.hostname.toLowerCase();
@@ -27,5 +49,15 @@ export function registerOfflineShell() {
     void unregisterAppWorkers().catch(() => {});
     return;
   }
-  void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+  registration = navigator.serviceWorker
+    .register("/sw.js", { scope: "/" })
+    .then(() => navigator.serviceWorker.ready)
+    .catch(() => null);
+  void registration.then(async (reg) => {
+    if (!reg || navigator.onLine === false) return;
+    try {
+      const cache = await caches.open(`workbox-runtime-${reg.scope}`);
+      if (!(await cache.match(location.pathname))) await cache.add(location.pathname);
+    } catch { /* ignored */ }
+  });
 }

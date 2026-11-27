@@ -75,7 +75,7 @@
     }
   </style>
 </head>
-<body>
+<body data-native-ready>
   <svg class="logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="50" cy="50" r="46" fill="#17212d" stroke="#d4af37" stroke-width="3"/>
     <path d="M35 58 C35 66 65 66 65 52 C65 38 35 42 35 28 C35 18 65 18 65 26" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
@@ -86,17 +86,26 @@
     <span>Mode hors-ligne actif</span>
   </div>
 
-  <h1>Espace Chauffeur</h1>
-  <p>Vos données et réglages sont conservés sur votre iPhone. L'application se reconnecte automatiquement dès que le réseau revient.</p>
+  <h1>StrasDrive</h1>
+  <p>Ouvrez l'application une fois avec le réseau : ensuite elle s'ouvrira normalement, même en mode avion.</p>
 
-  <button class="btn btn-gold" onclick="location.replace('https://strasdrive.fr')">Ouvrir mon tableau de bord</button>
-  <button class="btn btn-ghost" onclick="location.reload()">Rafraîchir</button>
+  <button class="btn btn-gold" onclick="openApp(true)">Ouvrir StrasDrive</button>
 
   <script>
-    // Reconnexion automatique et discrète dès qu'une barre de réseau apparaît
-    window.addEventListener('online', () => {
-      location.replace('https://strasdrive.fr');
-    });
+    // The app saved on the phone opens through strasdrive.fr even without
+    // network. Try it at once; if it is not saved yet, iOS brings us back here,
+    // and the timestamp stops an endless loop.
+    var KEY = 'sd-offline-open-try';
+    function openApp(force) {
+      try {
+        var last = Number(sessionStorage.getItem(KEY) || 0);
+        if (!force && Date.now() - last < 20000) return;
+        sessionStorage.setItem(KEY, String(Date.now()));
+      } catch (e) {}
+      location.replace('https://strasdrive.fr/');
+    }
+    openApp(false);
+    window.addEventListener('online', function () { openApp(true); });
   </script>
 </body>
 </html>

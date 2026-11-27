@@ -1,8 +1,9 @@
 import { apiFetch } from './archive-fetch';
+import { warmOfflinePages } from './offline-shell';
 
-let prefetched = false;
-
-const DRIVER_PAGES = [
+// Every screen of each space, loaded in the background on the first connected
+// opening so the whole app keeps working in airplane mode afterwards.
+export const DRIVER_PAGES = [
   '/driver/dashboard',
   '/driver/reservations',
   '/driver/discover',
@@ -24,50 +25,66 @@ const DRIVER_DATA_ENDPOINTS = [
   '/api/drivers/me/classes',
   '/api/users/me',
   '/api/users/me/live',
+  '/api/wallet',
 ];
 
-let screensLoaded = false;
+export const RIDER_PAGES = [
+  '/dashboard',
+  '/favorite',
+  '/transport',
+  '/recurring',
+  '/wallet',
+  '/profile',
+  '/rides',
+];
+
+const RIDER_DATA_ENDPOINTS = [
+  '/api/users/me',
+  '/api/riders/me/favorite',
+  '/api/wallet',
+  '/api/rider/cards',
+  '/api/rides/active',
+  '/api/rides?page=1&limit=15&view=rider',
+];
+
+const done = new Set();
 
 /**
- * Loads the code of every driver tab into memory right away. Without it, a tab
+ * Loads the code of every tab into memory right away. Without it, a tab
  * opened for the first time in airplane mode cannot load its screen and the
  * router reloads the whole page, which shows the iPhone's offline screen.
  */
-async function preloadDriverScreens(router) {
-  if (screensLoaded || !router) return;
-  screensLoaded = true;
-  for (const to of DRIVER_PAGES) {
+async function preloadScreens(router, pages) {
+  if (!router) return true;
+  let ok = true;
+  for (const to of pages) {
     try {
       const route = router.routesByPath?.[to];
       if (route) await router.loadRouteChunk(route);
     } catch {
-      screensLoaded = false;
+      ok = false;
     }
   }
+  return ok;
 }
 
-export async function prefetchDriverAssets(router) {
+async function prefetchSpace(key, router, pages, endpoints) {
   if (typeof window === 'undefined') return;
-  await preloadDriverScreens(router);
-  if (prefetched) return;
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-  prefetched = true;
-
-  // 1. Précharger toutes les données du compte et des onglets dans le téléphone
-  for (const endpoint of DRIVER_DATA_ENDPOINTS) {
-    try {
-      await apiFetch(endpoint);
-    } catch {
-      // Ignorer si un endpoint échoue temporairement
-    }
+  if (!done.has(key + ':screens') && (await preloadScreens(router, pages))) done.add(key + ':screens');
+  if (done.has(key + ':data') || navigator.onLine === false) return;
+  done.add(key + ':data');
+  // Reads are kept on the phone by apiFetch, so each screen shows them offline.
+  for (const endpoint of endpoints) {
+    try { await apiFetch(endpoint); } catch { /* temporary failure: ignored */ }
   }
+  // Pages saved for a cold start in airplane mode (app fully closed).
+  await warmOfflinePages(['/', ...pages]);
+}
 
-  // 2. Précharger toutes les pages HTML dans le cache hors-ligne
-  for (const page of DRIVER_PAGES) {
-    try {
-      await fetch(page, { credentials: 'same-origin' });
-    } catch {
-      // Ignorer si hors connexion
-    }
-  }
+export function prefetchDriverAssets(router) {
+  return prefetchSpace('driver', router, DRIVER_PAGES, DRIVER_DATA_ENDPOINTS);
+}
+
+export function prefetchRiderAssets(router) {
+  return prefetchSpace('rider', router, RIDER_PAGES, RIDER_DATA_ENDPOINTS);
 }
