@@ -274,6 +274,7 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json();
+    if (!res.ok && data.code === 'OFFLINE') throw Object.assign(new Error(data.error), { code: 'OFFLINE' });
     if (!res.ok) throw new Error(data.error || ({
       accept: 'Impossible d’accepter la course',
       decline: 'Impossible de refuser la demande',

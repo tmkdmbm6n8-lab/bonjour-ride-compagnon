@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { enqueue, flushQueue, readQueue } from '@/lib/offline-queue';
+import { enqueue, flushQueue, isNetworkFailure, readQueue } from '@/lib/offline-queue';
 
 describe('file hors connexion', () => {
   beforeEach(() => localStorage.clear());
@@ -17,5 +17,9 @@ describe('file hors connexion', () => {
   });
   it('ne met jamais en attente l’acceptation d’une course', () => {
     expect(enqueue('r1', 'accept')).toBe(false);
+  });
+  it('reconnaît une réponse « base de données injoignable » comme une absence de réseau', () => {
+    expect(isNetworkFailure(Object.assign(new Error('x'), { code: 'OFFLINE' }))).toBe(true);
+    expect(isNetworkFailure(new Error('Course déjà prise'))).toBe(navigator.onLine === false);
   });
 });

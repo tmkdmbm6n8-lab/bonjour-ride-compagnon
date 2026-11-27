@@ -22,6 +22,7 @@ function writeQueue(items) {
 
 export function isNetworkFailure(error) {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+  if (error?.code === 'OFFLINE') return true;
   if (error instanceof TypeError) return true;
   const msg = String(error?.message || error || '').toLowerCase();
   return /network|fetch|failed to fetch|offline|load failed|abort|timeout/i.test(msg);
