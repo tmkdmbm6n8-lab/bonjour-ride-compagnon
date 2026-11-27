@@ -1,4 +1,11 @@
 # StrasDrive — import fidèle de l’archive
+
+# Application native React Native
+- [x] Ajouter la passerelle HTTP authentifiée qui réutilise les contrôles métier existants.
+- [x] Brancher le transport React Native sur cette passerelle sans embarquer de secret.
+- [x] Vérifier les accès, les erreurs et le contrat réseau par des tests automatisés et une vraie session temporaire.
+- [ ] Valider la connexion et une lecture de compte depuis un iPhone et un Android réels après publication.
+
 ## Corrections demandées le 24 novembre
 - [x] Valider la protection des paiements sans modifier les tarifs (5 contrôles réussis).
 - [x] Corriger les résultats d’adresse vides et le contrôle des QR expirés.

@@ -1,4 +1,5 @@
 const ORIGIN = 'https://strasdrive.fr';
+const NATIVE_API_PREFIX = '/api/public/native';
 
 export class NetworkUnavailableError extends Error {
   constructor() {
@@ -14,8 +15,8 @@ export class ApiError extends Error {
   }
 }
 
-// Transport only. Authentication must be wired to the verified server contract
-// before private endpoints are used. Never automatically retry mutations.
+// Transport only: authenticatedRequest attaches the bearer and the gateway verifies it.
+// Never automatically retry mutations.
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
@@ -31,9 +32,13 @@ export async function apiRequest<T>(
   try {
     const headers = new Headers(options.headers);
     headers.set('Accept', 'application/json');
+    if (typeof options.body === 'string' && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+    const gatewayPath = NATIVE_API_PREFIX + path.slice('/api'.length);
     let response: Response;
     try {
-      response = await fetch(ORIGIN + path, {
+      response = await fetch(ORIGIN + gatewayPath, {
         ...options, headers, signal: controller.signal,
       });
     } catch (error) {

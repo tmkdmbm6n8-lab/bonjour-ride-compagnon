@@ -52,6 +52,7 @@ import { Route as AuthenticatedRidesIdRouteImport } from './routes/_authenticate
 import { Route as ApiPublicJobsChatRetentionRouteImport } from './routes/api/public/jobs/chat-retention'
 import { Route as ApiPublicJobsWeeklyPayoutsRouteImport } from './routes/api/public/jobs/weekly-payouts'
 import { Route as ApiPublicJobsWithdrawalNotificationsRouteImport } from './routes/api/public/jobs/withdrawal-notifications'
+import { Route as ApiPublicNativeSplatRouteImport } from './routes/api/public/native/$'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -290,6 +291,11 @@ const ApiPublicJobsWithdrawalNotificationsRoute =
     path: '/api/public/jobs/withdrawal-notifications',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicNativeSplatRoute = ApiPublicNativeSplatRouteImport.update({
+  id: '/api/public/native/$',
+  path: '/api/public/native/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -340,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
+  '/api/public/native/$': typeof ApiPublicNativeSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -385,6 +392,7 @@ export interface FileRoutesByTo {
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
+  '/api/public/native/$': typeof ApiPublicNativeSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -432,6 +440,7 @@ export interface FileRoutesById {
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
+  '/api/public/native/$': typeof ApiPublicNativeSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -479,6 +488,7 @@ export interface FileRouteTypes {
     | '/api/public/jobs/chat-retention'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
+    | '/api/public/native/$'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -524,6 +534,7 @@ export interface FileRouteTypes {
     | '/api/public/jobs/chat-retention'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
+    | '/api/public/native/$'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -570,6 +581,7 @@ export interface FileRouteTypes {
     | '/api/public/jobs/chat-retention'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
+    | '/api/public/native/$'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -587,6 +599,7 @@ export interface RootRouteChildren {
   ApiPublicJobsChatRetentionRoute: typeof ApiPublicJobsChatRetentionRoute
   ApiPublicJobsWeeklyPayoutsRoute: typeof ApiPublicJobsWeeklyPayoutsRoute
   ApiPublicJobsWithdrawalNotificationsRoute: typeof ApiPublicJobsWithdrawalNotificationsRoute
+  ApiPublicNativeSplatRoute: typeof ApiPublicNativeSplatRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -893,6 +906,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsWithdrawalNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/native/$': {
+      id: '/api/public/native/$'
+      path: '/api/public/native/$'
+      fullPath: '/api/public/native/$'
+      preLoaderRoute: typeof ApiPublicNativeSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -997,6 +1017,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicJobsWeeklyPayoutsRoute: ApiPublicJobsWeeklyPayoutsRoute,
   ApiPublicJobsWithdrawalNotificationsRoute:
     ApiPublicJobsWithdrawalNotificationsRoute,
+  ApiPublicNativeSplatRoute: ApiPublicNativeSplatRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
