@@ -114,7 +114,17 @@ import {
 import { sanitizeTripPrefs, tripPrefsOf, riderAverage } from "./vtc-trip-prefs";
 import { evaluateDriverProgress } from "./vtc-tracking";
 import { newlyOfferedDriverIds, validPushToken } from "./vtc-push";
-import { pushRideOffer } from "./vtc-push.server";
+import {
+  validLiveActivityDeviceId,
+  validLiveActivityReference,
+  validLiveActivityToken,
+} from "./live-activity-offers";
+import {
+  pushRideOffer,
+  endRideOfferLiveActivities,
+  endDeviceLiveActivities,
+  registerLiveActivityUpdateToken,
+} from "./vtc-push.server";
 import {
   ALERT_KINDS,
   NEARBY_RADIUS_KM,
@@ -1045,6 +1055,51 @@ export async function handleVtc(input, context) {
     );
     return { driver: driverShape(required(await db.from("drivers").select("*").eq("user_id", uid).single())) };
   }
+  if (p === "/api/notifications/live-activity-token") {
+    if (!canDrive) throw new Error("Accès refusé");
+    if (!["POST", "DELETE"].includes(method)) throw new Error("Méthode non autorisée");
+    const token = validLiveActivityToken(body.token);
+    const deviceId = validLiveActivityDeviceId(body.deviceId);
+    if (!token || !deviceId) throw new Error("Jeton Live Activity invalide");
+
+    if (method === "DELETE") {
+      // End only this account's activities on this phone, then forget its start token.
+      await endDeviceLiveActivities(admin, uid, deviceId).catch((error) => {
+        console.error("Fermeture Live Activity à la déconnexion", error?.message || error);
+      });
+      required(await admin.from("live_activity_start_tokens").delete()
+        .eq("token", token).eq("user_id", uid).eq("device_id", deviceId));
+      return { ok: true };
+    }
+
+    const previous = required(await admin.from("live_activity_start_tokens")
+      .select("user_id").eq("token", token).maybeSingle());
+    if (previous?.user_id && previous.user_id !== uid) {
+      // A new account on the same phone must never inherit the former account's bubbles.
+      await endDeviceLiveActivities(admin, previous.user_id, deviceId).catch((error) => {
+        console.error("Fermeture Live Activity au changement de compte", error?.message || error);
+      });
+    }
+    // A rotated push-to-start token replaces the former token of this physical device.
+    required(await admin.from("live_activity_start_tokens").delete()
+      .eq("device_id", deviceId).neq("token", token));
+    required(await admin.from("live_activity_start_tokens").upsert(
+      { token, user_id: uid, device_id: deviceId, updated_at: new Date().toISOString() },
+      { onConflict: "token" },
+    ));
+    return { ok: true };
+  }
+
+  if (p === "/api/notifications/live-activity-update-token") {
+    if (!canDrive || method !== "POST") throw new Error("Accès refusé");
+    const rideId = validLiveActivityReference(body.rideId);
+    const activityId = validLiveActivityReference(body.activityId);
+    const token = validLiveActivityToken(body.token);
+    const deviceId = validLiveActivityDeviceId(body.deviceId);
+    if (!rideId || !activityId || !token || !deviceId) throw new Error("Jeton de fermeture invalide");
+    return registerLiveActivityUpdateToken(admin, { userId: uid, deviceId, rideId, activityId, token });
+  }
+
   if (p === "/api/drivers/me/push-token" || p === "/api/notifications/push-token") {
     if (!canDrive && role !== "admin") throw new Error("Accès refusé");
     if (!["POST", "DELETE"].includes(method)) throw new Error("Méthode non autorisée");
@@ -1551,11 +1606,19 @@ export async function handleVtc(input, context) {
 
       const claimed = required(await claim.select("*"))[0];
       if (!claimed) throw new Error("Course déjà acceptée");
+      // One acceptance closes every Dynamic Island bubble for this offer.
+      await endRideOfferLiveActivities(admin, id).catch((error) => {
+        console.error("Fermeture Live Activity après acceptation", error?.message || error);
+      });
       return { ride: await serialize(admin, claimed, uid) };
     }
     if (action === "decline") {
       if (!canDrive) throw new Error("Accès refusé");
       required(await admin.rpc("decline_ride_offer", { _ride: id, _driver: uid }));
+      // A refusal closes only the declining driver's bubble.
+      await endRideOfferLiveActivities(admin, id, uid).catch((error) => {
+        console.error("Fermeture Live Activity après refus", error?.message || error);
+      });
       return { ok: true };
     }
     if (!participant && role !== "admin") throw new Error("Course inaccessible");
@@ -2178,16 +2241,18 @@ async function assignOffer(db, r, pool) {
   if (r.status !== "searching") return r;
   if (r.is_test) {
     if (r.offer_expires_at && new Date(r.offer_expires_at).getTime() > Date.now()) return r;
-    return (
-      required(
-        await db
-          .from("rides")
-          .update({ status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null })
-          .eq("id", r.id)
-          .eq("status", "searching")
-          .select("*"),
-      )[0] || r
-    );
+    const closed = required(
+      await db
+        .from("rides")
+        .update({ status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null })
+        .eq("id", r.id)
+        .eq("status", "searching")
+        .select("*"),
+    )[0];
+    if (closed) await endRideOfferLiveActivities(db, r.id).catch((error) => {
+      console.error("Fermeture Live Activity à l’expiration", error?.message || error);
+    });
+    return closed || r;
   }
   let drivers = pool || (await dispatchPool(db));
   const blockResult = await db.from("user_blocks").select("blocker_id,blocked_id")

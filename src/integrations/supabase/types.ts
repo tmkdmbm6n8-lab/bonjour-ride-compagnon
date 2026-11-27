@@ -427,16 +427,19 @@ export type Database = {
       }
       live_activity_start_tokens: {
         Row: {
+          device_id: string | null
           token: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          device_id?: string | null
           token: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          device_id?: string | null
           token?: string
           updated_at?: string
           user_id?: string
@@ -446,6 +449,7 @@ export type Database = {
       live_activity_update_tokens: {
         Row: {
           activity_id: string
+          device_id: string | null
           ride_id: string
           token: string
           updated_at: string
@@ -453,6 +457,7 @@ export type Database = {
         }
         Insert: {
           activity_id: string
+          device_id?: string | null
           ride_id: string
           token: string
           updated_at?: string
@@ -460,6 +465,7 @@ export type Database = {
         }
         Update: {
           activity_id?: string
+          device_id?: string | null
           ride_id?: string
           token?: string
           updated_at?: string

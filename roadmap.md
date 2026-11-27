@@ -66,6 +66,13 @@
 - [ ] Nouvel APK avec les notifications — en attente du fichier google-services.json de Firebase
 - [ ] App iPhone (IPA) — reportée à la demande de l'utilisateur
 
+# Dynamic Island iOS — course test uniquement
+- [ ] Aligner le pont Capacitor et le format Apple sur `capacitor-live-activity` / `GenericAttributes`.
+- [ ] Enregistrer les jetons de démarrage et de fermeture pour Tata (`world.poker74@gmail.com`) et le bon appareil, avec déconnexion et changement de compte.
+- [ ] Fermer la bulle au refus, à l’acceptation par un chauffeur et à l’expiration sans ouverture de l’app.
+- [ ] Vérifier les règles par tests automatisés ; ne jamais activer la fonction pour les vraies courses.
+- [ ] Validation sur iPhone depuis l’écran d’accueil après publication autorisée et synchronisation Xcode — test utilisateur requis.
+
 # Vocaux façon Snapchat (17/11)
 - [x] Bouton micro à droite, bulle qui suit le doigt, glisser à gauche = corbeille
 - [x] Lecture : bouton play rouge, onde, vitesse 1x/1,5x/2x, durée

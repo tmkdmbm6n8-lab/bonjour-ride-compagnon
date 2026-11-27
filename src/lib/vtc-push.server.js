@@ -2,6 +2,12 @@ import { fareForDriver } from "./driver-ride-fare.server";
 import { favoriteDriverId } from "./private-clients.server";
 // Sends ride-offer notifications to drivers' phones through Firebase Cloud Messaging (connector gateway).
 import { buildOfferMessage, isStaleTokenError, isApnsHexToken, APPLE_BUNDLE_ID } from "./vtc-push";
+import {
+  buildLiveActivityEnd,
+  buildLiveActivityStart,
+  liveActivityOfferDriverIds,
+  shouldCloseLiveActivityOffer,
+} from "./live-activity-offers";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/firebase_messaging";
 const SEND_TIMEOUT_MS = 4000;
@@ -10,9 +16,11 @@ const diagnostics = [];
 export function getPushDiagnostics() { return [...diagnostics]; }
 function log(entry) { diagnostics.unshift({ timestamp: new Date().toISOString(), ...entry }); if (diagnostics.length > 150) diagnostics.pop(); }
 let jwtCache;
-async function sendApple(token, message) {
+
+async function sendApple(token, message, options = {}) {
   const { APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY, APNS_ENV } = process.env;
   if (!APNS_KEY_ID || !APNS_TEAM_ID || !APNS_PRIVATE_KEY) { log({provider:"apns",outcome:"missing_configuration"}); return {ok:false}; }
+  const liveActivity = options.liveActivity === true;
   try {
     const now = Math.floor(Date.now()/1000);
     if (!jwtCache || now-jwtCache.time > 2400) {
@@ -24,20 +32,26 @@ async function sendApple(token, message) {
       jwtCache={time:now,value:input+"."+b64(String.fromCharCode(...new Uint8Array(sig)))};
     }
     const host = APNS_ENV === "sandbox" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
-    const payload = {...message.data, aps:{alert:message.notification,sound:"default",...message.apns?.payload?.aps}};
+    const payload = liveActivity
+      ? message
+      : {...message.data, aps:{alert:message.notification,sound:"default",...message.apns?.payload?.aps}};
     // Cloudflare Workers has no node:http2; its fetch speaks HTTP/2 to APNs.
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), SEND_TIMEOUT_MS);
     let response;
     try {
+      const headers = {
+        authorization: "bearer " + jwtCache.value,
+        "apns-topic": liveActivity ? `${APPLE_BUNDLE_ID}.push-type.liveactivity` : APPLE_BUNDLE_ID,
+        "apns-push-type": liveActivity ? "liveactivity" : "alert",
+        "apns-priority": "10",
+        "apns-expiration": String(options.expiration || message.apns?.headers?.["apns-expiration"] || "0"),
+        "content-type": "application/json"
+      };
+      if (options.collapseId) headers["apns-collapse-id"] = String(options.collapseId).slice(0, 64);
       const res = await fetch("https://" + host + "/3/device/" + token, {
         method: "POST",
-        headers: {
-          authorization: "bearer " + jwtCache.value,
-          "apns-topic": APPLE_BUNDLE_ID, "apns-push-type": "alert",
-          "apns-priority": "10", "apns-expiration": message.apns?.headers?.["apns-expiration"] || "0",
-          "content-type": "application/json"
-        },
+        headers,
         body: JSON.stringify(payload),
         signal: ctrl.signal,
       });
@@ -46,11 +60,12 @@ async function sendApple(token, message) {
     let reason;
     try { reason = JSON.parse(response.body).reason; } catch {}
     const ok = response.status === 200;
-    log({provider:"apns",environment:APNS_ENV || "production",status:response.status,reason,outcome:ok?"success":"failed"});
-    console.info("[APNs]", response.status, reason || "accepted");
-    return {ok,stale:response.status===410};
-  } catch(e) { log({provider:"apns",outcome:"network_or_configuration_error",code:e?.code || e?.name}); console.error("[APNs] transport error", e?.code || e?.name); return {ok:false}; }
+    log({provider:"apns",channel:liveActivity?"liveactivity":"alert",environment:APNS_ENV || "production",status:response.status,reason,outcome:ok?"success":"failed"});
+    console.info("[APNs]", liveActivity ? "liveactivity" : "alert", response.status, reason || "accepted");
+    return {ok,status:response.status,reason,stale:response.status===410};
+  } catch(e) { log({provider:"apns",channel:liveActivity?"liveactivity":"alert",outcome:"network_or_configuration_error",code:e?.code || e?.name}); console.error("[APNs] transport error", e?.code || e?.name); return {ok:false}; }
 }
+
 async function sendOne(token, message, headers) {
   if (isApnsHexToken(token)) return sendApple(token,message);
   if (!headers) return {ok:false};
@@ -75,6 +90,100 @@ async function sendOne(token, message, headers) {
   }
 }
 
+/** Remote start for the tested GenericAttributes widget. Real rides never enter this path. */
+export async function startRideOfferLiveActivities(admin, ride, userIds) {
+  const ids = liveActivityOfferDriverIds(ride, userIds);
+  if (!ids.length) return { sent: 0 };
+  const start = buildLiveActivityStart(ride);
+  if (!start) return { sent: 0 };
+
+  const { data: devices, error } = await admin
+    .from("live_activity_start_tokens")
+    .select("token,user_id")
+    .in("user_id", ids);
+  if (error) throw error;
+
+  const results = await Promise.all((devices ?? []).map(async ({ token }) => ({
+    token,
+    ...await sendApple(token, start.payload, {
+      liveActivity: true,
+      expiration: start.expiresAt,
+      collapseId: start.collapseId,
+    }),
+  })));
+  const expiredTokens = results.filter((result) => result.stale).map(({ token }) => token);
+  if (expiredTokens.length) {
+    await admin.from("live_activity_start_tokens").delete().in("token", expiredTokens);
+  }
+  return { sent: results.filter((result) => result.ok).length };
+}
+
+async function endLiveActivityRows(admin, activities) {
+  await Promise.all((activities ?? []).map(async ({ token, user_id: ownerId, ride_id: rideId }) => {
+    const end = buildLiveActivityEnd();
+    const result = await sendApple(token, end.payload, {
+      liveActivity: true,
+      expiration: end.expiresAt,
+      collapseId: `ride-${rideId}`,
+    });
+    // A transient Apple/network failure stays in the table for the next expiry run.
+    if (result.ok || result.stale) {
+      const { error: deleteError } = await admin
+        .from("live_activity_update_tokens")
+        .delete()
+        .eq("token", token)
+        .eq("user_id", ownerId);
+      if (deleteError) throw deleteError;
+    }
+  }));
+}
+
+export async function endRideOfferLiveActivities(admin, rideId, userId, deviceId) {
+  let query = admin
+    .from("live_activity_update_tokens")
+    .select("token,user_id,ride_id")
+    .eq("ride_id", String(rideId));
+  if (userId !== undefined) query = query.eq("user_id", userId);
+  if (deviceId !== undefined) query = query.eq("device_id", deviceId);
+  const { data: activities, error } = await query;
+  if (error) throw error;
+  await endLiveActivityRows(admin, activities);
+}
+
+/** Sign-out/account change: only this account on this device, never other phones. */
+export async function endDeviceLiveActivities(admin, userId, deviceId) {
+  const { data: activities, error } = await admin
+    .from("live_activity_update_tokens")
+    .select("token,user_id,ride_id")
+    .eq("user_id", userId)
+    .eq("device_id", deviceId);
+  if (error) throw error;
+  await endLiveActivityRows(admin, activities);
+}
+
+/** Shared by the authenticated WebView fallback and the native background endpoint. */
+export async function registerLiveActivityUpdateToken(admin, { userId, deviceId, rideId, activityId, token }) {
+  const { error } = await admin.from("live_activity_update_tokens").upsert(
+    { token, ride_id: rideId, activity_id: activityId, user_id: userId, device_id: deviceId, updated_at: new Date().toISOString() },
+    { onConflict: "user_id,activity_id" },
+  );
+  if (error) throw error;
+
+  const { data: offer, error: offerError } = await admin
+    .from("rides")
+    .select("status,offer_expires_at,declined")
+    .eq("id", rideId)
+    .maybeSingle();
+  if (offerError) throw offerError;
+
+  // The activity may have ended before iOS delivered its per-activity token.
+  if (shouldCloseLiveActivityOffer(offer, userId)) {
+    await endRideOfferLiveActivities(admin, rideId, userId, deviceId);
+    return { ok: true, closing: true };
+  }
+  return { ok: true, closing: false };
+}
+
 /** Never throws: a failed notification must not block dispatch. */
 export async function pushRideOffer(admin, ride, userIds) {
   try {
@@ -83,7 +192,13 @@ export async function pushRideOffer(admin, ride, userIds) {
     const lovableKey = process.env.LOVABLE_API_KEY,
       connKey = process.env.FIREBASE_MESSAGING_API_KEY;
 
+    // Live Activity does not depend on the presence of a classic push token.
+    const liveStart = startRideOfferLiveActivities(admin, ride, ids).catch((error) => {
+      console.error("Envoi Live Activity impossible", error?.code || error?.name || error?.message);
+      return { sent: 0 };
+    });
     const { data: rows, error } = await admin.from("push_tokens").select("token,user_id").in("user_id", ids);
+    await liveStart;
     if (error || !rows?.length) return;
     const headers = lovableKey && connKey ? {
       Authorization: `Bearer ${lovableKey}`,

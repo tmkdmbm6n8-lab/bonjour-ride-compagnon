@@ -50,6 +50,7 @@
         "@tanstack/react-start": "1.168.60",
         "@tanstack/router-plugin": "1.168.42",
         "@types/leaflet": "^1.9.22",
+        "capacitor-live-activity": "^8.2.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
@@ -1073,6 +1074,8 @@
     "camelcase": ["camelcase@5.3.1", "", {}, "sha512-L28STB170nwWS63UjtlEOE3dldQApaJXZkOI1uMFfzf3rRuPegHaHesyee+YxQ+W6SvRDQV6UrdOdRiR153wJg=="],
 
     "caniuse-lite": ["caniuse-lite@1.0.30001806", "", {}, "sha512-72Cuvd95zbSYPKq6Fhg8eDJRlzgWDf7/mtoZv6Qe/DYNCEBdNxoA3+rZAU2ZhGCpZlns3EssFavaZomckT5Uuw=="],
+
+    "capacitor-live-activity": ["capacitor-live-activity@8.2.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-w0Q6TZgCJXhjUaf63EsPI8jV/Rq3qd26cIuSIKjLVwo2k1EfxZ1PTJF6X8f1xKAAP9GYrWycEcNJb3Z+eWcVcw=="],
 
     "chai": ["chai@6.2.2", "", {}, "sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg=="],
 

@@ -50,9 +50,11 @@ import { Route as AuthenticatedDriverTripsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedDriverWalletRouteImport } from './routes/_authenticated.driver.wallet'
 import { Route as AuthenticatedRidesIdRouteImport } from './routes/_authenticated.rides.$id'
 import { Route as ApiPublicJobsChatRetentionRouteImport } from './routes/api/public/jobs/chat-retention'
+import { Route as ApiPublicJobsLiveActivityExpiryRouteImport } from './routes/api/public/jobs/live-activity-expiry'
 import { Route as ApiPublicJobsWeeklyPayoutsRouteImport } from './routes/api/public/jobs/weekly-payouts'
 import { Route as ApiPublicJobsWithdrawalNotificationsRouteImport } from './routes/api/public/jobs/withdrawal-notifications'
 import { Route as ApiPublicNativeSplatRouteImport } from './routes/api/public/native/$'
+import { Route as ApiPublicNativeLiveActivityTokenRouteImport } from './routes/api/public/native/live-activity-token'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -279,6 +281,12 @@ const ApiPublicJobsChatRetentionRoute =
     path: '/api/public/jobs/chat-retention',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsLiveActivityExpiryRoute =
+  ApiPublicJobsLiveActivityExpiryRouteImport.update({
+    id: '/api/public/jobs/live-activity-expiry',
+    path: '/api/public/jobs/live-activity-expiry',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicJobsWeeklyPayoutsRoute =
   ApiPublicJobsWeeklyPayoutsRouteImport.update({
     id: '/api/public/jobs/weekly-payouts',
@@ -296,6 +304,12 @@ const ApiPublicNativeSplatRoute = ApiPublicNativeSplatRouteImport.update({
   path: '/api/public/native/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicNativeLiveActivityTokenRoute =
+  ApiPublicNativeLiveActivityTokenRouteImport.update({
+    id: '/api/public/native/live-activity-token',
+    path: '/api/public/native/live-activity-token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -344,9 +358,11 @@ export interface FileRoutesByFullPath {
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
+  '/api/public/jobs/live-activity-expiry': typeof ApiPublicJobsLiveActivityExpiryRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
   '/api/public/native/$': typeof ApiPublicNativeSplatRoute
+  '/api/public/native/live-activity-token': typeof ApiPublicNativeLiveActivityTokenRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -390,9 +406,11 @@ export interface FileRoutesByTo {
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
+  '/api/public/jobs/live-activity-expiry': typeof ApiPublicJobsLiveActivityExpiryRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
   '/api/public/native/$': typeof ApiPublicNativeSplatRoute
+  '/api/public/native/live-activity-token': typeof ApiPublicNativeLiveActivityTokenRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -438,9 +456,11 @@ export interface FileRoutesById {
   '/_authenticated/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/_authenticated/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
+  '/api/public/jobs/live-activity-expiry': typeof ApiPublicJobsLiveActivityExpiryRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
   '/api/public/native/$': typeof ApiPublicNativeSplatRoute
+  '/api/public/native/live-activity-token': typeof ApiPublicNativeLiveActivityTokenRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -486,9 +506,11 @@ export interface FileRouteTypes {
     | '/driver/wallet'
     | '/rides/$id'
     | '/api/public/jobs/chat-retention'
+    | '/api/public/jobs/live-activity-expiry'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
     | '/api/public/native/$'
+    | '/api/public/native/live-activity-token'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -532,9 +554,11 @@ export interface FileRouteTypes {
     | '/driver/wallet'
     | '/rides/$id'
     | '/api/public/jobs/chat-retention'
+    | '/api/public/jobs/live-activity-expiry'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
     | '/api/public/native/$'
+    | '/api/public/native/live-activity-token'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -579,9 +603,11 @@ export interface FileRouteTypes {
     | '/_authenticated/driver/wallet'
     | '/_authenticated/rides/$id'
     | '/api/public/jobs/chat-retention'
+    | '/api/public/jobs/live-activity-expiry'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
     | '/api/public/native/$'
+    | '/api/public/native/live-activity-token'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -597,9 +623,11 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   ApiPublicJobsChatRetentionRoute: typeof ApiPublicJobsChatRetentionRoute
+  ApiPublicJobsLiveActivityExpiryRoute: typeof ApiPublicJobsLiveActivityExpiryRoute
   ApiPublicJobsWeeklyPayoutsRoute: typeof ApiPublicJobsWeeklyPayoutsRoute
   ApiPublicJobsWithdrawalNotificationsRoute: typeof ApiPublicJobsWithdrawalNotificationsRoute
   ApiPublicNativeSplatRoute: typeof ApiPublicNativeSplatRoute
+  ApiPublicNativeLiveActivityTokenRoute: typeof ApiPublicNativeLiveActivityTokenRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -892,6 +920,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsChatRetentionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/live-activity-expiry': {
+      id: '/api/public/jobs/live-activity-expiry'
+      path: '/api/public/jobs/live-activity-expiry'
+      fullPath: '/api/public/jobs/live-activity-expiry'
+      preLoaderRoute: typeof ApiPublicJobsLiveActivityExpiryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/weekly-payouts': {
       id: '/api/public/jobs/weekly-payouts'
       path: '/api/public/jobs/weekly-payouts'
@@ -911,6 +946,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/native/$'
       fullPath: '/api/public/native/$'
       preLoaderRoute: typeof ApiPublicNativeSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/native/live-activity-token': {
+      id: '/api/public/native/live-activity-token'
+      path: '/api/public/native/live-activity-token'
+      fullPath: '/api/public/native/live-activity-token'
+      preLoaderRoute: typeof ApiPublicNativeLiveActivityTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/payments/webhook': {
@@ -1014,10 +1056,12 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   ApiPublicJobsChatRetentionRoute: ApiPublicJobsChatRetentionRoute,
+  ApiPublicJobsLiveActivityExpiryRoute: ApiPublicJobsLiveActivityExpiryRoute,
   ApiPublicJobsWeeklyPayoutsRoute: ApiPublicJobsWeeklyPayoutsRoute,
   ApiPublicJobsWithdrawalNotificationsRoute:
     ApiPublicJobsWithdrawalNotificationsRoute,
   ApiPublicNativeSplatRoute: ApiPublicNativeSplatRoute,
+  ApiPublicNativeLiveActivityTokenRoute: ApiPublicNativeLiveActivityTokenRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
