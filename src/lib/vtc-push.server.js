@@ -1,5 +1,6 @@
 import { fareForDriver } from "./driver-ride-fare.server";
 import { favoriteDriverId } from "./private-clients.server";
+// Sends ride-offer notifications to drivers' phones through Firebase Cloud Messaging (connector gateway).
 import { buildOfferMessage, isStaleTokenError, isApnsHexToken, APPLE_BUNDLE_ID } from "./vtc-push";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/firebase_messaging";
@@ -9,8 +10,7 @@ const diagnostics = [];
 export function getPushDiagnostics() { return [...diagnostics]; }
 function log(entry) { diagnostics.unshift({ timestamp: new Date().toISOString(), ...entry }); if (diagnostics.length > 150) diagnostics.pop(); }
 let jwtCache;
-
-async function sendApple(token, message, liveActivity = false) {
+async function sendApple(token, message) {
   const { APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY, APNS_ENV } = process.env;
   if (!APNS_KEY_ID || !APNS_TEAM_ID || !APNS_PRIVATE_KEY) { log({provider:"apns",outcome:"missing_configuration"}); return {ok:false}; }
   try {
@@ -24,9 +24,7 @@ async function sendApple(token, message, liveActivity = false) {
       jwtCache={time:now,value:input+"."+b64(String.fromCharCode(...new Uint8Array(sig)))};
     }
     const host = APNS_ENV === "sandbox" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
-    const payload = liveActivity
-      ? message.apns.payload
-      : { ...message.data, aps: { alert: message.notification, sound: "default", ...message.apns?.payload?.aps } };
+    const payload = {...message.data, aps:{alert:message.notification,sound:"default",...message.apns?.payload?.aps}};
     // Cloudflare Workers has no node:http2; its fetch speaks HTTP/2 to APNs.
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), SEND_TIMEOUT_MS);
@@ -36,10 +34,8 @@ async function sendApple(token, message, liveActivity = false) {
         method: "POST",
         headers: {
           authorization: "bearer " + jwtCache.value,
-          "apns-topic": liveActivity ? `${APPLE_BUNDLE_ID}.push-type.liveactivity` : APPLE_BUNDLE_ID,
-          "apns-push-type": liveActivity ? "liveactivity" : "alert",
-          "apns-priority": "10",
-          "apns-expiration": message.apns?.headers?.["apns-expiration"] || "0",
+          "apns-topic": APPLE_BUNDLE_ID, "apns-push-type": "alert",
+          "apns-priority": "10", "apns-expiration": message.apns?.headers?.["apns-expiration"] || "0",
           "content-type": "application/json"
         },
         body: JSON.stringify(payload),
@@ -55,7 +51,6 @@ async function sendApple(token, message, liveActivity = false) {
     return {ok,stale:response.status===410};
   } catch(e) { log({provider:"apns",outcome:"network_or_configuration_error",code:e?.code || e?.name}); console.error("[APNs] transport error", e?.code || e?.name); return {ok:false}; }
 }
-
 async function sendOne(token, message, headers) {
   if (isApnsHexToken(token)) return sendApple(token,message);
   if (!headers) return {ok:false};
@@ -80,46 +75,6 @@ async function sendOne(token, message, headers) {
   }
 }
 
-async function startRideOfferLiveActivities(admin, userIds, ride, message) {
-  // Laisser dÃ©sactivÃ© jusqu'Ã  ce que la fin d'offre soit branchÃ©e.
-  if (process.env.LIVE_ACTIVITY_OFFERS_ENABLED !== "true") return;
-
-  const timestamp = Math.floor(Date.now() / 1000);
-  const expiresAt = Number(message.apns?.headers?.["apns-expiration"]);
-  if (!ride.id || !Number.isFinite(expiresAt) || expiresAt <= timestamp) return;
-
-  const { data: devices, error } = await admin
-    .from("live_activity_start_tokens")
-    .select("token")
-    .in("user_id", userIds);
-  if (error) throw error;
-
-  const results = await Promise.all((devices ?? []).map(async ({ token }) => ({
-    token,
-    ...await sendApple(token, {
-      apns: {
-        headers: { "apns-expiration": String(expiresAt) },
-        payload: {
-          aps: {
-            timestamp,
-            event: "start",
-            "attributes-type": "GenericAttributes",
-            attributes: { id: String(ride.id), staticValues: { type: "driver_offer" } },
-            "content-state": { values: { status: "Nouvelle course" } },
-            "stale-date": expiresAt,
-            alert: { title: "StrasDrive", body: "Nouvelle course disponible" },
-          },
-        },
-      },
-    }, true),
-  })));
-
-  const expiredTokens = results.filter((result) => result.stale).map(({ token }) => token);
-  if (expiredTokens.length) {
-    await admin.from("live_activity_start_tokens").delete().in("token", expiredTokens);
-  }
-}
-
 /** Never throws: a failed notification must not block dispatch. */
 export async function pushRideOffer(admin, ride, userIds) {
   try {
@@ -136,9 +91,6 @@ export async function pushRideOffer(admin, ride, userIds) {
       "Content-Type": "application/json",
     } : null;
     const message = buildOfferMessage(ride);
-    await startRideOfferLiveActivities(admin, ids, ride, message).catch((error) => {
-      console.error("Envoi Live Activity impossible", error?.code || error?.name);
-    });
     const favorite = ride.is_test ? null : await favoriteDriverId(admin, ride.rider_id);
     const privateMessage = rows.some((row) => favorite && row.user_id === favorite)
       ? buildOfferMessage({
@@ -155,42 +107,6 @@ export async function pushRideOffer(admin, ride, userIds) {
   } catch (e) {
     console.error("pushRideOffer:", e?.message || e);
   }
-}
-
-export async function endRideOfferLiveActivities(admin, rideId, userId) {
-  let query = admin
-    .from("live_activity_update_tokens")
-    .select("token,user_id")
-    .eq("ride_id", String(rideId));
-
-  if (userId !== undefined) query = query.eq("user_id", userId);
-  const { data: activities, error } = await query;
-  if (error) throw error;
-
-  await Promise.all((activities ?? []).map(async ({ token, user_id: ownerId }) => {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const result = await sendApple(token, {
-      apns: {
-        payload: {
-          aps: {
-            timestamp,
-            event: "end",
-            "content-state": { values: { status: "Offre terminÃ©e" } },
-            "dismissal-date": timestamp,
-          },
-        },
-      },
-    }, true);
-
-    if (result.ok || result.stale) {
-      const { error: deleteError } = await admin
-        .from("live_activity_update_tokens")
-        .delete()
-        .eq("token", token)
-        .eq("user_id", ownerId);
-      if (deleteError) throw deleteError;
-    }
-  }));
 }
 
 /** Admin and driver notifications share the existing managed Firebase connector. */

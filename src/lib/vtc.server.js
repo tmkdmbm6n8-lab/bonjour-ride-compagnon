@@ -42,7 +42,7 @@ export function cityFromAddress(addr) {
     .map((p) => p.trim())
     .filter(Boolean);
   for (const p of parts) {
-    const m = p.match(/\b\d{5}\s+([A-Za-zÃ€-Ã¿\s'-]+)/);
+    const m = p.match(/\b\d{5}\s+([A-Za-zÀ-ÿ\s'-]+)/);
     if (m && m[1]) {
       const clean = m[1].replace(/\(.*?\)/g, "").trim();
       if (clean) return clean;
@@ -114,7 +114,7 @@ import {
 import { sanitizeTripPrefs, tripPrefsOf, riderAverage } from "./vtc-trip-prefs";
 import { evaluateDriverProgress } from "./vtc-tracking";
 import { newlyOfferedDriverIds, validPushToken } from "./vtc-push";
-import { pushRideOffer, endRideOfferLiveActivities } from "./vtc-push.server";
+import { pushRideOffer } from "./vtc-push.server";
 import {
   ALERT_KINDS,
   NEARBY_RADIUS_KM,
@@ -197,8 +197,8 @@ async function serialize(db, r, actor, raw = false) {
     };
   }
 
-  // RÃ¨gle d'anonymat : pour les chauffeurs normaux (non prioritaires et non admins),
-  // dÃ¨s que la course est terminÃ©e, masquer les adresses exactes et diffÃ©rer la note de 12 h.
+  // Règle d'anonymat : pour les chauffeurs normaux (non prioritaires et non admins),
+  // dès que la course est terminée, masquer les adresses exactes et différer la note de 12 h.
   const isDriverViewingOwnCompletedRide = actor === r.driver_id && r.status === "completed";
   const mustAnonymize = isDriverViewingOwnCompletedRide && !isPriorityDriver;
 
@@ -250,7 +250,7 @@ async function serialize(db, r, actor, raw = false) {
     live_route: undefined,
   };
 
-  // Attacher les coordonnÃ©es du passager (nom, tÃ©lÃ©phone, note) au chauffeur
+  // Attacher les coordonnées du passager (nom, téléphone, note) au chauffeur
   if (r.rider_id && (actor === r.driver_id || raw)) {
     try {
       const rp = required(await db.from("profiles").select("name,phone,rating,avatar").eq("id", r.rider_id).single());
@@ -321,7 +321,7 @@ async function osmNavigationRoute(a, b) {
     return response.ok ? routeFromOsrm(await response.json()) : null;
   } catch { return null; }
 }
-/** Live leg driver â†’ pickup/destination, shared by rider and driver through rides.live_route. */
+/** Live leg driver → pickup/destination, shared by rider and driver through rides.live_route. */
 async function liveRoute(admin, r) {
   const target = liveTarget(r);
   if (!target || !r.driver_id) return null;
@@ -361,8 +361,8 @@ export async function handleVtc(input, context) {
       ? "driver"
       : "rider";
   const canDrive = roles.some((r) => r.role === "driver");
-  if (p.startsWith("/api/admin/") && role !== "admin") throw new Error("AccÃ¨s administrateur requis");
-  if (p.startsWith("/api/drivers/me") && !canDrive) throw new Error("AccÃ¨s chauffeur requis");
+  if (p.startsWith("/api/admin/") && role !== "admin") throw new Error("Accès administrateur requis");
+  if (p.startsWith("/api/drivers/me") && !canDrive) throw new Error("Accès chauffeur requis");
   // RLS has verified the role; privileged operations below use only the verified caller identity.
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
   const profile = required(profileResult);
@@ -384,7 +384,7 @@ export async function handleVtc(input, context) {
     };
   }
 
-  // Gestion des cartes du passager : identitÃ© issue de la session, jamais du corps de requÃªte.
+  // Gestion des cartes du passager : identité issue de la session, jamais du corps de requête.
   if (p === "/api/rider/cards" && method === "GET") {
     const { listRiderCards } = await import("./vtc-card-hold.server.js");
     return { cards: await listRiderCards(admin, uid) };
@@ -408,12 +408,12 @@ export async function handleVtc(input, context) {
     const { setDefaultRiderCard } = await import("./vtc-card-hold.server.js");
     return setDefaultRiderCard(admin, { userId: uid, cardId: body.cardId });
   }
-  if (p.startsWith("/api/rider/cards")) throw new Error("MÃ©thode non autorisÃ©e");
+  if (p.startsWith("/api/rider/cards")) throw new Error("Méthode non autorisée");
 
   if (p === "/api/admin/chat-evidence") {
     if (method === "GET") return adminChatEvidence(admin, q);
     if (method === "POST") return handleAdminReportAction(admin, body);
-    throw new Error("MÃ©thode non autorisÃ©e");
+    throw new Error("Méthode non autorisée");
   }
 
   if (p === "/api/admin/content-reports") {
@@ -438,19 +438,19 @@ export async function handleVtc(input, context) {
       required(await admin.from("contact_messages").update({ topic: "safety_reviewed" }).eq("id", id).eq("topic", "safety"));
       return { ok: true };
     }
-    throw new Error("MÃ©thode non autorisÃ©e");
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/admin/monitoring") {
-    if (method !== "GET") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "GET") throw new Error("Méthode non autorisée");
     const { readSiteActivity } = await import("./site-monitoring.server");
     return readSiteActivity(admin);
   }
   if (p === "/api/users/me/blocks") {
-    if (method !== "GET") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "GET") throw new Error("Méthode non autorisée");
     return { blocks: await listUserBlocks(admin, uid) };
   }
   if (p === "/api/users/me/export") {
-    if (method !== "GET") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "GET") throw new Error("Méthode non autorisée");
     const { page, until, from, to } = exportPageOptions(q);
     const driver =
       page === 0 && role === "driver"
@@ -542,22 +542,22 @@ export async function handleVtc(input, context) {
       return { application: data || null, canDrive };
     }
     if (method === "POST") {
-      if (canDrive) throw new Error("Votre compte possÃ¨de dÃ©jÃ  un espace chauffeur.");
+      if (canDrive) throw new Error("Votre compte possède déjà un espace chauffeur.");
       // Enforce the same complete document acknowledgment on the server.
       const { REQUIRED_DOCUMENTS } = await import("./vtc-documents");
       const confirmed = Array.isArray(body.confirmedDocuments) ? body.confirmedDocuments : [];
       if (!REQUIRED_DOCUMENTS.every((spec) => confirmed.includes(spec.type)))
-        throw new Error("Confirmez que vous possÃ©dez tous les documents obligatoires avant de candidater.");
+        throw new Error("Confirmez que vous possédez tous les documents obligatoires avant de candidater.");
 
       const { data: existing, error: readError } = await admin.from("driver_applications").select("status").eq("user_id", uid).maybeSingle();
-      if (readError) throw new Error("Impossible de vÃ©rifier votre candidature.");
+      if (readError) throw new Error("Impossible de vérifier votre candidature.");
       if (existing) return { application: existing, alreadySubmitted: true };
       const { data, error } = await admin.from("driver_applications").insert({ user_id: uid, status: "pending" }).select("status,created_at").single();
       if (error?.code === "23505") return { application: { status: "pending" }, alreadySubmitted: true };
       if (error) throw new Error("Impossible d'envoyer la candidature.");
       return { application: data };
     }
-    throw new Error("MÃ©thode non autorisÃ©e");
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/admin/driver-applications") {
     if (method === "GET") {
@@ -575,30 +575,30 @@ export async function handleVtc(input, context) {
       if (!/^[0-9a-f-]{36}$/i.test(target)) throw new Error("Client invalide");
       if (body.action === "accept") {
         const { error } = await admin.rpc("accept_driver_application", { p_user_id: target, p_admin_id: uid });
-        if (error) throw new Error("Impossible d'accepter la candidature. VÃ©rifiez que la migration et le profil chauffeur sont configurÃ©s.");
+        if (error) throw new Error("Impossible d'accepter la candidature. Vérifiez que la migration et le profil chauffeur sont configurés.");
         return { ok: true };
       }
       if (body.action === "reject") {
         const { data, error } = await admin.from("driver_applications").update({ status: "rejected", reviewed_at: new Date().toISOString(), reviewed_by: uid }).eq("user_id", target).eq("status", "pending").select("user_id");
-        if (error || !data?.length) throw new Error("Candidature dÃ©jÃ  traitÃ©e ou introuvable");
+        if (error || !data?.length) throw new Error("Candidature déjà traitée ou introuvable");
         return { ok: true };
       }
       throw new Error("Action invalide");
     }
-    throw new Error("MÃ©thode non autorisÃ©e");
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/users/me/mode") {
-    if (method !== "POST") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "POST") throw new Error("Méthode non autorisée");
     return switchAccountMode(admin, { uid, canDrive, mode: body.mode });
   }
   if (p === "/api/users/me/support") {
     if (method === "GET") return personalSupportRequests(admin, uid, context.claims.email, Number(q.get("page") || 0));
     if (method === "POST")
       return sendSupportMessage(admin, { uid, email: context.claims.email, name: profile.name, role, body });
-    throw new Error("MÃ©thode non autorisÃ©e");
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/users/me/deletion-request" && method === "POST") {
-    // Suppression immÃ©diate et autonome du compte (exigence Apple 5.1.1(v) et RGPD)
+    // Suppression immédiate et autonome du compte (exigence Apple 5.1.1(v) et RGPD)
     // Fail closed before any irreversible Stripe operation. The database RPC
     // must enforce the same rules transactionally (see Supabase migration).
     const linkedChecks = [
@@ -619,11 +619,11 @@ export async function handleVtc(input, context) {
     ]) {
       const { data, error } = await admin.from(table).select("id").eq(column, uid).limit(1);
       if (error) throw new Error(error.message);
-      if (data.length) throw new Error("Ce compte comporte des opÃ©rations financiÃ¨res Ã  conserver. Contactez l'assistance pour finaliser la suppression.");
+      if (data.length) throw new Error("Ce compte comporte des opérations financières à conserver. Contactez l'assistance pour finaliser la suppression.");
     }
     const { data: files, error: listError } = await admin.storage.from(DOCUMENTS_BUCKET).list(uid, { limit: 1000 });
     if (listError) throw new Error(listError.message);
-    if ((files || []).length === 1000) throw new Error("Trop de documents Ã  effacer automatiquement. Contactez l'assistance.");
+    if ((files || []).length === 1000) throw new Error("Trop de documents à effacer automatiquement. Contactez l'assistance.");
     const { closeGoldBillingForDeletedAccount } = await import("./driver-gold.server");
     await closeGoldBillingForDeletedAccount(admin, uid);
     const removed = required(await admin.rpc("admin_delete_account", { _user: uid }));
@@ -641,11 +641,11 @@ export async function handleVtc(input, context) {
     }
     const { error } = await admin.auth.admin.deleteUser(uid);
     if (error && !/not.?found/i.test(error.message))
-      throw new Error(`DonnÃ©es effacÃ©es, mais l'accÃ¨s au compte n'a pas pu Ãªtre supprimÃ© : ${error.message}`);
+      throw new Error(`Données effacées, mais l'accès au compte n'a pas pu être supprimé : ${error.message}`);
     return { ok: true, removed };
   }
   if (p === "/api/users/me/avatar") {
-    if (method !== "POST") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "POST") throw new Error("Méthode non autorisée");
     const { validProfileAvatar } = await import("./profile-avatar");
     if (!validProfileAvatar(body.avatar)) throw new Error("Photo invalide. Choisissez une image JPEG, PNG ou WebP.");
     required(await db.from("profiles").update({ avatar: body.avatar }).eq("id", uid));
@@ -685,7 +685,7 @@ export async function handleVtc(input, context) {
     return { ...quote, favorite, showPriorityPriceSource: priorityDriver?.is_priority === true };
   }
   if (p === "/api/drivers/me/accepted-reservations" && method === "GET") {
-    if (!canDrive) throw new Error("AccÃ¨s chauffeur requis");
+    if (!canDrive) throw new Error("Accès chauffeur requis");
     const rows = required(await admin.from("rider_scheduled_requests")
       .select("id,kind,transport_type,transport_number,scheduled_at,pickup_address,dropoff_address,payment_method,status,estimated_price,created_at")
       .eq("favorite_driver_id",uid).in("status",["confirmed","modified_pending"])
@@ -694,42 +694,42 @@ export async function handleVtc(input, context) {
     return { reservations: rows };
   }
   if (p === "/api/drivers/me/accepted-reservations/cancel" && method === "POST") {
-    if (!canDrive) throw new Error("AccÃ¨s chauffeur requis");
+    if (!canDrive) throw new Error("Accès chauffeur requis");
     const id = String(body.id || "");
-    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("RÃ©servation invalide");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Réservation invalide");
     // The driver withdraws: the reservation returns to pending so another driver can take it.
     const released = required(await admin.from("rider_scheduled_requests").update({status:"pending",favorite_driver_id:null})
       .eq("id",id).eq("favorite_driver_id",uid).in("status",["confirmed","modified_pending"]).select("id").maybeSingle());
-    if (!released) throw new Error("Cette rÃ©servation nâ€™est plus annulable");
+    if (!released) throw new Error("Cette réservation n’est plus annulable");
     return { ok: true };
   }
   if (p === "/api/drivers/me/accepted-reservations/confirm-change" && method === "POST") {
-    if (!canDrive) throw new Error("AccÃ¨s chauffeur requis");
+    if (!canDrive) throw new Error("Accès chauffeur requis");
     const id = String(body.id || "");
-    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("RÃ©servation invalide");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Réservation invalide");
     const row = required(await admin.from("rider_scheduled_requests")
       .update({status:"confirmed"}).eq("id",id).eq("favorite_driver_id",uid)
       .eq("status","modified_pending").gt("scheduled_at",new Date().toISOString())
       .select("id").maybeSingle());
-    if (!row) throw new Error("Cette modification nâ€™est plus disponible");
+    if (!row) throw new Error("Cette modification n’est plus disponible");
     return {ok:true};
   }
   if (p === "/api/drivers/me/advance-reservations/accept" && method === "POST") {
-    if (!canDrive) throw new Error("AccÃ¨s chauffeur requis");
+    if (!canDrive) throw new Error("Accès chauffeur requis");
     const id = String(body.id || "");
-    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("RÃ©servation invalide");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Réservation invalide");
     const driver = required(await admin.from("drivers").select("user_id,is_online,is_approved").eq("user_id",uid).single());
     const { driverAccess } = await import("./driver-warnings.server");
     if ((await driverAccess(admin, uid, driver)).suspended) throw new Error("DRIVER_SUSPENDED");
-    if (!driver.is_online) throw new Error("Passez en ligne pour accepter une rÃ©servation");
+    if (!driver.is_online) throw new Error("Passez en ligne pour accepter une réservation");
     const updated = required(await admin.from("rider_scheduled_requests").update({status:"confirmed",favorite_driver_id:uid})
       .eq("id",id).eq("kind","transport").eq("status","pending")
       .gt("scheduled_at",new Date().toISOString()).select("id,scheduled_at,transport_type,transport_number").maybeSingle());
-    if (!updated) throw new Error("Cette rÃ©servation nâ€™est plus disponible");
+    if (!updated) throw new Error("Cette réservation n’est plus disponible");
     return {reservation:updated};
   }
   if (p === "/api/drivers/me/advance-reservations" && method === "GET") {
-    if (!canDrive) throw new Error("AccÃ¨s chauffeur requis");
+    if (!canDrive) throw new Error("Accès chauffeur requis");
     const rows = required(await admin.from("rider_scheduled_requests")
       .select("id,kind,transport_type,transport_number,scheduled_at,pickup_address,dropoff_address,payment_method,status,estimated_price,created_at")
       .eq("kind","transport").eq("status","pending").is("favorite_driver_id",null)
@@ -748,17 +748,17 @@ export async function handleVtc(input, context) {
     }
     if (method === "POST") {
       const kind = body.kind;
-      if (!["transport", "recurring"].includes(kind)) throw new Error("Type de rÃ©servation invalide");
+      if (!["transport", "recurring"].includes(kind)) throw new Error("Type de réservation invalide");
       const pickup = String(body.pickupAddress || "").trim().slice(0, 240);
       const dropoff = String(body.dropoffAddress || "").trim().slice(0, 240);
-      if (pickup.length < 5 || dropoff.length < 5) throw new Error("Indiquez les deux adresses complÃ¨tes");
+      if (pickup.length < 5 || dropoff.length < 5) throw new Error("Indiquez les deux adresses complètes");
       const payload = { rider_id: uid, kind, pickup_address: pickup, dropoff_address: dropoff };
       if (kind === "transport") {
         const number = String(body.transportNumber || "").trim().toUpperCase();
         const date = new Date(body.scheduledAt);
         if (!["flight", "train"].includes(body.transportType) || !/^[A-Z0-9 -]{2,24}$/.test(number) ||
           !Number.isFinite(date.getTime()) || date.getTime() < Date.now())
-          throw new Error("NumÃ©ro de vol/train ou date invalide");
+          throw new Error("Numéro de vol/train ou date invalide");
         Object.assign(payload, { transport_type: body.transportType, transport_number: number,
           scheduled_at: date.toISOString(), payment_method: ["cash","card","wallet"].includes(body.paymentMethod) ? body.paymentMethod : null, estimated_price: body.estimatedPrice != null && body.estimatedPrice !== "" && Number.isFinite(Number(body.estimatedPrice)) && Number(body.estimatedPrice) >= 0 ? Number(body.estimatedPrice) : null, adjustment_consent: body.adjustmentConsent === true });
       } else {
@@ -777,7 +777,7 @@ export async function handleVtc(input, context) {
       if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Identifiant invalide");
       const canceled = required(await admin.from("rider_scheduled_requests").update({ status: "canceled" })
         .eq("rider_id", uid).eq("id", id).in("status", ["pending", "confirmed", "modified_pending"]).select("id").maybeSingle());
-      if (!canceled) throw new Error("Cette rÃ©servation ne peut plus Ãªtre annulÃ©e");
+      if (!canceled) throw new Error("Cette réservation ne peut plus être annulée");
       return { ok: true };
     }
     if (method === "PATCH") {
@@ -785,13 +785,13 @@ export async function handleVtc(input, context) {
       if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Identifiant invalide");
       const pickup = String(body.pickupAddress || "").trim().slice(0, 240);
       const dropoff = String(body.dropoffAddress || "").trim().slice(0, 240);
-      if (pickup.length < 5 || dropoff.length < 5) throw new Error("Indiquez les deux adresses complÃ¨tes");
+      if (pickup.length < 5 || dropoff.length < 5) throw new Error("Indiquez les deux adresses complètes");
       const date = new Date(body.scheduledAt);
       if (!Number.isFinite(date.getTime()) || date.getTime() <= Date.now()) throw new Error("Choisissez une date et une heure futures");
       const existing = required(await admin.from("rider_scheduled_requests")
         .select("favorite_driver_id,status").eq("id",id).eq("rider_id",uid)
         .eq("kind","transport").in("status",["pending","confirmed","modified_pending"]).maybeSingle());
-      if (!existing) throw new Error("Cette rÃ©servation ne peut plus Ãªtre modifiÃ©e");
+      if (!existing) throw new Error("Cette réservation ne peut plus être modifiée");
       const patch = {
         pickup_address:pickup,dropoff_address:dropoff,scheduled_at:date.toISOString(),
         payment_method:["cash","card","wallet"].includes(body.paymentMethod) ? body.paymentMethod : null,
@@ -804,10 +804,10 @@ export async function handleVtc(input, context) {
       const row = required(await admin.from("rider_scheduled_requests").update(patch)
         .eq("rider_id",uid).eq("id",id).eq("kind","transport")
         .eq("status",existing.status).select("*").maybeSingle());
-      if (!row) throw new Error("Cette rÃ©servation a Ã©tÃ© modifiÃ©e entre-temps");
+      if (!row) throw new Error("Cette réservation a été modifiée entre-temps");
       return {request:row};
     }
-    throw new Error("MÃ©thode non autorisÃ©e");
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/riders/me/favorite/location" && method === "GET") {
     const { favoriteLiveLocation } = await import("./private-clients.server");
@@ -818,7 +818,7 @@ export async function handleVtc(input, context) {
     if (method === "GET") return pc.favoriteCard(admin, uid);
     if (method === "POST") return pc.setFavorite(admin, db, uid, body);
     if (method === "DELETE") return pc.removeFavorite(db);
-    throw new Error("MÃ©thode non autorisÃ©e");
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/private-clients/redeem" && method === "POST") {
     const { redeemClaim } = await import("./private-clients.server");
@@ -832,7 +832,7 @@ export async function handleVtc(input, context) {
     try {
       return await openGoldBilling(admin, uid, body.manage === true);
     } catch {
-      throw new Error("Impossible dâ€™ouvrir la facturation StrasDrive Gold. RÃ©essayez ou contactez le support.");
+      throw new Error("Impossible d’ouvrir la facturation StrasDrive Gold. Réessayez ou contactez le support.");
     }
   }
   if (p === "/api/drivers/me/private-clients" && method === "GET") {
@@ -841,23 +841,23 @@ export async function handleVtc(input, context) {
   }
   const privateClientAction = p.match(/^\/api\/drivers\/me\/private-clients\/([0-9a-f-]{36})$/i);
   if (privateClientAction) {
-    if (!canDrive) throw new Error("AccÃ¨s chauffeur requis");
+    if (!canDrive) throw new Error("Accès chauffeur requis");
     const riderId = privateClientAction[1];
     const { removePrivateClient, privateClients } = await import("./private-clients.server");
     if (method === "DELETE") return removePrivateClient(admin, uid, riderId);
     if (method === "POST") {
       const links = await privateClients(admin, uid);
-      if (!links.clients.some((client) => client.id === riderId)) throw new Error("Client privÃ© introuvable");
+      if (!links.clients.some((client) => client.id === riderId)) throw new Error("Client privé introuvable");
       return setUserBlock(admin, uid, riderId, body.blocked === true);
     }
-    throw new Error("MÃ©thode non autorisÃ©e");
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/drivers/me/private-clients/qr" && method === "POST") {
     const { createInvitation } = await import("./private-clients.server");
     return createInvitation(admin, uid);
   }
   if (p === "/api/drivers/me/discover" && method === "GET") {
-    if (!(await loadDriverGold(admin, uid)).active) throw new Error("Le trafic est rÃ©servÃ© Ã  StrasDrive Gold.");
+    if (!(await loadDriverGold(admin, uid)).active) throw new Error("Le trafic est réservé à StrasDrive Gold.");
     return discoverBoard(q.get("day") || parisDay());
   }
   if (p === "/api/drivers/me/inbox" && method === "GET")
@@ -876,7 +876,7 @@ export async function handleVtc(input, context) {
   if (p === "/api/admin/support/reply" && method === "POST")
     return sendSupportMessage(admin, { uid, email: context.claims?.email, name: profile.name, role, body });
   if (p === "/api/drivers/me/achievements") {
-    if (method !== "GET") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "GET") throw new Error("Méthode non autorisée");
     const { driverAchievements } = await import("./driver-achievements");
     const [driverResult, trips, stars, rating] = await Promise.all([
       admin.from("drivers").select("vehicle").eq("user_id", uid).single(),
@@ -910,12 +910,12 @@ export async function handleVtc(input, context) {
     };
   }
   if (p === "/api/drivers/me/ratings-unlock") {
-    if (method !== "POST") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "POST") throw new Error("Méthode non autorisée");
     const { claimRatingCelebration } = await import("./driver-rating-unlock.server");
     return claimRatingCelebration(admin, uid);
   }
   if (p === "/api/drivers/me/ratings") {
-    if (method !== "GET") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "GET") throw new Error("Méthode non autorisée");
     const { driverRatingSummary } = await import("./driver-rating-summary");
     const driver = required(await admin.from("drivers").select("is_priority,stats").eq("user_id", uid).single());
     const rows = required(
@@ -979,7 +979,7 @@ export async function handleVtc(input, context) {
     const current = required(await admin.from("drivers").select("vehicle").eq("user_id", uid).single());
     const operator = sanitizeOperator(body.operator);
     if (!operator.legalName || !operator.address || !operator.phone)
-      throw new Error("Renseignez la raison sociale, lâ€™adresse et le tÃ©lÃ©phone de lâ€™exploitant");
+      throw new Error("Renseignez la raison sociale, l’adresse et le téléphone de l’exploitant");
     required(
       await admin
         .from("drivers")
@@ -1015,10 +1015,10 @@ export async function handleVtc(input, context) {
   if (p === "/api/drivers/me") {
     if (method === "PATCH") {
       const cur = required(await db.from("drivers").select("vehicle_class,vehicle").eq("user_id", uid).single());
-      // La gamme est attribuÃ©e par StrasDrive : le chauffeur ne peut pas la changer lui-mÃªme.
+      // La gamme est attribuée par StrasDrive : le chauffeur ne peut pas la changer lui-même.
       const v = { ...(body.vehicle || {}), operator: cur.vehicle?.operator || {}, type: driverClass(cur) };
       if (!v.make || !v.model || !v.plate || !Number.isInteger(v.year) || v.year < 1990 || v.year > 2030)
-        throw new Error("VÃ©rifiez les informations du vÃ©hicule");
+        throw new Error("Vérifiez les informations du véhicule");
       required(await db.from("drivers").update({ vehicle: v }).eq("user_id", uid));
     }
     const driverRow = required(await db.from("drivers").select("*").eq("user_id", uid).single());
@@ -1036,7 +1036,7 @@ export async function handleVtc(input, context) {
     const own = driverClass(cur);
     const wanted = Array.isArray(body.acceptsClasses) ? body.acceptsClasses : [];
     if (wanted.some((c) => !(LOWER_CLASSES[own] || []).includes(c)))
-      throw new Error("Vous ne pouvez accepter que des courses de gamme infÃ©rieure autorisÃ©e pour votre vÃ©hicule");
+      throw new Error("Vous ne pouvez accepter que des courses de gamme inférieure autorisée pour votre véhicule");
     required(
       await admin
         .from("drivers")
@@ -1045,82 +1045,9 @@ export async function handleVtc(input, context) {
     );
     return { driver: driverShape(required(await db.from("drivers").select("*").eq("user_id", uid).single())) };
   }
-  if (p === "/api/notifications/live-activity-token") {
-    if (!canDrive) throw new Error("AccÃ¨s refusÃ©");
-    if (method !== "POST" && method !== "DELETE") {
-      throw new Error("MÃ©thode non autorisÃ©e");
-    }
-
-    const token = typeof body.token === "string" ? body.token.trim() : "";
-    if (!/^(?:[0-9a-f]{2}){16,256}$/i.test(token)) {
-      throw new Error("Jeton Live Activity invalide");
-    }
-
-    if (method === "DELETE") {
-      required(await admin.from("live_activity_start_tokens")
-        .delete()
-        .eq("token", token)
-        .eq("user_id", uid));
-    } else {
-      required(await admin.from("live_activity_start_tokens").upsert(
-        { token, user_id: uid, updated_at: new Date().toISOString() },
-        { onConflict: "token" },
-      ));
-    }
-
-    return { ok: true };
-  }
-
-  if (p === "/api/notifications/live-activity-update-token") {
-    if (!canDrive) throw new Error("AccÃ¨s refusÃ©");
-    if (method !== "POST") throw new Error("MÃ©thode non autorisÃ©e");
-
-    const rideId = typeof body.rideId === "string" ? body.rideId.trim() : "";
-    const activityId = typeof body.activityId === "string" ? body.activityId.trim() : "";
-    const token = typeof body.token === "string" ? body.token.trim() : "";
-
-    if (!/^[a-z0-9_-]{1,128}$/i.test(rideId) ||
-        !/^[a-z0-9_-]{1,128}$/i.test(activityId) ||
-        !/^(?:[0-9a-f]{2}){16,256}$/i.test(token)) {
-      throw new Error("Jeton de fermeture invalide");
-    }
-
-    required(await admin.from("live_activity_update_tokens").upsert(
-      {
-        token,
-        ride_id: rideId,
-        activity_id: activityId,
-        user_id: uid,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,activity_id" },
-    ));
-
-    try {
-      const { data: offer, error } = await admin
-        .from("rides")
-        .select("status,offer_expires_at,declined")
-        .eq("id", rideId)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      const deadline = Date.parse(offer?.offer_expires_at);
-      if (!offer || offer.status !== "searching" ||
-          !Number.isFinite(deadline) || deadline <= Date.now() ||
-          (Array.isArray(offer.declined) && offer.declined.includes(uid))) {
-        await endRideOfferLiveActivities(admin, rideId, uid);
-      }
-    } catch (error) {
-      console.error("Fermeture Live Activity aprÃ¨s jeton tardif impossible", error?.code || error?.name);
-    }
-
-    return { ok: true };
-  }
-
   if (p === "/api/drivers/me/push-token" || p === "/api/notifications/push-token") {
-    if (!canDrive && role !== "admin") throw new Error("AccÃ¨s refusÃ©");
-    if (!["POST", "DELETE"].includes(method)) throw new Error("MÃ©thode non autorisÃ©e");
+    if (!canDrive && role !== "admin") throw new Error("Accès refusé");
+    if (!["POST", "DELETE"].includes(method)) throw new Error("Méthode non autorisée");
     // Phone notification address: written only by the server, one owner per phone.
     const token = validPushToken(body.token);
     if (!token) throw new Error("Notification invalide");
@@ -1137,7 +1064,7 @@ export async function handleVtc(input, context) {
     return { ok: true };
   }
   if (p === "/api/drivers/me/preferences" && method === "PATCH") {
-    // PrÃ©fÃ©rences de course : Ã©crites uniquement par le serveur, aprÃ¨s nettoyage.
+    // Préférences de course : écrites uniquement par le serveur, après nettoyage.
     const cur = required(await db.from("drivers").select("trip_prefs").eq("user_id", uid).single());
     const next = sanitizeTripPrefs({ ...tripPrefsOf(cur), ...(body.tripPrefs || {}) });
     required(await admin.from("drivers").update({ trip_prefs: next }).eq("user_id", uid));
@@ -1176,7 +1103,7 @@ export async function handleVtc(input, context) {
           { onConflict: "user_id,doc_type" },
         ),
       );
-      // Le document remplacÃ© est supprimÃ© immÃ©diatement (minimisation RGPD).
+      // Le document remplacé est supprimé immédiatement (minimisation RGPD).
       if (previous && previous.file_path !== path)
         await admin.storage.from(DOCUMENTS_BUCKET).remove([previous.file_path]);
     }
@@ -1185,12 +1112,12 @@ export async function handleVtc(input, context) {
     return { documents: docs.map(docShape), compliance: { ...c, problem: complianceProblem(c) } };
   }
   if (p === "/api/drivers/me/online-time") {
-    if (!canDrive || method !== "POST") throw new Error("AccÃ¨s refusÃ©");
+    if (!canDrive || method !== "POST") throw new Error("Accès refusé");
     await recordOnlineTime(admin, uid);
     return { ok: true };
   }
   if (p === "/api/drivers/me/status") {
-    if (method !== "POST") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "POST") throw new Error("Méthode non autorisée");
     if (typeof body.online !== "boolean") throw new Error("Statut invalide");
     const d = required(await db.from("drivers").select("*").eq("user_id", uid).single());
     const current = required(await db.from("rides").select("id").eq("driver_id", uid).in("status", active));
@@ -1202,18 +1129,18 @@ export async function handleVtc(input, context) {
         if ((await driverAccess(admin, uid, d)).suspended) throw new Error("DRIVER_SUSPENDED");
         if ((await reportedRideCount(admin, uid)) >= 3)
           throw new Error(
-            "Votre activitÃ© chauffeur est suspendue Ã  cause de plusieurs signalements. Contactez lâ€™assistance.",
+            "Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.",
           );
-        throw new Error("Votre inscription doit Ãªtre approuvÃ©e");
+        throw new Error("Votre inscription doit être approuvée");
       }
-      if (!d.vehicle.plate) throw new Error("Ajoutez votre vÃ©hicule");
+      if (!d.vehicle.plate) throw new Error("Ajoutez votre véhicule");
       if (!d.documents_override) {
         const dc = driverCompliance(
           required(await db.from("driver_documents").select("doc_type,status,valid_until").eq("user_id", uid)),
         );
-        if (!dc.canDrive) throw new Error(`${complianceProblem(dc)} â€” mettez Ã  jour vos documents dans votre profil`);
+        if (!dc.canDrive) throw new Error(`${complianceProblem(dc)} — mettez à jour vos documents dans votre profil`);
       }
-      if (Number(profile.balance) < -25) throw new Error("RÃ©gularisez votre solde avant de passer en ligne");
+      if (Number(profile.balance) < -25) throw new Error("Régularisez votre solde avant de passer en ligne");
       if (!validLocation(body.location)) throw new Error("Position invalide");
     }
     await recordOnlineTime(admin, uid, {
@@ -1227,8 +1154,8 @@ export async function handleVtc(input, context) {
     return { ok: true };
   }
   if (p === "/api/drivers/location") {
-    if (!canDrive) throw new Error("AccÃ¨s refusÃ©");
-    if (method !== "POST") throw new Error("MÃ©thode non autorisÃ©e");
+    if (!canDrive) throw new Error("Accès refusé");
+    if (method !== "POST") throw new Error("Méthode non autorisée");
     if (!validLocation(body)) throw new Error("Position invalide");
     const driver = required(await db.from("drivers").select("is_online").eq("user_id", uid).single());
     const ongoing = required(await db.from("rides").select("id").eq("driver_id", uid).in("status", active));
@@ -1249,7 +1176,7 @@ export async function handleVtc(input, context) {
           fare: { ...trip.fare, approachTracking: { lat: body.lat, lng: body.lng, at: now, meters } },
         }).eq("id", trip.id).eq("driver_id", uid).eq("status", "accepted")
           .eq("fare", JSON.stringify(trip.fare));
-        if (error) console.error("Ã‰chec du suivi de lâ€™approche", error.message);
+        if (error) console.error("Échec du suivi de l’approche", error.message);
       }
     }
     await recordOnlineTime(admin, uid);
@@ -1280,7 +1207,7 @@ export async function handleVtc(input, context) {
     };
   }
   if (p === "/api/wallet") {
-    if (method === "POST") throw new Error("Les recharges nÃ©cessitent un paiement Stripe vÃ©rifiÃ©.");
+    if (method === "POST") throw new Error("Les recharges nécessitent un paiement Stripe vérifié.");
     const tx = required(
       await db
         .from("wallet_transactions")
@@ -1319,7 +1246,7 @@ export async function handleVtc(input, context) {
     if (!DEFAULT_PRICING[b.vehicleType]) throw new Error("Gamme invalide");
     const quote = await estimates(admin, b.pickup, b.dropoff);
     const fare = quote.estimates[b.vehicleType];
-    if (!fare) throw new Error("Tarif indisponible pour cette gamme, rÃ©essayez");
+    if (!fare) throw new Error("Tarif indisponible pour cette gamme, réessayez");
     if (quote.route.distanceMeters < 100) throw new Error("Le trajet doit faire au moins 100 m");
     return { fare: { ...fare, pickupWaitingEnabled: true }, route: quote.route };
   };
@@ -1331,7 +1258,7 @@ export async function handleVtc(input, context) {
   const createRide = async ({ vehicleType, pickup, dropoff, route, fare, payment, favoriteDriverId = null }) => {
     await preparePassengerBooking(admin, uid, canDrive);
     const pin = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000).padStart(4, "0");
-    // Note moyenne laissÃ©e par les chauffeurs, figÃ©e Ã  la commande (filtre Â« note minimale Â» des chauffeurs).
+    // Note moyenne laissée par les chauffeurs, figée à la commande (filtre « note minimale » des chauffeurs).
     const past = required(
       await admin
         .from("rides")
@@ -1403,7 +1330,7 @@ export async function handleVtc(input, context) {
         userId: uid, rideId: crypto.randomUUID(), fareEuros: fare.total,
         paymentMethodId: card.stripe_payment_method_id,
       });
-      if (hold.status !== "requires_capture") throw new Error("La banque demande une validation supplÃ©mentaire de la carte.");
+      if (hold.status !== "requires_capture") throw new Error("La banque demande une validation supplémentaire de la carte.");
       holdIntentId = hold.intentId;
       paymentMeta = { method: "card", intent_id: hold.intentId, status: "hold", brand: card.brand, last4: card.last4 };
     } else {
@@ -1422,7 +1349,7 @@ export async function handleVtc(input, context) {
           const { cancelRideHold } = await import("./vtc-card-hold.server.js");
           await cancelRideHold(admin, { paymentIntentId: holdIntentId });
         } catch (releaseError) {
-          console.error("Ã‰chec de libÃ©ration de l'empreinte aprÃ¨s erreur de rÃ©servation", releaseError);
+          console.error("Échec de libération de l'empreinte après erreur de réservation", releaseError);
         }
       }
       throw error;
@@ -1445,7 +1372,7 @@ export async function handleVtc(input, context) {
     return { ride: await serialize(admin, r, uid) };
   }
   if (p === "/api/drivers/offers") {
-    if (!canDrive) throw new Error("AccÃ¨s refusÃ©");
+    if (!canDrive) throw new Error("Accès refusé");
     const { driverAccess } = await import("./driver-warnings.server");
     const accessDriver = required(await admin.from("drivers").select("is_approved").eq("user_id", uid).single());
     if ((await driverAccess(admin, uid, accessDriver)).suspended) return { offer: null };
@@ -1537,12 +1464,12 @@ export async function handleVtc(input, context) {
   }
   const recordMatch = p.match(/^\/api\/admin\/rides\/([0-9a-f-]+)\/record$/i);
   if (recordMatch) {
-    if (method !== "GET") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "GET") throw new Error("Méthode non autorisée");
     const { adminRideRecord } = await import("./admin-ride-record.server");
     return adminRideRecord(admin, recordMatch[1], role, uid);
   }
   if (p === "/api/admin/rides") {
-    if (role !== "admin") throw new Error("AccÃ¨s administrateur requis");
+    if (role !== "admin") throw new Error("Accès administrateur requis");
     const { adminRideList } = await import("./admin-ride-list.server");
     return adminRideList(admin, uid, q, (r) => serialize(admin, r, uid, true));
   }
@@ -1582,7 +1509,7 @@ export async function handleVtc(input, context) {
       if ((await driverAccess(admin, uid, approval)).suspended) throw new Error("DRIVER_SUSPENDED");
       if (!approval.is_approved && (await reportedRideCount(admin, uid)) >= 3)
         throw new Error(
-          "Votre activitÃ© chauffeur est suspendue Ã  cause de plusieurs signalements. Contactez lâ€™assistance.",
+          "Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.",
         );
       if (!canDrive || r.rider_id === uid || (await hasPassengerRide(admin, uid)))
         throw new Error("Vous ne pouvez pas accepter cette course");
@@ -1594,14 +1521,14 @@ export async function handleVtc(input, context) {
           !r.offer_expires_at ||
           new Date(r.offer_expires_at).getTime() <= Date.now()
         )
-          throw new Error("Cette demande nâ€™est plus disponible");
+          throw new Error("Cette demande n’est plus disponible");
       } else {
         const available = await dispatchPool(admin);
         const pool = r.route?.goldReturn ? await goldDispatchPool(admin, available) : available;
         const candidate = pool.find((d) => d.user_id === uid) || null;
         const me =
           r.dispatch_phase === "private" && !r.route?.goldReturn ? await withDriverGold(admin, candidate) : candidate;
-        if (!canSeeOffer(r, me, Date.now(), pool)) throw new Error("Cette demande nâ€™est plus disponible");
+        if (!canSeeOffer(r, me, Date.now(), pool)) throw new Error("Cette demande n’est plus disponible");
       }
       const fare = await fareForDriver(admin, r, uid);
       const claim = admin
@@ -1620,35 +1547,29 @@ export async function handleVtc(input, context) {
         .eq("offer_expires_at", r.offer_expires_at)
         .gt("offer_expires_at", new Date().toISOString());
       // En phase nearest, le plus proche peut accepter tout de suite ;
-      // les autres attendent le passage Ã  la phase broadcast.
+      // les autres attendent le passage à la phase broadcast.
 
       const claimed = required(await claim.select("*"))[0];
-      if (!claimed) throw new Error("Course dÃ©jÃ  acceptÃ©e");
-      await endRideOfferLiveActivities(admin, id).catch((error) => {
-        console.error("Fermeture Live Activity aprÃ¨s acceptation impossible", error?.code || error?.name);
-      });
+      if (!claimed) throw new Error("Course déjà acceptée");
       return { ride: await serialize(admin, claimed, uid) };
     }
     if (action === "decline") {
-      if (!canDrive) throw new Error("AccÃ¨s refusÃ©");
+      if (!canDrive) throw new Error("Accès refusé");
       required(await admin.rpc("decline_ride_offer", { _ride: id, _driver: uid }));
-      await endRideOfferLiveActivities(admin, id, uid).catch((error) => {
-        console.error("Fermeture Live Activity aprÃ¨s refus impossible", error?.code || error?.name);
-      });
       return { ok: true };
     }
     if (!participant && role !== "admin") throw new Error("Course inaccessible");
     if (!action) return { ride: await serialize(admin, r, uid) };
     if (action === "report") {
       driverReportMessage(r, uid, body);
-      if (!context.claims.email) throw new Error("Une adresse e-mail de compte est nÃ©cessaire");
+      if (!context.claims.email) throw new Error("Une adresse e-mail de compte est nécessaire");
       await preserveRideChat(admin, id, uid);
       return sendDriverReport(admin, { ride: r, uid, email: context.claims.email, name: profile.name, body });
     }
     if (action === "invoice") {
       const message = invoiceRequestMessage(r, uid, role);
       const email = context.claims.email;
-      if (!email) throw new Error("Une adresse e-mail de compte est nÃ©cessaire");
+      if (!email) throw new Error("Une adresse e-mail de compte est nécessaire");
       // Existing support storage provides an authenticated, persistent request without issuing a fiscal document.
       const previous = required(
         await admin
@@ -1670,12 +1591,12 @@ export async function handleVtc(input, context) {
         );
       return {
         ok: true,
-        message: "Votre demande de facture a Ã©tÃ© transmise Ã  lâ€™assistance. Aucune facture nâ€™a encore Ã©tÃ© Ã©mise.",
+        message: "Votre demande de facture a été transmise à l’assistance. Aucune facture n’a encore été émise.",
       };
     }
     if (action === "radars" && method === "GET") {
       requireCameraReader(role);
-      if (r.driver_id !== uid) throw new Error("AccÃ¨s refusÃ©");
+      if (r.driver_id !== uid) throw new Error("Accès refusé");
       if (!["accepted", "in_progress"].includes(r.status)) return { cameras: [], available: false };
       const route = await liveRoute(admin, r);
       const geometry = route?.geometry || (r.status === "in_progress" ? r.route?.geometry : null);
@@ -1696,12 +1617,12 @@ export async function handleVtc(input, context) {
       return { ...result, cameras: radarsOnRoute(mergeCameraAlerts(reported, result.cameras), geometry) };
     }
     if (action === "route") {
-      if (!participant) throw new Error("AccÃ¨s refusÃ©");
+      if (!participant) throw new Error("Accès refusé");
       return { route: await liveRoute(admin, r) };
     }
     if (action === "arrive" || action === "start" || action === "complete") {
       const previous = { arrive: "accepted", start: "arrived", complete: "in_progress" }[action];
-      if (r.driver_id !== uid || r.status !== previous) throw new Error("Action non autorisÃ©e");
+      if (r.driver_id !== uid || r.status !== previous) throw new Error("Action non autorisée");
       let arrivalFare = r.fare;
       if (action === "arrive" || (action === "start" && !r.is_test)) {
         const driver = required(await admin.from("drivers").select("location,vehicle_class").eq("user_id", uid).single());
@@ -1743,23 +1664,23 @@ export async function handleVtc(input, context) {
           .eq("id", id).eq("driver_id", uid).eq("status", previous));
       }
     } else if (action === "cancel_no_show") {
-      if (r.driver_id !== uid) throw new Error("AccÃ¨s refusÃ©");
+      if (r.driver_id !== uid) throw new Error("Accès refusé");
       const result = await admin.rpc("cancel_ride_no_show", { _ride: id, _driver: uid });
-      if (result.error?.code === "PGRST202") throw new Error("La compensation pour absence nâ€™est pas encore activÃ©e.");
+      if (result.error?.code === "PGRST202") throw new Error("La compensation pour absence n’est pas encore activée.");
       required(result);
       if (r.payment?.intent_id) {
         try {
           const { cancelRideHold } = await import("./vtc-card-hold.server.js");
           await cancelRideHold(admin, { paymentIntentId: r.payment.intent_id });
         } catch (error) {
-          console.error("Impossible de libÃ©rer lâ€™empreinte aprÃ¨s absence du passager", error);
+          console.error("Impossible de libérer l’empreinte après absence du passager", error);
         }
       }
     } else if (action === "cancel") {
       if (!participant || !["searching", "accepted", "arrived"].includes(r.status))
         throw new Error("Annulation impossible");
 
-      // â”€â”€ A. Le CHAUFFEUR annule (remise en recherche + mÃ©morisation du motif) â”€â”€
+      // ── A. Le CHAUFFEUR annule (remise en recherche + mémorisation du motif) ──
       if (r.driver_id === uid) {
         required(
           await admin
@@ -1778,13 +1699,13 @@ export async function handleVtc(input, context) {
             .eq("status", r.status),
         );
       } else {
-        // â”€â”€ B. Le CLIENT annule â”€â”€
+        // ── B. Le CLIENT annule ──
         const patch = {
           status: "cancelled",
           offer_driver_id: null,
         };
 
-        // VÃ©rification anti-fraude : le chauffeur Ã©tait-il immobile ou en mauvaise direction ?
+        // Vérification anti-fraude : le chauffeur était-il immobile ou en mauvaise direction ?
         const driverLoc = r.driver_id
           ? (await admin.from("drivers").select("location").eq("user_id", r.driver_id).single()).data?.location
           : null;
@@ -1793,7 +1714,7 @@ export async function handleVtc(input, context) {
         if (!r.is_test && !r.payment?.intent_id && paymentMethodOf(r.payment?.method) !== "cash" &&
           r.driver_id && r.fare?.total >= 14.55 && r.fare?.approachTracking?.meters > 10000) {
           const result = await admin.rpc("cancel_ride_long_approach", { _ride: id, _rider: uid });
-          if (result.error?.code === "PGRST202") throw new Error("Le barÃ¨me dâ€™annulation longue approche nâ€™est pas encore activÃ©.");
+          if (result.error?.code === "PGRST202") throw new Error("Le barème d’annulation longue approche n’est pas encore activé.");
           required(result);
           await closeRideChat(admin, id, { allowSearching: true });
           return { ride: await serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid) };
@@ -1801,9 +1722,9 @@ export async function handleVtc(input, context) {
 
         const cancelled = required(await admin.from("rides").update(patch)
           .eq("id", id).eq("status", r.status).select("id").maybeSingle());
-        if (!cancelled) throw new Error("La course a dÃ©jÃ  changÃ© de statut.");
+        if (!cancelled) throw new Error("La course a déjà changé de statut.");
 
-        // Frais d'annulation de 3 â‚¬ uniquement si le chauffeur est arrivÃ© ET n'est pas en faute
+        // Frais d'annulation de 3 € uniquement si le chauffeur est arrivé ET n'est pas en faute
         if (
           r.status === "arrived" &&
           !r.is_test &&
@@ -1826,32 +1747,32 @@ export async function handleVtc(input, context) {
               payment: { ...r.payment, status: "canceled" },
             }).eq("id", id).eq("status", "cancelled"));
           } catch (error) {
-            console.error("Impossible de libÃ©rer l'empreinte Stripe aprÃ¨s annulation", error);
+            console.error("Impossible de libérer l'empreinte Stripe après annulation", error);
           }
         }
       }
     } else if (action === "block" || action === "unblock") {
-      if (!participant || !r.driver_id) throw new Error("AccÃ¨s refusÃ©");
+      if (!participant || !r.driver_id) throw new Error("Accès refusé");
       const otherId = r.rider_id === uid ? r.driver_id : r.rider_id;
       return setUserBlock(admin, uid, otherId, action === "block");
     } else if (action === "report-message") {
-      if (!participant || !r.driver_id) throw new Error("AccÃ¨s refusÃ©");
+      if (!participant || !r.driver_id) throw new Error("Accès refusé");
       const msg = visibleChatMessages(r.messages).find((m) => m.id === body.messageId);
       if (!msg || msg.from === (r.rider_id === uid ? "rider" : "driver")) throw new Error("Message introuvable");
       const reason = String(body.reason || "Contenu abusif").trim().slice(0, 200);
-      if (!reason) throw new Error("Motif nÃ©cessaire");
+      if (!reason) throw new Error("Motif nécessaire");
       const reporter = r.rider_id === uid ? "passager" : "chauffeur";
       const report = JSON.stringify({ type: "ride_chat_report_v1", rideId: r.id, messageId: msg.id, messageType: msg.type, reporterId: uid, reportedUserId: r.rider_id === uid ? r.driver_id : r.rider_id, reason, createdAt: new Date().toISOString() });
       if (CHAT_ACTIVE_STATUSES.includes(r.status)) await preserveRideChat(admin, r.id, uid);
       required(await admin.from("contact_messages").insert({ topic: "safety", name: `Signalement chat ${r.id}`, email: context.claims.email || profile.email || "support@strasdrive.invalid", message: report }));
       return { ok: true };
     } else if (action === "attachment") {
-      if (!participant) throw new Error("AccÃ¨s refusÃ©");
+      if (!participant) throw new Error("Accès refusé");
       await sendChatAttachment(admin, r, uid, body);
     } else if (action === "media") {
       return chatFileUrl(admin, r, uid, q.get("messageId"));
     } else if (action === "messages") {
-      if (!participant || !CHAT_ACTIVE_STATUSES.includes(r.status)) throw new Error("Discussion fermÃ©e");
+      if (!participant || !CHAT_ACTIVE_STATUSES.includes(r.status)) throw new Error("Discussion fermée");
       if (method === "GET") return { messages: visibleChatMessages(r.messages) };
       await sendChatMessage(admin, r, uid, body);
     } else if (action === "rate") {
@@ -1865,7 +1786,7 @@ export async function handleVtc(input, context) {
       )
         throw new Error("Note invalide");
       const field = r.rider_id === uid ? "byRider" : "byDriver";
-      if (r.rating[field]) throw new Error("Course dÃ©jÃ  notÃ©e");
+      if (r.rating[field]) throw new Error("Course déjà notée");
       required(
         await admin
           .from("rides")
@@ -1895,7 +1816,7 @@ export async function handleVtc(input, context) {
           .in("status", ["accepted", "arrived", "in_progress"]),
       ).length
     )
-      throw new Error("Ce chauffeur est dÃ©jÃ  en course");
+      throw new Error("Ce chauffeur est déjà en course");
     required(
       await admin
         .from("rides")
@@ -1906,10 +1827,10 @@ export async function handleVtc(input, context) {
     );
     const at = d.location && Number.isFinite(d.location.lat) && Number.isFinite(d.location.lng) ? d.location : null;
     const pickup = at
-      ? { lat: at.lat + 0.005, lng: at.lng + 0.004, address: "Point de prise en charge test (Ã  ~600 m)" }
+      ? { lat: at.lat + 0.005, lng: at.lng + 0.004, address: "Point de prise en charge test (à ~600 m)" }
       : { ...TEST_PICKUP };
     const dropoff = at
-      ? { lat: at.lat - 0.012, lng: at.lng + 0.022, address: "Destination test (Ã  ~2 km)" }
+      ? { lat: at.lat - 0.012, lng: at.lng + 0.022, address: "Destination test (à ~2 km)" }
       : { ...TEST_DROPOFF };
     const cls = driverClass(d);
     const quote = await estimates(admin, pickup, dropoff);
@@ -1950,19 +1871,19 @@ export async function handleVtc(input, context) {
       }, { onConflict: "vehicle_type" }));
       return { ok: true, provider };
     }
-    throw new Error("MÃ©thode non autorisÃ©e");
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/admin/pricing") {
     if (method === "PUT") {
       const type = body.vehicleType;
-      if (!Object.hasOwn(DEFAULT_PRICING, type) || body.tariffVersion !== TARIFF_VERSION) throw new Error("BarÃ¨me invalide : rechargez la page de tarification.");
+      if (!Object.hasOwn(DEFAULT_PRICING, type) || body.tariffVersion !== TARIFF_VERSION) throw new Error("Barème invalide : rechargez la page de tarification.");
       const problem = tariffRuleProblem(body);
       if (problem) throw new Error(problem);
       const rule = { ...DEFAULT_PRICING[type], ...Object.fromEntries(TARIFF_FIELDS.map(key => [key, body[key]])), tariffVersion: TARIFF_VERSION };
       required(await admin.from("pricing_rules").upsert({ vehicle_type: type, rule }, { onConflict: "vehicle_type" }));
       return { rule: { ...rule, vehicleType: type } };
     }
-    if (method !== "GET") throw new Error("MÃ©thode non autorisÃ©e");
+    if (method !== "GET") throw new Error("Méthode non autorisée");
     const rows = required(await admin.from("pricing_rules").select("vehicle_type,rule").in("vehicle_type", Object.keys(DEFAULT_PRICING)));
     return { mode: "tariff", tariffVersion: TARIFF_VERSION, rules: Object.entries(pricingRules(rows)).map(([vehicleType, rule]) => ({ ...rule, vehicleType })) };
   }
@@ -2079,16 +2000,16 @@ export async function handleVtc(input, context) {
     for (const [table, column] of [["wallet_transactions", "user_id"], ["payouts", "driver_id"], ["withdrawal_requests", "driver_id"]]) {
       const { data, error } = await admin.from(table).select("id").eq(column, target).limit(1);
       if (error) throw new Error(error.message);
-      if (data.length) throw new Error("Ce compte contient des opÃ©rations financiÃ¨res Ã  archiver avant suppression. Contactez le responsable des donnÃ©es.");
+      if (data.length) throw new Error("Ce compte contient des opérations financières à archiver avant suppression. Contactez le responsable des données.");
     }
     const { data: files, error: fileListError } = await admin.storage.from(DOCUMENTS_BUCKET).list(target, { limit: 1000 });
     if (fileListError) throw new Error(fileListError.message);
-    if ((files || []).length === 1000) throw new Error("Trop de documents Ã  effacer automatiquement.");
+    if ((files || []).length === 1000) throw new Error("Trop de documents à effacer automatiquement.");
     const { closeGoldBillingForDeletedAccount } = await import("./driver-gold.server");
     try {
       await closeGoldBillingForDeletedAccount(admin, target);
     } catch {
-      throw new Error("La facturation StrasDrive Gold doit Ãªtre clÃ´turÃ©e avant la suppression du compte.");
+      throw new Error("La facturation StrasDrive Gold doit être clôturée avant la suppression du compte.");
     }
     const removed = required(await admin.rpc("admin_delete_account", { _user: target }));
     required(await admin.from("push_tokens").delete().eq("user_id", target));
@@ -2103,7 +2024,7 @@ export async function handleVtc(input, context) {
     if (files?.length) required(await admin.storage.from(DOCUMENTS_BUCKET).remove(files.map((f) => `${target}/${f.name}`)));
     const { error } = await admin.auth.admin.deleteUser(target);
     if (error && !/not.?found/i.test(error.message))
-      throw new Error(`DonnÃ©es effacÃ©es, mais lâ€™accÃ¨s au compte nâ€™a pas pu Ãªtre supprimÃ© : ${error.message}`);
+      throw new Error(`Données effacées, mais l’accès au compte n’a pas pu être supprimé : ${error.message}`);
     return { ok: true, removed };
   }
   if (p === "/api/admin/users") {
@@ -2192,10 +2113,10 @@ export async function handleVtc(input, context) {
       statusBreakdown: { completed: completed.length },
     };
   }
-  throw new Error("Ce service nâ€™est pas encore disponible");
+  throw new Error("Ce service n’est pas encore disponible");
 }
 const TEST_PIN = "0000";
-const TEST_PICKUP = { lat: 48.5833, lng: 7.7458, address: "Place KlÃ©ber, 67000 Strasbourg (test)" };
+const TEST_PICKUP = { lat: 48.5833, lng: 7.7458, address: "Place Kléber, 67000 Strasbourg (test)" };
 const TEST_DROPOFF = { lat: 48.585, lng: 7.7342, address: "Gare de Strasbourg, 67000 Strasbourg (test)" };
 async function pendingTestOffer(db, uid) {
   const busy = required(
@@ -2303,7 +2224,7 @@ async function assignOffer(db, r, pool) {
   return won || required(await db.from("rides").select("*").eq("id", r.id).single());
 }
 
-// Visiteurs non connectÃ©s (page d'accueil) : uniquement la recherche d'adresse et l'estimation.
+// Visiteurs non connectés (page d'accueil) : uniquement la recherche d'adresse et l'estimation.
 export async function publicVtc(input) {
   if (input?.path === "/api/public/app-version") {
     return { buildId: typeof __STRASDRIVE_BUILD_ID__ === "string" ? __STRASDRIVE_BUILD_ID__ : null };
@@ -2324,7 +2245,7 @@ export async function publicVtc(input) {
     const { scanInvitation } = await import("./private-clients.server");
     return scanInvitation(supabaseAdmin, input.body?.token);
   }
-  throw new Error("AccÃ¨s refusÃ©");
+  throw new Error("Accès refusé");
 }
 
 async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
@@ -2358,7 +2279,7 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
   };
 
   if (p === "/api/admin/road-alerts") {
-    if (!isAdmin) throw new Error("AccÃ¨s administrateur requis");
+    if (!isAdmin) throw new Error("Accès administrateur requis");
     if (method === "DELETE") {
       const kind = q.get("kind");
       if (!ALERT_KINDS.includes(kind)) throw new Error("Type de signalement invalide");
@@ -2379,7 +2300,7 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
   }
   const adminMatch = p.match(/^\/api\/admin\/road-alerts\/([0-9a-f-]{36})(?:\/(validate))?$/);
   if (adminMatch) {
-    if (!isAdmin) throw new Error("AccÃ¨s administrateur requis");
+    if (!isAdmin) throw new Error("Accès administrateur requis");
     const [, id, action] = adminMatch;
     if (method === "DELETE") {
       required(await admin.from("road_alerts").delete().eq("id", id));
@@ -2452,7 +2373,7 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
             lat: point.lat,
             lng: point.lng,
             reported_by: uid,
-            is_permanent: body.kind === "radar", // un radar reste jusqu'Ã  sa suppression par l'admin
+            is_permanent: body.kind === "radar", // un radar reste jusqu'à sa suppression par l'admin
           })
           .select("id")
           .single(),
@@ -2489,7 +2410,7 @@ async function roadAlerts(admin, { p, method, body, q, uid, isAdmin }) {
 }
 // Public landing card: one random real completed ride. Visitors are anonymous,
 // so only non-identifying fields leave the server (first name, car make/model/color,
-// duration, distance, fare) â€” never the plate, rider, addresses or route geometry.
+// duration, distance, fare) — never the plate, rider, addresses or route geometry.
 export async function getRandomRealRide() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: rides, error } = await supabaseAdmin
@@ -2517,7 +2438,7 @@ export async function getRandomRealRide() {
   return {
     driverName: firstName,
     driverAvatar: avatar,
-    vehicleText: vehicleText || "VÃ©hicule StrasDrive",
+    vehicleText: vehicleText || "Véhicule StrasDrive",
     approachMin: Math.floor(Math.random() * 3) + 2,
     durationMin: duration > 0 ? Math.max(1, Math.round(duration / 60)) : 12,
     distanceKm: distance > 0 ? (distance / 1000).toFixed(1).replace(".", ",") : "4,8",
