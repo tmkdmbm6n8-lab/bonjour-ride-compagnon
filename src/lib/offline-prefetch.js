@@ -11,6 +11,9 @@ const DRIVER_PAGES = [
   '/driver/menu',
   '/driver/preferences',
   '/driver/profile',
+  '/driver/private-clients',
+  '/driver/trips',
+  '/driver/wallet',
 ];
 
 const DRIVER_DATA_ENDPOINTS = [
@@ -23,8 +26,30 @@ const DRIVER_DATA_ENDPOINTS = [
   '/api/users/me/live',
 ];
 
-export async function prefetchDriverAssets() {
-  if (prefetched || typeof window === 'undefined') return;
+let screensLoaded = false;
+
+/**
+ * Loads the code of every driver tab into memory right away. Without it, a tab
+ * opened for the first time in airplane mode cannot load its screen and the
+ * router reloads the whole page, which shows the iPhone's offline screen.
+ */
+async function preloadDriverScreens(router) {
+  if (screensLoaded || !router) return;
+  screensLoaded = true;
+  for (const to of DRIVER_PAGES) {
+    try {
+      const route = router.routesByPath?.[to];
+      if (route) await router.loadRouteChunk(route);
+    } catch {
+      screensLoaded = false;
+    }
+  }
+}
+
+export async function prefetchDriverAssets(router) {
+  if (typeof window === 'undefined') return;
+  await preloadDriverScreens(router);
+  if (prefetched) return;
   if (typeof navigator !== 'undefined' && !navigator.onLine) return;
   prefetched = true;
 

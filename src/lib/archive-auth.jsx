@@ -4,27 +4,25 @@ import {createContext,useContext,useEffect,useState,useCallback,useRef} from 're
 import {supabase} from '@/integrations/supabase/client';
 import {apiFetch} from './archive-fetch';
 import {clearRideDraft} from './ride-draft';
+import {localSessionUser} from './offline-session';
 // The route guard and provider can start together on a protected deep link.
 let pendingUserVerification;
 export function verifySessionUser() {
  if (typeof window === 'undefined') return supabase.auth.getUser();
  if (pendingUserVerification) return pendingUserVerification;
  const verification = (async () => {
-  // Sans réseau : on lit la session enregistrée sur le téléphone sans faire d'appel réseau
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
-   const { data: { session } } = await supabase.auth.getSession();
-   return { data: { user: session?.user ?? null }, error: null };
-  }
+  // The phone's saved session decides first; the network only confirms it.
+  // A failed or slow check (airplane mode, tunnel) never signs the driver out.
+  const local = await localSessionUser();
   try {
-   const res = await supabase.auth.getUser();
-   if (res.error && !res.data?.user) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) return { data: { user: session.user }, error: null };
-   }
+   const res = await Promise.race([supabase.auth.getUser(), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
+   if (!res) return { data: { user: local }, error: null };
+   const status = res.error?.status;
+   // Only an explicit refusal from the server ends the session.
+   if (res.error && !res.data?.user && !(status === 401 || status === 403)) return { data: { user: local }, error: null };
    return res;
   } catch {
-   const { data: { session } } = await supabase.auth.getSession();
-   return { data: { user: session?.user ?? null }, error: null };
+   return { data: { user: local }, error: null };
   }
  })().finally(() => {
   if (pendingUserVerification === verification) pendingUserVerification = null;

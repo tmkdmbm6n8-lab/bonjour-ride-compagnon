@@ -20,6 +20,7 @@ import { registerDriverPush } from "@/lib/native-push";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { signOut, useSession } from "@/lib/archive-auth";
 import { prefetchDriverAssets } from "@/lib/offline-prefetch";
+import { useRouter as useTanstackRouter } from "@tanstack/react-router";
 
 const NAV = [
   { href: "/driver/dashboard", label: "Accueil", icon: Gauge },
@@ -38,6 +39,7 @@ export const useDriverGoldLoad = () => useContext(GoldLoadContext);
 const STANDARD_NAV = [NAV[0], NAV[1], { href: "/driver/discover", label: "Découvrir", icon: RouteIcon }, ...NAV.slice(4, 6), { href: "/driver/private-clients", label: "SDGold", icon: Gem }, NAV[6]];
 
 export default function DriverLayout({ children }) {
+  const router = useTanstackRouter();
   const { data: goldData, error: goldError, reload: reloadGold } = useDriverData("/api/drivers/me/gold", 15000);
   const { live } = useSession();
   const gold = goldData?.gold;
@@ -78,10 +80,10 @@ export default function DriverLayout({ children }) {
   // Préchargement automatique de tous les onglets en arrière-plan comme Uber
   useEffect(() => {
     const timer = setTimeout(() => {
-      void prefetchDriverAssets();
-    }, 1500);
+      void prefetchDriverAssets(router);
+    }, 300);
     return () => clearTimeout(timer);
-  }, []);
+  }, [router]);
 
   // Écran de bannissement total : bloque l'accès à toute l'application
   if (isSuspended) {

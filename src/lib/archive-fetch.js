@@ -4,6 +4,7 @@ import {supabase} from '@/integrations/supabase/client';
 import {publishRefresh} from './live-refresh';
 import {rememberRead,recallRead,queueSetting,flushSettings,clearOfflineData} from './offline-cache';
 import {isNetworkFailure} from './offline-queue';
+import {storedSessionUser} from './offline-session';
 const json=(d,status=200)=>new Response(JSON.stringify(d),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 let offlineWired=false;
 function wireOffline(){
@@ -15,10 +16,8 @@ function wireOffline(){
 const PUBLIC_PAGES=['/','/login','/signup','/recover-account','/contact','/privacy','/terms','/mentions-legales','/join'];
 let redirecting=false;
 function sessionExpired(){
- // Si le téléphone est en mode avion, ce n'est PAS une expiration de session : ne pas rediriger
- if (typeof navigator !== 'undefined' && !navigator.onLine) {
-  return new Error('Hors connexion : vos données locales restent actives.');
- }
+ // A session still saved on the phone means the network failed, not the account: never leave the page.
+ if(storedSessionUser())return new TypeError('Pas de connexion : vos données locales restent actives.');
  if(typeof window!=='undefined'&&!redirecting&&!PUBLIC_PAGES.includes(window.location.pathname)){redirecting=true;const back=window.location.pathname+window.location.search;window.location.href=`/login?expired=1&callbackUrl=${encodeURIComponent(back)}`;}
  return new Error('Votre session a expiré : reconnectez-vous');
 }
@@ -38,8 +37,8 @@ export async function apiFetch(path,options={}) {
   else if(path==='/api/private-clients/scan')data=await publicVtcRequest({data:{path,body},signal:options.signal});
   else{
    // Without a session the request would be refused: send the user back to sign in with a clear message.
-   const {data:{session}}=await supabase.auth.getSession();if(!session)throw sessionExpired();
-   try{data=await vtcRequest({data:{path,method,body},signal:options.signal});if(method==='GET')rememberRead(path,data);}catch(e){
+   const {data:{session}}=await supabase.auth.getSession().catch(()=>({data:{session:null}}));
+   try{if(!session)throw sessionExpired();data=await vtcRequest({data:{path,method,body},signal:options.signal});if(method==='GET')rememberRead(path,data);}catch(e){
     // No network: reads come from the phone, settings wait to be sent; everything else still needs the server.
     if(isNetworkFailure(e)){if(method==='GET'){const saved=recallRead(path);if(saved!==undefined)return json(saved);}else if(queueSetting(path,method,body))return json({ok:true,offline:true});throw new Error('Pas de connexion : cette action demande internet.');}
     if(/unauthori[sz]ed|authorization header|jwt|ACCOUNT_UNAVAILABLE/i.test(String(e?.message||'')))throw sessionExpired();throw e;}
