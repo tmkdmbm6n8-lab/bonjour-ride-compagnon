@@ -1,25 +1,102 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>StrasDrive — hors connexion</title>
-<style>body{box-sizing:border-box;margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0e0f12;color:#f3efe4;font-family:system-ui,sans-serif;text-align:center;padding:24px}
-h1{color:#d4af37;font-size:22px;margin:0}p{margin:0;opacity:.75}button{background:#d4af37;color:#0e0f12;border:0;border-radius:999px;padding:12px 26px;font-weight:700;font-size:16px}</style>
-</head><body><h1>Connexion interrompue</h1><p>La page n'a pas pu se charger. Vérifiez votre réseau ou réessayez.</p>
-<button onclick="location.replace('https://strasdrive.fr')">Réessayer</button>
-<button onclick="location.replace('https://strasdrive.fr/login')">Retour à la connexion</button>
-<script>
-// A failed navigation (including cancelled OAuth) is not proof of network loss.
-let recovering = false;
-const heading = document.querySelector('h1');
-const message = document.querySelector('p');
-function updateNetworkMessage() {
-  heading.textContent = navigator.onLine ? 'Chargement interrompu' : 'Pas de connexion';
-  message.textContent = navigator.onLine ? 'Réessayez ou revenez à la connexion.' : 'StrasDrive se reconnectera lorsque votre réseau sera disponible.';
-}
-updateNetworkMessage();
-window.addEventListener('offline', updateNetworkMessage);
-window.addEventListener('online', () => {
-  if (recovering) return;
-  recovering = true;
-  location.replace('https://strasdrive.fr');
-});
-</script></body></html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>StrasDrive</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #0e0f12;
+      color: #f3efe4;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 24px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      color: #d4af37;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 14px;
+      color: #9ca3af;
+      max-width: 300px;
+      line-height: 1.5;
+      margin-bottom: 32px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 280px;
+      padding: 14px 20px;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .btn-gold {
+      background: #d4af37;
+      color: #0e0f12;
+      margin-bottom: 12px;
+    }
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.06);
+      color: #d1d5db;
+    }
+  </style>
+</head>
+<body>
+  <svg class="logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="46" fill="#17212d" stroke="#d4af37" stroke-width="3"/>
+    <path d="M35 58 C35 66 65 66 65 52 C65 38 35 42 35 28 C35 18 65 18 65 26" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+    <path d="M50 20 L50 78" stroke="#d4af37" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+
+  <div class="badge">
+    <span>Mode hors-ligne actif</span>
+  </div>
+
+  <h1>Espace Chauffeur</h1>
+  <p>Vos données et réglages sont conservés sur votre iPhone. L'application se reconnecte automatiquement dès que le réseau revient.</p>
+
+  <button class="btn btn-gold" onclick="location.replace('https://strasdrive.fr')">Ouvrir mon tableau de bord</button>
+  <button class="btn btn-ghost" onclick="location.reload()">Rafraîchir</button>
+
+  <script>
+    // Reconnexion automatique et discrète dès qu'une barre de réseau apparaît
+    window.addEventListener('online', () => {
+      location.replace('https://strasdrive.fr');
+    });
+  </script>
+</body>
+</html>
