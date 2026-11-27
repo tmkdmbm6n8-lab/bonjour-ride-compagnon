@@ -15,8 +15,8 @@ function wireOffline(){
 const PUBLIC_PAGES=['/','/login','/signup','/recover-account','/contact','/privacy','/terms','/mentions-legales','/join'];
 let redirecting=false;
 function sessionExpired(){
- // Si le téléphone est en mode avion / sans réseau, ce n'est pas une expiration de session : ne pas rediriger
- if(typeof navigator !== 'undefined' && !navigator.onLine) {
+ // Si le téléphone est en mode avion, ce n'est PAS une expiration de session : ne pas rediriger
+ if (typeof navigator !== 'undefined' && !navigator.onLine) {
   return new Error('Hors connexion : vos données locales restent actives.');
  }
  if(typeof window!=='undefined'&&!redirecting&&!PUBLIC_PAGES.includes(window.location.pathname)){redirecting=true;const back=window.location.pathname+window.location.search;window.location.href=`/login?expired=1&callbackUrl=${encodeURIComponent(back)}`;}
