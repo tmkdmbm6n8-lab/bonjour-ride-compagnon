@@ -19,6 +19,7 @@ import AppShell from "@/components/shell/AppShell";
 import { registerDriverPush } from "@/lib/native-push";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { signOut, useSession } from "@/lib/archive-auth";
+import { prefetchDriverAssets } from "@/lib/offline-prefetch";
 
 const NAV = [
   { href: "/driver/dashboard", label: "Accueil", icon: Gauge },
@@ -72,6 +73,14 @@ export default function DriverLayout({ children }) {
       clearInterval(timer);
       window.removeEventListener("focus", heartbeat);
     };
+  }, []);
+
+  // Préchargement automatique de tous les onglets en arrière-plan comme Uber
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void prefetchDriverAssets();
+    }, 1500);
+    return () => clearTimeout(timer);
   }, []);
 
   // Écran de bannissement total : bloque l'accès à toute l'application
