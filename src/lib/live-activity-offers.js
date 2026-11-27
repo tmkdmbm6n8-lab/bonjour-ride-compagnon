@@ -36,7 +36,10 @@ export function buildLiveActivityStart(ride, now = Date.now()) {
     type: "driver_offer",
     expiresAt: String(expiresAt),
   };
-  if (Number.isFinite(earnings)) values.earnings = `${earnings.toFixed(2).replace(".", ",")} €`;
+  if (Number.isFinite(earnings)) {
+    values.earnings = `${earnings.toFixed(2).replace(".", ",")} €`;
+    values.title = values.earnings;
+  }
   return {
     expiresAt,
     collapseId: `ride-${ride.id}`,

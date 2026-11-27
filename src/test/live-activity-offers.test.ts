@@ -29,7 +29,7 @@ describe('Dynamic Island — course test GenericAttributes', () => {
     const start = buildLiveActivityStart(ride, NOW);
     expect(start?.payload.aps['attributes-type']).toBe('GenericAttributes');
     expect(start?.payload.aps.attributes).toEqual({ id: ride.id, staticValues: { type: 'driver_offer' } });
-    expect(start?.payload.aps['content-state'].values).toMatchObject({ title: 'Course', status: 'Nouvelle course', earnings: '12,40 €' });
+    expect(start?.payload.aps['content-state'].values).toMatchObject({ title: '12,40 €', status: 'Nouvelle course', earnings: '12,40 €' });
     expect(Object.values(start?.payload.aps['content-state'].values || {}).every((value) => typeof value === 'string')).toBe(true);
     expect(start?.expiresAt).toBe(Math.floor((NOW + 60_000) / 1000));
   });
