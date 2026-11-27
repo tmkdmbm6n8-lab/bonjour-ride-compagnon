@@ -25,37 +25,24 @@ async function sendApple(token, message) {
     }
     const host = APNS_ENV === "sandbox" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
     const payload = {...message.data, aps:{alert:message.notification,sound:"default",...message.apns?.payload?.aps}};
-    const { connect } = await import("node:http2");
-    const response = await new Promise((resolve, reject) => {
-      const client = connect("https://" + host);
-      let timer;
-      let settled = false;
-      const finish = (error, result) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        client.destroy();
-        if (error) reject(error); else resolve(result);
-      };
-      client.on("error", error => finish(error));
-      timer = setTimeout(() => finish(new Error("APNs timeout")), SEND_TIMEOUT_MS);
-      try {
-        const req = client.request({
-          ":method": "POST", ":path": "/3/device/" + token,
+    // Cloudflare Workers has no node:http2; its fetch speaks HTTP/2 to APNs.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), SEND_TIMEOUT_MS);
+    let response;
+    try {
+      const res = await fetch("https://" + host + "/3/device/" + token, {
+        method: "POST",
+        headers: {
           authorization: "bearer " + jwtCache.value,
           "apns-topic": APPLE_BUNDLE_ID, "apns-push-type": "alert",
           "apns-priority": "10", "apns-expiration": message.apns?.headers?.["apns-expiration"] || "0",
           "content-type": "application/json"
-        });
-        let status = 0, body = "";
-        req.setEncoding("utf8");
-        req.on("response", headers => { status = Number(headers[":status"]); });
-        req.on("data", chunk => { body += chunk; });
-        req.on("error", error => finish(error));
-        req.on("end", () => finish(null, {status, body}));
-        req.end(JSON.stringify(payload));
-      } catch (error) { finish(error); }
-    });
+        },
+        body: JSON.stringify(payload),
+        signal: ctrl.signal,
+      });
+      response = { status: res.status, body: await res.text() };
+    } finally { clearTimeout(timer); }
     let reason;
     try { reason = JSON.parse(response.body).reason; } catch {}
     const ok = response.status === 200;
