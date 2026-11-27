@@ -9,7 +9,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         window = UIWindow(windowScene: windowScene)
         let background = UIColor(red: 14.0 / 255.0, green: 15.0 / 255.0, blue: 18.0 / 255.0, alpha: 1)
-        let controller = CAPBridgeViewController()
+        let controller = StrasDriveBridgeViewController()
         window?.backgroundColor = background
         window?.rootViewController = controller
         controller.view.backgroundColor = background

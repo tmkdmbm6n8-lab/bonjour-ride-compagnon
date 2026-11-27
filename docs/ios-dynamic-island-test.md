@@ -28,7 +28,7 @@ Dans Xcode :
 
 1. Sélectionner le projet **App**, puis la cible principale **App**.
 2. Dans **Signing & Capabilities**, vérifier **Push Notifications** et **Live Activities**.
-3. Vérifier que le paquet **CapacitorLiveActivity** est présent après synchronisation, et que le module `LiveActivityPlugin` est accessible à la cible principale. Le nouvel observateur dans `AppDelegate.swift` doit être conservé si le Mac possède ses propres modifications.
+3. Vérifier que le paquet **CapacitorLiveActivity** est présent après synchronisation, et que le module `LiveActivityPlugin` est accessible à la cible principale. Conserver les versions du dépôt de **AppDelegate.swift et SceneDelegate.swift** : le premier contient le pont `StrasDriveOffers` et l’observateur natif, le second utilise `StrasDriveBridgeViewController` pour l’enregistrer. Si le Mac possède ses propres modifications, intégrer ces deux changements dans la cible principale **App**, pas dans le widget. Ne pas redéfinir `GenericAttributes` dans la cible App : utiliser le type importé du module.
 4. Dans la cible du widget, ouvrir le fichier fourni par l’utilisateur contenant `struct StrasDriveLiveActivityLiveActivity: Widget`. Remplacer tout son contenu par celui de `native/ios/LiveActivities/StrasDriveOfferWidget.swift`. Le remplacement conserve ce même nom : ne pas modifier le `WidgetBundle` existant. Conserver intact le fichier séparé définissant `GenericAttributes` (avec `id`, `staticValues`, `ContentState.values`). Ne pas ajouter une deuxième présentation pour ce même type.
 5. Choisir l’iPhone réel, puis cliquer sur **Run (▶️)**.
 6. Si iOS le demande, autoriser les notifications et les activités en direct.
@@ -36,6 +36,12 @@ Dans Xcode :
 Le fichier du widget installé a été fourni le 27 novembre : sa vue compacte contient littéralement `Text("Course")` et ses adresses utilisent des valeurs de secours absentes du message serveur. Le remplacement affiche le gain envoyé et le compte à rebours, sans fausses adresses. Le serveur ne peut pas remplacer les textes codés en dur dans l’application installée. La source Swift n’a pas pu être compilée dans Xcode depuis l’environnement Lovable ; Run sur le Mac et la vérification sur l’iPhone restent nécessaires. Le compte à rebours ne ferme pas lui-même l’activité : cette fermeture dépend toujours de l’ordre Apple et du jeton de mise à jour.
 
 Le démarrage à distance d’une activité exige iOS 17.2 ou plus récent. Le simulateur ne permet pas ce test.
+
+### Correction de la bulle persistante après acceptation
+
+La fermeture utilise maintenant directement `Activity<GenericAttributes>.activities` et `.immediate`, sans attendre la liste interne du module. L’acceptation réussie ferme explicitement cette offre avant la navigation ; le refus ferme aussi cette offre sans toucher à une autre offre arrivée entre-temps. Le pont natif observe les jetons au lancement sans écran web, rejoue le jeton courant après association au compte, réessaie les erreurs temporaires et ferme immédiatement si le serveur répond `closing: true` à un jeton tardif. La déconnexion efface son adresse de rappel et invalide les envois en cours.
+
+**Une publication seule ne suffit pas** : refaire la synchronisation ci-dessus et **Run** pour installer le pont natif sur l’iPhone. Après installation, ouvrir une fois l’espace chauffeur avec Internet. Les tests automatisés valident les appels et le parcours d’acceptation/refus ; la compilation Swift et la disparition réelle doivent encore être confirmées sur le Mac/iPhone.
 
 ## 2. Publier le serveur après accord explicite
 

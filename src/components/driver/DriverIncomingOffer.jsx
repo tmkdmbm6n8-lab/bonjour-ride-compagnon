@@ -91,7 +91,7 @@ export default function DriverIncomingOffer() {
     if (!incoming || pendingAction.current) return;
     ringing.current?.();
     if (isReservation) { remember(incoming.id); setReservation(null); }
-    else await decline();
+    else { await decline(); await stopLiveActivity('driver_offer', incoming.rideId); }
     // No navigation: the underlying page and its scroll position stay intact.
   };
   useEffect(() => {
@@ -114,6 +114,7 @@ export default function DriverIncomingOffer() {
       } else {
         const acceptedRide = await accept();
         if (!acceptedRide) return;
+        await stopLiveActivity('driver_offer', incoming.rideId);
         router.push('/driver/dashboard');
         ringing.current?.();
         previousOffer.current = null;

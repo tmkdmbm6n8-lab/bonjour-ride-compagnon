@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const fixture=vi.hoisted(()=>({
- path:'/driver/menu',fetch:vi.fn(),push:vi.fn(),listeners:new Map<string,Set<any>>(),ring:vi.fn(),stopRing:vi.fn(),reservations:[] as any[],activity:null as any,
+ path:'/driver/menu',fetch:vi.fn(),push:vi.fn(),listeners:new Map<string,Set<any>>(),ring:vi.fn(),stopRing:vi.fn(),stopActivity:vi.fn(),reservations:[] as any[],activity:null as any,
 }));
 vi.mock('@/lib/archive-auth',()=>({useSession:()=>({status:'authenticated',data:{user:{id:'driver-a',role:'driver',canDrive:true}}})}));
 vi.mock('@/lib/archive-navigation',()=>({default:({children}:any)=><>{children}</>,usePathname:()=>fixture.path,useRouter:()=>({push:fixture.push})}));
@@ -9,7 +9,7 @@ vi.mock('@/lib/archive-fetch',()=>({apiFetch:(...args:any[])=>fixture.fetch(...a
 vi.mock('@/components/ui/Toast',()=>({useToast:()=>vi.fn()}));
 vi.mock('@/components/ui/Modal',()=>({default:({open,children,fullScreen}:any)=>open?<div role="dialog" data-fullscreen={String(fullScreen)}>{children}</div>:null}));
 vi.mock('@/lib/sounds',()=>({startRinging:()=>{fixture.ring();return fixture.stopRing;},playSound:vi.fn()}));
-vi.mock('@/lib/live-activity-native',()=>({syncLiveActivity:vi.fn(),stopLiveActivity:vi.fn()}));
+vi.mock('@/lib/live-activity-native',()=>({syncLiveActivity:vi.fn(),stopLiveActivity:fixture.stopActivity}));
 vi.mock('@/context/SocketProvider',()=>({useSocket:()=>({isConnected:true,socket:socket})}));
 const socket={on:(event:string,fn:any)=>{if(!fixture.listeners.has(event))fixture.listeners.set(event,new Set());fixture.listeners.get(event)!.add(fn);},off:(event:string,fn:any)=>fixture.listeners.get(event)?.delete(fn),emit:vi.fn()};
 import { DriverActivityProvider, useDriverActivity } from '../context/DriverActivityProvider';
@@ -40,12 +40,16 @@ describe('persistent driver activity and shared incoming offers',()=>{
   fireEvent.click(screen.getByRole('button',{name:/Accepter/}));await flush();
   expect(fixture.fetch).toHaveBeenCalledWith('/api/rides/ride-a/accept',expect.objectContaining({method:'POST'}));
   expect(fixture.push).toHaveBeenCalledWith('/driver/dashboard');
+  expect(fixture.stopActivity).toHaveBeenCalledWith('driver_offer','ride-a');
+  const closeOrder=fixture.stopActivity.mock.calls.findIndex(args=>args[1]==='ride-a');
+  expect(fixture.stopActivity.mock.invocationCallOrder[closeOrder]).toBeLessThan(fixture.push.mock.invocationCallOrder[0] ?? 0);
   expect(fixture.activity.ride.id).toBe('ride-a');
  });
  it.each(['Refuser','Fermer la demande'])('keeps the underlying page when using %s',async(name)=>{
   render(<DriverActivityProvider><Probe/></DriverActivityProvider>);await flush();await receive();
   fireEvent.click(screen.getByRole('button',{name}));await flush();
   expect(screen.queryByRole('dialog')).toBeNull();
+  expect(fixture.stopActivity).toHaveBeenCalledWith('driver_offer','ride-a');
   expect(screen.getByText('Page /driver/menu')).toBeTruthy();expect(fixture.push).not.toHaveBeenCalled();
  });
  it('expires after the server deadline without moving away from Reservations',async()=>{

@@ -4,6 +4,23 @@ let legacyActivity;
 let queue = Promise.resolve();
 let expiryTimer = null;
 let disabled = false;
+let nativeOffers;
+
+function nativeOfferPlugin() {
+  if (!supported() || !Capacitor.isPluginAvailable('StrasDriveOffers')) return null;
+  nativeOffers ||= registerPlugin('StrasDriveOffers');
+  return nativeOffers;
+}
+
+export async function configureNativeOfferTokens(url) {
+  const plugin = nativeOfferPlugin();
+  if (plugin) await plugin.configure({ url });
+}
+
+export async function clearNativeOfferTokens() {
+  const plugin = nativeOfferPlugin();
+  if (plugin) await plugin.clear();
+}
 
 function supported() {
   return !disabled && Capacitor.getPlatform() === 'ios';
@@ -15,6 +32,8 @@ async function offerPlugin() {
 }
 
 export async function reconcileOfferActivities() {
+  const native = nativeOfferPlugin();
+  if (native) { await native.reconcile(); return; }
   const plugin = await offerPlugin();
   if (!plugin) return;
   const { items = [] } = await plugin.listActivities();
@@ -58,15 +77,22 @@ export function syncLiveActivity(payload) {
   legacyActivity ||= registerPlugin('RideLiveActivity');
   return enqueue(() => legacyActivity.sync(payload));
 }
-export function stopLiveActivity(kind) {
+export function stopLiveActivity(kind, reference) {
   if (!supported()) return Promise.resolve();
   if (!kind || kind === 'driver_offer') clearExpiry();
   return enqueue(async () => {
     if (!kind || kind === 'driver_offer') {
-      const plugin = await offerPlugin();
-      if (plugin) {
-        const { items = [] } = await plugin.listActivities();
-        for (const item of items) await plugin.endActivity({ id: item.id, contentState: {}, dismissalPolicy: 'immediate' });
+      const native = nativeOfferPlugin();
+      if (native) {
+        await native.endOffers(reference ? { id: reference } : {});
+      } else {
+        const plugin = await offerPlugin();
+        if (plugin) {
+          const { items = [] } = await plugin.listActivities();
+          for (const item of items) {
+            if (!reference || item.id === reference) await plugin.endActivity({ id: item.id, contentState: {}, dismissalPolicy: 'immediate' });
+          }
+        }
       }
     }
     if (Capacitor.isPluginAvailable('RideLiveActivity')) {

@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   getActivityPushTokens: vi.fn(),
   endActivity: vi.fn(),
   available: vi.fn(),
+  list: vi.fn().mockResolvedValue({ items: [] }),
 }));
 
 vi.mock('@/lib/archive-fetch', () => ({ apiFetch: state.apiFetch }));
@@ -33,7 +34,7 @@ vi.mock('capacitor-live-activity', () => ({
     observePushToStartToken: state.observePushToStartToken,
     getActivityPushTokens: state.getActivityPushTokens,
     isAvailable: state.available,
-    listActivities: vi.fn().mockResolvedValue({ items: [] }),
+    listActivities: state.list,
     endActivity: state.endActivity,
   },
 }));
@@ -44,9 +45,23 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.resetModules();
   delete window.Capacitor;
+  state.list.mockResolvedValue({ items: [] });
 });
 
 describe('jetons Dynamic Island du bon iPhone', () => {
+  it('ferme immédiatement un jeton reçu après la fin de son offre seulement', async () => {
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios' };
+    localStorage.setItem('sd_push_token', 'ef'.repeat(32));
+    state.apiFetch.mockResolvedValue({ ok: true, json: async () => ({ closing: true }) });
+    state.available.mockResolvedValue({ value: true });
+    state.getActivityPushTokens.mockResolvedValue({ items: [] });
+    const bridge = await import('@/lib/native-push');
+    await bridge.registerDriverPush();
+    state.list.mockResolvedValue({ items: [{ id: 'late-ride' }, { id: 'new-ride' }] });
+    await state.liveListeners.get('liveActivityPushToken')({ id: 'late-ride', activityId: 'activity-late', token: 'cd'.repeat(32) });
+    await vi.waitFor(() => expect(state.endActivity).toHaveBeenCalledWith({ id: 'late-ride', contentState: {}, dismissalPolicy: 'immediate' }));
+    expect(state.endActivity).toHaveBeenCalledTimes(1);
+  });
   it('associe démarrage et fermeture au même appareil puis les retire à la déconnexion', async () => {
     window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios' };
     localStorage.setItem('sd_push_token', 'ef'.repeat(32));

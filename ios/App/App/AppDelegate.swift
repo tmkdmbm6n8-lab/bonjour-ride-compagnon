@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import ActivityKit
 #if canImport(LiveActivityPlugin)
 import LiveActivityPlugin
 #endif
@@ -8,14 +9,11 @@ import LiveActivityPlugin
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-    private var offerActivityObserver: AnyObject?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Observe remote activities even on an APNs background launch without a WebView.
-        // The plugin reloads the persisted HTTPS callback and posts per-activity tokens natively.
         #if canImport(LiveActivityPlugin)
         if #available(iOS 16.2, *) {
-            offerActivityObserver = LiveActivity()
+            StrasDriveOfferManager.shared.start()
         }
         #endif
         return true
@@ -61,3 +59,173 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 }
+
+// Register this bridge explicitly: remote activities must be read from ActivityKit,
+// not from the Capacitor plugin's asynchronously populated in-memory dictionary.
+class StrasDriveBridgeViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        #if canImport(LiveActivityPlugin)
+        bridge?.registerPluginInstance(StrasDriveOffersPlugin())
+        #endif
+    }
+}
+
+#if canImport(LiveActivityPlugin)
+@objc(StrasDriveOffersPlugin)
+public class StrasDriveOffersPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "StrasDriveOffersPlugin"
+    public let jsName = "StrasDriveOffers"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "configure", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clear", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "endOffers", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "reconcile", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func configure(_ call: CAPPluginCall) {
+        guard let raw = call.getString("url"), let url = URL(string: raw),
+              url.scheme == "https", url.host == "strasdrive.fr",
+              url.path == "/api/public/native/live-activity-token",
+              let device = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "device" })?.value,
+              device.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil else {
+            call.reject("Invalid callback URL"); return
+        }
+        Task { @MainActor in
+            if #available(iOS 16.2, *) { StrasDriveOfferManager.shared.configure(url) }
+            call.resolve()
+        }
+    }
+
+    @objc func clear(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            if #available(iOS 16.2, *) {
+                StrasDriveOfferManager.shared.clear()
+                await StrasDriveOfferManager.shared.endOffers(id: nil)
+            }
+            call.resolve()
+        }
+    }
+
+    @objc func endOffers(_ call: CAPPluginCall) {
+        let id = call.getString("id")
+        Task { @MainActor in
+            if #available(iOS 16.2, *) { await StrasDriveOfferManager.shared.endOffers(id: id) }
+            call.resolve()
+        }
+    }
+
+    @objc func reconcile(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            if #available(iOS 16.2, *) { await StrasDriveOfferManager.shared.reconcile() }
+            call.resolve()
+        }
+    }
+}
+
+@available(iOS 16.2, *)
+@MainActor
+private final class StrasDriveOfferManager {
+    static let shared = StrasDriveOfferManager()
+    private let endpointKey = "sd.native.offer-token-endpoint"
+    private var endpoint: URL?
+    private var discovery: Task<Void, Never>?
+    private var observers: [String: Task<Void, Never>] = [:]
+    private var generation = UUID()
+
+    func start() {
+        if endpoint == nil, let raw = UserDefaults.standard.string(forKey: endpointKey) {
+            endpoint = URL(string: raw)
+        }
+        guard discovery == nil else { return }
+        scan()
+        discovery = Task { [weak self] in
+            for await activity in Activity<GenericAttributes>.activityUpdates {
+                self?.observe(activity)
+            }
+        }
+    }
+
+    func configure(_ url: URL) {
+        if endpoint != url { generation = UUID() }
+        endpoint = url
+        UserDefaults.standard.set(url.absoluteString, forKey: endpointKey)
+        start()
+        // Replay the current token too: it may have arrived before account registration.
+        scan()
+    }
+
+    func clear() {
+        generation = UUID()
+        endpoint = nil
+        UserDefaults.standard.removeObject(forKey: endpointKey)
+    }
+
+    private func scan() {
+        for activity in Activity<GenericAttributes>.activities {
+            observe(activity)
+            if let token = activity.pushToken {
+                Task { await self.send(token, for: activity) }
+            }
+        }
+    }
+
+    private func observe(_ activity: Activity<GenericAttributes>) {
+        guard observers[activity.id] == nil else { return }
+        observers[activity.id] = Task { [weak self] in
+            for await token in activity.pushTokenUpdates {
+                await self?.send(token, for: activity)
+            }
+            self?.observers.removeValue(forKey: activity.id)
+        }
+    }
+
+    private func send(_ token: Data, for activity: Activity<GenericAttributes>) async {
+        guard let url = endpoint else { return }
+        let currentGeneration = generation
+        let payload = ["id": activity.attributes.id, "activityId": activity.id,
+                       "token": token.map { String(format: "%02x", $0) }.joined()]
+        for attempt in 0..<3 {
+            guard endpoint == url, generation == currentGeneration else { return }
+            do {
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.timeoutInterval = 15
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard endpoint == url, generation == currentGeneration else { return }
+                if let http = response as? HTTPURLResponse {
+                    if (200...299).contains(http.statusCode) {
+                        let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                        if result?["closing"] as? Bool == true {
+                            await activity.end(nil, dismissalPolicy: .immediate)
+                        }
+                        return
+                    }
+                    if (400..<500).contains(http.statusCode), http.statusCode != 429 { return }
+                }
+            } catch { /* Replay current ActivityKit token on next configure/launch. */ }
+            if attempt < 2 { try? await Task.sleep(nanoseconds: UInt64(attempt + 1) * 2_000_000_000) }
+        }
+    }
+
+    func endOffers(id: String?) async {
+        for activity in Activity<GenericAttributes>.activities {
+            // A targeted accept/refuse must not close a newer offer delivered concurrently.
+            if let id, activity.attributes.id != id { continue }
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
+    }
+
+    func reconcile() async {
+        for activity in Activity<GenericAttributes>.activities {
+            let values = activity.content.state.values
+            let deadline = Double(values["expiresAt"] ?? "") ?? 0
+            if values["type"] != "driver_offer" || deadline <= Date().timeIntervalSince1970 {
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+        scan()
+    }
+}
+#endif

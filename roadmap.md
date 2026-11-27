@@ -67,6 +67,7 @@
 - [ ] App iPhone (IPA) — reportée à la demande de l'utilisateur
 
 # Dynamic Island iOS — vraies offres (27 novembre)
+- [x] Corriger la fermeture native des activités démarrées par Apple et la remontée du jeton sans écran web ; 31 tests réussis (acceptation/refus, jeton tardif, secours classique). Compilation Swift et validation réelle iPhone restent à faire sur le Mac.
 - [x] Aligner le pont Capacitor et le format Apple sur `capacitor-live-activity` / `GenericAttributes`.
 - [x] Enregistrer les jetons de démarrage et de fermeture pour Tata (`world.poker74@gmail.com`) et le bon appareil, avec déconnexion et changement de compte.
 - [x] Fermer la bulle au refus, à l’acceptation par un chauffeur et à l’expiration sans ouverture de l’app.

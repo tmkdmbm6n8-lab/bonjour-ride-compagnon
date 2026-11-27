@@ -3,6 +3,7 @@ import { apiFetch } from "./archive-fetch";
 import { OFFER_CHANNEL_ID, OFFER_PATH } from "./vtc-push";
 import { publishRefresh } from "./live-refresh";
 import { pushDeviceId, validLiveActivityToken } from "./live-activity-offers";
+import { configureNativeOfferTokens, clearNativeOfferTokens, stopLiveActivity } from './live-activity-native';
 
 const TOKEN_KEY = "sd_push_token";
 const LIVE_ACTIVITY_TOKEN_KEY = "sd_live_activity_token";
@@ -61,6 +62,8 @@ function registerStartToken(token) {
       body: JSON.stringify({ token: validToken, deviceId }),
     });
     if (!response.ok) throw new Error("Enregistrement du jeton de démarrage refusé");
+    // Replay tokens only after the server knows the current account/device association.
+    await configureNativeOfferTokens(`${NATIVE_UPDATE_TOKEN_URL}?device=${encodeURIComponent(deviceId)}`);
   });
 }
 
@@ -79,8 +82,7 @@ function registerUpdateToken({ id, activityId, token }) {
     if (!response.ok) throw new Error("Enregistrement du jeton de fermeture refusé");
     const result = await response.json();
     if (result.closing) {
-      const { LiveActivity } = await import('capacitor-live-activity');
-      await LiveActivity.endActivity({ id, contentState: {}, dismissalPolicy: 'immediate' });
+      await stopLiveActivity('driver_offer', id);
     }
   });
 }
@@ -157,6 +159,7 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
       await LiveActivity.setUpdateTokenEndpoint({
         url: `${NATIVE_UPDATE_TOKEN_URL}?device=${encodeURIComponent(deviceId)}`,
       });
+      await configureNativeOfferTokens(`${NATIVE_UPDATE_TOKEN_URL}?device=${encodeURIComponent(deviceId)}`);
     }
     try { await LiveActivity.observePushToStartToken(); }
     catch { await removeDisabledLiveStart(); return; } // iOS <17.2 keeps its classic registration intact.
@@ -186,6 +189,7 @@ export async function unregisterDriverPush() {
   const platform = window.Capacitor?.getPlatform?.();
 
   if (platform === "ios") {
+    await clearNativeOfferTokens().catch(() => {});
     const listeners = [liveActivityListener, liveActivityUpdateListener];
     liveActivityListener = undefined;
     liveActivityUpdateListener = undefined;
