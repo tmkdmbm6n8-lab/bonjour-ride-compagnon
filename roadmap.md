@@ -67,10 +67,10 @@
 - [ ] App iPhone (IPA) — reportée à la demande de l'utilisateur
 
 # Dynamic Island iOS — course test uniquement
-- [ ] Aligner le pont Capacitor et le format Apple sur `capacitor-live-activity` / `GenericAttributes`.
-- [ ] Enregistrer les jetons de démarrage et de fermeture pour Tata (`world.poker74@gmail.com`) et le bon appareil, avec déconnexion et changement de compte.
-- [ ] Fermer la bulle au refus, à l’acceptation par un chauffeur et à l’expiration sans ouverture de l’app.
-- [ ] Vérifier les règles par tests automatisés ; ne jamais activer la fonction pour les vraies courses.
+- [x] Aligner le pont Capacitor et le format Apple sur `capacitor-live-activity` / `GenericAttributes`.
+- [x] Enregistrer les jetons de démarrage et de fermeture pour Tata (`world.poker74@gmail.com`) et le bon appareil, avec déconnexion et changement de compte.
+- [x] Fermer la bulle au refus, à l’acceptation par un chauffeur et à l’expiration sans ouverture de l’app.
+- [x] Vérifier les règles par tests automatisés ; ne jamais activer la fonction pour les vraies courses.
 - [ ] Validation sur iPhone depuis l’écran d’accueil après publication autorisée et synchronisation Xcode — test utilisateur requis.
 
 # Vocaux façon Snapchat (17/11)
