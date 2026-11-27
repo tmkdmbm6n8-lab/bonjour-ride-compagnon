@@ -2,7 +2,7 @@
 import { apiFetch } from "./archive-fetch";
 import { OFFER_CHANNEL_ID, OFFER_PATH } from "./vtc-push";
 import { publishRefresh } from "./live-refresh";
-import { validLiveActivityDeviceId, validLiveActivityToken } from "./live-activity-offers";
+import { pushDeviceId, validLiveActivityToken } from "./live-activity-offers";
 
 const TOKEN_KEY = "sd_push_token";
 const LIVE_ACTIVITY_TOKEN_KEY = "sd_live_activity_token";
@@ -18,13 +18,22 @@ function isNativeApp() {
   return typeof window !== "undefined" && Boolean(window.Capacitor?.isNativePlatform?.());
 }
 
-function liveActivityDeviceId() {
-  let id = null;
-  try { id = validLiveActivityDeviceId(localStorage.getItem(LIVE_ACTIVITY_DEVICE_KEY)); } catch {}
-  if (id) return id;
-  id = globalThis.crypto?.randomUUID?.() || `device_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 18)}`;
-  try { localStorage.setItem(LIVE_ACTIVITY_DEVICE_KEY, id); } catch {}
+async function liveActivityDeviceId() {
+  let token = null;
+  try { token = localStorage.getItem(TOKEN_KEY); } catch {}
+  const id = await pushDeviceId(token);
+  if (id) try { localStorage.setItem(LIVE_ACTIVITY_DEVICE_KEY, id); } catch {}
   return id;
+}
+
+async function removeDisabledLiveStart() {
+  const token = validLiveActivityToken(localStorage.getItem(LIVE_ACTIVITY_TOKEN_KEY));
+  const deviceId = await liveActivityDeviceId();
+  if (!token || !deviceId) return;
+  await apiFetch('/api/notifications/live-activity-token', {
+    method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, deviceId }),
+  });
 }
 
 function queueLiveActivityRegistration(action) {
@@ -39,11 +48,17 @@ function registerStartToken(token) {
   if (!started || !validToken) return Promise.resolve();
   return queueLiveActivityRegistration(async () => {
     if (!started) return;
+    const deviceId = await liveActivityDeviceId();
+    if (!deviceId) return; // Classic APNs registration must establish the same physical device first.
+    const { LiveActivity } = await import('capacitor-live-activity');
+    const { value: available } = await LiveActivity.isAvailable();
+    if (!available) { await removeDisabledLiveStart(); return; }
+    await LiveActivity.setUpdateTokenEndpoint({ url: `${NATIVE_UPDATE_TOKEN_URL}?device=${encodeURIComponent(deviceId)}` });
     try { localStorage.setItem(LIVE_ACTIVITY_TOKEN_KEY, validToken); } catch {}
     const response = await apiFetch("/api/notifications/live-activity-token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: validToken, deviceId: liveActivityDeviceId() }),
+      body: JSON.stringify({ token: validToken, deviceId }),
     });
     if (!response.ok) throw new Error("Enregistrement du jeton de démarrage refusé");
   });
@@ -54,12 +69,19 @@ function registerUpdateToken({ id, activityId, token }) {
   if (!started || !id || !activityId || !validToken) return Promise.resolve();
   return queueLiveActivityRegistration(async () => {
     if (!started) return;
+    const deviceId = await liveActivityDeviceId();
+    if (!deviceId) return;
     const response = await apiFetch("/api/notifications/live-activity-update-token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rideId: id, activityId, token: validToken, deviceId: liveActivityDeviceId() }),
+      body: JSON.stringify({ rideId: id, activityId, token: validToken, deviceId }),
     });
     if (!response.ok) throw new Error("Enregistrement du jeton de fermeture refusé");
+    const result = await response.json();
+    if (result.closing) {
+      const { LiveActivity } = await import('capacitor-live-activity');
+      await LiveActivity.endActivity({ id, contentState: {}, dismissalPolicy: 'immediate' });
+    }
   });
 }
 
@@ -88,6 +110,10 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: value, platform: platform === "ios" ? "ios" : "android" }),
       });
+      if (platform === 'ios' && audience === 'driver') {
+        const saved = localStorage.getItem(LIVE_ACTIVITY_TOKEN_KEY);
+        if (saved) void registerStartToken(saved);
+      }
     });
     await PushNotifications.addListener("registrationError", (e) => console.error("Push registration:", e?.error));
     await PushNotifications.addListener("pushNotificationReceived", ({ data }) => {
@@ -114,9 +140,11 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
 
     if (audience !== "driver" || platform !== "ios") return;
     const { LiveActivity } = await import("capacitor-live-activity");
-    const deviceId = liveActivityDeviceId();
+    const { value: available } = await LiveActivity.isAvailable();
+    if (!available) { await removeDisabledLiveStart(); return; } // Keep the classic alert after disabling activities.
 
     liveActivityListener = await LiveActivity.addListener("liveActivityPushToStartToken", ({ token }) => {
+      try { localStorage.setItem(LIVE_ACTIVITY_TOKEN_KEY, token); } catch {}
       void registerStartToken(token);
     });
     liveActivityUpdateListener = await LiveActivity.addListener("liveActivityPushToken", (event) => {
@@ -124,12 +152,16 @@ export async function registerDriverPush({ audience = "driver" } = {}) {
     });
 
     // The native plugin persists this URL and can register a token without the WebView.
-    if (typeof LiveActivity.setUpdateTokenEndpoint === "function") {
+    const deviceId = await liveActivityDeviceId();
+    if (deviceId && typeof LiveActivity.setUpdateTokenEndpoint === "function") {
       await LiveActivity.setUpdateTokenEndpoint({
         url: `${NATIVE_UPDATE_TOKEN_URL}?device=${encodeURIComponent(deviceId)}`,
       });
     }
-    await LiveActivity.observePushToStartToken();
+    try { await LiveActivity.observePushToStartToken(); }
+    catch { await removeDisabledLiveStart(); return; } // iOS <17.2 keeps its classic registration intact.
+    const { reconcileOfferActivities } = await import('./live-activity-native');
+    await reconcileOfferActivities();
 
     // Re-associate a previously received token after sign-in/account change.
     let savedStartToken = null;
@@ -167,7 +199,7 @@ export async function unregisterDriverPush() {
         const response = await apiFetch("/api/notifications/live-activity-token", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, deviceId: liveActivityDeviceId() }),
+          body: JSON.stringify({ token, deviceId: await liveActivityDeviceId() }),
         });
         if (response.ok) localStorage.removeItem(LIVE_ACTIVITY_TOKEN_KEY);
       }

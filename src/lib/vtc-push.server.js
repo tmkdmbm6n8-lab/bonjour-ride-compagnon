@@ -6,6 +6,7 @@ import {
   buildLiveActivityEnd,
   buildLiveActivityStart,
   liveActivityOfferDriverIds,
+  pushDeviceId,
   shouldCloseLiveActivityOffer,
 } from "./live-activity-offers";
 
@@ -90,21 +91,23 @@ async function sendOne(token, message, headers) {
   }
 }
 
-/** Remote start for the tested GenericAttributes widget. Real rides never enter this path. */
+/** Remote start for dispatch-authorized drivers; only matched devices replace the classic alert. */
 export async function startRideOfferLiveActivities(admin, ride, userIds) {
   const ids = liveActivityOfferDriverIds(ride, userIds);
-  if (!ids.length) return { sent: 0 };
+  if (!ids.length) return { sent: 0, devices: [] };
   const start = buildLiveActivityStart(ride);
-  if (!start) return { sent: 0 };
+  if (!start) return { sent: 0, devices: [] };
 
   const { data: devices, error } = await admin
     .from("live_activity_start_tokens")
-    .select("token,user_id")
+    .select("token,user_id,device_id")
     .in("user_id", ids);
   if (error) throw error;
 
-  const results = await Promise.all((devices ?? []).map(async ({ token }) => ({
+  const results = await Promise.all((devices ?? []).filter(({ device_id }) => /^[0-9a-f]{64}$/.test(device_id || '')).map(async ({ token, user_id, device_id }) => ({
     token,
+    user_id,
+    device_id,
     ...await sendApple(token, start.payload, {
       liveActivity: true,
       expiration: start.expiresAt,
@@ -115,7 +118,8 @@ export async function startRideOfferLiveActivities(admin, ride, userIds) {
   if (expiredTokens.length) {
     await admin.from("live_activity_start_tokens").delete().in("token", expiredTokens);
   }
-  return { sent: results.filter((result) => result.ok).length };
+  const successful = results.filter((result) => result.ok);
+  return { sent: successful.length, devices: successful.map(({ user_id, device_id }) => ({ userId: user_id, deviceId: device_id })) };
 }
 
 async function endLiveActivityRows(admin, activities) {
@@ -192,14 +196,7 @@ export async function pushRideOffer(admin, ride, userIds) {
     const lovableKey = process.env.LOVABLE_API_KEY,
       connKey = process.env.FIREBASE_MESSAGING_API_KEY;
 
-    // Live Activity does not depend on the presence of a classic push token.
-    const liveStart = startRideOfferLiveActivities(admin, ride, ids).catch((error) => {
-      console.error("Envoi Live Activity impossible", error?.code || error?.name || error?.message);
-      return { sent: 0 };
-    });
     const { data: rows, error } = await admin.from("push_tokens").select("token,user_id").in("user_id", ids);
-    await liveStart;
-    if (error || !rows?.length) return;
     const headers = lovableKey && connKey ? {
       Authorization: `Bearer ${lovableKey}`,
       "X-Connection-Api-Key": connKey,
@@ -207,16 +204,31 @@ export async function pushRideOffer(admin, ride, userIds) {
     } : null;
     const message = buildOfferMessage(ride);
     const favorite = ride.is_test ? null : await favoriteDriverId(admin, ride.rider_id);
-    const privateMessage = rows.some((row) => favorite && row.user_id === favorite)
+    const privateFare = favorite && ids.includes(favorite) ? await fareForDriver(admin, ride, favorite).catch(() => null) : null;
+    const privateMessage = privateFare
       ? buildOfferMessage({
           ...ride,
-          fare: await fareForDriver(admin, ride, favorite).catch(() => null),
+          fare: privateFare,
         })
       : message;
-    const results = await Promise.all(rows.map((row) =>
-      sendOne(row.token, row.user_id === favorite ? privateMessage : message, headers)
-        .then((result) => ({ ...result, token: row.token }))
-    ));
+    const starts = await Promise.all(ids.map(async (id) => {
+      try {
+        return await startRideOfferLiveActivities(admin, id === favorite && privateFare ? { ...ride, fare: privateFare } : ride, [id]);
+      } catch (error) {
+        console.error("Envoi Live Activity impossible", error?.code || error?.name);
+        return { sent: 0, devices: [] };
+      }
+    }));
+    if (error || !rows?.length) return;
+    const successfulDevices = starts.flatMap((start) => start.devices);
+    const results = await Promise.all(rows.map(async (row) => {
+      const deviceId = await pushDeviceId(row.token);
+      // Never suppress another phone or Android, nor a rejected Live Activity push.
+      if (deviceId && successfulDevices.some((device) => device.userId === row.user_id && device.deviceId === deviceId)) {
+        return { token: row.token, ok: true };
+      }
+      return { ...await sendOne(row.token, row.user_id === favorite ? privateMessage : message, headers), token: row.token };
+    }));
     const stale = results.filter((x) => x.stale).map((x) => x.token);
     if (stale.length) await admin.from("push_tokens").delete().in("token", stale);
   } catch (e) {

@@ -66,11 +66,14 @@
 - [ ] Nouvel APK avec les notifications — en attente du fichier google-services.json de Firebase
 - [ ] App iPhone (IPA) — reportée à la demande de l'utilisateur
 
-# Dynamic Island iOS — course test uniquement
+# Dynamic Island iOS — vraies offres (27 novembre)
 - [x] Aligner le pont Capacitor et le format Apple sur `capacitor-live-activity` / `GenericAttributes`.
 - [x] Enregistrer les jetons de démarrage et de fermeture pour Tata (`world.poker74@gmail.com`) et le bon appareil, avec déconnexion et changement de compte.
 - [x] Fermer la bulle au refus, à l’acceptation par un chauffeur et à l’expiration sans ouverture de l’app.
-- [x] Vérifier les règles par tests automatisés ; ne jamais activer la fonction pour les vraies courses.
+- [x] Autoriser les vraies offres et éviter deux alertes sur un même appareil, sans supprimer le secours classique.
+- [x] Corriger la remontée du jeton de fermeture et fermer les activités périmées au retour dans l’app (code et tests).
+- [x] Vérifier les tests et documenter séparément la synchronisation Xcode et la publication.
+- [ ] Adapter le widget réellement installé affichant « Course » — fichier Swift du Mac demandé ; présentation de remplacement préparée.
 - [ ] Validation sur iPhone depuis l’écran d’accueil après publication autorisée et synchronisation Xcode — test utilisateur requis.
 
 # Vocaux façon Snapchat (17/11)

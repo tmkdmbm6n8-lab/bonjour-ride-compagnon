@@ -19,10 +19,10 @@ const ride = {
   declined: [] as string[],
 };
 
-describe('Dynamic Island — course test GenericAttributes', () => {
-  it('autorise uniquement le compte Tata et jamais une vraie course', () => {
-    expect(liveActivityOfferDriverIds(ride, ['autre', LIVE_ACTIVITY_TEST_DRIVER_ID])).toEqual([LIVE_ACTIVITY_TEST_DRIVER_ID]);
-    expect(liveActivityOfferDriverIds({ ...ride, is_test: false }, [LIVE_ACTIVITY_TEST_DRIVER_ID])).toEqual([]);
+describe('Dynamic Island — offres GenericAttributes', () => {
+  it('autorise les vraies offres pour tous les destinataires du dispatch, sans doublon', () => {
+    expect(liveActivityOfferDriverIds(ride, ['autre', LIVE_ACTIVITY_TEST_DRIVER_ID])).toEqual(['autre', LIVE_ACTIVITY_TEST_DRIVER_ID]);
+    expect(liveActivityOfferDriverIds({ ...ride, is_test: false }, ['chauffeur', 'chauffeur'])).toEqual(['chauffeur']);
   });
 
   it('envoie le format exact attendu par GenericAttributes, avec des valeurs texte', () => {
@@ -32,6 +32,7 @@ describe('Dynamic Island — course test GenericAttributes', () => {
     expect(start?.payload.aps['content-state'].values).toMatchObject({ title: '12,40 €', status: 'Nouvelle course', earnings: '12,40 €' });
     expect(Object.values(start?.payload.aps['content-state'].values || {}).every((value) => typeof value === 'string')).toBe(true);
     expect(start?.expiresAt).toBe(Math.floor((NOW + 60_000) / 1000));
+    expect(start?.payload.aps['input-push-token']).toBe(1);
   });
 
   it('n’envoie pas de bulle si l’offre est déjà expirée', () => {

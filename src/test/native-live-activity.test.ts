@@ -7,10 +7,13 @@ const state = vi.hoisted(() => ({
   setUpdateTokenEndpoint: vi.fn(),
   observePushToStartToken: vi.fn(),
   getActivityPushTokens: vi.fn(),
+  endActivity: vi.fn(),
+  available: vi.fn(),
 }));
 
 vi.mock('@/lib/archive-fetch', () => ({ apiFetch: state.apiFetch }));
 vi.mock('@/lib/live-refresh', () => ({ publishRefresh: vi.fn() }));
+vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => 'ios', isPluginAvailable: () => true }, registerPlugin: vi.fn() }));
 vi.mock('@capacitor/push-notifications', () => ({
   PushNotifications: {
     addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
@@ -29,6 +32,9 @@ vi.mock('capacitor-live-activity', () => ({
     setUpdateTokenEndpoint: state.setUpdateTokenEndpoint,
     observePushToStartToken: state.observePushToStartToken,
     getActivityPushTokens: state.getActivityPushTokens,
+    isAvailable: state.available,
+    listActivities: vi.fn().mockResolvedValue({ items: [] }),
+    endActivity: state.endActivity,
   },
 }));
 
@@ -43,10 +49,12 @@ afterEach(() => {
 describe('jetons Dynamic Island du bon iPhone', () => {
   it('associe démarrage et fermeture au même appareil puis les retire à la déconnexion', async () => {
     window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios' };
-    state.apiFetch.mockResolvedValue({ ok: true });
+    localStorage.setItem('sd_push_token', 'ef'.repeat(32));
+    state.apiFetch.mockResolvedValue({ ok: true, json: async () => ({ closing: false }) });
     state.setUpdateTokenEndpoint.mockResolvedValue(undefined);
     state.observePushToStartToken.mockResolvedValue(undefined);
     state.getActivityPushTokens.mockResolvedValue({ items: [] });
+    state.available.mockResolvedValue({ value: true });
     const bridge = await import('@/lib/native-push');
     await bridge.registerDriverPush();
 
@@ -65,5 +73,17 @@ describe('jetons Dynamic Island du bon iPhone', () => {
     const removal = state.apiFetch.mock.calls.find(([path, options]) => path === '/api/notifications/live-activity-token' && options.method === 'DELETE');
     expect(removal).toBeTruthy();
     expect(JSON.parse(removal[1].body)).toEqual({ token: 'ab'.repeat(32), deviceId: start.deviceId });
+  });
+  it('retire l’association d’activité si les activités iOS sont désactivées, sans retirer le push classique', async () => {
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios' };
+    localStorage.setItem('sd_push_token', 'ef'.repeat(32));
+    localStorage.setItem('sd_live_activity_token', 'ab'.repeat(32));
+    state.available.mockResolvedValue({ value: false });
+    state.apiFetch.mockResolvedValue({ ok: true });
+    const bridge = await import('@/lib/native-push');
+    await bridge.registerDriverPush();
+    expect(state.apiFetch).toHaveBeenCalledWith('/api/notifications/live-activity-token', expect.objectContaining({ method: 'DELETE' }));
+    expect(state.observePushToStartToken).not.toHaveBeenCalled();
+    expect(localStorage.getItem('sd_push_token')).toBe('ef'.repeat(32));
   });
 });

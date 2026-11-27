@@ -1,11 +1,19 @@
 // Contrat APNs du widget GenericAttributes de capacitor-live-activity.
-// Les vraies courses sont volontairement exclues : seul le compte de test confirmé est autorisé.
+// Destinataires déjà autorisés par le dispatch ; aucun nouvel accès aux courses.
 export const LIVE_ACTIVITY_TEST_DRIVER_ID = "a0c1029a-73e0-448a-8451-a2e997f608fc";
 export const LIVE_ACTIVITY_ATTRIBUTES_TYPE = "GenericAttributes";
 
 export function liveActivityOfferDriverIds(ride, userIds) {
-  if (!ride?.is_test) return [];
-  return [...new Set((userIds || []).filter((id) => id === LIVE_ACTIVITY_TEST_DRIVER_ID))];
+  if (!ride?.id) return [];
+  return [...new Set((userIds || []).filter((id) => typeof id === 'string' && id.length > 0))];
+}
+
+/** Match a classic APNs token to its Live Activity device without storing another secret. */
+export async function pushDeviceId(token) {
+  const value = String(token || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{64,200}$/.test(value)) return null;
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function validLiveActivityToken(token) {
@@ -47,11 +55,12 @@ export function buildLiveActivityStart(ride, now = Date.now()) {
       aps: {
         timestamp,
         event: "start",
+        "input-push-token": 1,
         "attributes-type": LIVE_ACTIVITY_ATTRIBUTES_TYPE,
         attributes: { id: String(ride.id), staticValues: { type: "driver_offer" } },
         "content-state": { values },
         "stale-date": expiresAt,
-        alert: { title: "StrasDrive", body: "Nouvelle course disponible" },
+        alert: { title: `Nouvelle course · ${values.title}`, body: "Ouvrez StrasDrive pour voir la course", sound: "default" },
       },
     },
   };

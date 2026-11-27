@@ -73,6 +73,7 @@ export default function DriverIncomingOffer() {
     return () => { stop(); if (ringing.current === stop) ringing.current = null; };
   }, [key]);
   useEffect(() => {
+    if (!enabled || loading) return; // A loading screen is not proof that the server offer ended.
     const activity = enabled && !loading ? driverOfferActivity(offer) : null;
     if (activity) void syncLiveActivity(activity);
     else void stopLiveActivity('driver_offer');

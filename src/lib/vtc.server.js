@@ -1073,7 +1073,7 @@ export async function handleVtc(input, context) {
     }
 
     const previous = required(await admin.from("live_activity_start_tokens")
-      .select("user_id").eq("token", token).maybeSingle());
+      .select("user_id").eq("device_id", deviceId).maybeSingle());
     if (previous?.user_id && previous.user_id !== uid) {
       // A new account on the same phone must never inherit the former account's bubbles.
       await endDeviceLiveActivities(admin, previous.user_id, deviceId).catch((error) => {

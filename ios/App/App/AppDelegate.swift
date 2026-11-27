@@ -1,13 +1,23 @@
 import UIKit
 import Capacitor
+#if canImport(LiveActivityPlugin)
+import LiveActivityPlugin
+#endif
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    private var offerActivityObserver: AnyObject?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Observe remote activities even on an APNs background launch without a WebView.
+        // The plugin reloads the persisted HTTPS callback and posts per-activity tokens natively.
+        #if canImport(LiveActivityPlugin)
+        if #available(iOS 16.2, *) {
+            offerActivityObserver = LiveActivity()
+        }
+        #endif
         return true
     }
 
