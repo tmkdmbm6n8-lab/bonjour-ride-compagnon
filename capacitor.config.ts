@@ -20,6 +20,8 @@ const config: CapacitorConfig = {
     contentInset: 'never',
     backgroundColor: '#0e0f12',
     scheme: 'StrasDrive',
+    // Requis par iOS pour activer le service worker (démarrage en mode avion).
+    limitsNavigationsToAppBoundDomains: true,
     allowsLinkPreview: false,
     scrollEnabled: true,
   },

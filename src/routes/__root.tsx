@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import fontCss from "../fonts.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import Providers from '@/components/providers';
+import { registerOfflineShell } from '@/lib/offline-shell';
 import PaymentTestModeBanner from '@/components/payments/PaymentTestModeBanner';
 
 function NotFoundComponent() {
@@ -126,6 +127,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => { registerOfflineShell(); }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
