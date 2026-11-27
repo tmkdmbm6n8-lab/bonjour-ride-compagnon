@@ -1,6 +1,7 @@
 # StrasDrive — import fidèle de l’archive
 
 # Application native React Native
+- [x] Ajouter et tester les points de connexion/renouvellement publics sans ouvrir les accès métier (connexion réelle, renouvellement et relecture du compte validés).
 - [x] Ajouter la passerelle HTTP authentifiée qui réutilise les contrôles métier existants.
 - [x] Brancher le transport React Native sur cette passerelle sans embarquer de secret.
 - [x] Vérifier les accès, les erreurs et le contrat réseau par des tests automatisés et une vraie session temporaire.

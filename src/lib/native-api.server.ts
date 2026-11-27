@@ -10,6 +10,11 @@ const tokenSchema = z
   .max(8192)
   .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
 const bodySchema = z.record(z.string(), z.unknown());
+const loginSchema = z.object({
+  email: z.string().trim().email().max(254),
+  password: z.string().min(1).max(1024),
+}).strict();
+const refreshSchema = z.object({ refreshToken: z.string().min(1).max(8192) }).strict();
 
 export class NativeApiError extends Error {
   constructor(
@@ -114,6 +119,50 @@ async function authenticate(request: Request) {
   return { supabase, userId: data.claims.sub, claims: data.claims };
 }
 
+async function nativeAuth(request: Request, path: string): Promise<Response> {
+  if (request.method !== "POST") {
+    const response = jsonResponse({ error: "Méthode non autorisée" }, 405, "METHOD_NOT_ALLOWED");
+    response.headers.set("Allow", "POST, OPTIONS");
+    return response;
+  }
+  const body = await jsonBody(request);
+  const login = path === "/api/auth/login";
+  const credentials = login ? loginSchema.safeParse(body) : refreshSchema.safeParse(body);
+  if (!credentials.success) {
+    throw new NativeApiError(400, login ? "Indiquez un e-mail valide et votre mot de passe" : "Jeton de renouvellement manquant ou invalide", "INVALID_BODY");
+  }
+  const url = process.env["SUPABASE_URL"];
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+  if (!url || !key) throw new NativeApiError(503, "Le service de connexion est momentanément indisponible", "AUTH_UNAVAILABLE");
+  // A fresh publishable client per request: never share sessions or use admin credentials.
+  const client = createClient<Database>(url, key, {
+    global: { fetch: createSupabaseFetch(key) },
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const result = login
+    ? await client.auth.signInWithPassword(loginSchema.parse(body))
+    : await client.auth.refreshSession({ refresh_token: refreshSchema.parse(body).refreshToken });
+  if (result.error) {
+    if (result.error.status === 429) {
+      throw new NativeApiError(429, "Trop de tentatives : réessayez dans quelques instants", "AUTH_RATE_LIMITED");
+    }
+    if (!result.error.status || result.error.status >= 500) {
+      throw new NativeApiError(503, "Le service de connexion est momentanément indisponible", "AUTH_UNAVAILABLE");
+    }
+    throw new NativeApiError(401, login ? "E-mail ou mot de passe incorrect" : "Votre session a expiré : reconnectez-vous", login ? "INVALID_CREDENTIALS" : "SESSION_EXPIRED");
+  }
+  const session = result.data.session;
+  if (!session?.user.id || !session.access_token || !session.refresh_token || !session.expires_at) {
+    throw new NativeApiError(503, "Le service de connexion est momentanément indisponible", "AUTH_UNAVAILABLE");
+  }
+  return jsonResponse({
+    accountId: session.user.id,
+    accessToken: session.access_token,
+    refreshToken: session.refresh_token,
+    expiresAt: session.expires_at * 1000,
+  });
+}
+
 async function jsonBody(request: Request): Promise<Record<string, unknown>> {
   if (request.method === "GET") return {};
   const raw = await request.text();
@@ -158,8 +207,12 @@ function businessFailure(error: unknown): Response {
 export async function handleNativeApiRequest(request: Request): Promise<Response> {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: nativeHeaders() });
   try {
-    const context = await authenticate(request);
     const path = nativeBusinessPath(request.url);
+    const pathname = path.split("?", 1)[0];
+    if (pathname === "/api/auth/login" || pathname === "/api/auth/refresh") {
+      return await nativeAuth(request, pathname);
+    }
+    const context = await authenticate(request);
     const body = await jsonBody(request);
     const { handleVtc } = await import("./vtc.server");
     const result = await handleVtc({ path, method: request.method, body }, context);
@@ -167,6 +220,9 @@ export async function handleNativeApiRequest(request: Request): Promise<Response
   } catch (error) {
     if (error instanceof NativeApiError) {
       return jsonResponse({ error: error.message }, error.status, error.code);
+    }
+    if (new URL(request.url).pathname.startsWith(`${NATIVE_API_PREFIX}/auth/`)) {
+      return jsonResponse({ error: "Le service de connexion est momentanément indisponible" }, 503, "AUTH_UNAVAILABLE");
     }
     return businessFailure(error);
   }

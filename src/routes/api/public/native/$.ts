@@ -5,7 +5,7 @@ async function handle(request: Request): Promise<Response> {
   return handleNativeApiRequest(request);
 }
 
-// React Native is an external caller: this public-prefix route still requires a verified user bearer.
+// Only login/refresh bootstrap sessions; all business calls require a verified user bearer.
 export const Route = createFileRoute("/api/public/native/$")({
   server: {
     handlers: {
