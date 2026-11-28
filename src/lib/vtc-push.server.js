@@ -251,33 +251,53 @@ export async function pushRideOffer(admin, ride, userIds) {
     const lovableKey = process.env.LOVABLE_API_KEY,
       connKey = process.env.FIREBASE_MESSAGING_API_KEY;
 
-    const { data: rows, error } = await admin.from("push_tokens").select("token,user_id").in("user_id", ids);
-    const headers =
-      lovableKey && connKey
-        ? {
-            Authorization: `Bearer ${lovableKey}`,
-            "X-Connection-Api-Key": connKey,
-            "Content-Type": "application/json",
-          }
-        : null;
-    const message = buildOfferMessage(ride);
-    const favorite = ride.is_test ? null : await favoriteDriverId(admin, ride.rider_id);
-    const privateFare =
-      favorite && ids.includes(favorite) ? await fareForDriver(admin, ride, favorite).catch(() => null) : null;
-    const privateMessage = privateFare
-      ? buildOfferMessage({
-          ...ride,
-          fare: privateFare,
-        })
-      : message;
-    // Offers always use the classic notification; the Dynamic Island only shows the local "online" arrow.
+    // Récupérer les jetons, la position des chauffeurs et le profil passager
+    const [{ data: rows, error }, { data: drivers }, riderProfile] = await Promise.all([
+      admin.from("push_tokens").select("token,user_id").in("user_id", ids),
+      admin.from("drivers").select("user_id,location").in("user_id", ids),
+      ride.rider_id ? admin.from("profiles").select("name").eq("id", ride.rider_id).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+
     if (error || !rows?.length) return;
-    const results = await Promise.all(
-      rows.map(async (row) => ({
-        ...(await sendOne(row.token, row.user_id === favorite ? privateMessage : message, headers)),
-        token: row.token,
-      })),
-    );
+
+    const riderName = riderProfile?.data?.name || null;
+    const driverMap = new Map((drivers || []).map((d) => [d.user_id, d]));
+
+    const favorite = ride.is_test ? null : await favoriteDriverId(admin, ride.rider_id);
+    const privateFare = favorite && ids.includes(favorite) ? await fareForDriver(admin, ride, favorite).catch(() => null) : null;
+
+    const headers = lovableKey && connKey ? {
+      Authorization: `Bearer ${lovableKey}`,
+      "X-Connection-Api-Key": connKey,
+      "Content-Type": "application/json",
+    } : null;
+
+    const results = await Promise.all(rows.map(async (row) => {
+      const d = driverMap.get(row.user_id);
+      let approachKm = null;
+      let approachMin = null;
+      if (d?.location && ride.pickup) {
+        const rawKm = distanceToPickupKm(ride, d);
+        if (Number.isFinite(rawKm)) {
+          approachKm = rawKm * 1.35;
+          const approachMeters = Math.round(rawKm * 1350);
+          approachMin = Math.max(1, Math.round(approachSecondsFor(approachMeters) / 60));
+        }
+      }
+
+      const driverFare = row.user_id === favorite && privateFare ? privateFare : ride.fare;
+      const driverRide = {
+        ...ride,
+        fare: driverFare,
+        rider_name: riderName,
+        approach_km: approachKm,
+        approach_min: approachMin,
+      };
+
+      const message = buildOfferMessage(driverRide);
+      return { ...await sendOne(row.token, message, headers), token: row.token };
+    }));
+
     const stale = results.filter((x) => x.stale).map((x) => x.token);
     if (stale.length) await admin.from("push_tokens").delete().in("token", stale);
   } catch (e) {
