@@ -19,27 +19,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
 
-    func applicationWillResignActive(_ application: UIApplication) {
-        // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
-        // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
-    }
+    func applicationWillResignActive(_ application: UIApplication) {}
 
-    func applicationDidEnterBackground(_ application: UIApplication) {
-        // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
-        // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
-    }
+    func applicationDidEnterBackground(_ application: UIApplication) {}
 
-    func applicationWillEnterForeground(_ application: UIApplication) {
-        // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
-    }
+    func applicationWillEnterForeground(_ application: UIApplication) {}
 
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
-    }
+    func applicationDidBecomeActive(_ application: UIApplication) {}
 
     func applicationWillTerminate(_ application: UIApplication) {
         StrasDriveOnlineArrow.endAllBlocking()
-        // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
     func application(_ application: UIApplication,
@@ -58,11 +47,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
-
 }
 
-// Register this bridge explicitly: remote activities must be read from ActivityKit,
-// not from the Capacitor plugin's asynchronously populated in-memory dictionary.
+// Controller unique pour enregistrer les plugins Capacitor
 class StrasDriveBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         #if canImport(LiveActivityPlugin)
@@ -160,7 +147,6 @@ private final class StrasDriveOfferManager {
         endpoint = url
         UserDefaults.standard.set(url.absoluteString, forKey: endpointKey)
         start()
-        // Replay the current token too: it may have arrived before account registration.
         scan()
     }
 
@@ -214,14 +200,13 @@ private final class StrasDriveOfferManager {
                     }
                     if (400..<500).contains(http.statusCode), http.statusCode != 429 { return }
                 }
-            } catch { /* Replay current ActivityKit token on next configure/launch. */ }
+            } catch {}
             if attempt < 2 { try? await Task.sleep(nanoseconds: UInt64(attempt + 1) * 2_000_000_000) }
         }
     }
 
     func endOffers(id: String?) async {
         for activity in Activity<GenericAttributes>.activities {
-            // A targeted accept/refuse must not close a newer offer delivered concurrently.
             if let id, activity.attributes.id != id { continue }
             await activity.end(nil, dismissalPolicy: .immediate)
         }
@@ -240,8 +225,7 @@ private final class StrasDriveOfferManager {
 }
 #endif
 
-
-// MARK: - Flèche dorée « En ligne » (Dynamic Island, uniquement hors de l'app)
+// MARK: - Flèche dorée « En ligne » (Dynamic Island épurée)
 @MainActor
 enum StrasDriveOnlineArrow {
     private static let key = "sd.native.driver-online"
@@ -252,12 +236,13 @@ enum StrasDriveOnlineArrow {
         if !online { hide() }
     }
 
-    /// Appelé quand on quitte l'app : la flèche n'apparaît que si le chauffeur est en ligne.
     static func show() {
         guard isOnline else { return }
         if #available(iOS 16.2, *) {
             guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-            let running = Activity<GenericAttributes>.activities.contains { $0.attributes.staticValues["type"] == "driver_online" }
+            let running = Activity<GenericAttributes>.activities.contains {
+                $0.attributes.id == "driver-online" || $0.attributes.staticValues["type"] == "driver_online"
+            }
             if running { return }
             let attributes = GenericAttributes(id: "driver-online", staticValues: ["type": "driver_online"])
             let state = GenericAttributes.ContentState(values: ["type": "driver_online"])
@@ -265,11 +250,12 @@ enum StrasDriveOnlineArrow {
         }
     }
 
-    /// Appelé au retour dans l'app, au passage hors ligne et à la fermeture forcée.
     static func hide() {
         if #available(iOS 16.2, *) {
-            for activity in Activity<GenericAttributes>.activities where activity.attributes.staticValues["type"] == "driver_online" {
-                Task { await activity.end(nil, dismissalPolicy: .immediate) }
+            for activity in Activity<GenericAttributes>.activities {
+                if activity.attributes.id == "driver-online" || activity.attributes.staticValues["type"] == "driver_online" {
+                    Task { await activity.end(nil, dismissalPolicy: .immediate) }
+                }
             }
         }
     }
@@ -278,8 +264,10 @@ enum StrasDriveOnlineArrow {
         guard #available(iOS 16.2, *) else { return }
         let done = DispatchSemaphore(value: 0)
         Task.detached {
-            for activity in Activity<GenericAttributes>.activities where activity.attributes.staticValues["type"] == "driver_online" {
-                await activity.end(nil, dismissalPolicy: .immediate)
+            for activity in Activity<GenericAttributes>.activities {
+                if activity.attributes.id == "driver-online" || activity.attributes.staticValues["type"] == "driver_online" {
+                    await activity.end(nil, dismissalPolicy: .immediate)
+                }
             }
             done.signal()
         }
