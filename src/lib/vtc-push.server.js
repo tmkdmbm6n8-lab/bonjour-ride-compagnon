@@ -252,15 +252,18 @@ export async function pushRideOffer(admin, ride, userIds) {
       connKey = process.env.FIREBASE_MESSAGING_API_KEY;
 
     // Récupérer les jetons, la position des chauffeurs et le profil passager
-    const [{ data: rows, error }, { data: drivers }, riderProfile] = await Promise.all([
+    const [{ data: rows, error }, { data: drivers }, riderProfile, riderHistory] = await Promise.all([
       admin.from("push_tokens").select("token,user_id").in("user_id", ids),
       admin.from("drivers").select("user_id,location").in("user_id", ids),
       ride.rider_id ? admin.from("profiles").select("name").eq("id", ride.rider_id).maybeSingle() : Promise.resolve({ data: null }),
+      ride.rider_id ? admin.from("rides").select("rating").eq("rider_id", ride.rider_id).eq("status", "completed").eq("is_test", false).order("completed_at", { ascending: false }).limit(200) : Promise.resolve({ data: [] }),
     ]);
 
     if (error || !rows?.length) return;
 
     const riderName = riderProfile?.data?.name || null;
+    const ratings = (riderHistory?.data || []).map((r) => Number(r.rating?.byDriver)).filter((n) => Number.isFinite(n) && n >= 1 && n <= 5);
+    const riderRating = ratings.length ? ratings.reduce((sum, n) => sum + n, 0) / ratings.length : ride.rider_rating ?? null;
     const driverMap = new Map((drivers || []).map((d) => [d.user_id, d]));
 
     const favorite = ride.is_test ? null : await favoriteDriverId(admin, ride.rider_id);
@@ -290,6 +293,7 @@ export async function pushRideOffer(admin, ride, userIds) {
         ...ride,
         fare: driverFare,
         rider_name: riderName,
+        rider_rating: riderRating,
         approach_km: approachKm,
         approach_min: approachMin,
       };
