@@ -1,0 +1,28 @@
+{
+	"appId": "fr.strasdrive.app",
+	"appName": "StrasDrive",
+	"webDir": "capacitor-shell",
+	"server": {
+		"url": "https://strasdrive.fr",
+		"cleartext": false,
+		"androidScheme": "https",
+		"errorPath": "offline.html"
+	},
+	"android": {
+		"backgroundColor": "#0e0f12",
+		"allowMixedContent": false
+	},
+	"ios": {
+		"contentInset": "never",
+		"backgroundColor": "#0e0f12",
+		"scheme": "StrasDrive",
+		"limitsNavigationsToAppBoundDomains": true,
+		"allowsLinkPreview": false,
+		"scrollEnabled": true
+	},
+	"packageClassList": [
+		"GeolocationPlugin",
+		"PushNotificationsPlugin",
+		"LiveActivityPlugin"
+	]
+}

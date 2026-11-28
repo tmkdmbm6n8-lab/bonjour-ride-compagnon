@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>StrasDrive</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #0e0f12;
+      color: #f3efe4;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 24px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      color: #d4af37;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 14px;
+      color: #9ca3af;
+      max-width: 300px;
+      line-height: 1.5;
+      margin-bottom: 32px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 280px;
+      padding: 14px 20px;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .btn-gold {
+      background: #d4af37;
+      color: #0e0f12;
+      margin-bottom: 12px;
+    }
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.06);
+      color: #d1d5db;
+    }
+  </style>
+</head>
+<body data-native-ready>
+  <svg class="logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="46" fill="#17212d" stroke="#d4af37" stroke-width="3"/>
+    <path d="M35 58 C35 66 65 66 65 52 C65 38 35 42 35 28 C35 18 65 18 65 26" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+    <path d="M50 20 L50 78" stroke="#d4af37" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+
+  <h1>StrasDrive</h1>
+  <p>Ouvrez l'application une fois avec le réseau : ensuite elle s'ouvrira normalement, même en mode avion.</p>
+
+  <button class="btn btn-gold" onclick="openApp(true)">Ouvrir StrasDrive</button>
+
+  <script>
+    // The app saved on the phone opens through strasdrive.fr even without
+    // network. Try it at once; if it is not saved yet, iOS brings us back here,
+    // and the timestamp stops an endless loop.
+    var KEY = 'sd-offline-open-try';
+    function openApp(force) {
+      try {
+        var last = Number(sessionStorage.getItem(KEY) || 0);
+        if (!force && Date.now() - last < 20000) return;
+        sessionStorage.setItem(KEY, String(Date.now()));
+      } catch (e) {}
+      location.replace('https://strasdrive.fr/');
+    }
+    openApp(false);
+    window.addEventListener('online', function () { openApp(true); });
+  </script>
+</body>
+</html>
