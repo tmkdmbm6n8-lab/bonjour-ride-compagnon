@@ -1,6 +1,7 @@
 // Pure rules for ride-offer push notifications (unit-tested in src/test/vtc-push.test.ts).
 import { canSeeOffer } from "./vtc-dispatch";
 import { formatEuro } from "./vtc-pricing";
+import { passengerDisplayName } from "./passenger-name";
 
 /** Android channel shown as a heads-up banner with sound; created by the app on first launch. */
 export const OFFER_CHANNEL_ID = "ride_offers";
@@ -29,10 +30,19 @@ export function offerSecondsLeft(ride, now = Date.now()) {
   return Math.max(0, Math.ceil((until - now) / 1000));
 }
 
-/** Nettoyage d'une adresse pour l'affichage concis en notification. */
 function cleanAddress(addr) {
   if (!addr) return "";
-  return String(addr).split(",")[0].trim();
+  return String(addr).trim();
+}
+
+function formatKm(meters) {
+  if (!meters || meters <= 0) return null;
+  return `${(meters / 1000).toFixed(1).replace(".", ",")} km`;
+}
+
+function formatMin(seconds) {
+  if (!seconds || seconds <= 0) return null;
+  return `${Math.max(1, Math.round(seconds / 60))} min`;
 }
 
 /** FCM HTTP v1 message body (without the target) for a ride offer. Never reveals the dispatch phase. */
@@ -40,26 +50,40 @@ export function buildOfferMessage(ride, now = Date.now()) {
   const amount = Number(ride?.fare?.driverEarnings);
   const title = Number.isFinite(amount) ? `Nouvelle course · ${formatEuro(amount)}` : "Nouvelle course";
 
-  // Adresses départ et arrivée
-  const pickup = cleanAddress(ride?.pickup?.address || ride?.pickup_address);
-  const dropoff = cleanAddress(ride?.dropoff?.address || ride?.dropoff_address);
-
-  // Gamme et estimation temps / distance
+  // 1. Passager, note et gamme (affiché en sous-titre)
+  const rawName = ride?.rider_name || ride?.rider?.name;
+  const name = rawName ? passengerDisplayName(rawName) : null;
+  const ratingVal = Number(ride?.rider_rating ?? ride?.rider?.rating);
+  const ratingStr = Number.isFinite(ratingVal) && ratingVal > 0 ? `★ ${ratingVal.toFixed(1).replace(".", ",")}` : null;
   const vehicleName = VEHICLE_LABELS[ride?.vehicle_type] || "StrasDrive Go";
-  const durationSeconds = Number(ride?.route?.durationSeconds || ride?.route?.duration || 0);
-  const durationMin = durationSeconds > 0 ? Math.max(1, Math.round(durationSeconds / 60)) : null;
-  const distanceMeters = Number(ride?.route?.distanceMeters || ride?.route?.distance || 0);
-  const distanceKm = distanceMeters > 0 ? (distanceMeters / 1000).toFixed(1).replace(".", ",") : null;
 
-  const metrics = [durationMin ? `${durationMin} min` : null, distanceKm ? `${distanceKm} km` : null]
-    .filter(Boolean)
-    .join(" · ");
-  const subtitle = metrics ? `${vehicleName} · ${metrics}` : vehicleName;
+  const riderInfo = [name, ratingStr].filter(Boolean).join(" ");
+  const subtitle = riderInfo ? `${riderInfo} · ${vehicleName}` : vehicleName;
 
-  // Corps avec départ et destination
+  // 2. Départ : adresse + distance / temps d'approche du chauffeur
+  const pickup = cleanAddress(ride?.pickup?.address || ride?.pickup_address);
+  let pickupMetrics = null;
+  if (ride?.approach_km != null && ride?.approach_min != null) {
+    pickupMetrics = `${Number(ride.approach_km).toFixed(1).replace(".", ",")} km (${ride.approach_min} min)`;
+  } else if (ride?.approach_meters != null) {
+    const km = (ride.approach_meters / 1000).toFixed(1).replace(".", ",");
+    const min = Math.max(1, Math.round((ride.approach_seconds || (ride.approach_meters / 1000 / 25) * 3600) / 60));
+    pickupMetrics = `${km} km (${min} min)`;
+  }
+
+  // 3. Arrivée : adresse + distance et durée de la course
+  const dropoff = cleanAddress(ride?.dropoff?.address || ride?.dropoff_address);
+  const tripKm = formatKm(Number(ride?.route?.distanceMeters || ride?.route?.distance || 0));
+  const tripMin = formatMin(Number(ride?.route?.durationSeconds || ride?.route?.duration || 0));
+  const tripMetrics = [tripKm, tripMin ? `(${tripMin})` : null].filter(Boolean).join(" ");
+
   const lines = [];
-  if (pickup) lines.push(`📍 ${pickup}`);
-  if (dropoff) lines.push(`🏁 ${dropoff}`);
+  if (pickup) {
+    lines.push(pickupMetrics ? `📍 Départ : ${pickup} · ${pickupMetrics}` : `📍 Départ : ${pickup}`);
+  }
+  if (dropoff) {
+    lines.push(tripMetrics ? `🏁 Arrivée : ${dropoff} · ${tripMetrics}` : `🏁 Arrivée : ${dropoff}`);
+  }
   const body = lines.length > 0 ? lines.join("\n") : "Ouvrez StrasDrive pour voir la course";
 
   const ttl = Math.max(1, offerSecondsLeft(ride, now));
