@@ -8,8 +8,50 @@
 // hosting already compresses at the edge.
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  vite: {
+    define: { __STRASDRIVE_BUILD_ID__: JSON.stringify(new Date().toISOString()) },
+    plugins: [
+      VitePWA({
+        strategies: "generateSW",
+        registerType: "autoUpdate",
+        injectRegister: null,
+        manifest: false,
+        filename: "sw.js",
+        devOptions: { enabled: false },
+        // Browser files live in dist/client: without this, precache URLs start with client/ and 404, so the worker never installs.
+        outDir: "dist/client",
+        workbox: {
+          globPatterns: ["**/*.{js,css,svg,woff2,json}"],
+          maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
+          navigateFallback: null,
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+          runtimeCaching: [
+            {
+              urlPattern: ({ request, url }) =>
+                request.mode === "navigate" && !url.pathname.startsWith("/~oauth") && !url.pathname.startsWith("/api/"),
+              handler: "NetworkFirst",
+              options: { networkTimeoutSeconds: 4 },
+            },
+            {
+              urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/assets/"),
+              handler: "CacheFirst",
+              options: { cacheName: "sd-assets", expiration: { maxEntries: 300, maxAgeSeconds: 30 * 24 * 3600 } },
+            },
+            {
+              urlPattern: ({ url }) => url.hostname.endsWith("openfreemap.org"),
+              handler: "StaleWhileRevalidate",
+              options: { cacheName: "sd-map", expiration: { maxEntries: 1500, maxAgeSeconds: 14 * 24 * 3600 } },
+            },
+          ],
+        },
+      }),
+    ],
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

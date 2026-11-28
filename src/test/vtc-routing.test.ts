@@ -10,6 +10,7 @@ describe('itinéraire Google avec trafic', () => {
     const body = googleRouteRequest({ lat: 48.58, lng: 7.75 }, { lat: 48.57, lng: 7.76 });
     expect(body.routingPreference).toBe('TRAFFIC_AWARE');
     expect(body.travelMode).toBe('DRIVE');
+    expect(body.polylineQuality).toBe('HIGH_QUALITY');
     expect(body.origin.location.latLng).toEqual({ latitude: 48.58, longitude: 7.75 });
   });
 

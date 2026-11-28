@@ -21,8 +21,20 @@ describe('Course payée par carte', () => {
     expect(cardBookingExpired('2026-11-15T11:31:00Z', now)).toBe(false);
     expect(cardBookingExpired('2026-11-15T11:29:00Z', now)).toBe(true);
   });
+  it('expires malformed or future-dated bookings instead of keeping them pending forever', () => {
+    const now = Date.parse('2026-11-21T12:00:00Z');
+    expect(cardBookingExpired('not-a-date', now)).toBe(true);
+    expect(cardBookingExpired('', now)).toBe(true);
+    expect(cardBookingExpired(null, now)).toBe(true);
+    expect(cardBookingExpired('2026-11-21T12:01:00Z', now)).toBe(true);
+  });
   it('only returns to a plain site address', () => {
     expect(safeOrigin('https://bonjour-ride-compagnon.lovable.app')).toBe('https://bonjour-ride-compagnon.lovable.app');
     expect(safeOrigin('https://evil.example/path')).toBeNull();
+    expect(safeOrigin('https://evil.example', 'https://strasdrive.fr')).toBeNull();
+    expect(safeOrigin('https://strasdrive.fr', 'https://strasdrive.fr')).toBe('https://strasdrive.fr');
+    expect(safeOrigin('http://strasdrive.fr', 'http://strasdrive.fr')).toBeNull();
+    expect(safeOrigin('http://localhost:3000', 'http://localhost:3000')).toBe('http://localhost:3000');
+    expect(safeOrigin('https://strasdrive.fr', undefined)).toBe('https://strasdrive.fr');
   });
 });
