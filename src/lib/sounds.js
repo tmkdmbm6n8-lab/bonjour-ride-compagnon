@@ -93,6 +93,7 @@ export const MELODIES = {
   'driver-online': [[261.63, 0, 0.7], [392, 0.15, 0.7], [523.25, 0.30, 0.7], [659.25, 0.45, 0.9]],
   'driver-offline': [[659.25, 0, 0.7], [523.25, 0.15, 0.7], [392, 0.30, 0.7], [261.63, 0.45, 0.9]],
   offer: [[110, 0, 0.55], [165, 0.15, 0.55], [262, 0.30, 0.55], [440, 0.45, 0.35]],
+  'destination-offer': [[138.59, 0, 0.55], [207.89, 0.15, 0.55], [330.1, 0.30, 0.55], [554.37, 0.45, 0.35]],
   'driver-found': [[349,0,0.7],[523,0.12,0.85]],
   'arrived': [[349,0,0.7],[523,0.12,0.7],[659,0.36,0.85]],
   'started': [[262,0,0.55],[349,0.12,0.55],[523,0.24,0.85]],
@@ -103,6 +104,7 @@ export const MELODIES = {
 
 const VIBRATIONS = {
   offer: [200, 100, 200, 100, 400],
+  'destination-offer': [200, 100, 200, 100, 400],
   'driver-found': [150, 80, 150],
   arrived: [300, 120, 300],
   message: [80],
@@ -222,7 +224,7 @@ function renderSound(kind, c) {
     setTimeout(() => { master.disconnect(); limiter.disconnect(); }, 1500);
     return;
   }
-  if (kind === 'offer') {
+  if (kind === 'offer' || kind === 'destination-offer') {
     const bus = driverAlertBus(c, 0.85 * 4);
     const { master } = bus;
     function note(f, offset, volume, dur) {
@@ -240,7 +242,7 @@ function renderSound(kind, c) {
       }
     }
     for (const [f, at, dur] of melody) note(f, at, 1, dur);
-    for (let i = 0; i < 3; i++) note(440, .45 + (i + 1) * .33, .08 * Math.pow(.1, i), .35);
+    for (let i = 0; i < 3; i++) note(melody[melody.length - 1][0], .45 + (i + 1) * .33, (kind === 'destination-offer' ? .12 : .08) * Math.pow(.1, i), .35);
     const cleanup = setTimeout(() => bus.disconnect(), 2000);
     return () => { clearTimeout(cleanup); master.gain.setTargetAtTime(0, c.currentTime, .015); setTimeout(() => bus.disconnect(), 100); };
   }
@@ -272,7 +274,7 @@ function renderSound(kind, c) {
 /** Ring repeatedly (incoming ride request) until the returned stop() is called. */
 export function startRinging(kind = 'offer', everyMs = 1800) {
   let cancel = playSound(kind);
-  const id = setInterval(() => { if (typeof cancel === 'function') cancel(); cancel = playSound(kind); }, kind === 'offer' ? 2990 : everyMs);
+  const id = setInterval(() => { if (typeof cancel === 'function') cancel(); cancel = playSound(kind); }, (kind === 'offer' || kind === 'destination-offer') ? 2990 : everyMs);
   return () => { clearInterval(id); if (typeof cancel === 'function') cancel(); };
 }
 
