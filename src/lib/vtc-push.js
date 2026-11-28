@@ -40,32 +40,30 @@ function formatMin(seconds) {
 /** FCM HTTP v1 message body (without the target) for a ride offer. Never reveals the dispatch phase. */
 export function buildOfferMessage(ride, now = Date.now()) {
   const amount = Number(ride?.fare?.driverEarnings);
-  const title = Number.isFinite(amount) ? `Nouvelle course · ${formatEuro(amount)}` : "Nouvelle course";
+  const title = Number.isFinite(amount) ? `Nouvelle course — ${formatEuro(amount)}` : "Nouvelle course";
 
   // 2. Départ : adresse + distance / temps d'approche du chauffeur
   const pickup = cleanAddress(ride?.pickup?.address || ride?.pickup_address);
   let pickupMetrics = null;
   if (ride?.approach_km != null && ride?.approach_min != null) {
-    pickupMetrics = `${Number(ride.approach_km).toFixed(1).replace(".", ",")} km · ${ride.approach_min} min`;
+    pickupMetrics = `${Number(ride.approach_km).toFixed(1).replace(".", ",")} km / ${ride.approach_min} min`;
   } else if (ride?.approach_meters != null) {
     const km = (ride.approach_meters / 1000).toFixed(1).replace(".", ",");
     const min = Math.max(1, Math.round((ride.approach_seconds || (ride.approach_meters / 1000 / 25) * 3600) / 60));
-    pickupMetrics = `${km} km · ${min} min`;
+    pickupMetrics = `${km} km / ${min} min`;
   }
 
   // 3. Arrivée : adresse + distance et durée de la course
   const dropoff = cleanAddress(ride?.dropoff?.address || ride?.dropoff_address);
   const tripKm = formatKm(Number(ride?.route?.distanceMeters || ride?.route?.distance || 0));
   const tripMin = formatMin(Number(ride?.route?.durationSeconds || ride?.route?.duration || 0));
-  const tripMetrics = [tripKm, tripMin].filter(Boolean).join(" · ");
+  const tripMetrics = [tripKm, tripMin].filter(Boolean).join(" / ");
 
   const lines = [];
-  if (pickup || pickupMetrics) {
-    lines.push(`📍 ${[pickupMetrics, pickup].filter(Boolean).join(" — ")}`);
-  }
-  if (dropoff || tripMetrics) {
-    lines.push(`🏁 ${[tripMetrics, dropoff].filter(Boolean).join(" — ")}`);
-  }
+  if (pickupMetrics) lines.push(`Approche : ${pickupMetrics}`);
+  if (tripMetrics) lines.push(`Trajet : ${tripMetrics}`);
+  const addresses = [pickup, dropoff].filter(Boolean).join(" → ");
+  if (addresses) lines.push(addresses);
   const body = lines.length > 0 ? lines.join("\n") : "Ouvrez StrasDrive pour voir la course";
 
   const ttl = Math.max(1, offerSecondsLeft(ride, now));
