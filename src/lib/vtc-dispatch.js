@@ -91,6 +91,11 @@ export function planDispatch(ride, drivers, now = Date.now()) {
       };
     }
   }
+  if (phase === "destination" && running && pool.some(d => d.user_id === ride.offer_driver_id)) return null;
+  if (!phase && !ride.is_test && !ride.route?.goldReturn) {
+    const best = pool.map(d => ({ d, match: destinationMatch(ride,d) })).filter(x => x.match).sort((a,b) => a.match.score-b.match.score)[0];
+    if (best) return { dispatch_phase: "destination", offer_driver_id: best.d.user_id, offer_expires_at: iso(now + NEAREST_WINDOW_SECONDS * 1000) };
+  }
   if (ride.route?.goldReturn && !pool.length) {
     return { status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
   }
@@ -102,7 +107,7 @@ export function planDispatch(ride, drivers, now = Date.now()) {
       : { status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
   }
 
-  if (!phase && pool.some((d) => d.is_priority)) {
+  if ((!phase || phase === "destination") && pool.some((d) => d.is_priority)) {
     return {
       dispatch_phase: "priority",
       offer_driver_id: null,
@@ -145,6 +150,8 @@ export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
   if (ride.dispatch_phase === "private") return ride.offer_driver_id === driver.user_id && favoriteCanTake(ride, driver);
   const all = pool && pool.some((d) => d.user_id === driver.user_id) ? pool : [driver];
   if (!availableFor(ride, all).some((d) => d.user_id === driver.user_id)) return false;
+
+  if (ride.dispatch_phase === "destination") return ride.offer_driver_id === driver.user_id;
 
   // Phase prioritaires (chauffeurs VIP)
   if (ride.dispatch_phase === "priority") return Boolean(driver.is_priority);
