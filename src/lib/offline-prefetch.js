@@ -1,4 +1,6 @@
 import { apiFetch } from './archive-fetch';
+import { parisDay } from './vtc-dates';
+import { recallRead } from './offline-cache';
 import { warmOfflinePages } from './offline-shell';
 
 // Every screen of each space, loaded in the background on the first connected
@@ -23,6 +25,9 @@ const DRIVER_DATA_ENDPOINTS = [
   '/api/drivers/me/accepted-reservations',
   '/api/drivers/me/preferences',
   '/api/drivers/me/classes',
+  '/api/drivers/me/inbox?page=1',
+  '/api/users/me?view=driver',
+  '/api/rides?page=1&limit=15',
   '/api/users/me',
   '/api/users/me/live',
   '/api/wallet',
@@ -44,10 +49,14 @@ const RIDER_DATA_ENDPOINTS = [
   '/api/wallet',
   '/api/rider/cards',
   '/api/rides/active',
+  '/api/rides/active?view=rider',
+  '/api/riders/me/scheduled-requests',
   '/api/rides?page=1&limit=15&view=rider',
 ];
 
 const done = new Set();
+const pending = new Map();
+const refreshed = new Map();
 
 /**
  * Loads the code of every tab into memory right away. Without it, a tab
@@ -70,15 +79,35 @@ async function preloadScreens(router, pages) {
 
 async function prefetchSpace(key, router, pages, endpoints) {
   if (typeof window === 'undefined') return;
-  if (!done.has(key + ':screens') && (await preloadScreens(router, pages))) done.add(key + ':screens');
-  if (done.has(key + ':data') || navigator.onLine === false) return;
-  done.add(key + ':data');
-  // Reads are kept on the phone by apiFetch, so each screen shows them offline.
-  for (const endpoint of endpoints) {
-    try { await apiFetch(endpoint); } catch { /* temporary failure: ignored */ }
-  }
-  // Pages saved for a cold start in airplane mode (app fully closed).
-  await warmOfflinePages(['/', ...pages]);
+  if (!done.has(key + ':screens')) void preloadScreens(router, pages).then(ok => { if (ok) done.add(key + ':screens'); });
+  if (navigator.onLine === false || pending.has(key)) return;
+  const task = (async () => {
+    const reads = [...endpoints];
+    if (key === 'driver') {
+      reads.unshift('/api/drivers/me/earnings?day=' + parisDay());
+      try {
+        const response = await apiFetch('/api/drivers/me/gold');
+        const payload = await response.json();
+        if (response.ok && payload.gold?.active) {
+          reads.unshift('/api/drivers/me/discover?day=' + parisDay(), '/api/drivers/me/private-clients');
+        }
+      } catch { /* retry on next navigation */ }
+    }
+    if (key === 'rider') reads.unshift('/api/riders/me/transport-board?day=' + parisDay());
+    const due = [...new Set(reads)].filter(path => recallRead(path) === undefined || Date.now() - (refreshed.get(path) || 0) > 60000);
+    // Limit parallel requests to avoid starving the active screen.
+    for (let i = 0; i < due.length; i += 3) {
+      await Promise.all(due.slice(i, i + 3).map(async path => {
+        try { const response = await apiFetch(path); if (response.ok) refreshed.set(path, Date.now()); } catch { /* retry later */ }
+      }));
+    }
+    if (!done.has(key + ':shell')) {
+      await warmOfflinePages(['/', ...pages]);
+      done.add(key + ':shell');
+    }
+  })();
+  pending.set(key, task);
+  try { await task; } finally { pending.delete(key); }
 }
 
 export function prefetchDriverAssets(router) {
