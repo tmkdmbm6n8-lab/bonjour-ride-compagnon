@@ -28,6 +28,8 @@
 	<string>StrasDrive utilise votre position pour assurer le suivi de vos courses lorsque vous êtes en ligne.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>StrasDrive utilise votre position pour vous proposer des courses à proximité.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -72,14 +74,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSSupportsLiveActivities</key>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>WKAppBoundDomains</key>
 	<array>
 		<string>strasdrive.fr</string>
 		<string>www.strasdrive.fr</string>
 	</array>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<true/>
 </dict>
 </plist>
