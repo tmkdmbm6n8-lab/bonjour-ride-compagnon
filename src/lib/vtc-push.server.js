@@ -211,24 +211,11 @@ export async function pushRideOffer(admin, ride, userIds) {
           fare: privateFare,
         })
       : message;
-    const starts = await Promise.all(ids.map(async (id) => {
-      try {
-        return await startRideOfferLiveActivities(admin, id === favorite && privateFare ? { ...ride, fare: privateFare } : ride, [id]);
-      } catch (error) {
-        console.error("Envoi Live Activity impossible", error?.code || error?.name);
-        return { sent: 0, devices: [] };
-      }
-    }));
+    // Offers always use the classic notification; the Dynamic Island only shows the local "online" arrow.
     if (error || !rows?.length) return;
-    const successfulDevices = starts.flatMap((start) => start.devices);
-    const results = await Promise.all(rows.map(async (row) => {
-      const deviceId = await pushDeviceId(row.token);
-      // Never suppress another phone or Android, nor a rejected Live Activity push.
-      if (deviceId && successfulDevices.some((device) => device.userId === row.user_id && device.deviceId === deviceId)) {
-        return { token: row.token, ok: true };
-      }
-      return { ...await sendOne(row.token, row.user_id === favorite ? privateMessage : message, headers), token: row.token };
-    }));
+    const results = await Promise.all(rows.map(async (row) => (
+      { ...await sendOne(row.token, row.user_id === favorite ? privateMessage : message, headers), token: row.token }
+    )));
     const stale = results.filter((x) => x.stale).map((x) => x.token);
     if (stale.length) await admin.from("push_tokens").delete().in("token", stale);
   } catch (e) {
