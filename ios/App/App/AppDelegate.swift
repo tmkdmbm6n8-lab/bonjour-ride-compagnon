@@ -38,6 +38,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
+        StrasDriveOnlineArrow.endAllBlocking()
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
@@ -79,8 +80,17 @@ public class StrasDriveOffersPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "configure", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clear", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endOffers", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "reconcile", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "reconcile", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setOnline", returnType: CAPPluginReturnPromise)
     ]
+
+    @objc func setOnline(_ call: CAPPluginCall) {
+        let online = call.getBool("online") ?? false
+        Task { @MainActor in
+            StrasDriveOnlineArrow.setOnline(online)
+            call.resolve()
+        }
+    }
 
     @objc func configure(_ call: CAPPluginCall) {
         guard let raw = call.getString("url"), let url = URL(string: raw),
@@ -229,3 +239,50 @@ private final class StrasDriveOfferManager {
     }
 }
 #endif
+
+
+// MARK: - Flèche dorée « En ligne » (Dynamic Island, uniquement hors de l'app)
+@MainActor
+enum StrasDriveOnlineArrow {
+    private static let key = "sd.native.driver-online"
+    static var isOnline: Bool { UserDefaults.standard.bool(forKey: key) }
+
+    static func setOnline(_ online: Bool) {
+        UserDefaults.standard.set(online, forKey: key)
+        if !online { hide() }
+    }
+
+    /// Appelé quand on quitte l'app : la flèche n'apparaît que si le chauffeur est en ligne.
+    static func show() {
+        guard isOnline else { return }
+        if #available(iOS 16.2, *) {
+            guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+            let running = Activity<GenericAttributes>.activities.contains { $0.attributes.staticValues["type"] == "driver_online" }
+            if running { return }
+            let attributes = GenericAttributes(id: "driver-online", staticValues: ["type": "driver_online"])
+            let state = GenericAttributes.ContentState(values: ["type": "driver_online"])
+            _ = try? Activity.request(attributes: attributes, content: .init(state: state, staleDate: nil), pushType: nil)
+        }
+    }
+
+    /// Appelé au retour dans l'app, au passage hors ligne et à la fermeture forcée.
+    static func hide() {
+        if #available(iOS 16.2, *) {
+            for activity in Activity<GenericAttributes>.activities where activity.attributes.staticValues["type"] == "driver_online" {
+                Task { await activity.end(nil, dismissalPolicy: .immediate) }
+            }
+        }
+    }
+
+    nonisolated static func endAllBlocking() {
+        guard #available(iOS 16.2, *) else { return }
+        let done = DispatchSemaphore(value: 0)
+        Task.detached {
+            for activity in Activity<GenericAttributes>.activities where activity.attributes.staticValues["type"] == "driver_online" {
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+            done.signal()
+        }
+        _ = done.wait(timeout: .now() + 2)
+    }
+}

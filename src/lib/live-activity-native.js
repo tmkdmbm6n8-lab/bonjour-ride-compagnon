@@ -17,8 +17,17 @@ export async function configureNativeOfferTokens(url) {
   if (plugin) await plugin.configure({ url });
 }
 
+/** Online flag for the native Dynamic Island arrow; older iPhone builds without setOnline ignore it. */
+export async function setNativeOnlineIndicator(online) {
+  try {
+    const plugin = nativeOfferPlugin();
+    if (plugin) await plugin.setOnline({ online: Boolean(online) });
+  } catch { /* the arrow is optional */ }
+}
+
 export async function clearNativeOfferTokens() {
   const plugin = nativeOfferPlugin();
+  await setNativeOnlineIndicator(false);
   if (plugin) await plugin.clear();
 }
 

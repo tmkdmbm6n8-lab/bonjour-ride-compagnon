@@ -2,6 +2,7 @@ import { playSound } from '@/lib/sounds';
 import {apiFetch as fetch} from '@/lib/archive-fetch';
 'use client';
 
+import { setNativeOnlineIndicator } from '@/lib/live-activity-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSocket } from '@/context/SocketProvider';
 import { watchRefresh } from '@/lib/live-refresh';
@@ -17,6 +18,8 @@ export default function useDriverState({ onEvent, enabled = true, userId } = {})
   const { socket, isConnected } = useSocket();
   const [profile, setProfile] = useState(null); // Driver doc
   const [online, setOnline] = useState(false);
+  // Tells the iPhone whether to show the gold "online" arrow when the app is left.
+  useEffect(() => { setNativeOnlineIndicator(online); }, [online]);
   const [offer, setOffer] = useState(null); // incoming ride offer
   const [ride, setRide] = useState(null); // active serialized ride
   const [position, setPosition] = useState(null);

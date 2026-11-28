@@ -47,6 +47,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
 
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        StrasDriveOnlineArrow.hide()
+    }
+
+    func sceneWillResignActive(_ scene: UIScene) {
+        StrasDriveOnlineArrow.show()
+    }
+
     private func waitForStartupContent(_ controller: CAPBridgeViewController, splash: UIView, deadline: Date) {
         guard splash.superview != nil else { return }
         if Date() >= deadline {
