@@ -199,3 +199,17 @@ export function pickupZoneProblem(driverLocation, pickup, radius = PICKUP_ZONE_M
   if (meters <= radius) return null;
   return `Rapprochez-vous du point de prise en charge (encore ${Math.ceil(meters - radius)} m)`;
 }
+
+// Destination matching uses geographic progress, not a paid routing request.
+export function destinationMatch(ride, driver) {
+  const target = driver?.destination_mode?.target;
+  const mode = driver?.destination_mode;
+  const valid = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng);
+  if (!mode?.active || !valid(target) || !valid(driver.location) || !valid(ride.pickup) || !valid(ride.dropoff)) return null;
+  const km = (a,b) => haversineDistance(a.lat,a.lng,b.lat,b.lng);
+  const before = km(driver.location,target), after = km(ride.dropoff,target);
+  const approach = km(driver.location,ride.pickup);
+  const progress = before-after;
+  if (before < 1 || progress < Math.min(2,before*.5) || approach > 5 || after > Math.max(1,before*.25)) return null;
+  return { remainingKm: after, approachKm: approach, score: after + approach*.5 };
+}
