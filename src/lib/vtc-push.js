@@ -64,7 +64,7 @@ export function buildOfferMessage(ride, now = Date.now()) {
   if (tripMetrics) lines.push(`Trajet : ${tripMetrics}`);
   const rawName = ride?.rider_name || ride?.rider?.name;
   const firstName = typeof rawName === "string" ? rawName.trim().split(/\s+/)[0] : "";
-  const rating = Number(ride?.rider_rating ?? ride?.rider?.rating);
+  const rating = Number(ride?.rider_rating ?? ride?.rider?.rating ?? 5);
   const ratingLabel = Number.isFinite(rating) && rating > 0 && rating <= 5
     ? `★ ${rating.toFixed(2).replace(".", ",")}`
     : "";
