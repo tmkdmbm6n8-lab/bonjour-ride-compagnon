@@ -1,3 +1,4 @@
+import { waitingRate } from "@/lib/ride-waiting";
 import CloseControl from "@/components/ui/CloseControl";
 import ReportDriverButton from "@/components/ride/ReportDriverButton";
 import RideSafety from '@/components/ride/RideSafety';
@@ -27,6 +28,8 @@ import {
   TrendingUp,
   LocateFixed,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Link from "@/lib/archive-navigation";
 import MapView from "@/components/ArchiveMap";
@@ -39,11 +42,9 @@ import { useToast } from "@/components/ui/Toast";
 import { Avatar, Stars, StarPicker, VEHICLE_LABELS, money } from "@/components/ui/bits";
 import useRiderRide from "@/hooks/useRiderRide";
 import { bookingPaymentProblem, paymentMethodLabel } from "@/lib/vtc-pricing";
-import EmbeddedPayment from "@/components/payments/EmbeddedPayment";
 import FavoriteQuoteRow from "@/components/private-clients/FavoriteQuoteRow";
 import FavoriteRideChoice from "@/components/private-clients/FavoriteRideChoice";
 import { readPendingClaim } from "@/lib/private-client-claim";
-import { getStripeEnvironment } from "@/lib/stripe";
 import { playSound } from "@/lib/sounds";
 import useVisualViewport from "@/hooks/useVisualViewport";
 import useGeolocation from "@/hooks/useGeolocation";
@@ -64,7 +65,7 @@ const VEHICLE_META = {
   economy: { icon: Car, blurb: "Des courses au quotidien à prix avantageux" },
   comfort: { icon: Car, blurb: "Voitures récentes, plus d’espace pour les jambes" },
   pet: { icon: PawPrint, blurb: "Voyagez sereinement avec votre animal de compagnie" },
-  xl: { icon: Users, blurb: "Jusqu’à 6 places" },
+  xl: { icon: Users, blurb: "Jusqu’à 8 passagers" },
 };
 const CANCEL_REASONS = [
   "Le chauffeur met trop de temps",
@@ -84,9 +85,7 @@ function RiderDashboard() {
   // Booking form state
   const [pickup, setPickup] = useState(null); // {address, lat, lng}
   const [dropoff, setDropoff] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("wallet"); // 'wallet' | 'cash' | 'card'
-  const [cardKey, setCardKey] = useState(0); // >0 while Stripe's card form is shown
-  const cardRef = useRef({ booking: null, sessionId: null });
+  const [paymentMethod, setPaymentMethod] = useState("card"); // 'card' | 'cash'
   const [pickupText, setPickupText] = useState("");
   const [dropoffText, setDropoffText] = useState("");
   const [estimate, setEstimate] = useState(null); // {route, estimates}
@@ -326,95 +325,19 @@ function RiderDashboard() {
   // ── Book ──
   async function handleBook() {
     if (!pickup || !dropoff || booking) return;
-    const bookedType = favoriteSelected && estimate?.favorite ? estimate.favorite.vehicleType : vehicleType;
-    if (paymentMethod === "card") {
-      cardRef.current = {
-        booking: { pickup, dropoff, vehicleType: bookedType, ...(favoriteSelected ? { favorite: true } : {}) },
-        sessionId: null,
-      };
-      setCardKey((k) => k + 1);
-      return;
-    }
+    const bookedType = favoriteChosen ? estimate.favorite.vehicleType : vehicleType;
     setBooking(true);
     try {
-      await book({ pickup, dropoff, vehicleType: bookedType, paymentMethod, favorite: favoriteSelected });
+      await book({ pickup, dropoff, vehicleType: bookedType, paymentMethod, favorite: Boolean(favoriteChosen) });
       setUnread(0);
       setLastMsg(null);
+      toast("Recherche d’un chauffeur en cours…", "success");
     } catch (err) {
       toast(err.message, "error", 5000);
     } finally {
       setBooking(false);
     }
   }
-
-  // ── Card payment: Stripe form in the app, then the ride is booked with the paid price ──
-  const fetchCardSecret = useCallback(async () => {
-    const res = await fetch("/api/rides/card-checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...cardRef.current.booking,
-        environment: getStripeEnvironment(),
-        origin: window.location.origin,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok || data.error) {
-      toast(data.error || "Impossible de lancer le paiement", "error", 6000);
-      setCardKey(0);
-      throw new Error(data.error || "Impossible de lancer le paiement");
-    }
-    cardRef.current.sessionId = data.sessionId;
-    return data.clientSecret;
-  }, [toast]);
-
-  const confirmCard = useCallback(
-    async (sessionId) => {
-      if (!sessionId) return;
-      setBooking(true);
-      try {
-        const res = await fetch("/api/rides/card-confirm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId, environment: getStripeEnvironment() }),
-        });
-        const data = await res.json();
-        if (!res.ok || data.error) toast(data.error || "Impossible de confirmer le paiement", "error", 7000);
-        else if (!data.paid) toast("Paiement non effectué — aucun montant n’a été débité", "info", 5000);
-        else if (data.ride) {
-          adoptRide(data.ride);
-          setUnread(0);
-          setLastMsg(null);
-          toast("Paiement accepté — recherche d’un chauffeur", "success");
-        } else if (data.expired)
-          toast("Paiement reçu, mais la réservation a expiré : le montant est sur votre portefeuille", "info", 7000);
-        else if (!data.booked) toast("Paiement reçu : le montant a été ajouté à votre portefeuille", "info", 6000);
-      } catch {
-        toast("Paiement reçu — actualisez la page dans un instant", "info", 6000);
-      } finally {
-        setBooking(false);
-        refreshWallet();
-      }
-    },
-    [adoptRide, toast, refreshWallet],
-  );
-
-  const onCardPaid = useCallback(() => {
-    const id = cardRef.current.sessionId;
-    setCardKey(0);
-    confirmCard(id);
-  }, [confirmCard]);
-
-  // Back from a payment method that leaves the page (bank redirect): confirm once, then clean the address bar.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get("card_session");
-    if (!sessionId) return;
-    params.delete("card_session");
-    const rest = params.toString();
-    window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
-    confirmCard(sessionId);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCancel(reason) {
     setCancelling(true);
@@ -561,7 +484,7 @@ function RiderDashboard() {
       </div>
 
       <div
-        className={`ride-panel rider-trip-panel ${searchFocused ? "is-editing" : ""}`}
+        className={`ride-panel rider-trip-panel ${searchFocused ? "is-editing" : ""} ${phase === "idle" && estimate && !estimating ? "has-estimate" : ""}`}
         ref={bookingPanelRef}
         style={
           phase === "active" && vv ? {
@@ -614,6 +537,20 @@ function RiderDashboard() {
             <p className="rider-desktop-intro">Indiquez votre départ et votre destination pour découvrir votre trajet.</p>
 
 
+            {estimate && !searchFocused ? (
+              <div className="rider-route-summary-compact" aria-label="Itinéraire sélectionné">
+                <div className="rider-route-summary-addresses">
+                  <span className="rider-route-summary-pickup" title={pickupText}>{pickupText || "Départ"}</span>
+                  <span className="rider-route-summary-dropoff" title={dropoffText}>➜ {dropoffText || "Destination"}</span>
+                </div>
+                <button type="button" className="rider-route-summary-edit" onClick={() => {
+                  setEstimate(null);
+                  setEstimating(false);
+                  setFavoriteSelected(false);
+                }}>Modifier</button>
+              </div>
+            ) : (
+              <>
             <div className="flex-col gap-3">
               <div className="rider-pickup-row">
               <div className="rider-pickup-field">
@@ -670,27 +607,18 @@ function RiderDashboard() {
                 bias={geo || undefined}
               />
             </div>
-
-            <div className="rider-booking-context">
-              <div className="rider-pickup-time">
-                <Clock size={18} />
-                <span>Prise en charge immédiate</span>
-              </div>
-              <div className="rider-passenger">
-                <UserRound size={15} /> Pour moi
-              </div>
-              {!estimate && (
-                <button
-                  className="btn rider-search-button"
-                  onClick={() => {
+              <div className="rider-booking-context">
+                <div className="rider-pickup-time"><Clock size={18} /><span>Prise en charge immédiate</span></div>
+                <div className="rider-passenger"><UserRound size={15} /> Pour moi</div>
+                {!estimate && (
+                  <button className="btn rider-search-button" onClick={() => {
                     const inputs = bookingPanelRef.current?.querySelectorAll("input");
                     inputs?.[pickup ? 1 : 0]?.focus();
-                  }}
-                >
-                  {estimating ? "Recherche…" : "Rechercher"}
-                </button>
-              )}
-            </div>
+                  }}>{estimating ? "Recherche…" : "Rechercher"}</button>
+                )}
+              </div>
+              </>
+            )}
             {estimating && (
               <div className="flex items-center gap-2 mt-4 muted small">
                 <span className="spinner" /> Calcul des tarifs…{" "}
@@ -726,67 +654,75 @@ function RiderDashboard() {
                   <FavoriteQuoteRow
                     favorite={estimate.favorite}
                     selected={Boolean(favoriteChosen)}
-                    onSelect={() => setFavoriteSelected(true)}
+                    onSelect={() => setFavoriteSelected((selected) => !selected)}
                   />
-                  {Object.entries(estimate.estimates).map(([type, fare]) => {
+                  {(() => {
+                    const types = ["economy", "comfort", "pet", "xl"].filter((type) => estimate.estimates[type]);
+                    const index = Math.max(0, types.indexOf(vehicleType));
+                    const type = types[index];
+                    if (!type) return null;
+                    const fare = estimate.estimates[type];
                     const Meta = VEHICLE_META[type];
                     const avail = availability?.[type];
+                    const changeType = (nextIndex) => {
+                      setFavoriteSelected(false);
+                      setVehicleType(types[nextIndex]);
+                    };
                     return (
-                      <button
-                        key={type}
-                        className={`vehicle-row ${!favoriteChosen && vehicleType === type ? "selected" : ""}`}
-                        onClick={() => {
-                          setFavoriteSelected(false);
-                          setVehicleType(type);
-                        }}
-                        aria-pressed={!favoriteChosen && vehicleType === type}
-                      >
-                        <Meta.icon
-                          size={22}
-                          style={{ color: !favoriteChosen && vehicleType === type ? "var(--gold-600)" : "var(--ink-400)", flexShrink: 0 }}
-                        />
-                        {/* Remplacer l'intérieur du bouton vehicle-row, vers la ligne 381 */}
-                        <span className="flex-1" style={{ minWidth: 0 }}>
-                          <span className="small" style={{ display: "block", fontWeight: 700 }}>
-                            {VEHICLE_LABELS[type]}
-                          </span>
-                          <span className="tiny muted truncate" style={{ display: "block" }}>
-                            {Meta.blurb}
-                          </span>
-                          {avail && (
-                            <span
-                              className="tiny vehicle-availability"
-                              style={{
-                                display: "block",
-                                fontWeight: 600,
+                      <div className="rider-vehicle-carousel" aria-label="Choisir une catégorie de course">
+                        <button type="button" className="rider-vehicle-arrow" aria-label="Catégorie précédente"
+                          disabled={index === 0} onClick={() => changeType(index - 1)}>
+                          <ChevronLeft size={22} />
+                        </button>
+                        <div className={`vehicle-row rider-vehicle-carousel-card${favoriteChosen ? "" : " selected"}`} aria-live="polite">
+                          <Meta.icon size={25} style={{ color: "var(--gold-600)", flexShrink: 0 }} />
+                          <span className="flex-1" style={{ minWidth: 0 }}>
+                            <span className="small" style={{ display: "block", fontWeight: 700 }}>{VEHICLE_LABELS[type]}</span>
+                            <span className="tiny muted" style={{ display: "block" }}>{Meta.blurb}</span>
+                            {avail && (
+                              <span className="tiny vehicle-availability" style={{
+                                display: "block", fontWeight: 600,
                                 color: avail.count ? "var(--success)" : "var(--text-2)",
-                              }}
-                            >
-                              {avail.count
-                                ? `${avail.count} chauffeur${avail.count > 1 ? "s" : ""} disponible${avail.count > 1 ? "s" : ""}${avail.etaMinutes ? ` · ${avail.etaMinutes} min` : ""}`
-                                : "Aucun chauffeur disponible"}
-                            </span>
-                          )}
-                        </span>
-                        <span className="flex-col" style={{ alignItems: "flex-end" }}>
-                          <span className="small mono-nums" style={{ fontWeight: 700 }}>
-                            {money(fare.total)}
+                              }}>
+                                {avail.count
+                                  ? `${avail.count} chauffeur${avail.count > 1 ? "s" : ""} disponible${avail.count > 1 ? "s" : ""}${avail.etaMinutes ? ` · ${avail.etaMinutes} min` : ""}`
+                                  : "Aucun chauffeur disponible"}
+                              </span>
+                            )}
                           </span>
-                          {fare.discount > 0 && (
-                            <span className="tiny muted mono-nums" style={{ textDecoration: "line-through" }}>
-                              {money(fare.originalTotal)}
-                            </span>
-                          )}
-                        </span>
-                      </button>
+                          <span className="flex-col" style={{ alignItems: "flex-end", flexShrink: 0 }}>
+                            <span className="small mono-nums" style={{ fontWeight: 700 }}>{money(fare.total)}</span>
+                            {fare.discount > 0 && !fare.priceEndingDiscount && (
+                              <span className="tiny muted mono-nums" style={{ textDecoration: "line-through" }}>
+                                {money(fare.originalTotal)}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <button type="button" className="rider-vehicle-arrow" aria-label="Catégorie suivante"
+                          disabled={index === types.length - 1} onClick={() => changeType(index + 1)}>
+                          <ChevronRight size={22} />
+                        </button>
+                        <span className="rider-vehicle-carousel-count">{index + 1} / {types.length}</span>
+                      </div>
                     );
-                  })}
+                  })()}
                 </div>
+
+                {selectedFare && (
+                  <p className="tiny muted">
+                    Deux minutes d’attente gratuites après l’arrivée du chauffeur. Ensuite,{" "}
+                    {(favoriteChosen ? estimate.favorite.vehicleType : vehicleType) === "pet"
+                      ? "0,72 € à 0,98 € par minute selon la catégorie du véhicule"
+                      : `${money(waitingRate(favoriteChosen ? estimate.favorite.vehicleType : vehicleType) / 100)} par minute`}.
+                    {paymentMethod === "card" && " Le supplément est prélevé sur le portefeuille StrasDrive."}
+                  </p>
+                )}
 
                 {selectedFare?.discount > 0 && (
                   <div className="flex items-center justify-between mt-4 tiny">
                     <span style={{ fontWeight: 600 }}>
-                      Remise de {Math.round(selectedFare.discountRate * 100)} % appliquée
+                      {selectedFare.priceEndingDiscount > 0 ? 'Ajustement du prix' : `Remise de ${Math.round(selectedFare.discountRate * 100)} % appliquée`}
                     </span>
                     <span className="mono-nums">−{money(selectedFare.discount)}</span>
                   </div>
@@ -799,17 +735,21 @@ function RiderDashboard() {
                   </div>
                 )}
 
-                {/* Payment — wallet or cash */}
+                {/* Mode de paiement — Symétrie parfaite Carte & Espèces */}
                 <div className="rider-payment-options mt-4" role="radiogroup" aria-label="Mode de paiement">
                   {[
                     {
-                      id: "wallet",
-                      icon: Wallet,
-                      label: "Portefeuille",
-                      detail: walletBalance != null ? money(walletBalance) : "—",
+                      id: "card",
+                      icon: CreditCard,
+                      label: "Carte bancaire",
+                      detail: "Apple Pay · Google Pay"
                     },
-                    { id: "card", icon: CreditCard, label: "Carte", detail: "" },
-                    { id: "cash", icon: Banknote, label: "Espèces", detail: "" },
+                    {
+                      id: "cash",
+                      icon: Banknote,
+                      label: "Espèces",
+                      detail: "Règlement au chauffeur"
+                    },
                   ].map(({ id, icon: Icon, label, detail }) => (
                     <button
                       key={id}
@@ -817,26 +757,17 @@ function RiderDashboard() {
                       role="radio"
                       aria-checked={paymentMethod === id}
                       onClick={() => setPaymentMethod(id)}
-                      className="rider-payment-option"
+                      className={`rider-payment-option rider-payment-option--${id}`}
                     >
-                      <span className="flex items-center gap-2 tiny" style={{ fontWeight: 600 }}>
-                        <Icon size={16} /> {label}
+                      <span className="rider-payment-option-title">
+                        <Icon size={18} /> {label}
                       </span>
-                      <span className="tiny mono-nums rider-payment-detail">{detail}</span>
+                      <span className="rider-payment-detail">{detail}</span>
                     </button>
                   ))}
                 </div>
-                {paymentMethod === "cash" && selectedFare && (
-                  <p className="tiny muted mt-2">
-                    Vous réglerez {money(selectedFare.total)} en espèces directement au chauffeur à la fin de la course.
-                  </p>
-                )}
-
-                {paymentMethod === "card" && selectedFare && !insufficientWallet && (
-                  <p className="tiny muted mt-2">
-                    Vous payez {money(selectedFare.total)} par carte maintenant ; la course est lancée dès le paiement
-                    validé. En cas d’annulation, le montant reste sur votre portefeuille.
-                  </p>
+                {paymentMethod === "cash" && (
+                  <p className="tiny muted text-center mt-1">Règlement direct en espèces au chauffeur</p>
                 )}
 
                 {insufficientWallet && paymentMethod === "card" && (
@@ -880,7 +811,7 @@ function RiderDashboard() {
                     </>
                   )}
                 </button>
-                <p className="tiny muted mt-3">Prix TTC annoncé avant commande. Consultez les <Link href="/terms" style={{textDecoration:'underline'}}>conditions de réservation et d’annulation</Link>. Le mode de paiement sélectionné s’applique à cette course.</p>
+                <p className="tiny muted text-center mt-2">Prix TTC garanti avant commande · <Link href="/terms" style={{ textDecoration: "underline" }}>Conditions d’annulation applicables</Link></p>
               </>
             )}
           </div>
@@ -929,6 +860,24 @@ function RiderDashboard() {
                 </button>
               </div>
             )}
+            <div className="rider-active-chat flex gap-2 mb-3">
+              <button
+                type="button"
+                className={`btn flex-1 ${unread > 0 ? "chat-btn-unread" : "btn-secondary"}`}
+                onClick={() => {
+                  setChatOpen(true);
+                  setUnread(0);
+                  setLastMsg(null);
+                }}
+                style={{ position: "relative" }}
+              >
+                <MessageCircle size={17} />{" "}
+                {unread > 0 ? (unread > 1 ? `${unread} nouveaux messages` : "Nouveau message") : "Message au conducteur"}
+                {unread > 0 && <span className="chat-unread-badge mono-nums">{unread}</span>}
+              </button>
+
+            </div>
+
             <div className="flex items-center justify-between mb-3 wrap gap-2">
               <span className={`badge badge-dot ${ride.status === "in_progress" ? "badge-info" : "badge-gold"}`}>
                 {ride.status === "accepted" &&
@@ -1065,23 +1014,6 @@ function RiderDashboard() {
               </div>
             </div>
 
-            <div className="rider-active-chat flex gap-2 mt-4">
-              <button
-                className={`btn flex-1 ${unread > 0 ? "chat-btn-unread" : "btn-secondary"}`}
-                onClick={() => {
-                  setChatOpen(true);
-                  setUnread(0);
-                  setLastMsg(null);
-                }}
-                style={{ position: "relative" }}
-              >
-                <MessageCircle size={17} />{" "}
-                {unread > 0 ? (unread > 1 ? `${unread} nouveaux messages` : "Nouveau message") : "Discussion"}
-                {unread > 0 && <span className="chat-unread-badge mono-nums">{unread}</span>}
-              </button>
-
-            </div>
-
             {ride.status === "arrived" && (
               <p className="tiny muted mt-3 text-center">
                 {" "}
@@ -1127,15 +1059,6 @@ function RiderDashboard() {
       )}
 
       {/* Cancel confirm */}
-      <Modal
-        open={cardKey > 0}
-        onClose={() => setCardKey(0)}
-        title={`Paiement par carte · ${VEHICLE_LABELS[cardRef.current.booking?.vehicleType] || ""}`}
-        maxWidth={520}
-      >
-        {cardKey > 0 && <EmbeddedPayment key={cardKey} fetchClientSecret={fetchCardSecret} onComplete={onCardPaid} />}
-      </Modal>
-
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Annuler cette course ?">
         {ride?.status === "arrived" && (
           <p className="small mb-3">Des frais d’annulation tardive peuvent s’appliquer : 3,00 € selon les conditions de la course.</p>
@@ -1178,6 +1101,18 @@ function RiderDashboard() {
                   )}
                 </span>
               </div>
+              {completedRide.fare?.minimumFareSupplement > 0 && (
+                <div className="flex items-center justify-between small mt-1">
+                  <span className="muted">Application du prix minimum</span>
+                  <span className="mono-nums">{money(completedRide.fare.minimumFareSupplement)}</span>
+                </div>
+              )}
+              {completedRide.fare?.supplement > 0 && (
+                <div className="flex items-center justify-between small mt-1">
+                  <span className="muted">Supplément</span>
+                  <span className="mono-nums">{money(completedRide.fare.supplement)}</span>
+                </div>
+              )}
               {completedRide.fare?.surgeFare > 0 && (
                 <div className="flex items-center justify-between small mt-1">
                   <span className="muted">Majoration ({completedRide.fare.surgeMultiplier}×)</span>
@@ -1194,9 +1129,15 @@ function RiderDashboard() {
                   <span className="mono-nums">{money(completedRide.fare.driverFloorSupplement)}</span>
                 </div>
               )}
+              {completedRide.fare?.pickupWaiting?.amount > 0 && (
+                <div className="flex items-center justify-between small mt-1">
+                  <span className="muted">Attente à la prise en charge</span>
+                  <span className="mono-nums">{money(completedRide.fare.pickupWaiting.amount)}</span>
+                </div>
+              )}
               {completedRide.fare?.discount > 0 && (
                 <div className="flex items-center justify-between small mt-1">
-                  <span className="muted">Remise ({Math.round((completedRide.fare.discountRate || 0) * 100)} %)</span>
+                  <span className="muted">{completedRide.fare.priceEndingDiscount > 0 ? 'Ajustement du prix' : `Remise (${Math.round((completedRide.fare.discountRate || 0) * 100)} %)`}</span>
                   <span className="mono-nums">−{money(completedRide.fare.discount)}</span>
                 </div>
               )}

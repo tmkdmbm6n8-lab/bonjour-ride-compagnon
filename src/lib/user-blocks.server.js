@@ -9,7 +9,8 @@ export async function listUserBlocks(admin, uid) {
 export async function setUserBlock(admin, uid, blockedId, blocked) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(blockedId)) || uid === blockedId)
     throw new Error('Utilisateur invalide');
-  // Existing rides remain accessible for safety; blocks apply to future matching.\n  if (blocked) required(await admin.from('user_blocks').upsert({ blocker_id: uid, blocked_id: blockedId }, { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true }));
+  // Existing rides remain accessible for safety; blocks apply to future matching.
+  if (blocked) required(await admin.from('user_blocks').upsert({ blocker_id: uid, blocked_id: blockedId }, { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true }));
   else required(await admin.from('user_blocks').delete().eq('blocker_id', uid).eq('blocked_id', blockedId));
   return { ok: true };
 }

@@ -1,8 +1,8 @@
 // ATTENTION : coordonnées et immatriculations fictives / incomplètes.
 // Compléter avec les informations légales vérifiées avant toute soumission App Store.
 // Ne jamais remplacer les crochets par des données inventées.
-export const LEGAL_VERSION = '2026-11-17';
-export const LEGAL_UPDATED_LABEL = '17 novembre 2026';
+export const LEGAL_VERSION = '2026-11-24';
+export const LEGAL_UPDATED_LABEL = '24 novembre 2026';
 
 export const COMPANY = {
   brand: 'StrasDrive',

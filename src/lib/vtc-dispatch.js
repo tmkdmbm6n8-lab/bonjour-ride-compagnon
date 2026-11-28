@@ -6,13 +6,13 @@ import { tripPrefsAllow } from "./vtc-trip-prefs";
 // 1. "priority": every available priority driver sees the ride at once, whatever the distance; first to accept wins.
 // 2. "nearest": the closest other driver sees it alone for a short head start.
 // 3. "broadcast": every available driver sees it; first to accept wins. When this window ends, the ride has no driver.
-export const PRIORITY_WINDOW_SECONDS = 15;
-export const NEAREST_WINDOW_SECONDS = 10;
-export const BROADCAST_WINDOW_SECONDS = 4;
+export const PRIORITY_WINDOW_SECONDS = 45;
+export const NEAREST_WINDOW_SECONDS = 45;
+export const BROADCAST_WINDOW_SECONDS = 45;
 export const TEST_OFFER_SECONDS = BROADCAST_WINDOW_SECONDS;
 // 0. "private": when the rider explicitly chose her favorite driver, only he sees the ride for this long.
 //    If he declines, lets it expire, goes offline or cannot serve it, the ordinary dispatch starts (he stays in it).
-export const PRIVATE_OFFER_SECONDS = 30;
+export const PRIVATE_OFFER_SECONDS = 45;
 
 const iso = (ms) => new Date(ms).toISOString();
 
@@ -91,6 +91,11 @@ export function planDispatch(ride, drivers, now = Date.now()) {
       };
     }
   }
+  if (phase === "destination" && running && pool.some(d => d.user_id === ride.offer_driver_id)) return null;
+  if (!phase && !ride.is_test && !ride.route?.goldReturn) {
+    const best = pool.map(d => ({ d, match: destinationMatch(ride,d) })).filter(x => x.match).sort((a,b) => a.match.score-b.match.score)[0];
+    if (best) return { dispatch_phase: "destination", offer_driver_id: best.d.user_id, offer_expires_at: iso(now + NEAREST_WINDOW_SECONDS * 1000) };
+  }
   if (ride.route?.goldReturn && !pool.length) {
     return { status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
   }
@@ -102,7 +107,7 @@ export function planDispatch(ride, drivers, now = Date.now()) {
       : { status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null };
   }
 
-  if (!phase && pool.some((d) => d.is_priority)) {
+  if ((!phase || phase === "destination") && pool.some((d) => d.is_priority)) {
     return {
       dispatch_phase: "priority",
       offer_driver_id: null,
@@ -145,6 +150,8 @@ export function canSeeOffer(ride, driver, now = Date.now(), pool = null) {
   if (ride.dispatch_phase === "private") return ride.offer_driver_id === driver.user_id && favoriteCanTake(ride, driver);
   const all = pool && pool.some((d) => d.user_id === driver.user_id) ? pool : [driver];
   if (!availableFor(ride, all).some((d) => d.user_id === driver.user_id)) return false;
+
+  if (ride.dispatch_phase === "destination") return ride.offer_driver_id === driver.user_id;
 
   // Phase prioritaires (chauffeurs VIP)
   if (ride.dispatch_phase === "priority") return Boolean(driver.is_priority);
@@ -198,4 +205,18 @@ export function pickupZoneProblem(driverLocation, pickup, radius = PICKUP_ZONE_M
   const meters = haversineDistance(driverLocation.lat, driverLocation.lng, pickup.lat, pickup.lng) * 1000;
   if (meters <= radius) return null;
   return `Rapprochez-vous du point de prise en charge (encore ${Math.ceil(meters - radius)} m)`;
+}
+
+// Destination matching uses geographic progress, not a paid routing request.
+export function destinationMatch(ride, driver) {
+  const target = driver?.destination_mode?.target;
+  const mode = driver?.destination_mode;
+  const valid = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng);
+  if (!mode?.active || !valid(target) || !valid(driver.location) || !valid(ride.pickup) || !valid(ride.dropoff)) return null;
+  const km = (a,b) => haversineDistance(a.lat,a.lng,b.lat,b.lng);
+  const before = km(driver.location,target), after = km(ride.dropoff,target);
+  const approach = km(driver.location,ride.pickup);
+  const progress = before-after;
+  if (before < 1 || progress < Math.min(2,before*.5) || approach > 5 || after > Math.max(1,before*.25)) return null;
+  return { remainingKm: after, approachKm: approach, score: after + approach*.5 };
 }

@@ -7,17 +7,21 @@ const config: CapacitorConfig = {
   appName: 'StrasDrive',
   webDir: 'capacitor-shell',
   server: {
-    url: 'https://bonjour-ride-compagnon.lovable.app',
+    url: 'https://strasdrive.fr',
     cleartext: false,
     androidScheme: 'https',
     errorPath: 'offline.html',
   },
   android: {
+    backgroundColor: '#0e0f12',
     allowMixedContent: false,
   },
   ios: {
-    contentInset: 'always',
+    contentInset: 'never',
+    backgroundColor: '#0e0f12',
     scheme: 'StrasDrive',
+    // Requis par iOS pour activer le service worker (démarrage en mode avion).
+    limitsNavigationsToAppBoundDomains: true,
     allowsLinkPreview: false,
     scrollEnabled: true,
   },

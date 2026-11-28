@@ -1,0 +1,85 @@
+# Inventaire initial des API serveur
+
+Source : `src/lib/vtc.server.js`, blob `89a30b838d79705183016446017aabc4c59e1633`.
+
+Liste automatique des chemins littéraux présents dans le fichier. Ne constitue pas un contrat API validé : méthodes, paramètres, droits, réponses, routes dynamiques et autres fichiers restent à auditer. Aucun endpoint modifié.
+
+- `/api/admin/`
+- `/api/admin/address-search-provider`
+- `/api/admin/chat-evidence`
+- `/api/admin/content-reports`
+- `/api/admin/driver-applications`
+- `/api/admin/drivers`
+- `/api/admin/drivers/documents`
+- `/api/admin/monitoring`
+- `/api/admin/overview`
+- `/api/admin/pricing`
+- `/api/admin/rides`
+- `/api/admin/road-alerts`
+- `/api/admin/support`
+- `/api/admin/support/reply`
+- `/api/admin/test-ride`
+- `/api/admin/users`
+- `/api/admin/withdrawals`
+- `/api/drivers/location`
+- `/api/drivers/me`
+- `/api/drivers/me/accepted-reservations`
+- `/api/drivers/me/accepted-reservations/cancel`
+- `/api/drivers/me/accepted-reservations/confirm-change`
+- `/api/drivers/me/achievements`
+- `/api/drivers/me/advance-reservations`
+- `/api/drivers/me/advance-reservations/accept`
+- `/api/drivers/me/classes`
+- `/api/drivers/me/discover`
+- `/api/drivers/me/documents`
+- `/api/drivers/me/earnings`
+- `/api/drivers/me/gold`
+- `/api/drivers/me/inbox`
+- `/api/drivers/me/inbox/support`
+- `/api/drivers/me/online-time`
+- `/api/drivers/me/operator`
+- `/api/drivers/me/payouts`
+- `/api/drivers/me/preferences`
+- `/api/drivers/me/private-clients`
+- `/api/drivers/me/private-clients/qr`
+- `/api/drivers/me/push-token`
+- `/api/drivers/me/ratings`
+- `/api/drivers/me/ratings-unlock`
+- `/api/drivers/me/road-alerts`
+- `/api/drivers/me/status`
+- `/api/drivers/me/waybill`
+- `/api/drivers/nearby`
+- `/api/drivers/offers`
+- `/api/geo/search`
+- `/api/maps/speed-cameras`
+- `/api/notifications/push-token`
+- `/api/private-clients/redeem`
+- `/api/private-clients/scan`
+- `/api/public/app-version`
+- `/api/rider/cards`
+- `/api/rider/cards/default`
+- `/api/rider/cards/delete`
+- `/api/rider/cards/save`
+- `/api/rider/cards/setup`
+- `/api/riders/me/favorite`
+- `/api/riders/me/favorite/location`
+- `/api/riders/me/scheduled-requests`
+- `/api/riders/me/transport-board`
+- `/api/rides`
+- `/api/rides/active`
+- `/api/rides/card-checkout`
+- `/api/rides/card-confirm`
+- `/api/rides/estimate`
+- `/api/users/me`
+- `/api/users/me/avatar`
+- `/api/users/me/blocks`
+- `/api/users/me/deletion-request`
+- `/api/users/me/driver-application`
+- `/api/users/me/export`
+- `/api/users/me/live`
+- `/api/users/me/mode`
+- `/api/users/me/support`
+- `/api/wallet`
+- `/api/wallet/checkout`
+
+Les opérations métier restent sur le serveur. Le client natif devra utiliser des contrats authentifiés et versionnés; seules les lectures explicitement autorisées pourront être conservées hors ligne. Aucun rejeu automatique des mutations sensibles.

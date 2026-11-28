@@ -1,5 +1,9 @@
 import { withdrawalState, requestWithdrawal, adminWithdrawalAction } from './withdrawals.server';
-import Stripe from 'stripe';
+import { createStripeClient } from './stripe.server';
+function getStripe() {
+ const env = process.env.GOLD_STRIPE_ENV === 'live' ? 'live' : 'sandbox';
+ try { return createStripeClient(env); } catch { return null; }
+}
 import {earlyPayoutQuote,weeklyPayoutAmount,nextPayoutAt,payoutWeekKey,EARLY_PAYOUT_FEE,MIN_EARLY_PAYOUT} from './vtc-payouts';
 
 /** Balance, next automatic transfer and recent payouts shown on the driver's earnings page. */
@@ -11,19 +15,26 @@ async function payoutSummary(admin,uid,profile){
 
 /** Sends one recorded payout to the driver's Stripe account; a refusal puts the money back in the wallet. */
 async function sendTransfer(admin,stripe,payout,accountId){
- try{
-  const t=await stripe.transfers.create({amount:Math.round(payout.amount*100),currency:'eur',destination:accountId,metadata:{payoutId:payout.id}},{idempotencyKey:`payout-${payout.id}`});
-  await admin.rpc('finish_payout',{_id:payout.id,_ok:true,_provider:t.id,_failure:null});return true;
- }catch(err){
-  await admin.rpc('finish_payout',{_id:payout.id,_ok:false,_provider:null,_failure:String(err?.message||err)});throw new Error('Le virement a été refusé par Stripe — votre solde a été recrédité');
+ let transfer;
+ try {
+  transfer=await stripe.transfers.create(
+   {amount:Math.round(payout.amount*100),currency:'eur',destination:accountId,metadata:{payoutId:payout.id}},
+   {idempotencyKey:`payout-${payout.id}`}
+  );
+ } catch(err) {
+  // A network timeout does not prove Stripe rejected the transfer. Do not refund
+  // automatically: a retry with the same idempotency key must reconcile it.
+  throw new Error('Virement non confirmé par Stripe. Vérifiez son état avant tout remboursement ou nouvel essai.');
  }
+ const result=await admin.rpc('finish_payout',{_id:payout.id,_ok:true,_provider:transfer.id,_failure:null});
+ if(result.error)throw new Error('Virement transmis à Stripe, mais confirmation Supabase en attente. Ne recréditez pas le solde.');
+ return true;
 }
-
 /** Weekly run (Monday 00:00 Paris): pays each driver's whole positive balance, no fee. Idempotent per week. */
 export async function runWeeklyPayouts(admin,now=new Date()){
- const key=process.env.STRIPE_SECRET_KEY;const week=payoutWeekKey(now);
- if(!key)return {week,paid:0,skipped:'stripe_not_connected'};
- const stripe=new Stripe(key,{httpClient:Stripe.createFetchHttpClient()});
+ const week=payoutWeekKey(now);
+ const stripe=getStripe();
+ if(!stripe)return {week,paid:0,skipped:'stripe_not_connected'};
  const {data:ds,error}=await admin.from('drivers').select('user_id,payout');if(error)throw error;
  let paid=0,failed=0,waiting=0;
  for(const d of ds||[]){
@@ -46,15 +57,13 @@ export async function handlePayments({admin,profile,uid,role,p,q,method,body}) {
   if(role!=='admin')throw new Error('Accès refusé');
   if(method==='GET')return withdrawalState(admin,null);
   if(method!=='POST')throw new Error('Méthode non autorisée');
-  const key=process.env.STRIPE_SECRET_KEY;
-  const stripe=key?new Stripe(key,{httpClient:Stripe.createFetchHttpClient()}):null;
+  const stripe=getStripe();
   return adminWithdrawalAction(admin,{uid,body,stripe,sendTransfer:sendApprovedTransfer});
  }
  if(p!=='/api/drivers/me/payouts' || !['GET','POST'].includes(method))throw new Error('Méthode non autorisée');
- const key=process.env.STRIPE_SECRET_KEY;
- if(p==='/api/drivers/me/payouts'&&method==='GET'&&!key)return {...(await payoutSummary(admin,uid,profile)),configured:false,canCashOut:false};
- if(!key)throw new Error('Stripe n’est pas encore connecté : aucun paiement n’a été effectué.');
- const stripe=new Stripe(key,{httpClient:Stripe.createFetchHttpClient()});
+ const stripe=getStripe();
+ if(p==='/api/drivers/me/payouts'&&method==='GET'&&!stripe)return {...(await payoutSummary(admin,uid,profile)),configured:false,canCashOut:false};
+ if(!stripe)throw new Error('Stripe n’est pas encore connecté : aucun paiement n’a été effectué.');
  const base=process.env.APP_URL;if(!base)throw new Error('L’adresse publique doit être configurée avant les paiements.');
  const {data:d,error}=await admin.from('drivers').select('*').eq('user_id',uid).single();if(error||!d)throw new Error('Chauffeur introuvable');
  let account=d.payout?.stripeAccountId?await stripe.accounts.retrieve(d.payout.stripeAccountId):null;

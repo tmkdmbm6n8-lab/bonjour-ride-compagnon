@@ -112,9 +112,12 @@ function RideDetailPage() {
                 <Row label="Prise en charge" value={money(ride.fare.baseFare)} />
                 <Row label="Distance" value={money(ride.fare.distanceFare)} />
                 <Row label="Durée" value={money(ride.fare.timeFare)} />
+                {ride.fare.minimumFareSupplement > 0 && <Row label="Application du prix minimum" value={money(ride.fare.minimumFareSupplement)} />}
+                {ride.fare.supplement > 0 && <Row label="Supplément" value={money(ride.fare.supplement)} />}
                 {ride.fare.surgeFare > 0 && <Row label={`Majoration ${ride.fare.surgeMultiplier}×`} value={money(ride.fare.surgeFare)} />}
                 <Row label="Frais de réservation" value={money(ride.fare.bookingFee)} />
                 {ride.fare.driverFloorSupplement > 0 && <Row label="Complément rémunération minimale chauffeur" value={money(ride.fare.driverFloorSupplement)} />}
+                {ride.fare.pickupWaiting?.amount > 0 && <Row label="Attente à la prise en charge" value={money(ride.fare.pickupWaiting.amount)} />}
                 {ride.fare.discount > 0 && <Row label="Remise" value={`−${money(ride.fare.discount)}`} />}
                 <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8 }}>
                   <Row label={<b>Total ({paymentMethodLabel(ride.payment?.method)})</b>} value={<b>{money(ride.fare.total)}</b>} />

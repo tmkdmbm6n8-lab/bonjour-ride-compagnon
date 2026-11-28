@@ -1,5 +1,4 @@
 import { withdrawalQuote } from './withdrawals.js';
-import { EARLY_PAYOUT_FEE } from './vtc-payouts';
 import { notifyWithdrawalAdmins } from './withdrawal-notifications.server';
 
 function checked(result) {
@@ -15,7 +14,7 @@ export async function withdrawalState(admin, driverId) {
 export async function requestWithdrawal(admin, { uid, profile, value }) {
   const state = await withdrawalState(admin, uid);
   if (!state.available) throw new Error('Les demandes de retrait sont en cours d’activation. Aucun débit effectué.');
-  const quote = withdrawalQuote(value, profile.balance, EARLY_PAYOUT_FEE);
+  const quote = withdrawalQuote(value, profile.balance);
   const request = checked(await admin.rpc('request_withdrawal', {
     _driver: uid, _debit: quote.debit, _fee: quote.fee,
   }));

@@ -3,3 +3,4 @@
 - `VoiceNote.jsx` downloads the audio into a local blob as soon as the signed URL arrives; the 60 s signed URLs expire and iOS ignores `preload`, so playing straight from the URL needed a second tap.
 - Chat audio/images go through `src/lib/chat-media-cache.js` (download once, auto-retry, no manual reload button); dashboards notify a media message only after it is downloaded, so the alert never arrives before the vocal can play.
 - On touch screens every text field is at least 16px (`@media (pointer: coarse)` rule near the base input styles in `src/styles.css`); smaller fields made iPhone zoom the page in on focus and never zoom back out, so every page then slid left/right.
+- Driver ride steps (arrive/start/complete) made without network succeed on screen, wait in `src/lib/offline-queue.js` (phone storage), replay in order when back online, then are erased; accept/decline never wait, since an offer can't be held offline.

@@ -3,9 +3,10 @@
 // Pur et testé : le serveur et la tâche planifiée s'appuient sur ces règles.
 
 export const PAYOUT_TIMEZONE = 'Europe/Paris';
-export const EARLY_PAYOUT_FEE = 0.5;     // € de frais pour un retrait anticipé
-export const MIN_EARLY_PAYOUT = 5;       // € minimum versé lors d'un retrait anticipé (après frais)
+export const EARLY_PAYOUT_FEE = 1.0;     // € de frais pour un retrait anticipé
+export const MIN_EARLY_PAYOUT = 9;       // € minimum versé lors d'un retrait anticipé (après frais)
 
+import { withdrawalQuote, calculateWithdrawalFee, MIN_WITHDRAWAL } from './withdrawals';
 const round2 = (n) => Math.round(n * 100) / 100;
 
 /** Composants de date/heure à Paris pour un instant donné. */
@@ -60,9 +61,10 @@ export function weeklyPayoutAmount(balance) {
 /** Retrait anticipé de tout le solde : le chauffeur reçoit le solde moins les frais. */
 export function earlyPayoutQuote(balance) {
   const b = round2(Number(balance) || 0);
-  const amount = round2(b - EARLY_PAYOUT_FEE);
-  if (amount < MIN_EARLY_PAYOUT) {
-    return { ok: false, amount: 0, fee: EARLY_PAYOUT_FEE, reason: `Un retrait anticipé demande au moins ${(MIN_EARLY_PAYOUT + EARLY_PAYOUT_FEE).toFixed(2).replace('.', ',')} € de solde` };
+  try {
+    const quote = withdrawalQuote(b.toFixed(2), b);
+    return { ok: true, amount: quote.amount, fee: quote.fee, stripeFee: quote.stripeFee, margin: quote.margin };
+  } catch {
+    return { ok: false, amount: 0, fee: calculateWithdrawalFee(Math.max(b, MIN_WITHDRAWAL)), reason: 'Un retrait anticipé demande au moins 10,00 € de solde' };
   }
-  return { ok: true, amount, fee: EARLY_PAYOUT_FEE };
 }

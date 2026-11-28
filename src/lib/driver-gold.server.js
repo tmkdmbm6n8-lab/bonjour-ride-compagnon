@@ -132,7 +132,7 @@ export async function openGoldBilling(admin, driverId, manage = false) {
   const base = process.env.APP_URL;
   const priceId = process.env.GOLD_STRIPE_PRICE_ID || "strasdrive_gold_monthly";
   if (!env || !base || !priceId) throw new Error("Les abonnements StrasDrive Gold ne sont pas encore disponibles.");
-  const returnUrl = new URL("/driver/private-clients", base).href;
+  const returnUrl = new URL("/driver/menu", base).href;
   const stripe = createStripeClient(env);
 
   let owner = required(await billingRow(admin, driverId, env).maybeSingle());
@@ -155,7 +155,7 @@ export async function openGoldBilling(admin, driverId, manage = false) {
   const hasPendingSubscription = checkoutSubscription && checkoutSubscription !== billing.stripe_subscription_id &&
     !terminal.has((await stripe.subscriptions.retrieve(checkoutSubscription)).status);
   if (manage || billing.can_manage || hasPendingSubscription) {
-    const portal = await stripe.billingPortal.sessions.create({ customer, return_url: returnUrl });
+    const portal = await stripe.billingPortal.sessions.create({ customer, return_url: `${returnUrl}?gold=manage` });
     return { url: portal.url };
   }
 
@@ -172,6 +172,7 @@ export async function openGoldBilling(admin, driverId, manage = false) {
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer,
+    payment_method_types: ["card"],
     line_items: [{ price: price.id, quantity: 1 }],
     payment_method_collection: billing.trial_used ? "always" : "if_required",
     subscription_data: {
@@ -183,7 +184,7 @@ export async function openGoldBilling(admin, driverId, manage = false) {
     },
     metadata,
     success_url: `${returnUrl}?gold=return`,
-    cancel_url: returnUrl,
+    cancel_url: `${returnUrl}?gold=manage`,
   }, { idempotencyKey: `${KIND}:checkout:${customer}:${lastSession?.id || "initial"}` });
   return { url: session.url };
 }

@@ -5,6 +5,8 @@ import { formatEuro } from "./vtc-pricing";
 /** Android channel shown as a heads-up banner with sound; created by the app on first launch. */
 export const OFFER_CHANNEL_ID = "ride_offers";
 export const OFFER_PATH = "/driver/dashboard";
+export const APPLE_BUNDLE_ID = "fr.strasdrive.app";
+export const isApnsHexToken = (token) => /^[0-9a-f]{64,200}$/i.test(String(token || "").trim());
 
 /** Drivers who can see the ride after a dispatch step but could not before: each gets exactly one push per step. */
 export function newlyOfferedDriverIds(before, after, pool, now = Date.now()) {
@@ -20,16 +22,89 @@ export function offerSecondsLeft(ride, now = Date.now()) {
   return Math.max(0, Math.ceil((until - now) / 1000));
 }
 
+function cleanAddress(addr) {
+  if (!addr) return "";
+  return String(addr).trim();
+}
+
+function formatKm(meters) {
+  if (!meters || meters <= 0) return null;
+  return `${(meters / 1000).toFixed(1).replace(".", ",")} km`;
+}
+
+function formatMin(seconds) {
+  if (!seconds || seconds <= 0) return null;
+  return `${Math.max(1, Math.round(seconds / 60))} min`;
+}
+
 /** FCM HTTP v1 message body (without the target) for a ride offer. Never reveals the dispatch phase. */
 export function buildOfferMessage(ride, now = Date.now()) {
   const amount = Number(ride?.fare?.driverEarnings);
-  const title = Number.isFinite(amount) ? `Nouvelle course · ${formatEuro(amount)}` : "Nouvelle course";
-  const pickup = String(ride?.pickup?.address || "").split(",")[0].trim();
-  const body = pickup ? `Prise en charge : ${pickup}` : "Ouvrez StrasDrive pour voir la course";
+  const title = Number.isFinite(amount) ? `Nouvelle course — ${formatEuro(amount)}` : "Nouvelle course";
+
+  // 2. Départ : adresse + distance / temps d'approche du chauffeur
+  const pickup = cleanAddress(ride?.pickup?.address || ride?.pickup_address);
+  let pickupMetrics = null;
+  if (ride?.approach_km != null && ride?.approach_min != null) {
+    pickupMetrics = `${Number(ride.approach_km).toFixed(1).replace(".", ",")} km / ${ride.approach_min} min`;
+  } else if (ride?.approach_meters != null) {
+    const km = (ride.approach_meters / 1000).toFixed(1).replace(".", ",");
+    const min = Math.max(1, Math.round((ride.approach_seconds || (ride.approach_meters / 1000 / 25) * 3600) / 60));
+    pickupMetrics = `${km} km / ${min} min`;
+  }
+
+  // 3. Arrivée : adresse + distance et durée de la course
+  const dropoff = cleanAddress(ride?.dropoff?.address || ride?.dropoff_address);
+  const tripKm = formatKm(Number(ride?.route?.distanceMeters || ride?.route?.distance || 0));
+  const tripMin = formatMin(Number(ride?.route?.durationSeconds || ride?.route?.duration || 0));
+  const tripMetrics = [tripKm, tripMin].filter(Boolean).join(" / ");
+
+  const lines = [];
+  if (pickupMetrics) lines.push(`Approche : ${pickupMetrics}`);
+  if (tripMetrics) lines.push(`Trajet : ${tripMetrics}`);
+  const rawName = ride?.rider_name || ride?.rider?.name;
+  const firstName = typeof rawName === "string" ? rawName.trim().split(/\s+/)[0] : "";
+  const rating = Number(ride?.rider_rating ?? ride?.rider?.rating ?? 5);
+  const ratingLabel = Number.isFinite(rating) && rating > 0 && rating <= 5
+    ? `★ ${rating.toFixed(2).replace(".", ",")}`
+    : "";
+  const passenger = [firstName, ratingLabel].filter(Boolean).join(" · ");
+  if (passenger) lines.push(passenger);
+  const addresses = [pickup, dropoff].filter(Boolean).join(" → ");
+  if (addresses) lines.push(addresses);
+  const body = lines.length > 0 ? lines.join("\n") : "Ouvrez StrasDrive pour voir la course";
+
   const ttl = Math.max(1, offerSecondsLeft(ride, now));
+
   return {
-    notification: { title, body },
-    data: { type: "ride_offer", rideId: String(ride?.id || ""), path: OFFER_PATH },
+    notification: {
+      title,
+      body,
+    },
+    data: {
+      type: "ride_offer",
+      rideId: String(ride?.id || ""),
+      path: ride?.id ? `${OFFER_PATH}?offer=${encodeURIComponent(ride.id)}` : OFFER_PATH,
+    },
+    apns: {
+      headers: {
+        "apns-priority": "10",
+        "apns-push-type": "alert",
+        "apns-topic": APPLE_BUNDLE_ID,
+        "apns-expiration": String(Math.floor(now / 1000) + ttl),
+      },
+      payload: {
+        aps: {
+          alert: {
+            title,
+            body,
+          },
+          sound: "default",
+          "interruption-level": "time-sensitive",
+          category: "RIDE_OFFER",
+        },
+      },
+    },
     android: {
       priority: "high",
       ttl: `${ttl}s`,
@@ -50,10 +125,20 @@ export function buildOfferMessage(ride, now = Date.now()) {
 
 /** A device token the provider reports as dead must be deleted, never retried. */
 export function isStaleTokenError(status, bodyText = "") {
-  return status === 404 || (status === 400 && /INVALID_ARGUMENT|registration token/i.test(bodyText)) || /UNREGISTERED/.test(bodyText);
+  if (/not a valid FCM registration token/i.test(bodyText)) return false;
+  return (
+    status === 404 ||
+    (status === 400 && /INVALID_ARGUMENT|registration token/i.test(bodyText)) ||
+    /UNREGISTERED/.test(bodyText)
+  );
 }
 
 export function validPushToken(token) {
   const t = String(token || "");
   return t.length >= 20 && t.length <= 4096 && !/\s/.test(t) ? t : null;
+}
+
+export function buildDirectApnsPayload(ride, now = Date.now()) {
+  const message = buildOfferMessage(ride, now);
+  return { ...message.apns.payload, ...message.data };
 }

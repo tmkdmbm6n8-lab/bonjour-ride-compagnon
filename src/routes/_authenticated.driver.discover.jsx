@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Plane, TrainFront, Bookmark, RefreshCw, BellRing, Clock } from "lucide-react";
-import DriverLayout, { useDriverGold } from "@/components/DriverLayout";
+import DriverLayout, { useDriverGold, useDriverGoldLoad } from "@/components/DriverLayout";
+import { Button } from "@/components/ui/button";
 import Link from "@/lib/archive-navigation";
 import Modal from "@/components/ui/Modal";
 import { Loading } from "@/components/ui/bits";
@@ -53,7 +54,7 @@ function DiscoverPage() {
   }
 
   const selected = data?.items.find((item) => item.id === selectedId);
-  const items = (data?.items || []).filter((item) => item.kind === kind && item.direction === direction);
+  const items = (data?.items || []).filter((item) => item.kind === kind && item.direction === direction && item.status !== "completed" && item.status !== "cancelled" && Date.parse(item.actual || item.estimated || item.scheduled) > Date.now());
 
   const formattedDay = new Intl.DateTimeFormat("fr-FR", {
     weekday: "long",
@@ -231,8 +232,10 @@ function DiscoverPage() {
 
 function GoldTraffic() {
   const gold = useDriverGold();
-  if (!gold) return <Loading />;
-  if (gold.active) return <DiscoverPage />;
+  const { loading, error, reload } = useDriverGoldLoad();
+  if (loading) return <Loading />;
+  if (error) return <div className="driver-tab-page drv-cockpit-page"><h1>Trafic</h1><div role="alert" className="driver-notice"><p>{error}</p><Button onClick={reload} variant="secondary">Réessayer</Button></div></div>;
+  if (gold?.active) return <DiscoverPage />;
   return (
     <div className="driver-tab-page drv-cockpit-page">
       <h1>Trafic</h1>
@@ -243,7 +246,7 @@ function GoldTraffic() {
 }
 
 export const Route = createFileRoute("/_authenticated/driver/discover")({
-  head: () => ({ meta: [{ title: "Trafic · StrasDrive" }] }),
+  head: () => ({ meta: [{ title: "Trafic · StrasDrive" }, { name: "description", content: "Horaires des trains et vols à Strasbourg pour les chauffeurs StrasDrive Gold." }, { property: "og:title", content: "Trafic · StrasDrive" }, { property: "og:description", content: "Arrivées, départs et changements d’horaires à Strasbourg pour les chauffeurs StrasDrive." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: () => (
     <DriverLayout>
       <GoldTraffic />

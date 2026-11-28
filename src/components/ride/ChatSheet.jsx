@@ -1,11 +1,13 @@
+'use client';
+
 import CloseControl from "@/components/ui/CloseControl";
+import Modal from "@/components/ui/Modal";
 import ChatAttachments from "./ChatAttachments";
 import ChatMedia from "./ChatMedia";
 import { CHAT_NOTICE } from "@/lib/ride-chat";
 import {apiFetch as fetch} from '@/lib/archive-fetch';
-'use client';
-
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Send, MessageCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import useVisualViewport from '@/hooks/useVisualViewport';
@@ -19,9 +21,13 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
   const [sending, setSending] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [moderating, setModerating] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  const blockTarget = role === 'rider' ? 'ce conducteur' : 'cette utilisatrice';
+
+  useEffect(() => { setConfirmBlock(false); }, [open, rideId]);
+
   async function moderate(action, messageId) {
     if (moderating) return;
-    if (action === 'block' && !window.confirm('Bloquer cet utilisateur pour les prochaines courses ? La discussion de la course actuelle reste accessible.')) return;
     if (action === 'report-message' && !window.confirm('Signaler ce message à l’assistance StrasDrive ?')) return;
     setModerating(true);
     try {
@@ -32,21 +38,28 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Action impossible');
       if (action === 'block' || action === 'unblock') setBlocked(action === 'block');
-      toast(action === 'report-message' ? 'Signalement transmis à l’assistance.' : action === 'block' ? 'Utilisateur bloqué pour les prochaines courses.' : 'Utilisateur débloqué.', 'success');
+      if (action === 'block') setConfirmBlock(false);
+      toast(action === 'report-message' ? 'Signalement transmis à l’assistance.' : action === 'block' ? (role === 'rider' ? 'Conducteur bloqué pour les prochaines courses.' : 'Utilisatrice bloquée pour les prochaines courses.') : (role === 'rider' ? 'Conducteur débloqué.' : 'Utilisatrice débloquée.'), 'success');
     } catch (err) { toast(err.message || 'Action impossible', 'error'); }
     finally { setModerating(false); }
   }
   const listRef = useRef(null);
   const toast = useToast();
   const [isPhone, setIsPhone] = useState(false);
-  useEffect(() => { setIsPhone(window.matchMedia('(max-width: 640px)').matches); }, []);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 640px), (pointer: coarse)');
+    const update = () => setIsPhone(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   const vv = useVisualViewport(open && isPhone);
 
   useEffect(() => {
     if (open && listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
-  }, [messages, open]);
+  }, [messages, open, vv?.height]);
 
   async function send(e) {
     e?.preventDefault();
@@ -74,18 +87,18 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
 
   if (!open) return null;
 
-  return (
+  const sheet = (
     <div
-      className="card animate-in"
+      className={isPhone ? 'card mobile-ride-chat' : 'card animate-in'}
       style={{
-        position: vv ? 'fixed' : 'absolute',
-        ...(vv
-          ? { top: vv.top + 8, left: 8, right: 8, height: Math.min(520, vv.height - 16), zIndex: 'var(--z-sheet)' }
+        position: isPhone ? 'fixed' : 'absolute',
+        ...(isPhone
+          ? { top: (vv?.top ?? 0) + 8, left: 8, right: 8, '--ride-chat-visible-height': vv ? `${vv.height}px` : '100dvh', height: vv ? Math.max(0, Math.min(520, vv.height - 16)) : 'min(520px, calc(100dvh - 16px))' }
           : { bottom: 16, right: 16, width: 'min(380px, calc(100% - 32px))', height: 460 }),
         display: 'flex',
         flexDirection: 'column',
         boxShadow: 'var(--shadow-lg)',
-        ...(vv ? null : { zIndex: 25 }),
+        ...(isPhone ? null : { zIndex: 25 }),
         overflow: 'hidden',
       }}
       role="dialog"
@@ -93,7 +106,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
     >
       <div
         className="flex items-center justify-between"
-        style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}
+        style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}
       >
         <div className="flex items-center gap-2">
           <MessageCircle size={17} style={{ color: 'var(--gold-600)' }} />
@@ -103,21 +116,21 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
         </div>
         <div className="flex items-center gap-2">
           <button type="button" className="btn btn-sm" disabled={moderating}
-            onClick={() => moderate(blocked ? 'unblock' : 'block')}>
+            onClick={() => blocked ? moderate('unblock') : setConfirmBlock(true)}>
             {blocked ? 'Débloquer' : 'Bloquer'}
           </button>
           <CloseControl onClick={onClose} label="Fermer la discussion" />
         </div>
       </div>
 
-      <p className="chat-retention-notice">{CHAT_NOTICE}</p>
-      <p className="tiny muted" style={{ padding: '0 14px 8px' }}>
-        Message abusif, menace ou harcèlement ?{' '}
-        <a href={`/contact?topic=safety&ride=${encodeURIComponent(rideId)}`}>
-          Signaler cette discussion à l’assistance
-        </a>.
-      </p>
-      <div ref={listRef} className="flex-1" style={{ overflowY: 'auto', padding: 14 }}>
+      <div ref={listRef} className="flex-1" style={{ minHeight: 0, overflowY: 'auto', padding: 14 }}>
+        <p className="chat-retention-notice">{CHAT_NOTICE}</p>
+        <p className="tiny muted" style={{ padding: '0 14px 8px' }}>
+          Message abusif, menace ou harcèlement ?{' '}
+          <a href={`/contact?topic=safety&ride=${encodeURIComponent(rideId)}`}>
+            Signaler cette discussion à l’assistance
+          </a>.
+        </p>
         {messages.length === 0 && (
           <p className="tiny muted text-center" style={{ paddingTop: 40 }}> Dites bonjour à votre interlocuteur. </p>
         )}
@@ -169,7 +182,7 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
       <form
         onSubmit={send}
         className="flex gap-2"
-        style={{ padding: 12, borderTop: '1px solid var(--border)' }}
+        style={{ flexShrink: 0, padding: 12, borderTop: '1px solid var(--border)' }}
       >
         <input
           className="input flex-1"
@@ -190,5 +203,31 @@ export default function ChatSheet({ rideId, role, messages, open, onClose, count
         </button>
       </form>
     </div>
+  );
+
+  // A map or animated parent can trap position: fixed in its own bounds.
+  return (
+    <>
+      {isPhone ? createPortal(<div className="shell-dark">{sheet}</div>, document.body) : sheet}
+      <Modal
+        open={confirmBlock}
+        onClose={() => setConfirmBlock(false)}
+        title={`Bloquer ${blockTarget} ?`}
+        portal
+        keyboardSafe
+        sheetOnMobile={false}
+        closable={!moderating}
+      >
+        <p>Le blocage s’applique aux prochaines courses. La discussion de la course actuelle reste accessible.</p>
+        <div className="flex gap-2 mt-4">
+          <button type="button" className="btn btn-secondary flex-1" disabled={moderating} onClick={() => setConfirmBlock(false)}>
+            Annuler
+          </button>
+          <button type="button" className="btn btn-primary flex-1" disabled={moderating} onClick={() => moderate('block')}>
+            Bloquer
+          </button>
+        </div>
+      </Modal>
+    </>
   );
 }

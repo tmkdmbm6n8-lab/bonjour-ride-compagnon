@@ -37,7 +37,7 @@ export function decodePolyline(str) {
 /** Request body for Routes API computeRoutes, traffic-aware, departing now. */
 export function googleRouteRequest(a, b) {
   const wp = (p) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
-  return { origin: wp(a), destination: wp(b), travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE', languageCode: 'fr-FR', units: 'METRIC' };
+  return { origin: wp(a), destination: wp(b), travelMode: 'DRIVE', routingPreference: 'TRAFFIC_AWARE', polylineQuality: 'HIGH_QUALITY', languageCode: 'fr-FR', units: 'METRIC' };
 }
 export const GOOGLE_ROUTE_FIELDS = 'routes.distanceMeters,routes.duration,routes.staticDuration,routes.polyline.encodedPolyline';
 

@@ -189,8 +189,6 @@ function RecoverAccount() {
   );
 }
 export const Route = createFileRoute("/recover-account")({
-  head: () => ({
-    meta: [{ title: "Retrouver mon compte · StrasDrive" }, { name: "robots", content: "noindex" }],
-  }),
+  head: () => ({ meta: [{"title": "Retrouver mon compte · StrasDrive"}, {"name": "description", "content": "Retrouvez l’accès à votre compte StrasDrive."}, {"property": "og:title", "content": "Retrouver mon compte · StrasDrive"}, {"property": "og:description", "content": "Retrouvez l’accès à votre compte StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}, {"name": "robots", "content": "noindex"}] }),
   component: RecoverAccount,
 });

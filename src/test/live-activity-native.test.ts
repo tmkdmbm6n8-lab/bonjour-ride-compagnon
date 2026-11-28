@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({ platform: 'web', available: true, sync: vi.fn(), stop: vi.fn() }));
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => state.platform, isPluginAvailable: () => state.available },
+  Capacitor: { getPlatform: () => state.platform, isPluginAvailable: (name) => name === 'RideLiveActivity' && state.available },
   registerPlugin: () => ({ sync: state.sync, stop: state.stop }),
 }));
 afterEach(() => { vi.useRealTimers(); vi.resetModules(); state.sync.mockReset(); state.stop.mockReset(); state.platform = 'web'; state.available = true; });

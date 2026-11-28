@@ -24,7 +24,17 @@ export async function resolveOrCreateCustomer(stripe, options) {
 /** Credits the paid amount of a Checkout Session to its user's wallet. Idempotent per session (webhook + return page). */
 export async function creditPaidSession(admin, session) {
   const userId = session?.metadata?.userId;
-  if (!userId || session.payment_status !== "paid" || !session.amount_total) return false;
+  if (!userId || session.payment_status !== "paid") return false;
+  if (!Number.isSafeInteger(session.amount_total) || session.amount_total <= 0 ||
+      !["topup", "ride"].includes(session.metadata?.kind) ||
+      session.client_reference_id !== userId) {
+    throw new Error("Session de paiement invalide : crédit refusé");
+  }
+  const configuredEnv = process.env.PAYMENTS_STRIPE_ENV;
+  if (!isStripeEnv(configuredEnv) || session.livemode !== (configuredEnv === "live") ||
+      session.currency?.toLowerCase() !== "eur" || session.mode !== "payment") {
+    throw new Error("Environnement ou devise de paiement non autorisé");
+  }
   const { error } = await admin.rpc("wallet_entry", {
     _user: userId,
     _amount: session.amount_total / 100,
@@ -55,7 +65,12 @@ function embeddedSession(stripe, { uid, customer, amount, name, returnUrl, metad
  */
 export async function handleCheckout({ admin, uid, role, email, p, q, method, body, createRide, quoteRide, resolveFavorite, serializeRide, cardBookingProblem, preparePassenger }) {
   const env = method === "GET" ? q.get("env") : body.environment;
-  if (!isStripeEnv(env)) throw new Error("Paiement par carte indisponible pour le moment");
+  // Never let a request select the Stripe account whose payments fund the real wallet.
+  // Configure PAYMENTS_STRIPE_ENV (sandbox/live) on the server; no implicit sandbox fallback.
+  const configuredEnv = process.env.PAYMENTS_STRIPE_ENV;
+  if (!isStripeEnv(configuredEnv) || env !== configuredEnv) {
+    throw new Error("Environnement de paiement indisponible ou non autorisé");
+  }
   let stripe;
   try {
     stripe = createStripeClient(env);
@@ -66,7 +81,7 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
     if (p === "/api/wallet/checkout" && method === "POST") {
       const problem = topupAmountProblem(body.amount);
       if (problem) return { error: problem };
-      const origin = safeOrigin(body.origin);
+      const origin = safeOrigin(body.origin, process.env.APP_URL || '');
       if (!origin) return { error: "Adresse de retour invalide" };
       const customer = await resolveOrCreateCustomer(stripe, { email, userId: uid });
       const metadata = { userId: uid, kind: "topup" };
@@ -79,14 +94,14 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
     }
     if (p === "/api/wallet/checkout") {
       const session = await stripe.checkout.sessions.retrieve(String(q.get("session_id") || ""));
-      if (session.metadata?.userId !== uid) return { error: "Paiement inaccessible" };
+      if (session.metadata?.userId !== uid || session.metadata?.kind !== "topup") return { error: "Paiement inaccessible" };
       if (session.payment_status !== "paid") return { paid: false };
-      await creditPaidSession(admin, session);
+      if (!await creditPaidSession(admin, session)) return { paid: false, credited: false };
       return { paid: true, credited: true, amount: session.amount_total / 100 };
     }
     if (p === "/api/rides/card-checkout") {
       await preparePassenger();
-      const origin = safeOrigin(body.origin);
+      const origin = safeOrigin(body.origin, process.env.APP_URL || '');
       if (!origin) return { error: "Adresse de retour invalide" };
       // The favorite choice is kept with the paid booking so the ride never changes circuit after payment.
       const favorite = body.favorite === true ? await resolveFavorite() : null;
@@ -107,38 +122,55 @@ export async function handleCheckout({ admin, uid, role, email, p, q, method, bo
         name: `Course StrasDrive ${VEHICLE_CLASS_LABELS[vehicleType] || ""}`.trim(),
         returnUrl: `${origin}/dashboard?card_session={CHECKOUT_SESSION_ID}`,
       });
-      await admin.from("card_bookings").update({ stripe_session_id: session.id }).eq("id", booking.id);
+      const linked = await admin.from("card_bookings").update({ stripe_session_id: session.id }).eq("id", booking.id).select("id");
+      if (linked.error || linked.data?.length !== 1) return { error: "Session de paiement créée mais non enregistrée. Aucun paiement ne doit être lancé ; contactez le support." };
       return { clientSecret: session.client_secret, sessionId: session.id, amount: fare.total };
     }
     if (p === "/api/rides/card-confirm") {
       const session = await stripe.checkout.sessions.retrieve(String(body.sessionId || ""));
-      if (session.metadata?.userId !== uid || session.metadata?.kind !== "ride") return { error: "Paiement inaccessible" };
+      if (session.metadata?.userId !== uid || session.metadata?.kind !== "ride" ||
+          !session.metadata?.bookingId) return { error: "Paiement inaccessible" };
       if (session.payment_status !== "paid") return { paid: false };
-      await creditPaidSession(admin, session);
-      const { data: booking } = await admin
+      if (!await creditPaidSession(admin, session)) return { paid: false, booked: false };
+      const { data: booking, error: bookingError } = await admin
         .from("card_bookings").select("*").eq("id", session.metadata.bookingId).eq("rider_id", uid).maybeSingle();
+      if (bookingError) return { paid: true, booked: false, error: "Impossible de vérifier la réservation payée. Contactez le support." };
       if (!booking) return { paid: true, booked: false };
+      if (booking.environment !== env || booking.stripe_session_id !== session.id) {
+        return { paid: true, booked: false, error: "La session de paiement ne correspond pas à cette réservation. Contactez le support." };
+      }
       if (booking.ride_id) return { paid: true, booked: true, ride: await serializeRide(booking.ride_id) };
-      if (booking.status !== "pending") return { paid: true, booked: booking.status === "booking" };
+      if (booking.status !== "pending") return { paid: true, booked: false, processing: booking.status === "booking" };
       if (cardBookingExpired(booking.created_at)) {
-        await admin.from("card_bookings").update({ status: "expired" }).eq("id", booking.id).eq("status", "pending");
+        const expired = await admin.from("card_bookings").update({ status: "expired" }).eq("id", booking.id).eq("status", "pending").select("id");
+        if (expired.error) return { paid: true, booked: false, error: "Expiration de la réservation non enregistrée. Contactez le support." };
+        if (expired.data?.length !== 1) return { paid: true, booked: false, processing: true };
         return { paid: true, booked: false, expired: true };
       }
       // Only one confirmation (return page or callback) may create the ride.
-      const { data: claimed } = await admin
+      const { data: claimed, error: claimError } = await admin
         .from("card_bookings").update({ status: "booking" }).eq("id", booking.id).eq("status", "pending").select("id");
-      if (!claimed?.length) return { paid: true, booked: true };
+      if (claimError) return { paid: true, booked: false, error: "Impossible de confirmer la réservation payée. Contactez le support." };
+      if (!claimed?.length) return { paid: true, booked: false, processing: true };
       try {
         const ride = await createRide({
           vehicleType: booking.vehicle_type, pickup: booking.pickup, dropoff: booking.dropoff,
           route: booking.route, fare: booking.fare, payment: { method: "card", stripeSessionId: session.id },
           favoriteDriverId: booking.favorite_driver_id || null,
         });
-        await admin.from("card_bookings").update({ status: "booked", ride_id: ride.id }).eq("id", booking.id);
+        const saved = await admin.from("card_bookings").update({ status: "booked", ride_id: ride.id }).eq("id", booking.id).eq("status", "booking").select("id");
+        if (saved.error || saved.data?.length !== 1) {
+          // Ride creation already succeeded: never reset to pending or create it again.
+          return { paid: true, booked: false, processing: true, error: "Course créée mais confirmation non enregistrée. Contactez le support." };
+        }
         return { paid: true, booked: true, ride };
       } catch (e) {
-        await admin.from("card_bookings").update({ status: "pending" }).eq("id", booking.id);
-        return { error: `${e?.message || "La course n’a pas pu être créée"} — le montant payé est sur votre portefeuille` };
+        // Only release our own claim; do not overwrite a concurrently completed booking.
+        const reset = await admin.from("card_bookings").update({ status: "pending" }).eq("id", booking.id).eq("status", "booking").is("ride_id", null).select("id");
+        if (reset.error || reset.data?.length !== 1) {
+          return { paid: true, booked: false, processing: true, error: "Échec de création de la course ; état de réservation à vérifier par le support." };
+        }
+        return { paid: true, booked: false, error: `${e?.message || "La course n’a pas pu être créée"} — le montant payé est sur votre portefeuille` };
       }
     }
   } catch (error) {

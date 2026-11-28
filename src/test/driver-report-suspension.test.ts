@@ -27,18 +27,11 @@ function db(rows: any[], previous: any[] = []) {
 }
 const args = { ride: { id: 'third', rider_id: 'rider', driver_id: 'driver' }, uid: 'rider', email: 'rider@example.test', name: 'Client', body: { reason: 'aggression' } };
 describe('suspension chauffeur après trois courses signalées', () => {
-  it('programme la suspension 12 h après le troisième signalement, sans suspendre tout de suite', async () => {
+  it('enregistre le signalement sans suspension automatique, en attente de modération', async () => {
     const mock = db([stored('one'), stored('two')]);
-    const before = Date.now();
     await sendDriverReport(mock.admin, args);
     expect(mock.inserts).toHaveLength(1);
-    expect(mock.updates).toHaveLength(1);
-    const { table, patch } = mock.updates[0];
-    expect(table).toBe('drivers');
-    expect(patch.is_approved).toBeUndefined();
-    const delay = new Date(patch.stats.pending_suspension_at).getTime() - before;
-    expect(delay).toBeGreaterThanOrEqual(12 * 3600 * 1000);
-    expect(delay).toBeLessThan(12 * 3600 * 1000 + 60_000);
+    expect(mock.updates).toHaveLength(0);
     expect(mock.admin.from).not.toHaveBeenCalledWith('profiles');
   });
   it('ne crée pas de second signalement pour la même course', async () => {

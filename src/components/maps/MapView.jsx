@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Map as MLMap, Marker, LngLatBounds, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { projectRoute, predictPosition } from "@/lib/navigation-progress";
 import { drawRoute } from "@/lib/map-route";
 
 setWorkerUrl(maplibreWorkerUrl);
@@ -25,7 +26,13 @@ const PIN_SVG =
 const SQUARE_SVG =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 
+const USER_SVG =
+  '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+
+const savedViews = new Map();
+const retainedMaps = new Map();
 export default function MapView({
+  viewCacheKey,
   center = { lat: 40.7128, lng: -74.006 },
   zoom = 13,
   pickup,
@@ -51,6 +58,10 @@ export default function MapView({
   const driverDotsRef = useRef(new Map());
   const animRef = useRef(null);
   const routeGeomRef = useRef(null);
+  const navFixRef = useRef(null);
+  const navRouteRef = useRef(null);
+  navFixRef.current = userPosition;
+  navRouteRef.current = routeGeometry;
   const lastUserMoveRef = useRef(0);
   const initialUserCenterRef = useRef(false);
   const onClickRef = useRef(onClick);
@@ -63,11 +74,17 @@ export default function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined;
 
-    const map = new MLMap({
-      container: containerRef.current,
+    const saved = viewCacheKey && savedViews.get(viewCacheKey);
+    const retained = viewCacheKey && retainedMaps.get(viewCacheKey);
+    if (retained) { clearTimeout(retained.timer); retainedMaps.delete(viewCacheKey); }
+    const host = retained?.host || document.createElement("div");
+    host.style.cssText = "width:100%;height:100%;";
+    containerRef.current.appendChild(host);
+    const map = retained?.map || new MLMap({
+      container: host,
       style: "/map-dark.json",
-      center: [center.lng, center.lat],
-      zoom,
+      center: saved?.center || [center.lng, center.lat],
+      zoom: saved?.zoom ?? zoom,
       pitch: 0,
       attributionControl: false,
       cooperativeGestures: false, // un seul doigt suffit pour parcourir la carte
@@ -89,7 +106,8 @@ export default function MapView({
     map.on("load", applyRoute);
     map.on("style.load", applyRoute);
     map.on("idle", applyRoute);
-    map.on("click", (e) => onClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
+    const click = (e) => onClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+    map.on("click", click);
 
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(containerRef.current);
@@ -98,12 +116,21 @@ export default function MapView({
     mapRef.current = map;
 
     return () => {
+      if (viewCacheKey) savedViews.set(viewCacheKey, { center: map.getCenter().toArray(), zoom: map.getZoom() });
       ro.disconnect();
       cancelAnimationFrame(animRef.current);
+      Object.values(markersRef.current).forEach(marker => marker?.remove());
       markersRef.current = { pickup: null, dropoff: null, driver: null, user: null };
+      driverDotsRef.current.forEach(marker => marker.remove());
       driverDotsRef.current.clear();
+      map.off("dragstart", markUserMove); map.off("zoomstart", markUserMove);
+      map.off("load", applyRoute); map.off("style.load", applyRoute); map.off("idle", applyRoute); map.off("click", click);
       try {
-        map.remove();
+        if (viewCacheKey) {
+          host.remove();
+          const timer = setTimeout(() => { retainedMaps.delete(viewCacheKey); map.remove(); }, 300000);
+          retainedMaps.set(viewCacheKey, { map, host, timer });
+        } else map.remove();
       } catch (err) {
         console.warn("[MapView] map.remove() failed:", err?.message);
       }
@@ -139,8 +166,9 @@ export default function MapView({
 
   // Position only: turn-by-turn guidance belongs to the selected external GPS app.
   useEffect(() => {
-    syncMarker("user", userPosition, () => el("marker-dot-simple", ""));
-  }, [userPosition?.lat, userPosition?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (navigationMode) { syncMarker("user", null); return; }
+    syncMarker("user", userPosition, () => el("marker-dot-simple", USER_SVG));
+  }, [userPosition?.lat, userPosition?.lng, navigationMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The first GPS fix must be visible, including while the driver is offline.
   useEffect(() => {
@@ -181,11 +209,51 @@ export default function MapView({
 
   // Tracé d'itinéraire
   useEffect(() => {
+    if (navigationMode) return;
     routeGeomRef.current = routeGeometry || null;
     const map = mapRef.current;
     if (!map) return;
     readyRef.current = drawRoute(map, routeGeomRef.current);
   }, [routeGeometry, navigationMode, userPosition?.lat, userPosition?.lng]);
+
+  // Local animation: never send predicted positions to the server.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !navigationMode) return;
+    const node = el("marker-pin navigation-cursor", '<svg viewBox="0 0 32 32" width="32" height="32"><path d="M16 3 27 28 16 22 5 28Z" fill="#d4af37" stroke="#17212d" stroke-width="2" stroke-linejoin="round"/></svg>');
+    node.style.cssText = "width:34px;height:34px;background:transparent;border:0;box-shadow:none";
+    const marker = new Marker({element:node, rotationAlignment:"map"});
+    let frame, displayed, last = 0, lastDraw = 0, attached = false, bearing = 0;
+    let previousRoute, previousIndex = 0;
+    const tick = (time) => {
+      frame = requestAnimationFrame(tick);
+      const fix = navFixRef.current;
+      if (!fix || !Number.isFinite(fix.lat) || !Number.isFinite(fix.lng)) return;
+      const route = navRouteRef.current;
+      if (route !== previousRoute) { previousRoute = route; previousIndex = 0; }
+      const target = predictPosition(fix, Date.now());
+      const dt = last ? Math.min(100,time-last) : 16;
+      last = time;
+      const alpha = 1-Math.exp(-dt/100);
+      displayed = displayed ? {lat:displayed.lat+(target.lat-displayed.lat)*alpha,lng:displayed.lng+(target.lng-displayed.lng)*alpha} : target;
+      const snap = projectRoute(route, displayed);
+      const onRoute = snap && snap.distance <= Math.max(12, Math.min(25,fix.accuracy || 12)) && snap.index >= previousIndex;
+      const p = onRoute ? snap : displayed;
+      if (onRoute) previousIndex = snap.index;
+      marker.setLngLat([p.lng,p.lat]);
+      if (!attached) { marker.addTo(map); attached = true; }
+      if (Number.isFinite(fix.heading) && fix.speed > 0.7) bearing += (((fix.heading-bearing+540)%360)-180)*alpha;
+      marker.setRotation(bearing);
+      if (time-lastDraw >= 65) {
+        lastDraw = time;
+        routeGeomRef.current = onRoute ? [[p.lng,p.lat], ...route.slice(snap.index+1)] : route;
+        drawRoute(map,routeGeomRef.current);
+      }
+      if (Date.now()-lastUserMoveRef.current >= 8000) map.jumpTo({center:[p.lng,p.lat],bearing,zoom:Math.max(map.getZoom(),16),padding:fitPadding(map)});
+    };
+    frame = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(frame); marker.remove(); };
+  }, [navigationMode]);
 
   // Cadrage d'itinéraire (hors navigation active)
   useEffect(() => {
@@ -213,7 +281,7 @@ export default function MapView({
   // Suivi GPS temps réel 3D (type Waze)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !followPosition) return;
+    if (!map || !followPosition || navigationMode) return;
     // Si l'utilisateur touche la carte, pause de 8 secondes avant de reprendre le suivi
     if (Date.now() - lastUserMoveRef.current < 8000) return;
 

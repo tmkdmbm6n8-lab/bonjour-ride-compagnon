@@ -1,5 +1,7 @@
-import { goldDispatchPool, hasPaidDriverGold, loadDriverGold } from "./driver-gold.server";
-import { restoreGoldCommission, waiveGoldCommission } from "./driver-gold-fare";
+import { addPickupWaiting, waitingRate } from "./ride-waiting";
+import { goldDispatchPool, loadDriverGold } from "./driver-gold.server";
+import { restoreGoldCommission } from "./driver-gold-fare";
+import { fareForDriver } from "./driver-ride-fare.server";
 import { accountRating } from "./account-ratings.server";
 import { recordOnlineTime } from "./driver-online-time.server";
 import { driverReportMessage } from "./driver-reports";
@@ -63,6 +65,10 @@ import { mergeCameraAlerts } from "./vtc-speed-cameras";
 import { requireRadarReporter } from "./vtc-road-alerts.server";
 import {
   DEFAULT_PRICING,
+  TARIFF_VERSION,
+  TARIFF_FIELDS,
+  tariffRuleProblem,
+  pricingRules,
   calculateFare,
   settleDriverEarnings,
   paymentMethodOf,
@@ -80,6 +86,7 @@ import {
 import {
   approximateRoute,
   routeFromGoogle,
+  routeFromOsrm,
   googleRouteRequest,
   GOOGLE_ROUTE_FIELDS,
   liveTarget,
@@ -107,7 +114,17 @@ import {
 import { sanitizeTripPrefs, tripPrefsOf, riderAverage } from "./vtc-trip-prefs";
 import { evaluateDriverProgress } from "./vtc-tracking";
 import { newlyOfferedDriverIds, validPushToken } from "./vtc-push";
-import { pushRideOffer } from "./vtc-push.server";
+import {
+  validLiveActivityDeviceId,
+  validLiveActivityReference,
+  validLiveActivityToken,
+} from "./live-activity-offers";
+import {
+  pushRideOffer,
+  endRideOfferLiveActivities,
+  endDeviceLiveActivities,
+  registerLiveActivityUpdateToken,
+} from "./vtc-push.server";
 import {
   ALERT_KINDS,
   NEARBY_RADIUS_KM,
@@ -226,6 +243,7 @@ async function serialize(db, r, actor, raw = false) {
 
   const out = {
     ...r,
+    fare: r.fare ? { ...r.fare, approachTracking: undefined } : r.fare,
     pickup: pickupClean,
     dropoff: dropoffClean,
     rating: cleanRating,
@@ -300,6 +318,19 @@ async function routeBetween(a, b) {
   // Google only; an outage yields an explicitly approximate estimate without a road line.
   return (await googleRoute(a, b)) || approximateRoute(haversineDistance(a.lat, a.lng, b.lat, b.lng));
 }
+// Use OSM road geometry for navigation only, without changing fare estimates.
+async function osmNavigationRoute(a, b) {
+  const base = process.env.OSRM_BASE_URL;
+  if (!base) return null;
+  try {
+    const url = new URL(base.replace(/\/+$/, "") + "/route/v1/driving/" + a.lng + "," + a.lat + ";" + b.lng + "," + b.lat);
+    url.searchParams.set("overview", "full");
+    url.searchParams.set("geometries", "geojson");
+    url.searchParams.set("steps", "false");
+    const response = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    return response.ok ? routeFromOsrm(await response.json()) : null;
+  } catch { return null; }
+}
 /** Live leg driver → pickup/destination, shared by rider and driver through rides.live_route. */
 async function liveRoute(admin, r) {
   const target = liveTarget(r);
@@ -307,116 +338,21 @@ async function liveRoute(admin, r) {
   if (liveRouteFresh(r.live_route, r.status)) return r.live_route;
   const d = required(await admin.from("drivers").select("location").eq("user_id", r.driver_id).single());
   if (!validPoint(d.location) || !validPoint(target)) return null;
-  const route = await routeBetween(d.location, target);
+  const [original, osm] = await Promise.all([routeBetween(d.location, target), osmNavigationRoute(d.location, target)]);
+  // Keep the displayed geometry and distance from the same itinerary.
+  const route = osm || original;
   const value = { ...route, status: r.status, target: target.kind, at: new Date().toISOString() };
   required(await admin.from("rides").update({ live_route: value }).eq("id", r.id).eq("status", r.status));
   return value;
 }
 // === src/lib/vtc.server.js (autour de la ligne 229) ===
-async function estimates(db, a, b) {
+export async function estimates(db, a, b) {
   const route = await routeBetween(a, b);
-  const rows = required(await db.from("pricing_rules").select("*"));
-  const rules = { ...DEFAULT_PRICING };
-  for (const row of rows) {
-    if (row.vehicle_type !== "uber_discount") {
-      rules[row.vehicle_type] = row.rule;
-    }
-  }
-
-  // Configuration de la réduction Uber (20 % par défaut, activée par défaut)
-  const discountSetting = rows.find((r) => r.vehicle_type === "uber_discount")?.rule;
-  const isDiscountActive = discountSetting ? Boolean(discountSetting.enabled) : true;
-  const discountRate = discountSetting && Number.isFinite(discountSetting.rate) ? discountSetting.rate : 0.2; // 20 %
-
-  // 1. Appel en direct de l'API Uber
-  let uberList = null;
-  try {
-    const { uberProducts } = await import("./vtc-uber.server");
-    uberList = await uberProducts(a, b);
-  } catch {
-    uberList = null;
-  }
-
-  // 2. Si Uber ne répond pas (cookie expiré, lenteur, erreur) : on ne bloque jamais le client,
-  //    chaque gamme sans prix Uber retombe sur la grille StrasDrive (plancher ARPE inclus).
-  if (!Array.isArray(uberList)) uberList = [];
-
-  // 3. Correspondance avec les gammes StrasDrive (Go, Comfort, Pet, XL)
-  const findProduct = (keywords) => {
-    for (const kw of keywords) {
-      const match = uberList.find((p) => p.name?.toLowerCase().includes(kw.toLowerCase()));
-      if (match) return match;
-    }
-    return null;
-  };
-
-  const uberX = findProduct(["uberx", "electric", "wait & save"]);
-  const uberComfort = findProduct(["comfort"]);
-  const uberPet = findProduct(["pet", "uber pet", "animal"]);
-  const uberXL = findProduct(["uberxl", "xl"]);
-
-  const finalEstimates = {};
-
-  const applyUberPrice = (type, product) => {
-    let rawPrice = product?.price;
-
-    // Si Uber Pet n'est pas actif dans la ville, barème officiel Uber : UberX + 4,00 €
-    if (!rawPrice && type === "pet" && uberX?.price) {
-      rawPrice = Math.round((uberX.price + 4.0) * 100) / 100;
-    }
-
-    if (rawPrice && Number.isFinite(rawPrice) && rawPrice > 0) {
-      const commRate = rules[type]?.platformCommission || 5;
-
-      // Calcul du prix réduit de 20 %
-      let price = rawPrice;
-      if (isDiscountActive) {
-        price = Math.round(rawPrice * (1 - discountRate) * 100) / 100;
-      }
-
-      // ── Plancher légal ARPE : 9,00 € nets min par course pour le chauffeur ──
-      // Avec 5 % de commission, le prix payé par le client ne descend jamais sous 9,47 €
-      const minNetDriver = 9.0;
-      const minLegalPrice = Math.round((minNetDriver / (1 - commRate / 100)) * 100) / 100;
-      if (price < minLegalPrice) {
-        price = minLegalPrice;
-      }
-
-      const platformFee = Math.round(price * commRate) / 100;
-      const driverEarnings = Math.round((price - platformFee) * 100) / 100;
-
-      finalEstimates[type] = {
-        total: price,
-        estimatedTotal: price,
-        originalTotal: rawPrice, // Le prix Uber de référence avant réduction
-        platformFee,
-        driverEarnings,
-        uberProduct: product ? product.name : type === "pet" ? "Uber Pet" : null,
-        isUberPrice: true,
-        discountRate: isDiscountActive ? discountRate : 0,
-      };
-    }
-  };
-
-  applyUberPrice("economy", uberX);
-  applyUberPrice("comfort", uberComfort);
-  applyUberPrice("pet", uberPet);
-  applyUberPrice("xl", uberXL);
-
-  // 4. Repli : toute gamme non tarifée par Uber utilise la grille StrasDrive
-  let fallback = false;
-  for (const type of Object.keys(DEFAULT_PRICING)) {
-    if (finalEstimates[type] || !rules[type]) continue;
-    fallback = true;
-    finalEstimates[type] = {
-      ...calculateFare(rules[type], route.distanceMeters, route.durationSeconds),
-      isUberPrice: false,
-    };
-  }
-
-  return { route, estimates: finalEstimates, source: fallback ? (uberList.length ? "mixed" : "strasdrive") : "uber" };
+  const rows = required(await db.from("pricing_rules").select("vehicle_type,rule").in("vehicle_type", Object.keys(DEFAULT_PRICING)));
+  const rules = pricingRules(rows);
+  const fares = Object.fromEntries(Object.entries(rules).map(([type, rule]) => [type, calculateFare(rule, route.distanceMeters, route.durationSeconds)]));
+  return { route, estimates: fares, source: "strasdrive", pricingMode: "tariff", tariffVersion: TARIFF_VERSION };
 }
-
 export async function handleVtc(input, context) {
   const { path, method = "GET", body = {} } = input;
   const url = new URL(path, "http://app");
@@ -424,7 +360,11 @@ export async function handleVtc(input, context) {
   const q = url.searchParams;
   const db = context.supabase,
     uid = context.userId;
-  const roles = required(await db.from("user_roles").select("role").eq("user_id", uid));
+  const [rolesResult, profileResult] = await Promise.all([
+    db.from("user_roles").select("role").eq("user_id", uid),
+    db.from("profiles").select("*").eq("id", uid).maybeSingle(),
+  ]);
+  const roles = required(rolesResult);
   const role = roles.some((r) => r.role === "admin")
     ? "admin"
     : roles.some((r) => r.role === "driver")
@@ -435,7 +375,51 @@ export async function handleVtc(input, context) {
   if (p.startsWith("/api/drivers/me") && !canDrive) throw new Error("Accès chauffeur requis");
   // RLS has verified the role; privileged operations below use only the verified caller identity.
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-  const profile = required(await db.from("profiles").select("*").eq("id", uid).single());
+  const profile = required(profileResult);
+  if (!profile) throw new Error("ACCOUNT_UNAVAILABLE");
+
+  if (p === "/api/users/me/live" && method === "GET") {
+    const driver = canDrive ? required(await admin.from("drivers").select("*").eq("user_id", uid).maybeSingle()) : null;
+    const { driverAccess } = await import("./driver-warnings.server");
+    const access = driver ? await driverAccess(admin, uid, driver) : { suspended: false };
+    const current = required(await admin.from("rides").select("id,driver_id,rider_id,status")
+      .or(`driver_id.eq.${uid},rider_id.eq.${uid}`).in("status", active).limit(2));
+    return {
+      role, canDrive, suspended: access.suspended,
+      hasDriverRide: current.some(r => r.driver_id === uid),
+      hasActiveRide: current.length > 0,
+      revision: JSON.stringify([role, canDrive, profile.name, profile.phone, profile.balance, driver?.is_approved,
+        driver?.is_online, driver?.is_priority, driver?.vehicle_class, driver?.accepts_classes, driver?.vehicle, driver?.trip_prefs, access.suspended]),
+      buildId: typeof __STRASDRIVE_BUILD_ID__ === "string" ? __STRASDRIVE_BUILD_ID__ : null,
+    };
+  }
+
+  // Gestion des cartes du passager : identité issue de la session, jamais du corps de requête.
+  if (p === "/api/rider/cards" && method === "GET") {
+    const { listRiderCards } = await import("./vtc-card-hold.server.js");
+    return { cards: await listRiderCards(admin, uid) };
+  }
+  if (p === "/api/rider/cards/setup" && method === "POST") {
+    const { createCardSetupIntent } = await import("./vtc-card-hold.server.js");
+    return createCardSetupIntent(admin, { userId: uid, email: context.email || profile.email });
+  }
+  if (p === "/api/rider/cards/save" && method === "POST") {
+    const { saveRiderCard } = await import("./vtc-card-hold.server.js");
+    const card = await saveRiderCard(admin, {
+      userId: uid, paymentMethodId: body.paymentMethodId, isDefault: body.isDefault ?? true,
+    });
+    return { card };
+  }
+  if (p === "/api/rider/cards/delete" && method === "POST") {
+    const { deleteRiderCard } = await import("./vtc-card-hold.server.js");
+    return deleteRiderCard(admin, { userId: uid, cardId: body.cardId });
+  }
+  if (p === "/api/rider/cards/default" && method === "POST") {
+    const { setDefaultRiderCard } = await import("./vtc-card-hold.server.js");
+    return setDefaultRiderCard(admin, { userId: uid, cardId: body.cardId });
+  }
+  if (p.startsWith("/api/rider/cards")) throw new Error("Méthode non autorisée");
+
   if (p === "/api/admin/chat-evidence") {
     if (method === "GET") return adminChatEvidence(admin, q);
     if (method === "POST") return handleAdminReportAction(admin, body);
@@ -561,6 +545,58 @@ export async function handleVtc(input, context) {
       },
     };
   }
+  if (p === "/api/users/me/driver-application") {
+    if (method === "GET") {
+      const { data, error } = await admin.from("driver_applications").select("status,created_at,reviewed_at").eq("user_id", uid).maybeSingle();
+      if (error) throw new Error("Impossible de charger votre candidature.");
+      return { application: data || null, canDrive };
+    }
+    if (method === "POST") {
+      if (canDrive) throw new Error("Votre compte possède déjà un espace chauffeur.");
+      // Enforce the same complete document acknowledgment on the server.
+      const { REQUIRED_DOCUMENTS } = await import("./vtc-documents");
+      const confirmed = Array.isArray(body.confirmedDocuments) ? body.confirmedDocuments : [];
+      if (!REQUIRED_DOCUMENTS.every((spec) => confirmed.includes(spec.type)))
+        throw new Error("Confirmez que vous possédez tous les documents obligatoires avant de candidater.");
+
+      const { data: existing, error: readError } = await admin.from("driver_applications").select("status").eq("user_id", uid).maybeSingle();
+      if (readError) throw new Error("Impossible de vérifier votre candidature.");
+      if (existing) return { application: existing, alreadySubmitted: true };
+      const { data, error } = await admin.from("driver_applications").insert({ user_id: uid, status: "pending" }).select("status,created_at").single();
+      if (error?.code === "23505") return { application: { status: "pending" }, alreadySubmitted: true };
+      if (error) throw new Error("Impossible d'envoyer la candidature.");
+      return { application: data };
+    }
+    throw new Error("Méthode non autorisée");
+  }
+  if (p === "/api/admin/driver-applications") {
+    if (method === "GET") {
+      const { data, error } = await admin.from("driver_applications").select("user_id,status,created_at,reviewed_at").order("created_at", { ascending: false }).limit(200);
+      if (error) throw new Error("Impossible de charger les candidatures.");
+      const users = await Promise.all((data || []).map(async (application) => {
+        const { data: person } = await admin.from("profiles").select("name,username,phone").eq("id", application.user_id).maybeSingle();
+        const { data: auth } = await admin.auth.admin.getUserById(application.user_id);
+        return { ...application, name: person?.name || "Client", username: person?.username || "", phone: person?.phone || "", email: auth?.user?.email || "" };
+      }));
+      return { applications: users };
+    }
+    if (method === "POST") {
+      const target = String(body.userId || "");
+      if (!/^[0-9a-f-]{36}$/i.test(target)) throw new Error("Client invalide");
+      if (body.action === "accept") {
+        const { error } = await admin.rpc("accept_driver_application", { p_user_id: target, p_admin_id: uid });
+        if (error) throw new Error("Impossible d'accepter la candidature. Vérifiez que la migration et le profil chauffeur sont configurés.");
+        return { ok: true };
+      }
+      if (body.action === "reject") {
+        const { data, error } = await admin.from("driver_applications").update({ status: "rejected", reviewed_at: new Date().toISOString(), reviewed_by: uid }).eq("user_id", target).eq("status", "pending").select("user_id");
+        if (error || !data?.length) throw new Error("Candidature déjà traitée ou introuvable");
+        return { ok: true };
+      }
+      throw new Error("Action invalide");
+    }
+    throw new Error("Méthode non autorisée");
+  }
   if (p === "/api/users/me/mode") {
     if (method !== "POST") throw new Error("Méthode non autorisée");
     return switchAccountMode(admin, { uid, canDrive, mode: body.mode });
@@ -632,7 +668,9 @@ export async function handleVtc(input, context) {
         if (typeof body[k] === "string") payload[k] = body[k].slice(0, 100);
       required(await db.from("profiles").update(payload).eq("id", uid));
     }
-    const fresh = required(await db.from("profiles").select("*").eq("id", uid).single());
+    const fresh = method === "PATCH"
+      ? required(await db.from("profiles").select("*").eq("id", uid).single())
+      : profile;
     const mode = q.get("view") === "driver" && canDrive ? "driver" : "rider";
     const rating = await accountRating(admin, uid, mode);
     return { user: { ...profileShape(fresh, context.claims.email), rating, role, canDrive } };
@@ -649,7 +687,141 @@ export async function handleVtc(input, context) {
       loadPool: () => dispatchPool(admin),
       routeBetween,
     }).catch(() => null);
-    return { ...quote, favorite };
+    // Only an admin-designated priority driver, using the authenticated
+    // passenger estimate, may inspect the origin of each quoted price.
+    const priorityDriver = canDrive
+      ? required(await admin.from("drivers").select("is_priority").eq("user_id", uid).maybeSingle())
+      : null;
+    return { ...quote, favorite, showPriorityPriceSource: priorityDriver?.is_priority === true };
+  }
+  if (p === "/api/drivers/me/accepted-reservations" && method === "GET") {
+    if (!canDrive) throw new Error("Accès chauffeur requis");
+    const rows = required(await admin.from("rider_scheduled_requests")
+      .select("id,kind,transport_type,transport_number,scheduled_at,pickup_address,dropoff_address,payment_method,status,estimated_price,created_at")
+      .eq("favorite_driver_id",uid).in("status",["confirmed","modified_pending"])
+      .gte("scheduled_at",new Date().toISOString())
+      .order("scheduled_at",{ascending:true}).limit(100));
+    return { reservations: rows };
+  }
+  if (p === "/api/drivers/me/accepted-reservations/cancel" && method === "POST") {
+    if (!canDrive) throw new Error("Accès chauffeur requis");
+    const id = String(body.id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Réservation invalide");
+    // The driver withdraws: the reservation returns to pending so another driver can take it.
+    const released = required(await admin.from("rider_scheduled_requests").update({status:"pending",favorite_driver_id:null})
+      .eq("id",id).eq("favorite_driver_id",uid).in("status",["confirmed","modified_pending"]).select("id").maybeSingle());
+    if (!released) throw new Error("Cette réservation n’est plus annulable");
+    return { ok: true };
+  }
+  if (p === "/api/drivers/me/accepted-reservations/confirm-change" && method === "POST") {
+    if (!canDrive) throw new Error("Accès chauffeur requis");
+    const id = String(body.id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Réservation invalide");
+    const row = required(await admin.from("rider_scheduled_requests")
+      .update({status:"confirmed"}).eq("id",id).eq("favorite_driver_id",uid)
+      .eq("status","modified_pending").gt("scheduled_at",new Date().toISOString())
+      .select("id").maybeSingle());
+    if (!row) throw new Error("Cette modification n’est plus disponible");
+    return {ok:true};
+  }
+  if (p === "/api/drivers/me/advance-reservations/accept" && method === "POST") {
+    if (!canDrive) throw new Error("Accès chauffeur requis");
+    const id = String(body.id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Réservation invalide");
+    const driver = required(await admin.from("drivers").select("user_id,is_online,is_approved").eq("user_id",uid).single());
+    const { driverAccess } = await import("./driver-warnings.server");
+    if ((await driverAccess(admin, uid, driver)).suspended) throw new Error("DRIVER_SUSPENDED");
+    if (!driver.is_online) throw new Error("Passez en ligne pour accepter une réservation");
+    const updated = required(await admin.from("rider_scheduled_requests").update({status:"confirmed",favorite_driver_id:uid})
+      .eq("id",id).eq("kind","transport").eq("status","pending")
+      .gt("scheduled_at",new Date().toISOString()).select("id,scheduled_at,transport_type,transport_number").maybeSingle());
+    if (!updated) throw new Error("Cette réservation n’est plus disponible");
+    return {reservation:updated};
+  }
+  if (p === "/api/drivers/me/advance-reservations" && method === "GET") {
+    if (!canDrive) throw new Error("Accès chauffeur requis");
+    const rows = required(await admin.from("rider_scheduled_requests")
+      .select("id,kind,transport_type,transport_number,scheduled_at,pickup_address,dropoff_address,payment_method,status,estimated_price,created_at")
+      .eq("kind","transport").eq("status","pending").is("favorite_driver_id",null)
+      .gte("scheduled_at",new Date().toISOString())
+      .order("scheduled_at",{ascending:true}).limit(15));
+    return { reservations: rows };
+  }
+  if (p === "/api/riders/me/transport-board" && method === "GET") {
+    return discoverBoard(q.get("day") || parisDay());
+  }
+  if (p === "/api/riders/me/scheduled-requests") {
+    if (method === "GET") {
+      const rows = required(await db.from("rider_scheduled_requests").select("*")
+        .eq("rider_id", uid).order("created_at", { ascending: false }).limit(100));
+      return { requests: rows };
+    }
+    if (method === "POST") {
+      const kind = body.kind;
+      if (!["transport", "recurring"].includes(kind)) throw new Error("Type de réservation invalide");
+      const pickup = String(body.pickupAddress || "").trim().slice(0, 240);
+      const dropoff = String(body.dropoffAddress || "").trim().slice(0, 240);
+      if (pickup.length < 5 || dropoff.length < 5) throw new Error("Indiquez les deux adresses complètes");
+      const payload = { rider_id: uid, kind, pickup_address: pickup, dropoff_address: dropoff };
+      if (kind === "transport") {
+        const number = String(body.transportNumber || "").trim().toUpperCase();
+        const date = new Date(body.scheduledAt);
+        if (!["flight", "train"].includes(body.transportType) || !/^[A-Z0-9 -]{2,24}$/.test(number) ||
+          !Number.isFinite(date.getTime()) || date.getTime() < Date.now())
+          throw new Error("Numéro de vol/train ou date invalide");
+        Object.assign(payload, { transport_type: body.transportType, transport_number: number,
+          scheduled_at: date.toISOString(), payment_method: ["cash","card","wallet"].includes(body.paymentMethod) ? body.paymentMethod : null, estimated_price: body.estimatedPrice != null && body.estimatedPrice !== "" && Number.isFinite(Number(body.estimatedPrice)) && Number(body.estimatedPrice) >= 0 ? Number(body.estimatedPrice) : null, adjustment_consent: body.adjustmentConsent === true });
+      } else {
+        const day = Number(body.weekday);
+        const time = String(body.localTime || "");
+        if (!Number.isInteger(day) || day < 0 || day > 6 || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time))
+          throw new Error("Jour ou heure invalide");
+        // Do not preselect or prioritize a favorite: the rider chooses among driver proposals.
+        Object.assign(payload, { weekday: day, local_time: time, favorite_driver_id: null });
+      }
+      const row = required(await db.from("rider_scheduled_requests").insert(payload).select("*").single());
+      return { request: row };
+    }
+    if (method === "DELETE") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Identifiant invalide");
+      const canceled = required(await admin.from("rider_scheduled_requests").update({ status: "canceled" })
+        .eq("rider_id", uid).eq("id", id).in("status", ["pending", "confirmed", "modified_pending"]).select("id").maybeSingle());
+      if (!canceled) throw new Error("Cette réservation ne peut plus être annulée");
+      return { ok: true };
+    }
+    if (method === "PATCH") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Identifiant invalide");
+      const pickup = String(body.pickupAddress || "").trim().slice(0, 240);
+      const dropoff = String(body.dropoffAddress || "").trim().slice(0, 240);
+      if (pickup.length < 5 || dropoff.length < 5) throw new Error("Indiquez les deux adresses complètes");
+      const date = new Date(body.scheduledAt);
+      if (!Number.isFinite(date.getTime()) || date.getTime() <= Date.now()) throw new Error("Choisissez une date et une heure futures");
+      const existing = required(await admin.from("rider_scheduled_requests")
+        .select("favorite_driver_id,status").eq("id",id).eq("rider_id",uid)
+        .eq("kind","transport").in("status",["pending","confirmed","modified_pending"]).maybeSingle());
+      if (!existing) throw new Error("Cette réservation ne peut plus être modifiée");
+      const patch = {
+        pickup_address:pickup,dropoff_address:dropoff,scheduled_at:date.toISOString(),
+        payment_method:["cash","card","wallet"].includes(body.paymentMethod) ? body.paymentMethod : null,
+        status:existing.favorite_driver_id ? "modified_pending" : "pending"
+      };
+      if (body.estimatedPrice !== null && body.estimatedPrice !== undefined && body.estimatedPrice !== "" &&
+          Number.isFinite(Number(body.estimatedPrice)) && Number(body.estimatedPrice) >= 0) {
+        patch.estimated_price = Number(body.estimatedPrice);
+      }
+      const row = required(await admin.from("rider_scheduled_requests").update(patch)
+        .eq("rider_id",uid).eq("id",id).eq("kind","transport")
+        .eq("status",existing.status).select("*").maybeSingle());
+      if (!row) throw new Error("Cette réservation a été modifiée entre-temps");
+      return {request:row};
+    }
+    throw new Error("Méthode non autorisée");
+  }
+  if (p === "/api/riders/me/favorite/location" && method === "GET") {
+    const { favoriteLiveLocation } = await import("./private-clients.server");
+    return favoriteLiveLocation(admin, uid);
   }
   if (p === "/api/riders/me/favorite") {
     const pc = await import("./private-clients.server");
@@ -676,6 +848,19 @@ export async function handleVtc(input, context) {
   if (p === "/api/drivers/me/private-clients" && method === "GET") {
     const { privateClients } = await import("./private-clients.server");
     return privateClients(admin, uid);
+  }
+  const privateClientAction = p.match(/^\/api\/drivers\/me\/private-clients\/([0-9a-f-]{36})$/i);
+  if (privateClientAction) {
+    if (!canDrive) throw new Error("Accès chauffeur requis");
+    const riderId = privateClientAction[1];
+    const { removePrivateClient, privateClients } = await import("./private-clients.server");
+    if (method === "DELETE") return removePrivateClient(admin, uid, riderId);
+    if (method === "POST") {
+      const links = await privateClients(admin, uid);
+      if (!links.clients.some((client) => client.id === riderId)) throw new Error("Client privé introuvable");
+      return setUserBlock(admin, uid, riderId, body.blocked === true);
+    }
+    throw new Error("Méthode non autorisée");
   }
   if (p === "/api/drivers/me/private-clients/qr" && method === "POST") {
     const { createInvitation } = await import("./private-clients.server");
@@ -848,11 +1033,12 @@ export async function handleVtc(input, context) {
     }
     const driverRow = required(await db.from("drivers").select("*").eq("user_id", uid).single());
     const { getDriverDecisions } = await import("./driver-warnings.server");
-    const { countActiveWarnings, shouldSuspendDriver } = await import("./driver-warnings");
+    const { countActiveWarnings } = await import("./driver-warnings");
     const decisions = await getDriverDecisions(admin, uid);
     const driver = driverShape(driverRow);
     driver.activeWarningsCount = countActiveWarnings(decisions);
-    driver.isReportSuspended = !driver.isApproved && shouldSuspendDriver(decisions);
+    const { driverAccess } = await import("./driver-warnings.server");
+    driver.isReportSuspended = (await driverAccess(admin, uid, driverRow, decisions)).suspended;
     return { driver };
   }
   if (p === "/api/drivers/me/classes" && method === "PATCH") {
@@ -869,6 +1055,51 @@ export async function handleVtc(input, context) {
     );
     return { driver: driverShape(required(await db.from("drivers").select("*").eq("user_id", uid).single())) };
   }
+  if (p === "/api/notifications/live-activity-token") {
+    if (!canDrive) throw new Error("Accès refusé");
+    if (!["POST", "DELETE"].includes(method)) throw new Error("Méthode non autorisée");
+    const token = validLiveActivityToken(body.token);
+    const deviceId = validLiveActivityDeviceId(body.deviceId);
+    if (!token || !deviceId) throw new Error("Jeton Live Activity invalide");
+
+    if (method === "DELETE") {
+      // End only this account's activities on this phone, then forget its start token.
+      await endDeviceLiveActivities(admin, uid, deviceId).catch((error) => {
+        console.error("Fermeture Live Activity à la déconnexion", error?.message || error);
+      });
+      required(await admin.from("live_activity_start_tokens").delete()
+        .eq("token", token).eq("user_id", uid).eq("device_id", deviceId));
+      return { ok: true };
+    }
+
+    const previous = required(await admin.from("live_activity_start_tokens")
+      .select("user_id").eq("device_id", deviceId).maybeSingle());
+    if (previous?.user_id && previous.user_id !== uid) {
+      // A new account on the same phone must never inherit the former account's bubbles.
+      await endDeviceLiveActivities(admin, previous.user_id, deviceId).catch((error) => {
+        console.error("Fermeture Live Activity au changement de compte", error?.message || error);
+      });
+    }
+    // A rotated push-to-start token replaces the former token of this physical device.
+    required(await admin.from("live_activity_start_tokens").delete()
+      .eq("device_id", deviceId).neq("token", token));
+    required(await admin.from("live_activity_start_tokens").upsert(
+      { token, user_id: uid, device_id: deviceId, updated_at: new Date().toISOString() },
+      { onConflict: "token" },
+    ));
+    return { ok: true };
+  }
+
+  if (p === "/api/notifications/live-activity-update-token") {
+    if (!canDrive || method !== "POST") throw new Error("Accès refusé");
+    const rideId = validLiveActivityReference(body.rideId);
+    const activityId = validLiveActivityReference(body.activityId);
+    const token = validLiveActivityToken(body.token);
+    const deviceId = validLiveActivityDeviceId(body.deviceId);
+    if (!rideId || !activityId || !token || !deviceId) throw new Error("Jeton de fermeture invalide");
+    return registerLiveActivityUpdateToken(admin, { userId: uid, deviceId, rideId, activityId, token });
+  }
+
   if (p === "/api/drivers/me/push-token" || p === "/api/notifications/push-token") {
     if (!canDrive && role !== "admin") throw new Error("Accès refusé");
     if (!["POST", "DELETE"].includes(method)) throw new Error("Méthode non autorisée");
@@ -949,6 +1180,8 @@ export async function handleVtc(input, context) {
     if (body.online) {
       if (await hasPassengerRide(admin, uid)) throw new Error("Vous avez une course passager en cours");
       if (!d.is_approved) {
+        const { driverAccess } = await import("./driver-warnings.server");
+        if ((await driverAccess(admin, uid, d)).suspended) throw new Error("DRIVER_SUSPENDED");
         if ((await reportedRideCount(admin, uid)) >= 3)
           throw new Error(
             "Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.",
@@ -969,7 +1202,7 @@ export async function handleVtc(input, context) {
       online: body.online,
       patch: {
         is_online: body.online,
-        location: body.online ? body.location : null,
+        location: body.online ? { ...body.location, observedAt: new Date().toISOString() } : null,
         updated_at: new Date().toISOString(),
       },
     });
@@ -982,6 +1215,25 @@ export async function handleVtc(input, context) {
     const driver = required(await db.from("drivers").select("is_online").eq("user_id", uid).single());
     const ongoing = required(await db.from("rides").select("id").eq("driver_id", uid).in("status", active));
     if (!driver.is_online && !ongoing.length) return { ok: true, ignored: true };
+    // Track observed approach segments only while this driver is assigned.
+    if (ongoing.length) {
+      const { data: trip } = await admin.from("rides").select("id,fare")
+        .eq("driver_id", uid).eq("status", "accepted").eq("is_test", false).limit(1).maybeSingle();
+      if (trip?.fare) {
+        const previous = trip.fare.approachTracking;
+        const now = Date.now();
+        const seconds = previous ? (now - previous.at) / 1000 : 0;
+        const segment = previous && validLocation(previous)
+          ? haversineDistance(previous.lat, previous.lng, body.lat, body.lng) * 1000 : 0;
+        const plausible = seconds > 0 && seconds <= 120 && segment <= seconds * 45;
+        const meters = (previous?.meters || 0) + (plausible && segment >= 15 ? Math.floor(segment) : 0);
+        const { error } = await admin.from("rides").update({
+          fare: { ...trip.fare, approachTracking: { lat: body.lat, lng: body.lng, at: now, meters } },
+        }).eq("id", trip.id).eq("driver_id", uid).eq("status", "accepted")
+          .eq("fare", JSON.stringify(trip.fare));
+        if (error) console.error("Échec du suivi de l’approche", error.message);
+      }
+    }
     await recordOnlineTime(admin, uid);
     required(
       await db
@@ -991,6 +1243,7 @@ export async function handleVtc(input, context) {
             lat: body.lat,
             lng: body.lng,
             heading: Number.isFinite(body.heading) ? ((body.heading % 360) + 360) % 360 : null,
+            observedAt: new Date().toISOString(),
           },
           updated_at: new Date().toISOString(),
         })
@@ -1018,9 +1271,18 @@ export async function handleVtc(input, context) {
         .order("created_at", { ascending: false })
         .limit(100),
     );
+    const rideIds = [...new Set(tx.map(t => t.ride_id).filter(Boolean))];
+    const relatedRides = rideIds.length
+      ? required(await db.from("rides").select("id, fare, completed_at, created_at").in("id", rideIds))
+      : [];
+    const ridesById = new Map(relatedRides.map(r => [r.id, r]));
     return {
       wallet: { balance: Number(profile.balance), currency: "EUR" },
       transactions: tx.map((t) => ({
+        ride: ridesById.get(t.ride_id) ? {
+          total: Number(ridesById.get(t.ride_id).fare?.total),
+          date: ridesById.get(t.ride_id).completed_at || ridesById.get(t.ride_id).created_at,
+        } : null,
         ...t,
         _id: t.id,
         amount: Number(t.amount),
@@ -1041,7 +1303,7 @@ export async function handleVtc(input, context) {
     const fare = quote.estimates[b.vehicleType];
     if (!fare) throw new Error("Tarif indisponible pour cette gamme, réessayez");
     if (quote.route.distanceMeters < 100) throw new Error("Le trajet doit faire au moins 100 m");
-    return { fare, route: quote.route };
+    return { fare: { ...fare, pickupWaitingEnabled: true }, route: quote.route };
   };
   // "Book my favorite driver": the server picks the driver and his class; the ride is first offered to him alone.
   const resolveFavorite = async () => {
@@ -1107,22 +1369,46 @@ export async function handleVtc(input, context) {
   if (p === "/api/rides" && method === "POST") {
     await preparePassengerBooking(admin, uid, canDrive);
     const paymentMethod = paymentMethodOf(body.paymentMethod);
-    if (paymentMethod === "card") throw new Error("Le paiement par carte se fait depuis l’écran de paiement sécurisé");
     const favorite = body.favorite === true ? await resolveFavorite() : null;
     const vehicleType = favorite ? favorite.vehicleType : body.vehicleType;
     const { fare, route } = await quoteRide({ ...body, vehicleType });
-    const payProblem = bookingPaymentProblem(paymentMethod, profile.balance, fare.total);
-    if (payProblem) throw new Error(payProblem);
-    const ride = await createRide({
-      vehicleType,
-      pickup: body.pickup,
-      dropoff: body.dropoff,
-      route,
-      fare,
-      payment: { method: paymentMethod },
-      favoriteDriverId: favorite?.driverId || null,
-    });
-    return { ride };
+    let paymentMeta = { method: paymentMethod };
+    let holdIntentId = null;
+    if (paymentMethod === "card") {
+      const cards = required(await admin.from("rider_payment_methods")
+        .select("id, stripe_payment_method_id, brand, last4").eq("user_id", uid)
+        .order("is_default", { ascending: false }).order("created_at", { ascending: false }).limit(1));
+      const card = cards[0];
+      if (!card) throw new Error("Veuillez d'abord enregistrer une carte bancaire dans votre portefeuille.");
+      const { holdRideFare } = await import("./vtc-card-hold.server.js");
+      const hold = await holdRideFare(admin, {
+        userId: uid, rideId: crypto.randomUUID(), fareEuros: fare.total,
+        paymentMethodId: card.stripe_payment_method_id,
+      });
+      if (hold.status !== "requires_capture") throw new Error("La banque demande une validation supplémentaire de la carte.");
+      holdIntentId = hold.intentId;
+      paymentMeta = { method: "card", intent_id: hold.intentId, status: "hold", brand: card.brand, last4: card.last4 };
+    } else {
+      const problem = bookingPaymentProblem(paymentMethod, profile.balance, fare.total);
+      if (problem) throw new Error(problem);
+    }
+    try {
+      const ride = await createRide({
+        vehicleType, pickup: body.pickup, dropoff: body.dropoff, route, fare,
+        payment: paymentMeta, favoriteDriverId: favorite?.driverId || null,
+      });
+      return { ride };
+    } catch (error) {
+      if (holdIntentId) {
+        try {
+          const { cancelRideHold } = await import("./vtc-card-hold.server.js");
+          await cancelRideHold(admin, { paymentIntentId: holdIntentId });
+        } catch (releaseError) {
+          console.error("Échec de libération de l'empreinte après erreur de réservation", releaseError);
+        }
+      }
+      throw error;
+    }
   }
   if (p === "/api/rides/active") {
     const list = required(
@@ -1142,6 +1428,9 @@ export async function handleVtc(input, context) {
   }
   if (p === "/api/drivers/offers") {
     if (!canDrive) throw new Error("Accès refusé");
+    const { driverAccess } = await import("./driver-warnings.server");
+    const accessDriver = required(await admin.from("drivers").select("is_approved").eq("user_id", uid).single());
+    if ((await driverAccess(admin, uid, accessDriver)).suspended) return { offer: null };
     if (await hasPassengerRide(admin, uid)) return { offer: null };
     const pool = await dispatchPool(admin);
     let me = pool.find((d) => d.user_id === uid);
@@ -1178,8 +1467,7 @@ export async function handleVtc(input, context) {
       me = me || test.driver;
     }
     if (!r) return { offer: null };
-    const offerFare =
-      !r.is_test && (await hasPaidDriverGold(admin, uid).catch(() => false)) ? waiveGoldCommission(r.fare) : r.fare;
+    const offerFare = await fareForDriver(admin, r, uid);
     const approachKm = distanceToPickupKm(r, me),
       approachMeters = Number.isFinite(approachKm) ? Math.round(approachKm * 1350) : null;
     let profit = null;
@@ -1212,6 +1500,7 @@ export async function handleVtc(input, context) {
         routeGeometry: r.route?.geometry || null,
         surgeMultiplier: r.fare.surgeMultiplier,
         expiresInSeconds: Math.max(0, Math.ceil((new Date(r.offer_expires_at) - Date.now()) / 1000)),
+        expiresAt: r.offer_expires_at,
         ownClass: driverClass(me),
         lowerClass: isLowerClassRide(me, r.vehicle_type),
         distanceToPickupMeters: approachMeters ?? 0,
@@ -1271,6 +1560,8 @@ export async function handleVtc(input, context) {
       if (r.status === "searching" && (r.messages || []).length)
         await closeRideChat(admin, id, { allowSearching: true });
       const approval = required(await admin.from("drivers").select("is_approved").eq("user_id", uid).single());
+      const { driverAccess } = await import("./driver-warnings.server");
+      if ((await driverAccess(admin, uid, approval)).suspended) throw new Error("DRIVER_SUSPENDED");
       if (!approval.is_approved && (await reportedRideCount(admin, uid)) >= 3)
         throw new Error(
           "Votre activité chauffeur est suspendue à cause de plusieurs signalements. Contactez l’assistance.",
@@ -1294,7 +1585,7 @@ export async function handleVtc(input, context) {
           r.dispatch_phase === "private" && !r.route?.goldReturn ? await withDriverGold(admin, candidate) : candidate;
         if (!canSeeOffer(r, me, Date.now(), pool)) throw new Error("Cette demande n’est plus disponible");
       }
-      const fare = !r.is_test && (await hasPaidDriverGold(admin, uid)) ? waiveGoldCommission(r.fare) : r.fare;
+      const fare = await fareForDriver(admin, r, uid);
       const claim = admin
         .from("rides")
         .update({
@@ -1311,15 +1602,23 @@ export async function handleVtc(input, context) {
         .eq("offer_expires_at", r.offer_expires_at)
         .gt("offer_expires_at", new Date().toISOString());
       // En phase nearest, le plus proche peut accepter tout de suite ;
-      // les autres peuvent accepter si le délai de priorité de 4 s est écoulé
+      // les autres attendent le passage à la phase broadcast.
 
       const claimed = required(await claim.select("*"))[0];
       if (!claimed) throw new Error("Course déjà acceptée");
+      // One acceptance closes every Dynamic Island bubble for this offer.
+      await endRideOfferLiveActivities(admin, id).catch((error) => {
+        console.error("Fermeture Live Activity après acceptation", error?.message || error);
+      });
       return { ride: await serialize(admin, claimed, uid) };
     }
     if (action === "decline") {
       if (!canDrive) throw new Error("Accès refusé");
       required(await admin.rpc("decline_ride_offer", { _ride: id, _driver: uid }));
+      // A refusal closes only the declining driver's bubble.
+      await endRideOfferLiveActivities(admin, id, uid).catch((error) => {
+        console.error("Fermeture Live Activity après refus", error?.message || error);
+      });
       return { ok: true };
     }
     if (!participant && role !== "admin") throw new Error("Course inaccessible");
@@ -1387,8 +1686,13 @@ export async function handleVtc(input, context) {
     if (action === "arrive" || action === "start" || action === "complete") {
       const previous = { arrive: "accepted", start: "arrived", complete: "in_progress" }[action];
       if (r.driver_id !== uid || r.status !== previous) throw new Error("Action non autorisée");
+      let arrivalFare = r.fare;
       if (action === "arrive" || (action === "start" && !r.is_test)) {
-        const loc = required(await admin.from("drivers").select("location").eq("user_id", uid).single()).location;
+        const driver = required(await admin.from("drivers").select("location,vehicle_class").eq("user_id", uid).single());
+        const loc = driver.location;
+        if (action === "arrive" && !r.is_test && r.fare?.pickupWaitingEnabled && !r.payment?.intent_id) {
+          arrivalFare = { ...r.fare, pickupWaitingRate: waitingRate(r.vehicle_type, driver.vehicle_class) };
+        }
         const zone =
           action === "arrive"
             ? pickupZoneProblem(loc, r.pickup, ARRIVAL_ZONE_METERS)
@@ -1405,22 +1709,36 @@ export async function handleVtc(input, context) {
             .eq("status", "in_progress"),
         );
       } else if (action === "complete") {
-        const since = new Date(r.accepted_at || r.arrived_at || r.created_at).getTime();
+        const since = new Date(r.fare?.acceptedAt || r.accepted_at || r.arrived_at || r.created_at).getTime();
         const activitySeconds = Math.max(0, (Date.now() - since) / 1000);
-        const fare = settleDriverEarnings(r.fare, r.route.distanceMeters, activitySeconds);
+        const fare = { ...settleDriverEarnings(r.fare, r.route.distanceMeters, activitySeconds), completedAt: new Date().toISOString() };
         required(await admin.from("rides").update({ fare }).eq("id", id).eq("status", "in_progress"));
         required(await admin.rpc("settle_ride", { _id: id, _actor: uid }));
-      } else
-        required(
-          await admin
-            .from("rides")
-            .update({
-              status: action === "arrive" ? "arrived" : "in_progress",
-              ...(action === "arrive" ? { arrived_at: new Date().toISOString() } : {}),
-            })
-            .eq("id", id)
-            .eq("status", previous),
-        );
+      } else {
+        const now = new Date().toISOString();
+        const patch = action === "arrive"
+          ? { status: "arrived", arrived_at: now, fare: arrivalFare }
+          : { status: "in_progress", fare: {
+              ...addPickupWaiting(r.fare, r.arrived_at, now),
+              startedAt: now,
+              acceptedAt: r.accepted_at,
+            } };
+        required(await admin.from("rides").update(patch)
+          .eq("id", id).eq("driver_id", uid).eq("status", previous));
+      }
+    } else if (action === "cancel_no_show") {
+      if (r.driver_id !== uid) throw new Error("Accès refusé");
+      const result = await admin.rpc("cancel_ride_no_show", { _ride: id, _driver: uid });
+      if (result.error?.code === "PGRST202") throw new Error("La compensation pour absence n’est pas encore activée.");
+      required(result);
+      if (r.payment?.intent_id) {
+        try {
+          const { cancelRideHold } = await import("./vtc-card-hold.server.js");
+          await cancelRideHold(admin, { paymentIntentId: r.payment.intent_id });
+        } catch (error) {
+          console.error("Impossible de libérer l’empreinte après absence du passager", error);
+        }
+      }
     } else if (action === "cancel") {
       if (!participant || !["searching", "accepted", "arrived"].includes(r.status))
         throw new Error("Annulation impossible");
@@ -1437,7 +1755,7 @@ export async function handleVtc(input, context) {
               offer_expires_at: null,
               dispatch_phase: null,
               accepted_at: null,
-              fare: restoreGoldCommission(r.fare),
+              fare: restoreGoldCommission({ ...r.fare, approachTracking: null }),
               declined: [...r.declined, uid],
             })
             .eq("id", id)
@@ -1456,6 +1774,19 @@ export async function handleVtc(input, context) {
           : null;
         const progress = evaluateDriverProgress(r, driverLoc);
 
+        if (!r.is_test && !r.payment?.intent_id && paymentMethodOf(r.payment?.method) !== "cash" &&
+          r.driver_id && r.fare?.total >= 14.55 && r.fare?.approachTracking?.meters > 10000) {
+          const result = await admin.rpc("cancel_ride_long_approach", { _ride: id, _rider: uid });
+          if (result.error?.code === "PGRST202") throw new Error("Le barème d’annulation longue approche n’est pas encore activé.");
+          required(result);
+          await closeRideChat(admin, id, { allowSearching: true });
+          return { ride: await serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid) };
+        }
+
+        const cancelled = required(await admin.from("rides").update(patch)
+          .eq("id", id).eq("status", r.status).select("id").maybeSingle());
+        if (!cancelled) throw new Error("La course a déjà changé de statut.");
+
         // Frais d'annulation de 3 € uniquement si le chauffeur est arrivé ET n'est pas en faute
         if (
           r.status === "arrived" &&
@@ -1468,9 +1799,20 @@ export async function handleVtc(input, context) {
             required(
               await admin.rpc("wallet_entry", { _user: r.driver_id, _amount: 2.76, _type: "ride_earning", _ride: id }),
             );
-          patch.fare = { ...r.fare, cancellationFee: 3 };
+          required(await admin.from("rides").update({ fare: { ...r.fare, cancellationFee: 3 } })
+            .eq("id", id).eq("status", "cancelled"));
         }
-        required(await admin.from("rides").update(patch).eq("id", id).eq("status", r.status));
+        if (r.payment?.method === "card" && r.payment?.intent_id) {
+          try {
+            const { cancelRideHold } = await import("./vtc-card-hold.server.js");
+            await cancelRideHold(admin, { paymentIntentId: r.payment.intent_id });
+            required(await admin.from("rides").update({
+              payment: { ...r.payment, status: "canceled" },
+            }).eq("id", id).eq("status", "cancelled"));
+          } catch (error) {
+            console.error("Impossible de libérer l'empreinte Stripe après annulation", error);
+          }
+        }
       }
     } else if (action === "block" || action === "unblock") {
       if (!participant || !r.driver_id) throw new Error("Accès refusé");
@@ -1521,7 +1863,13 @@ export async function handleVtc(input, context) {
           .eq("id", id),
       );
     } else throw new Error("Action inconnue");
-    if (action === "cancel") await closeRideChat(admin, id, { allowSearching: true });
+    if (action === "cancel" || action === "cancel_no_show") await closeRideChat(admin, id, { allowSearching: true });
+    // A rider cancelling during search closes every driver's offer bubble right away.
+    if (action === "cancel" && r.status === "searching" && r.driver_id !== uid) {
+      await endRideOfferLiveActivities(admin, id).catch((error) => {
+        console.error("Fermeture Live Activity après annulation", error?.message || error);
+      });
+    }
     return { ride: await serialize(admin, required(await admin.from("rides").select("*").eq("id", id).single()), uid) };
   }
   if (p === "/api/admin/test-ride" && method === "POST") {
@@ -1578,37 +1926,35 @@ export async function handleVtc(input, context) {
     await pushRideOffer(admin, testRide, [d.user_id]);
     return { ok: true, rideId: r.id, expiresInSeconds: TEST_OFFER_SECONDS, driverOnline: Boolean(d.is_online) };
   }
+  if (p === "/api/admin/address-search-provider") {
+    if (method === "GET") {
+      const row = required(await admin.from("pricing_rules").select("rule").eq("vehicle_type", "address_search_provider").maybeSingle());
+      return { provider: row?.rule?.provider || "auto" };
+    }
+    if (method === "PUT") {
+      const provider = String(body.provider || "");
+      if (!["auto", "osm", "google"].includes(provider)) throw new Error("Fournisseur d'adresses invalide");
+      required(await admin.from("pricing_rules").upsert({
+        vehicle_type: "address_search_provider", is_active: false,
+        rule: { provider, updatedAt: new Date().toISOString() },
+      }, { onConflict: "vehicle_type" }));
+      return { ok: true, provider };
+    }
+    throw new Error("Méthode non autorisée");
+  }
   if (p === "/api/admin/pricing") {
     if (method === "PUT") {
-      // Configuration spéciale pour la réduction Uber
-      if (body.vehicleType === "uber_discount") {
-        const enabled = Boolean(body.enabled);
-        const rate = Number.isFinite(Number(body.rate)) ? Number(body.rate) : 0.2;
-        required(
-          await admin
-            .from("pricing_rules")
-            .upsert({ vehicle_type: "uber_discount", rule: { enabled, rate } }, { onConflict: "vehicle_type" }),
-        );
-        return { rule: { vehicleType: "uber_discount", enabled, rate } };
-      }
-
-      if (
-        !DEFAULT_PRICING[body.vehicleType] ||
-        Object.values(DEFAULT_PRICING[body.vehicleType]).some(
-          (_, i) => !Number.isFinite(body[Object.keys(DEFAULT_PRICING[body.vehicleType])[i]]),
-        )
-      )
-        throw new Error("Tarif invalide");
-      required(await admin.from("pricing_rules").upsert({ vehicle_type: body.vehicleType, rule: body }));
-      return { rule: body };
+      const type = body.vehicleType;
+      if (!Object.hasOwn(DEFAULT_PRICING, type) || body.tariffVersion !== TARIFF_VERSION) throw new Error("Barème invalide : rechargez la page de tarification.");
+      const problem = tariffRuleProblem(body);
+      if (problem) throw new Error(problem);
+      const rule = { ...DEFAULT_PRICING[type], ...Object.fromEntries(TARIFF_FIELDS.map(key => [key, body[key]])), tariffVersion: TARIFF_VERSION };
+      required(await admin.from("pricing_rules").upsert({ vehicle_type: type, rule }, { onConflict: "vehicle_type" }));
+      return { rule: { ...rule, vehicleType: type } };
     }
-    return {
-      rules: required(await admin.from("pricing_rules").select("*")).map((r) => ({
-        ...r.rule,
-        vehicleType: r.vehicle_type,
-        city: r.city,
-      })),
-    };
+    if (method !== "GET") throw new Error("Méthode non autorisée");
+    const rows = required(await admin.from("pricing_rules").select("vehicle_type,rule").in("vehicle_type", Object.keys(DEFAULT_PRICING)));
+    return { mode: "tariff", tariffVersion: TARIFF_VERSION, rules: Object.entries(pricingRules(rows)).map(([vehicleType, rule]) => ({ ...rule, vehicleType })) };
   }
 
   if (p === "/api/admin/drivers/documents") {
@@ -1686,6 +2032,11 @@ export async function handleVtc(input, context) {
                 ...(body.isApproved ? {} : { is_online: false }),
               };
       required(await admin.from("drivers").update(patch).eq("id", body.driverId));
+      if ("isApproved" in body && !("isPriority" in body) && !("vehicleClass" in body)) {
+        const target = required(await admin.from("drivers").select("user_id").eq("id", body.driverId).single());
+        const { recordDriverAccess } = await import("./driver-warnings.server");
+        await recordDriverAccess(admin, target.user_id, body.isApproved !== true);
+      }
       return { ok: true };
     }
     let query = admin.from("drivers").select("*");
@@ -1896,16 +2247,18 @@ async function assignOffer(db, r, pool) {
   if (r.status !== "searching") return r;
   if (r.is_test) {
     if (r.offer_expires_at && new Date(r.offer_expires_at).getTime() > Date.now()) return r;
-    return (
-      required(
-        await db
-          .from("rides")
-          .update({ status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null })
-          .eq("id", r.id)
-          .eq("status", "searching")
-          .select("*"),
-      )[0] || r
-    );
+    const closed = required(
+      await db
+        .from("rides")
+        .update({ status: "no_drivers", dispatch_phase: null, offer_driver_id: null, offer_expires_at: null })
+        .eq("id", r.id)
+        .eq("status", "searching")
+        .select("*"),
+    )[0];
+    if (closed) await endRideOfferLiveActivities(db, r.id).catch((error) => {
+      console.error("Fermeture Live Activity à l’expiration", error?.message || error);
+    });
+    return closed || r;
   }
   let drivers = pool || (await dispatchPool(db));
   const blockResult = await db.from("user_blocks").select("blocker_id,blocked_id")
@@ -1944,9 +2297,16 @@ async function assignOffer(db, r, pool) {
 
 // Visiteurs non connectés (page d'accueil) : uniquement la recherche d'adresse et l'estimation.
 export async function publicVtc(input) {
+  if (input?.path === "/api/public/app-version") {
+    return { buildId: typeof __STRASDRIVE_BUILD_ID__ === "string" ? __STRASDRIVE_BUILD_ID__ : null };
+  }
   const path = String(input?.path || "");
   const url = new URL(path, "http://app");
-  if (url.pathname === "/api/geo/search") return geoSearch(url.searchParams);
+  if (url.pathname === "/api/geo/search") {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const setting = required(await supabaseAdmin.from("pricing_rules").select("rule").eq("vehicle_type", "address_search_provider").maybeSingle());
+    return geoSearch(url.searchParams, fetch, setting?.rule?.provider || "auto");
+  }
   if (url.pathname === "/api/rides/estimate") {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     return estimates(supabaseAdmin, input.body?.pickup, input.body?.dropoff);

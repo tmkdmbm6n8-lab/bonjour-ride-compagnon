@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/bits';
 
-// This component is intentionally not mounted until the server contract is available.
-export default function FavoriteDriverCard({ driver, onRemove }) {
+export default function FavoriteDriverCard({ driver, onRemove, children }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -32,6 +31,7 @@ export default function FavoriteDriverCard({ driver, onRemove }) {
     </div>
     {vehicle && <p className="small mt-4">Véhicule : {vehicle}</p>}
     {count !== null && <p className="small muted mt-2">{count} course{count === 1 ? '' : 's'} ensemble</p>}
+    {children}
     {error && <p role="alert" className="small mt-3">{error}</p>}
     {confirming ? <div className="mt-4"><p className="small">Retirer ce chauffeur de vos favoris ? Il en sera informé.</p><div className="flex gap-2 mt-2"><button type="button" className="btn btn-secondary" onClick={() => setConfirming(false)} disabled={busy}>Annuler</button><button type="button" className="btn btn-primary" onClick={remove} disabled={busy}>{busy ? 'Suppression…' : 'Confirmer'}</button></div></div> : <button type="button" className="btn btn-secondary mt-4" onClick={() => setConfirming(true)}>Retirer des favoris</button>}
   </section>;

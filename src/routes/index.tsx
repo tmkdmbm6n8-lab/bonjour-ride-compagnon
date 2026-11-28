@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useSession } from "@/lib/archive-auth";
 import Link from "@/lib/archive-navigation";
@@ -46,8 +46,8 @@ const DEMO_RIDE: RideSummary = {
 const FEATURES = [
   {
     icon: Wallet,
-    title: "Les chauffeurs conservent 95 %",
-    text: "StrasDrive prélève une commission fixe de 5 %. Le chauffeur conserve 95 % du prix de la course.",
+    title: "Les chauffeurs conservent 85 %",
+    text: "StrasDrive prélève 15 % de commission pour les courses ordinaires, et 0 % lorsque le chauffeur abonné Gold payant transporte son propre client privé.",
   },
   {
     icon: Zap,
@@ -101,14 +101,99 @@ const STEPS = [
   },
 ];
 
+function StartupLogo({ ready, onDone }: { ready: boolean; onDone: () => void }) {
+  const uid = useId().replace(/:/g, "");
+  const road = useRef<SVGPathElement>(null);
+  const arrow = useRef<SVGGElement>(null);
+  const progress = useRef(0);
+  const done = useRef(onDone);
+  done.current = onDone;
+  useEffect(() => {
+    const path = road.current;
+    const marker = arrow.current;
+    if (!path || !marker) return;
+    const length = path.getTotalLength();
+    const start = Math.max(0, length - 5.2);
+    const initial = progress.current;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let frame = 0;
+    let began: number | undefined;
+    const tick = (now: number) => {
+      began ??= now;
+      const elapsed = now - began;
+      const value = ready
+        ? initial + (1 - initial) * Math.min(1, elapsed / (initial === 0 && !reduced ? 900 : 160))
+        : Math.min(0.92, initial + (0.92 - initial) * (1 - Math.exp(-elapsed / 900)));
+      progress.current = reduced ? (ready ? 1 : 0) : value;
+      const at = start * (1 - progress.current);
+      const point = path.getPointAtLength(at);
+      const ahead = path.getPointAtLength(Math.max(0, at - 0.15));
+      const behind = path.getPointAtLength(Math.min(length, at + 0.15));
+      const angle = Math.atan2(ahead.y - behind.y, ahead.x - behind.x) * 180 / Math.PI + 90;
+      marker.setAttribute("transform", `translate(${point.x} ${point.y}) rotate(${angle})`);
+      if (ready && progress.current >= 1) { done.current(); return; }
+      if (!reduced) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [ready]);
+  return (
+    <div className="native-startup-logo" role="status" aria-label="Ouverture de StrasDrive">
+      <svg width="128" height="128" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id={uid+"road"} x1="14" y1="8" x2="34" y2="40" gradientUnits="userSpaceOnUse"><stop stopColor="#FAFAF9"/><stop offset="1" stopColor="#E7E5E4"/></linearGradient>
+          <linearGradient id={uid+"arrow"} x1="0" y1="-3.5" x2="0" y2="3" gradientUnits="userSpaceOnUse"><stop stopColor="#EAB308"/><stop offset="1" stopColor="#A16207"/></linearGradient>
+          <radialGradient id={uid+"glow"}><stop stopColor="#EAB308" stopOpacity=".35"/><stop offset="1" stopColor="#EAB308" stopOpacity="0"/></radialGradient>
+        </defs>
+        <path ref={road} d="M29.2 15A6 6 0 1 0 24 24A6 6 0 1 1 18.8 33" stroke={`url(#${uid}road)`} strokeWidth="8" strokeLinecap="round"/>
+        <path d="M29.2 15A6 6 0 1 0 24 24A6 6 0 0 1 25.55 35.8" stroke="#44403C" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2.2 2.4"/>
+        <g ref={arrow} transform="translate(22.96 35.91) rotate(100)">
+          <circle r="6" fill={`url(#${uid}glow)`}/>
+          <path d="M0 -3.5L2.9 3L0 1.5L-2.9 3Z" fill={`url(#${uid}arrow)`} stroke="#0C0A09" strokeWidth=".7" strokeLinejoin="round"/>
+          <path d="M0 -2.3L1.2 .6L0 .1Z" fill="#FEF9C3" fillOpacity=".55"/>
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 function LandingPage() {
   const { data: session, status } = useSession() as { data: { user?: { role?: string } } | null; status: string };
   const [nativeApp, setNativeApp] = useState<boolean | null>(null);
+  const [startupDone, setStartupDone] = useState(false);
   useEffect(() => {
     setNativeApp(Capacitor.isNativePlatform());
   }, []);
+
+  // In the app, keep the animated logo on screen until the session is known
+  // and the arrow has finished its run, then go straight to the right space.
+  const animating = nativeApp === null || (nativeApp && (status === "loading" || !startupDone));
+  const destination =
+    nativeApp && !animating && session?.user
+      ? session.user.role === "driver"
+        ? "/driver/dashboard"
+        : session.user.role === "admin"
+          ? "/admin/dashboard"
+          : "/dashboard"
+      : null;
+  const showLogo = animating || destination !== null;
+  return (
+    <div className={nativeApp === null ? "native-startup-unresolved" : undefined}>
+      {showLogo && (
+        <StartupLogo ready={nativeApp === true && status !== "loading"} onDone={() => setStartupDone(true)} />
+      )}
+      {destination && <Navigate to={destination} replace />}
+      {(nativeApp === null || (!animating && !destination)) && (
+        <LandingContent loadSummary={nativeApp === false || (nativeApp === true && !animating)} />
+      )}
+    </div>
+  );
+}
+
+function LandingContent({ loadSummary }: { loadSummary: boolean }) {
   const [ride, setRide] = useState<RideSummary>(DEMO_RIDE);
   useEffect(() => {
+    if (!loadSummary) return;
     let alive = true;
     getRandomRideSummary()
       .then((data) => {
@@ -118,29 +203,8 @@ function LandingPage() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [loadSummary]);
 
-  // Restore the verified session before showing the public landing page.
-  if (nativeApp === null || (nativeApp && status === "loading")) {
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        style={{ minHeight: "100dvh", display: "grid", placeItems: "center", background: "#0b0c10", color: "#f3f4f6" }}
-      >
-        Ouverture de StrasDrive…
-      </div>
-    );
-  }
-  if (nativeApp && session?.user) {
-    const destination =
-      session.user.role === "driver"
-        ? "/driver/dashboard"
-        : session.user.role === "admin"
-          ? "/admin/dashboard"
-          : "/dashboard";
-    return <Navigate to={destination} replace />;
-  }
   return (
     <div className="landing-page brand-theme">
       <SiteHeader />
@@ -170,7 +234,7 @@ function LandingPage() {
             <div className="flex items-center gap-4">
               <span className="avatar avatar-lg" style={{ background: "var(--ink-950)" }}>
                 {ride.driverAvatar ? (
-                  <img src={ride.driverAvatar} alt={ride.driverName} />
+                  <img src={ride.driverAvatar} alt={ride.driverName} loading="lazy" decoding="async" />
                 ) : (
                   <Car size={22} color="#fff" />
                 )}
@@ -302,13 +366,13 @@ function LandingPage() {
               <h3 style={{ fontSize: "1.3rem" }}>Transformez votre voiture en source de revenus</h3>
               <p className="small mt-1" style={{ color: "rgba(250,250,249,0.7)" }}>
                 {" "}
-                Conservez 95 % du prix de chaque course : StrasDrive prélève une commission fixe de 5 %. Passez en ligne
+                Conservez 85 % du prix de la course ordinaire, et 100 % lorsque vous transportez votre propre client privé avec Gold payant. Passez en ligne
                 quand cela vous convient.{" "}
               </p>
             </div>
             <Link href="/signup?role=driver" className="btn btn-gold btn-lg">
               {" "}
-              Commencer à conduire <ArrowRight size={18} />
+              S’inscrire <ArrowRight size={18} />
             </Link>
           </div>
         </div>

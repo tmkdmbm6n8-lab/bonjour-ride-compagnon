@@ -1,10 +1,13 @@
 import { driverGold, loadDriverGold } from "./driver-gold.server";
 // Private clients and favorite driver: server operations. Identity always comes from the verified session;
 // links go through the manage_favorite_driver RPC (as the rider) which requires a ride together or a scanned QR.
-import { PRIVATE_INVITATION_SECONDS, PRIVATE_CLAIM_HOURS, favoriteStatus, favoriteEtaMinutes } from "./private-client-policy";
+import { PRIVATE_CLAIM_HOURS, favoriteStatus, favoriteEtaMinutes } from "./private-client-policy";
 import { driverClass } from "./vtc-classes";
 import { passengerDisplayName } from "./passenger-name";
 import { accountRating } from "./account-ratings.server";
+
+import { isPairBlocked } from "./user-blocks.server";
+import { validLocation } from "./vtc-access";
 
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 const ACTIVE = ["accepted", "arrived", "in_progress"];
@@ -33,6 +36,34 @@ export async function favoriteDriverId(admin, riderId) {
     await admin.from("rider_favorite_drivers").select("driver_id").eq("rider_id", riderId).maybeSingle(),
   );
   return row?.driver_id || null;
+}
+
+const FAVORITE_LOCATION_TTL_MS = 35000;
+
+export async function favoriteLiveLocation(admin, riderId, now = Date.now()) {
+  const driverId = await favoriteDriverId(admin, riderId);
+  if (!driverId || await isPairBlocked(admin, riderId, driverId)) return { status: "unavailable" };
+
+  const driver = required(await admin.from("drivers")
+    .select("is_online,is_approved,location")
+    .eq("user_id", driverId)
+    .maybeSingle());
+  if (!driver?.is_approved || !driver.is_online) return { status: "offline", driverId };
+
+  const location = driver.location;
+  const age = now - Date.parse(location?.observedAt);
+  if (!validLocation(location) || !Number.isFinite(age) || age < 0 || age >= FAVORITE_LOCATION_TTL_MS)
+    return { status: "waiting", driverId };
+
+  return {
+    status: "online",
+    driverId,
+    position: {
+      lat: Number(location.lat.toFixed(3)),
+      lng: Number(location.lng.toFixed(3)),
+    },
+    expiresInMs: FAVORITE_LOCATION_TTL_MS - age,
+  };
 }
 
 async function driverIdentity(admin, driverId) {
@@ -114,18 +145,32 @@ export async function favoriteBooking(admin, riderId, pool) {
   return { driverId: id, vehicleType: driverClass(fav) };
 }
 
-/** Driver: new five-minute QR invitation. Only the SHA-256 fingerprint is stored. */
+/** Stable, unguessable per-driver QR token; only its fingerprint is stored. */
+async function permanentDriverToken(driverId) {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) throw new Error("Configuration du serveur indisponible");
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const bytes = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("strasdrive:private-qr:v1:" + driverId)));
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** Driver: the same QR code on every visit, without a time limit. */
 export async function createInvitation(admin, driverId) {
   const gold = await loadDriverGold(admin, driverId);
   if (!gold.active) throw new Error("StrasDrive Gold est inactif.");
-  const expiresAt = Math.min(Date.now() + PRIVATE_INVITATION_SECONDS * 1000, gold.endsAt ? Date.parse(gold.endsAt) : Infinity);
-  const token = randomToken();
-  required(
-    await admin
-      .from("driver_private_invitations")
-      .insert({ driver_id: driverId, token_hash: await sha256(token), expires_at: new Date(expiresAt).toISOString() }),
-  );
-  return { token, expiresAt };
+  const token = await permanentDriverToken(driverId);
+  const hash = await sha256(token);
+  const existing = required(await admin.from("driver_private_invitations").select("id,expires_at").eq("token_hash", hash).maybeSingle());
+  const expiresAt = "9999-12-31T23:59:59.000Z";
+  if (!existing) {
+    const inserted = await admin.from("driver_private_invitations").insert({ driver_id: driverId, token_hash: hash, expires_at: expiresAt });
+    if (inserted.error && inserted.error.code !== "23505") throw new Error(inserted.error.message);
+  } else if (existing.expires_at !== expiresAt) {
+    required(await admin.from("driver_private_invitations").update({ expires_at: expiresAt }).eq("id", existing.id));
+  }
+  return { token, permanent: true };
 }
 
 /** Driver: his private clients, with only a display name and avatar. */
@@ -150,6 +195,14 @@ export async function privateClients(admin, driverId) {
       ),
   );
   const byId = new Map(profiles.map((p) => [p.id, p]));
+  const rideRows = required(await admin.from("rides").select("rider_id")
+    .eq("driver_id", driverId).eq("status", "completed").eq("is_test", false)
+    .in("rider_id", links.map((l) => l.rider_id)).limit(1000));
+  const counts = new Map();
+  for (const ride of rideRows) counts.set(ride.rider_id, (counts.get(ride.rider_id) || 0) + 1);
+  const blocksResult = await admin.from("user_blocks").select("blocked_id").eq("blocker_id", driverId);
+  if (blocksResult.error && !["42P01", "PGRST205"].includes(blocksResult.error.code)) throw new Error(blocksResult.error.message);
+  const blockedIds = new Set((blocksResult.data || []).map((b) => b.blocked_id));
   return {
     gold,
     clients: links.map((l) => ({
@@ -157,6 +210,8 @@ export async function privateClients(admin, driverId) {
       name: shortName(byId.get(l.rider_id)?.name, "Client StrasDrive"),
       avatar: byId.get(l.rider_id)?.avatar || "",
       since: l.created_at,
+      completedTogether: counts.get(l.rider_id) || 0,
+      blocked: blockedIds.has(l.rider_id),
     })),
   };
 }
@@ -243,4 +298,14 @@ export async function setFavorite(admin, db, uid, { driverId, confirmReplacement
 
 export async function removeFavorite(db) {
   return required(await db.rpc("manage_favorite_driver", { p_driver_id: null, p_action: "remove" }));
+}
+
+/** Driver may remove only their own private-client link; this also removes the rider's favorite. */
+export async function removePrivateClient(admin, driverId, riderId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(riderId)) || driverId === riderId) throw new Error("Client invalide");
+  const link = required(await admin.from("rider_favorite_drivers").select("rider_id")
+    .eq("driver_id", driverId).eq("rider_id", riderId).maybeSingle());
+  if (!link) throw new Error("Ce client ne figure pas dans votre clientèle privée");
+  required(await admin.from("rider_favorite_drivers").delete().eq("driver_id", driverId).eq("rider_id", riderId));
+  return { ok: true };
 }

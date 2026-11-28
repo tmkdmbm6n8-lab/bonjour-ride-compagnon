@@ -98,29 +98,11 @@ export default function HomeRideEstimator() {
     };
   }, [pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const rows = !result
-    ? []
-    : result.source === "uber"
-      ? result.products.map((p) => ({
-          key: p.name,
-          icon: Car,
-          name: p.name,
-          sub: [
-            p.capacity ? `${p.capacity} places` : null,
-            p.tripSeconds ? `${formatDuration(p.tripSeconds)} de trajet` : null,
-            p.etaMinutes ? `chauffeur à ${p.etaMinutes} min` : null,
-          ]
-            .filter(Boolean)
-            .join(" · "),
-          price: p.price,
-        }))
-      : Object.entries(result.estimates).map(([type, fare]) => ({
-          key: type,
-          icon: ICONS[type] || Car,
-          name: VEHICLE_LABELS[type],
-          sub: `${formatDuration(result.route.durationSeconds)} de trajet`,
-          price: fare.total,
-        }));
+  const rows = !result ? [] : Object.entries(result.estimates).map(([type, fare]) => ({
+    key: type, icon: ICONS[type] || Car, name: VEHICLE_LABELS[type],
+    sub: `${formatDuration(result.route.durationSeconds)} de trajet · Barème StrasDrive`,
+    price: fare.total,
+  }));
 
   return (
     <div

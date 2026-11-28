@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import CloseControl from "@/components/ui/CloseControl";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
 import { createFileRoute } from "@tanstack/react-router";
@@ -11,6 +12,12 @@ import { User, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { KovaLogo } from "@/components/brand/KovaLogo";
 import LegalFooter from "@/components/shell/LegalFooter";
 import { lovable } from '@/integrations/lovable/index';
+
+async function destination(callback, fallback) {
+  if (callback && callback.startsWith("/") && !callback.startsWith("//")) return callback;
+  const { data } = await supabase.rpc("sd_fleet", { action: "owner" });
+  return data === true ? "/contact?topic=fleet" : fallback;
+}
 
 function LoginCloseLink() {
   return <CloseControl href="/" className="signup-close" label="Fermer la connexion" title="Retour à l’accueil" />;
@@ -40,7 +47,9 @@ function LoginForm() {
           : session.user.role === "admin"
             ? "/admin/dashboard"
             : "/dashboard");
-      router.push(target);
+      let active = true;
+      destination(safeCallback, target).then(path => { if (active) router.push(path); });
+      return () => { active = false; };
     }
   }, [session, router, searchParams]);
 
@@ -75,10 +84,23 @@ function LoginForm() {
     });
 
     if (res?.error) {
+      // Do not label every server/configuration failure as a wrong password.
+      // Keep credential errors generic to avoid disclosing account existence.
+      const status = Number(res.status || 0);
+      const rawMessage = typeof res.error === "string" ? res.error : res.error?.message || "";
+      console.error("[login] Authentication failed", { status, message: rawMessage });
       setError(
-        res.status === 429
+        status === 429
           ? "Trop de tentatives de connexion — veuillez patienter quelques minutes et réessayer."
-          : "E-mail ou mot de passe incorrect",
+          : status === 400 || status === 401
+            ? "Adresse e-mail ou mot de passe incorrect. Vérifiez vos informations et réessayez. Si vous avez oublié votre mot de passe, utilisez le lien ci-dessous pour le réinitialiser."
+            : status === 403
+              ? "Connexion refusée. Vérifiez l’état de votre compte ou contactez l’assistance."
+            : status >= 500
+              ? "Le service de connexion rencontre un problème technique. Réessayez plus tard."
+              : status === 0
+                ? "Connexion impossible : vérifiez le réseau ou la configuration du service d'authentification."
+                : "Connexion impossible (erreur " + status + "). Veuillez réessayer.",
       );
       setLoading(false);
       return;
@@ -88,15 +110,13 @@ function LoginForm() {
     const me = await fetch("/api/users/me");
     const account = await me.json();
     await update();
-    await router.push(
-      callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")
-        ? callbackUrl
-        : account.user?.role === "driver"
+    await router.push(await destination(callbackUrl,
+      account.user?.role === "driver"
           ? "/driver/dashboard"
           : account.user?.role === "admin"
             ? "/admin/dashboard"
             : "/dashboard",
-    );
+    ));
   }
 
   return (
@@ -115,6 +135,12 @@ function LoginForm() {
         </h1>
         <p className="text-center muted small mt-1 mb-6"> Connectez-vous pour poursuivre votre voyage </p>
 
+        {searchParams.get("suspended") && (
+          <div className="small text-center mb-4" role="alert" style={{ color: "#f87171", fontWeight: 600 }}>
+            Votre accès chauffeur est suspendu. Vous avez été déconnecté de cet appareil.
+            <Link href="/contact?topic=driver_support" className="block mt-2">Contacter l’assistance</Link>
+          </div>
+        )}
         {searchParams.get("expired") && (
           <p className="small text-center mb-4" role="status" style={{ color: "var(--gold-700)", fontWeight: 600 }}>
             Votre session a expiré (déconnexion sur un autre appareil ou connexion trop ancienne). Reconnectez-vous pour

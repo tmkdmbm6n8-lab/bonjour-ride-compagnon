@@ -96,7 +96,7 @@ describe('réservation client', () => {
       fireEvent.blur(input);
     }
     const radios = await screen.findAllByRole('radio');
-    expect(radios).toHaveLength(3);
+    expect(radios).toHaveLength(2);
     expect(radios[0]).toHaveClass('rider-payment-option');
     fireEvent.click(screen.getByRole('radio', { name: /Carte/ }));
     expect(screen.getByRole('radio', { name: /Carte/ })).toHaveAttribute('aria-checked', 'true');

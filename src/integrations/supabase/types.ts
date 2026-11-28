@@ -110,6 +110,30 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_applications: {
+        Row: {
+          created_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       driver_documents: {
         Row: {
           doc_type: string
@@ -401,6 +425,54 @@ export type Database = {
           },
         ]
       }
+      live_activity_start_tokens: {
+        Row: {
+          device_id: string | null
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          device_id?: string | null
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          device_id?: string | null
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      live_activity_update_tokens: {
+        Row: {
+          activity_id: string
+          device_id: string | null
+          ride_id: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          device_id?: string | null
+          ride_id: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          device_id?: string | null
+          ride_id?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payouts: {
         Row: {
           amount: number
@@ -643,6 +715,110 @@ export type Database = {
           },
         ]
       }
+      rider_payment_methods: {
+        Row: {
+          brand: string
+          created_at: string
+          exp_month: number
+          exp_year: number
+          id: string
+          is_default: boolean
+          last4: string
+          stripe_payment_method_id: string
+          user_id: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          exp_month: number
+          exp_year: number
+          id?: string
+          is_default?: boolean
+          last4: string
+          stripe_payment_method_id: string
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          exp_month?: number
+          exp_year?: number
+          id?: string
+          is_default?: boolean
+          last4?: string
+          stripe_payment_method_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_payment_methods_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rider_scheduled_requests: {
+        Row: {
+          adjustment_consent: boolean
+          created_at: string
+          dropoff_address: string
+          estimated_price: number | null
+          favorite_driver_id: string | null
+          id: string
+          kind: string
+          local_time: string | null
+          payment_method: string | null
+          pickup_address: string
+          rider_id: string
+          scheduled_at: string | null
+          status: string
+          timezone: string
+          transport_number: string | null
+          transport_type: string | null
+          weekday: number | null
+        }
+        Insert: {
+          adjustment_consent?: boolean
+          created_at?: string
+          dropoff_address: string
+          estimated_price?: number | null
+          favorite_driver_id?: string | null
+          id?: string
+          kind: string
+          local_time?: string | null
+          payment_method?: string | null
+          pickup_address: string
+          rider_id: string
+          scheduled_at?: string | null
+          status?: string
+          timezone?: string
+          transport_number?: string | null
+          transport_type?: string | null
+          weekday?: number | null
+        }
+        Update: {
+          adjustment_consent?: boolean
+          created_at?: string
+          dropoff_address?: string
+          estimated_price?: number | null
+          favorite_driver_id?: string | null
+          id?: string
+          kind?: string
+          local_time?: string | null
+          payment_method?: string | null
+          pickup_address?: string
+          rider_id?: string
+          scheduled_at?: string | null
+          status?: string
+          timezone?: string
+          transport_number?: string | null
+          transport_type?: string | null
+          weekday?: number | null
+        }
+        Relationships: []
+      }
       rides: {
         Row: {
           accepted_at: string | null
@@ -829,6 +1005,439 @@ export type Database = {
         }
         Relationships: []
       }
+      sd_fleet_drivers: {
+        Row: {
+          accepted: boolean
+          driver_id: string
+          fleet_id: string
+          previous_vehicle: Json | null
+        }
+        Insert: {
+          accepted?: boolean
+          driver_id: string
+          fleet_id: string
+          previous_vehicle?: Json | null
+        }
+        Update: {
+          accepted?: boolean
+          driver_id?: string
+          fleet_id?: string
+          previous_vehicle?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_drivers_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleet_files: {
+        Row: {
+          content: string
+          expiry: string | null
+          filename: string
+          fleet_id: string
+          kind: string
+          reason: string | null
+          review: string
+          submitted_at: string
+        }
+        Insert: {
+          content: string
+          expiry?: string | null
+          filename: string
+          fleet_id: string
+          kind: string
+          reason?: string | null
+          review?: string
+          submitted_at?: string
+        }
+        Update: {
+          content?: string
+          expiry?: string | null
+          filename?: string
+          fleet_id?: string
+          kind?: string
+          reason?: string | null
+          review?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_files_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleet_news: {
+        Row: {
+          created_at: string
+          fleet_id: string | null
+          id: number
+          message: string
+          read_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          fleet_id?: string | null
+          id?: never
+          message: string
+          read_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          fleet_id?: string | null
+          id?: never
+          message?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_news_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleet_shifts: {
+        Row: {
+          driver_id: string
+          ended_at: string | null
+          fleet_id: string
+          id: number
+          started_at: string
+          vehicle: string
+        }
+        Insert: {
+          driver_id: string
+          ended_at?: string | null
+          fleet_id: string
+          id?: never
+          started_at?: string
+          vehicle: string
+        }
+        Update: {
+          driver_id?: string
+          ended_at?: string | null
+          fleet_id?: string
+          id?: never
+          started_at?: string
+          vehicle?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_shifts_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleet_trips: {
+        Row: {
+          fleet_id: string
+          ride_id: string
+          vehicle_label: string | null
+        }
+        Insert: {
+          fleet_id: string
+          ride_id: string
+          vehicle_label?: string | null
+        }
+        Update: {
+          fleet_id?: string
+          ride_id?: string
+          vehicle_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_trips_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sd_fleet_trips_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: true
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleet_vehicles: {
+        Row: {
+          driver_id: string | null
+          fleet_id: string
+          id: string
+          model: string
+          plate: string
+        }
+        Insert: {
+          driver_id?: string | null
+          fleet_id: string
+          id?: string
+          model: string
+          plate: string
+        }
+        Update: {
+          driver_id?: string | null
+          fleet_id?: string
+          id?: string
+          model?: string
+          plate?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sd_fleet_vehicles_fleet_id_driver_id_fkey"
+            columns: ["fleet_id", "driver_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleet_drivers"
+            referencedColumns: ["fleet_id", "driver_id"]
+          },
+          {
+            foreignKeyName: "sd_fleet_vehicles_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "sd_fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sd_fleets: {
+        Row: {
+          cash_max_per_ride: number | null
+          id: string
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          cash_max_per_ride?: number | null
+          id?: string
+          name: string
+          owner_id: string
+        }
+        Update: {
+          cash_max_per_ride?: number | null
+          id?: string
+          name?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
+      uber_ai_road_routes: {
+        Row: {
+          compared_at: string | null
+          created_at: string
+          distance_band: string
+          dropoff_key: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id: number
+          pickup_key: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          road_distance_km: number
+        }
+        Insert: {
+          compared_at?: string | null
+          created_at?: string
+          distance_band: string
+          dropoff_key: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id?: never
+          pickup_key: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          road_distance_km: number
+        }
+        Update: {
+          compared_at?: string | null
+          created_at?: string
+          distance_band?: string
+          dropoff_key?: string
+          dropoff_lat?: number
+          dropoff_lng?: number
+          dropoff_name?: string
+          id?: never
+          pickup_key?: string
+          pickup_lat?: number
+          pickup_lng?: number
+          pickup_name?: string
+          road_distance_km?: number
+        }
+        Relationships: []
+      }
+      uber_benchmark_measurements: {
+        Row: {
+          id: number
+          observed_at: string
+          price_eur: number
+          product_name: string
+          route_id: number
+        }
+        Insert: {
+          id?: never
+          observed_at?: string
+          price_eur: number
+          product_name: string
+          route_id: number
+        }
+        Update: {
+          id?: never
+          observed_at?: string
+          price_eur?: number
+          product_name?: string
+          route_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uber_benchmark_measurements_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "uber_benchmark_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      uber_benchmark_routes: {
+        Row: {
+          created_at: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id: number
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+        }
+        Insert: {
+          created_at?: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id?: never
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+        }
+        Update: {
+          created_at?: string
+          dropoff_lat?: number
+          dropoff_lng?: number
+          dropoff_name?: string
+          id?: never
+          pickup_lat?: number
+          pickup_lng?: number
+          pickup_name?: string
+        }
+        Relationships: []
+      }
+      uber_price_observations: {
+        Row: {
+          context: Json
+          distance_km: number
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id: number
+          observed_at: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          price_eur: number
+          product_name: string
+          trip_seconds: number | null
+        }
+        Insert: {
+          context?: Json
+          distance_km: number
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id?: never
+          observed_at?: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          price_eur: number
+          product_name: string
+          trip_seconds?: number | null
+        }
+        Update: {
+          context?: Json
+          distance_km?: number
+          dropoff_lat?: number
+          dropoff_lng?: number
+          dropoff_name?: string
+          id?: never
+          observed_at?: string
+          pickup_lat?: number
+          pickup_lng?: number
+          pickup_name?: string
+          price_eur?: number
+          product_name?: string
+          trip_seconds?: number | null
+        }
+        Relationships: []
+      }
+      uber_random_used_addresses: {
+        Row: {
+          address_key: string
+          address_name: string
+          claimed_at: string
+          latitude: number
+          longitude: number
+        }
+        Insert: {
+          address_key: string
+          address_name: string
+          claimed_at?: string
+          latitude: number
+          longitude: number
+        }
+        Update: {
+          address_key?: string
+          address_name?: string
+          claimed_at?: string
+          latitude?: number
+          longitude?: number
+        }
+        Relationships: []
+      }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           role: string
@@ -966,6 +1575,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_driver_application: {
+        Args: { p_admin_id: string; p_user_id: string }
+        Returns: undefined
+      }
       admin_delete_account: { Args: { _user: string }; Returns: Json }
       admin_ride_archive: {
         Args: { _actor: string; _ride: string }
@@ -985,6 +1598,51 @@ export type Database = {
       approve_withdrawal: {
         Args: { _actor: string; _request: string }
         Returns: Json
+      }
+      cancel_ride_long_approach: {
+        Args: { _ride: string; _rider: string }
+        Returns: undefined
+      }
+      cancel_ride_no_show: {
+        Args: { _driver: string; _ride: string }
+        Returns: undefined
+      }
+      claim_uber_ai_road_route: {
+        Args: never
+        Returns: {
+          compared_at: string | null
+          created_at: string
+          distance_band: string
+          dropoff_key: string
+          dropoff_lat: number
+          dropoff_lng: number
+          dropoff_name: string
+          id: number
+          pickup_key: string
+          pickup_lat: number
+          pickup_lng: number
+          pickup_name: string
+          road_distance_km: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "uber_ai_road_routes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_uber_random_addresses: {
+        Args: {
+          p_dropoff_key: string
+          p_dropoff_lat: number
+          p_dropoff_lng: number
+          p_dropoff_name: string
+          p_pickup_key: string
+          p_pickup_lat: number
+          p_pickup_lng: number
+          p_pickup_name: string
+        }
+        Returns: boolean
       }
       create_payout: {
         Args: {
@@ -1036,7 +1694,23 @@ export type Database = {
         Args: { _debit: number; _driver: string; _fee: number }
         Returns: Json
       }
+      sd_fleet: { Args: { action?: string; payload?: Json }; Returns: Json }
+      sd_fleet_desk: { Args: { action: string; p?: Json }; Returns: Json }
+      sd_refresh_shift: { Args: { who: string }; Returns: undefined }
+      sd_review_fleet_file: {
+        Args: { action: string; p?: Json }
+        Returns: Json
+      }
       settle_ride: { Args: { _actor: string; _id: string }; Returns: Json }
+      uber_benchmark_hourly_summary: {
+        Args: never
+        Returns: {
+          average: number
+          count: number
+          hour: string
+          product: string
+        }[]
+      }
       wallet_entry: {
         Args: {
           _amount: number

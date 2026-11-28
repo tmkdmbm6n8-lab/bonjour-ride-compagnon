@@ -12,9 +12,11 @@ vi.mock("@/lib/stripe.server", () => ({
   }),
   getStripeErrorMessage: () => "Erreur test",
 }));
-import { handleCheckout } from "@/lib/vtc-checkout.server";
+import { handleCheckout, creditPaidSession } from "@/lib/vtc-checkout.server";
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("APP_URL", "https://example.test");
+  vi.stubEnv("PAYMENTS_STRIPE_ENV", "sandbox");
   mock.createSession.mockResolvedValue({ id: "session", client_secret: "secret_test" });
   mock.createCustomer.mockResolvedValue({ id: "customer" });
 });
@@ -26,7 +28,7 @@ function params(role: string) {
         select: () => q,
         single: async () => ({ data: { id: "booking" }, error: null }),
         update: () => q,
-        eq: async () => ({ error: null }),
+        eq: () => ({ error: null, select: async () => ({ data: [{ id: "booking" }], error: null }) }),
       };
       return q;
     },
@@ -61,11 +63,50 @@ describe("réservation carte en mode passager", () => {
       expect(mock.createSession.mock.calls[0][0].line_items[0].price_data.unit_amount).toBe(4200);
     },
   );
+  it("refuse un environnement Stripe différent de celui du serveur", async () => {
+    const input = params("driver");
+    input.body.environment = "live";
+    await expect(handleCheckout(input)).rejects.toThrow(/non autorisé/);
+    expect(mock.createSession).not.toHaveBeenCalled();
+  });
+  it("ne remet pas une session de paiement au client si son enregistrement échoue", async () => {
+    const input = params("driver");
+    const baseFrom = input.admin.from;
+    input.admin.from = () => {
+      const query = baseFrom();
+      query.update = () => ({ eq: () => ({ select: async () => ({ data: null, error: { message: "Database unavailable" } }) }) });
+      return query;
+    };
+    const result = await handleCheckout(input);
+    expect(result.error).toMatch(/non enregistrée/);
+    expect(result.clientSecret).toBeUndefined();
+  });
   it("ne prépare pas de paiement si le conflit de course bloque la bascule", async () => {
     const input = params("driver");
     input.preparePassenger.mockRejectedValue(new Error("Course active"));
     await handleCheckout(input);
     expect(input.quoteRide).not.toHaveBeenCalled();
     expect(mock.createSession).not.toHaveBeenCalled();
+  });
+});
+
+describe("crédit du portefeuille après paiement", () => {
+  it("refuse une session payée sans référence client correspondante", async () => {
+    const rpc = vi.fn();
+    await expect(creditPaidSession({ rpc }, {
+      id: "cs_test", payment_status: "paid", amount_total: 1200,
+      livemode: false, currency: "eur", mode: "payment",
+      metadata: { userId: "user-1", kind: "topup" },
+      client_reference_id: "another-user",
+    })).rejects.toThrow(/invalide/);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("refuse un montant Stripe non entier", async () => {
+    const rpc = vi.fn();
+    await expect(creditPaidSession({ rpc }, {
+      id: "cs_test", payment_status: "paid", amount_total: 12.5,
+      metadata: { userId: "user-1", kind: "topup" }, client_reference_id: "user-1",
+    })).rejects.toThrow(/invalide/);
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,7 @@
 import { useDriverGold } from "@/components/DriverLayout";
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { apiFetch } from "@/lib/archive-fetch";
+import useDriverData from "@/hooks/useDriverData";
 import Link from "@/lib/archive-navigation";
 import {
   PawPrint,
@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   FileText,
   ShieldCheck,
+  ChevronUp,
+  Radio,
 } from "lucide-react";
 import MapView from "@/components/ArchiveMap";
 import Modal from "@/components/ui/Modal";
@@ -22,6 +24,7 @@ import { KovaIcon } from "@/components/brand/KovaLogo";
 export default function DriverHome({
   loading,
   online,
+  waiting = true,
   busy,
   isConnected,
   needsVehicle,
@@ -37,8 +40,9 @@ export default function DriverHome({
   onWaybill,
 }) {
   const gold = useDriverGold();
-  const [today, setToday] = useState(null);
-  const [lastRide, setLastRide] = useState(null);
+  const { data: earnings } = useDriverData("/api/drivers/me/earnings", 30000);
+  const today = earnings?.today;
+  const lastRide = earnings?.recentRides?.[0]?.fare?.driverEarnings;
   const [earningsView, setEarningsView] = useState("today"); // "today" | "last"
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -70,34 +74,96 @@ export default function DriverHome({
   };
 
   const [helpOpen, setHelpOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const availabilityTouch = useRef(0);
+  useEffect(() => { if (!statusOpen) return; const close = e => { if (e.key === "Escape") setStatusOpen(false); }; window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, [statusOpen]);
+  useEffect(() => {
+    if (!online || !waiting) setStatusOpen(false);
+  }, [online, waiting]);
   const [sosOpen, setSosOpen] = useState(false);
-  const { position: localPosition } = useGeolocation({ watch: false });
+  const { position: localPosition } = useGeolocation({ watch: online, maxAge: online ? 0 : undefined });
   const mapCenter = position || localPosition || center;
 
-  useEffect(() => {
-    let alive = true;
-    apiFetch("/api/drivers/me/earnings")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!alive || !d) return;
-        setToday(d.today || null);
-        const last = d.recentRides?.[0]?.fare?.driverEarnings;
-        setLastRide(typeof last === "number" ? last : null);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [online]);
 
   return (
     <div className={`drv-cockpit-root ${online ? "is-online" : ""}`}>
+      <style>{`
+        .drv-online-status.sd-online-signature { position: relative; isolation: isolate; overflow: hidden; border-radius: 12px; justify-content: flex-start; gap: 12px; box-shadow: none; animation: none; }
+        @media (max-width: 900px) {
+          .shell-driver:has(.drv-cockpit-bottom-bar > .sd-online-signature) > .sidebar { border-top: 0 !important; backdrop-filter: none; -webkit-backdrop-filter: none; }
+          .drv-cockpit-bottom-bar:has(> .sd-online-signature) { bottom: calc(var(--shell-nav-height, calc(84px + env(safe-area-inset-bottom, 0px))) - 2px); left: 0; right: 0; gap: 0; }
+          .drv-cockpit-bottom-bar > .drv-online-status.sd-online-signature { width: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; background: #0c0d12; box-shadow: none; padding-inline: max(20px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-right, 0px)); }
+        }
+        .drv-online-status.sd-online-signature::before { content: none; animation: none; }
+        .drv-online-status.sd-online-signature::after { content: ""; position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: linear-gradient(110deg, transparent 10%, color-mix(in srgb, var(--gold-500, #eab308) 10%, transparent) 50%, transparent 90%); pointer-events: none; opacity: 0; animation: sdSignatureEdge 8s linear infinite; }
+        .sd-online-signature .sd-signature-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--gold-500, #eab308); color: var(--gold-500, #eab308); animation: sdSignatureDot 6s ease-in-out infinite; }
+        .sd-online-signature .drv-online-copy { flex: 1; text-align: left; }
+        .sd-online-signature .drv-online-copy strong { font-weight: 550; font-size: 14px; }
+        .sd-online-signature .drv-online-copy small { font-size: 11px; }
+        @keyframes sdSignatureEdge { 0% { transform: translateX(-110%); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateX(110%); opacity: 0; } }
+        @keyframes sdSignatureDot { 0%,100% { opacity: .65; } 50% { opacity: 1; box-shadow: 0 0 8px color-mix(in srgb, currentColor 27%, transparent); } }
+        @media (prefers-reduced-motion: reduce) { .drv-online-status.sd-online-signature::after, .sd-online-signature .sd-signature-dot { animation: none !important; } }
+
+        /* Signature availability sheet: same surface and typography as the online strip. */
+        .modal-portal-root .drv-online-sheet { background: #0c0d12 !important; border: 0 !important; box-shadow: none !important; color: #f1f7f5; border-radius: 12px 12px 0 0; }
+        .modal-portal-root .drv-online-sheet .modal-header { border: 0; box-shadow: none; padding: 16px 20px; }
+        .modal-portal-root .drv-online-sheet .modal-header h3 { font-size: 14px !important; font-weight: 550; color: #f1f7f5; }
+        .modal-portal-root .drv-online-sheet .modal-body { min-height: 0; overflow-y: auto; gap: 16px; }
+        .modal-portal-root .drv-online-sheet .drv-online-sheet-waiting { padding: 12px 0 16px; }
+        .modal-portal-root .drv-online-sheet .drv-online-sheet-waiting .sd-signature-dot { display: block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; color: #f1f7f5; margin: 0 auto 16px; animation: sdSignatureDot 6s ease-in-out infinite; }
+        .modal-portal-root .drv-online-sheet .drv-online-sheet-waiting h4 { font-size: 15px; font-weight: 550; color: #f1f7f5; }
+        .modal-portal-root .drv-online-sheet .drv-online-sheet-waiting p { color: #94a3b8; font-size: 12px; line-height: 1.6; max-width: 320px; margin-inline: auto; }
+        @media (max-width: 900px) {
+          .modal-portal-root .drv-online-sheet { width: 100%; max-width: 100% !important; border-radius: 0 !important; }
+        }
+        @media (prefers-reduced-motion: reduce) { .modal-portal-root .drv-online-sheet .sd-signature-dot { animation: none !important; } }
+
+        .drv-cockpit-bottom-bar:has(> .sd-online-signature) { flex-direction: column; background: #0c0d12; pointer-events: auto; }
+        .sd-availability-panel { width: 100%; display: grid; grid-template-rows: 0fr; transition: grid-template-rows 450ms cubic-bezier(.22,.61,.36,1); background: #0c0d12; }
+        .sd-availability-content { min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+        .sd-availability-open .sd-availability-panel { grid-template-rows: 1fr; }
+        .sd-availability-content .drv-online-sheet-waiting { margin: 0; padding: 24px 24px 0; }
+        .sd-availability-content .drv-online-sheet-waiting p { max-width: 320px; margin-inline: auto; color: #94a3b8; font-size: 12px; }
+        .sd-availability-content .drv-online-sheet-waiting h4 { font-size: 15px; font-weight: 550; color: #f1f7f5; }
+        .sd-availability-content .sd-signature-dot { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold-500, #eab308); color: var(--gold-500, #eab308); margin: 0 auto 16px; animation: sdSignatureDot 6s ease-in-out infinite; }
+        .sd-availability-content .drv-online-stop { margin: 0 auto 32px; }
+        .sd-availability-chevron { transition: transform 450ms ease; }
+        .sd-availability-open .sd-availability-chevron { transform: rotate(180deg); }
+        @media (max-width: 900px) {
+          .sd-availability-content { height: max(0px, calc(50dvh - var(--shell-nav-height, 84px) - 72px)); }
+          .sd-availability-panel:not(:has(.drv-online-stop)) { display: none; }
+          .sd-availability-panel { grid-template-rows: 0fr; }
+          .sd-availability-content { height: auto; }
+          .sd-availability-content::before { content: ""; flex: 1 0 0; }
+          .sd-availability-content::after { content: ""; flex: 1 0 0; }
+          .sd-availability-panel { max-height: 0; overflow: hidden; transition: max-height 450ms cubic-bezier(.22,.61,.36,1), grid-template-rows 450ms cubic-bezier(.22,.61,.36,1); }
+          .sd-availability-open .sd-availability-panel { max-height: max(0px, calc(50dvh - var(--shell-nav-height, 84px) - 72px)); }
+          .sd-availability-content { min-height: 0; height: max(0px, calc(50dvh - var(--shell-nav-height, 84px) - 72px)); }
+        }
+        @media (prefers-reduced-motion: reduce) { .sd-availability-panel, .sd-availability-chevron { transition: none !important; } .sd-availability-content .sd-signature-dot { animation: none !important; } }
+        .drv-go-btn.sd-go-dynamic { position: relative; top: -8px; isolation: isolate; overflow: visible; animation: none; }
+        .sd-go-dynamic .drv-go-text { position: relative; z-index: 2; }
+        .sd-go-beacon { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: 1; }
+        .sd-go-beacon i { position: absolute; inset: -9px; border: 2px solid currentColor; border-radius: inherit; opacity: 0; animation: sdGoSonar 8s linear infinite; }
+        .sd-go-beacon i:nth-child(2) { animation-delay: 4s; }
+        .sd-go-connecting .sd-go-beacon i { animation: none; opacity: 0; }
+        .drv-go-btn.drv-online-stop { width: 72px; min-width: 72px; max-width: 72px; height: 72px; min-height: 72px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-inline: auto; flex: 0 0 72px; }
+        .drv-go-btn.drv-online-stop { position: relative; overflow: visible; animation: none; }
+        .drv-go-btn.drv-online-stop::after { content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 3px solid currentColor; border-left-color: transparent; border-right-color: transparent; pointer-events: none; animation: sdOfflineOrbit 8s ease-in-out infinite; }
+        .drv-go-btn.drv-online-stop:disabled::after { animation-play-state: paused; }
+        @keyframes sdOfflineOrbit { 0%,100% { transform: rotate(-60deg); } 50% { transform: rotate(120deg); } }
+        @media (prefers-reduced-motion: reduce) { .drv-go-btn.drv-online-stop::after { animation: none !important; } }
+        @keyframes sdGoSonar { 0% { transform: scale(.85); opacity: 0; } 20% { opacity: .8; } 100% { transform: scale(1.45); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { .drv-go-btn.sd-go-dynamic, .sd-go-beacon i { animation: none !important; } .sd-go-beacon i { opacity: 0; } }
+      `}</style>
       {/* ── Carte plein écran ── */}
       <div className="drv-cockpit-map">
         <MapView
+          viewCacheKey="driver-home"
           center={mapCenter}
           zoom={14}
-          userPosition={position || localPosition || undefined}
+          userPosition={(online ? localPosition || position : position || localPosition) || undefined}
+          navigationMode={online}
           followPosition={online && position ? position : undefined}
         />
       </div>
@@ -204,10 +270,10 @@ export default function DriverHome({
             {earningsView === "today"
               ? today
                 ? money(today.earnings)
-                : "0,00 €"
+                : earnings ? "0,00 €" : "—"
               : lastRide != null
                 ? money(lastRide)
-                : "0,00 €"}
+                : earnings ? "0,00 €" : "—"}
           </strong>
         </div>
       </div>
@@ -215,23 +281,56 @@ export default function DriverHome({
       </div>
 
       {/* ── Bouton GO compact flottant en bas ── */}
-      <div className="drv-cockpit-bottom-bar">
-        {needsVehicle ? (
+      <div className={`drv-cockpit-bottom-bar ${statusOpen && online && waiting && !loading && !needsVehicle ? "sd-availability-open" : ""}`}>
+        {loading ? (
+          <div className="drv-status-loading" role="status">Vérification du statut…</div>
+        ) : needsVehicle ? (
           <Link href="/driver/profile" className="drv-go-btn vehicle-needed">
             <span>Véhicule requis</span>
           </Link>
+        ) : online ? (
+          <button
+            type="button"
+            className={`drv-online-status sd-online-signature ${waiting ? "is-searching" : ""}`}
+            onClick={() => waiting && setStatusOpen(v => !v)}
+            onTouchStart={e => { availabilityTouch.current = e.touches[0].clientY; }}
+            onTouchEnd={e => { const dy = e.changedTouches[0].clientY - availabilityTouch.current; if (waiting && Math.abs(dy) > 45) { e.preventDefault(); setStatusOpen(dy < 0); } }}
+            aria-controls="sd-availability-panel"
+            aria-expanded={statusOpen}
+          >
+            <span className="sd-signature-dot" aria-hidden="true" />
+            <span className="drv-online-copy"><strong>Vous êtes en ligne</strong><small>{waiting ? "En attente d’une course" : "Une course vous est proposée"}</small></span>
+            <ChevronUp size={20} className="sd-availability-chevron" aria-hidden="true" />
+          </button>
         ) : (
           <button
-            className={`drv-go-btn ${online ? "is-online" : "is-offline"}`}
+            className={`drv-go-btn is-offline sd-go-dynamic ${busy ? "sd-go-connecting" : ""}`}
             onClick={onToggle}
             disabled={busy || loading}
-            aria-label={online ? "Passer hors ligne" : "Passer en ligne"}
+            aria-label={busy ? "Connexion en cours" : "Passer en ligne"}
+            aria-busy={busy}
           >
-            <span className="drv-go-pulse" />
-            <span className="drv-go-text">{busy ? "…" : online ? "HORS LIGNE" : "GO"}</span>
+            <span className="sd-go-beacon" aria-hidden="true"><i /><i /></span>
+            <span className="drv-go-text">{busy ? "…" : "GO"}</span>
           </button>
         )}
+        {online && waiting && !loading && !needsVehicle && (
+          <div id="sd-availability-panel" className="sd-availability-panel" inert={!statusOpen} aria-hidden={!statusOpen}>
+            <div className="sd-availability-content">
+        <div className="drv-online-sheet-waiting">
+          <span className="sd-signature-dot" aria-hidden="true" />
+          <h4>Prêt pour votre prochaine course</h4>
+          <p>Vous recevrez les nouvelles demandes ici. Vos clients privés peuvent voir votre position approximative tant que vous êtes en ligne.</p>
+        </div>
+        <button type="button" className="drv-go-btn is-online drv-online-stop" onClick={onToggle} disabled={busy || loading} aria-label={busy ? "Déconnexion en cours" : "Passer hors ligne"} aria-busy={busy} title="Passer hors ligne">
+          <Power size={32} aria-hidden="true" />
+        </button>
+            </div>
+          </div>
+        )}
       </div>
+
+
 
       <Modal open={sosOpen} onClose={() => setSosOpen(false)} title="SOS — Urgences en France" portal keyboardSafe sheetOnMobile={false}>
         <p className="drv-sos-intro">StrasDrive ne contacte pas les secours à votre place. Pour votre sécurité, arrêtez-vous dès que possible dans un endroit sûr.</p>

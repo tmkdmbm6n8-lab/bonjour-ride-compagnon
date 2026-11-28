@@ -95,6 +95,48 @@ function DriverDocuments({ driver, onClose, onChanged }) {
   );
 }
 
+function DriverApplicationsAdmin() {
+  const toast = useToast();
+  const [applications, setApplications] = useState([]);
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState(null);
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/driver-applications");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Chargement impossible");
+      setApplications(data.applications || []);
+      setError("");
+    } catch (err) { setError(err.message); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  async function decide(userId, action) {
+    setBusyId(userId);
+    try {
+      const res = await fetch("/api/admin/driver-applications", { method: "POST", body: JSON.stringify({ userId, action }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Impossible de traiter la candidature");
+      toast(action === "accept" ? "Candidature acceptée : le client peut fournir ses documents" : "Candidature refusée", "success");
+      await load();
+    } catch (err) { toast(err.message, "error"); }
+    finally { setBusyId(null); }
+  }
+  const pending = applications.filter((a) => a.status === "pending");
+  return <section className="card card-pad mb-6 sd-driver-applications-admin">
+    <h2 style={{ fontSize: "1.1rem", marginBottom: 8 }}>Candidatures clients · Devenir chauffeur <span className="badge badge-warning">{pending.length}</span></h2>
+    <p className="small muted mb-3">L'acceptation ouvre le dépôt de documents, sans autoriser la mise en ligne. La validation VTC définitive reste séparée.</p>
+    {error && <p role="alert" className="input-error-msg">{error} — Vérifiez la migration 0008.</p>}
+    {!error && pending.length === 0 && <p className="small muted">Aucune candidature en attente.</p>}
+    {pending.map((a) => <div key={a.user_id} className="sd-driver-application-row">
+      <div><strong>{a.name}</strong><p className="small muted">{a.email || a.username || "Compte client"} · {new Date(a.created_at).toLocaleDateString("fr-FR")}</p></div>
+      <div className="flex gap-2 wrap">
+        <button type="button" className="btn btn-success btn-sm" disabled={busyId === a.user_id} onClick={() => decide(a.user_id, "accept")}><CheckCircle2 size={16} /> Accepter</button>
+        <button type="button" className="btn btn-danger btn-sm" disabled={busyId === a.user_id} onClick={() => decide(a.user_id, "reject")}><X size={16} /> Refuser</button>
+      </div>
+    </div>)}
+  </section>;
+}
+
 function DriversAdmin() {
   const toast = useToast();
   const searchParams = useSearchParams();
@@ -192,6 +234,7 @@ function DriversAdmin() {
         </div>
       </div>
 
+      <DriverApplicationsAdmin />
       {drivers === null && <Loading label="Chargement des chauffeurs…" />}
       {drivers?.length === 0 && (
         <Empty icon={Car} title={pendingOnly ? 'Aucune demande en attente' : 'Aucun chauffeur pour le moment'} hint={pendingOnly ? 'Les nouvelles inscriptions de chauffeurs en attente d’approbation apparaîtront ici.' : 'Les chauffeurs inscrits apparaîtront ici.'} />

@@ -54,4 +54,4 @@ export function MonitoringPage() {
     </>}
   </div>;
 }
-export const Route = createFileRoute('/_authenticated/admin/monitoring')({ component: () => <AdminLayout><MonitoringPage/></AdminLayout> });
+export const Route = createFileRoute('/_authenticated/admin/monitoring')({head: () => ({ meta: [{"title": "Supervision du réseau · StrasDrive"}, {"name": "description", "content": "Suivi administratif des courses et de l’activité du réseau StrasDrive."}, {"property": "og:title", "content": "Supervision du réseau · StrasDrive"}, {"property": "og:description", "content": "Suivi administratif des courses et de l’activité du réseau StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }),  component: () => <AdminLayout><MonitoringPage/></AdminLayout> });

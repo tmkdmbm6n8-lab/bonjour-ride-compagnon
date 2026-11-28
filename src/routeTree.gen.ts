@@ -19,13 +19,17 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RecoverAccountRouteImport } from './routes/recover-account'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AuthenticatedBecomeDriverRouteImport } from './routes/_authenticated.become-driver'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedFavoriteRouteImport } from './routes/_authenticated.favorite'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
+import { Route as AuthenticatedRecurringRouteImport } from './routes/_authenticated.recurring'
 import { Route as AuthenticatedRidesRouteImport } from './routes/_authenticated.rides'
+import { Route as AuthenticatedTransportRouteImport } from './routes/_authenticated.transport'
 import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated.wallet'
 import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenticated.admin.alerts'
 import { Route as AuthenticatedAdminChatEvidenceRouteImport } from './routes/_authenticated.admin.chat-evidence'
+import { Route as AuthenticatedAdminContentReportsRouteImport } from './routes/_authenticated.admin.content-reports'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated.admin.dashboard'
 import { Route as AuthenticatedAdminDriversRouteImport } from './routes/_authenticated.admin.drivers'
 import { Route as AuthenticatedAdminMonitoringRouteImport } from './routes/_authenticated.admin.monitoring'
@@ -41,12 +45,16 @@ import { Route as AuthenticatedDriverMenuRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDriverPreferencesRouteImport } from './routes/_authenticated.driver.preferences'
 import { Route as AuthenticatedDriverPrivateClientsRouteImport } from './routes/_authenticated.driver.private-clients'
 import { Route as AuthenticatedDriverProfileRouteImport } from './routes/_authenticated.driver.profile'
+import { Route as AuthenticatedDriverReservationsRouteImport } from './routes/_authenticated.driver.reservations'
 import { Route as AuthenticatedDriverTripsRouteImport } from './routes/_authenticated.driver.trips'
 import { Route as AuthenticatedDriverWalletRouteImport } from './routes/_authenticated.driver.wallet'
 import { Route as AuthenticatedRidesIdRouteImport } from './routes/_authenticated.rides.$id'
 import { Route as ApiPublicJobsChatRetentionRouteImport } from './routes/api/public/jobs/chat-retention'
+import { Route as ApiPublicJobsLiveActivityExpiryRouteImport } from './routes/api/public/jobs/live-activity-expiry'
 import { Route as ApiPublicJobsWeeklyPayoutsRouteImport } from './routes/api/public/jobs/weekly-payouts'
 import { Route as ApiPublicJobsWithdrawalNotificationsRouteImport } from './routes/api/public/jobs/withdrawal-notifications'
+import { Route as ApiPublicNativeSplatRouteImport } from './routes/api/public/native/$'
+import { Route as ApiPublicNativeLiveActivityTokenRouteImport } from './routes/api/public/native/live-activity-token'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -98,6 +106,12 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedBecomeDriverRoute =
+  AuthenticatedBecomeDriverRouteImport.update({
+    id: '/become-driver',
+    path: '/become-driver',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -113,9 +127,19 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRecurringRoute = AuthenticatedRecurringRouteImport.update({
+  id: '/recurring',
+  path: '/recurring',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRidesRoute = AuthenticatedRidesRouteImport.update({
   id: '/rides',
   path: '/rides',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTransportRoute = AuthenticatedTransportRouteImport.update({
+  id: '/transport',
+  path: '/transport',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedWalletRoute = AuthenticatedWalletRouteImport.update({
@@ -133,6 +157,12 @@ const AuthenticatedAdminChatEvidenceRoute =
   AuthenticatedAdminChatEvidenceRouteImport.update({
     id: '/admin/chat-evidence',
     path: '/admin/chat-evidence',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminContentReportsRoute =
+  AuthenticatedAdminContentReportsRouteImport.update({
+    id: '/admin/content-reports',
+    path: '/admin/content-reports',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminDashboardRoute =
@@ -222,6 +252,12 @@ const AuthenticatedDriverProfileRoute =
     path: '/driver/profile',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDriverReservationsRoute =
+  AuthenticatedDriverReservationsRouteImport.update({
+    id: '/driver/reservations',
+    path: '/driver/reservations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDriverTripsRoute =
   AuthenticatedDriverTripsRouteImport.update({
     id: '/driver/trips',
@@ -245,6 +281,12 @@ const ApiPublicJobsChatRetentionRoute =
     path: '/api/public/jobs/chat-retention',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsLiveActivityExpiryRoute =
+  ApiPublicJobsLiveActivityExpiryRouteImport.update({
+    id: '/api/public/jobs/live-activity-expiry',
+    path: '/api/public/jobs/live-activity-expiry',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicJobsWeeklyPayoutsRoute =
   ApiPublicJobsWeeklyPayoutsRouteImport.update({
     id: '/api/public/jobs/weekly-payouts',
@@ -255,6 +297,17 @@ const ApiPublicJobsWithdrawalNotificationsRoute =
   ApiPublicJobsWithdrawalNotificationsRouteImport.update({
     id: '/api/public/jobs/withdrawal-notifications',
     path: '/api/public/jobs/withdrawal-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicNativeSplatRoute = ApiPublicNativeSplatRouteImport.update({
+  id: '/api/public/native/$',
+  path: '/api/public/native/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicNativeLiveActivityTokenRoute =
+  ApiPublicNativeLiveActivityTokenRouteImport.update({
+    id: '/api/public/native/live-activity-token',
+    path: '/api/public/native/live-activity-token',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicPaymentsWebhookRoute =
@@ -274,13 +327,17 @@ export interface FileRoutesByFullPath {
   '/recover-account': typeof RecoverAccountRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/become-driver': typeof AuthenticatedBecomeDriverRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/favorite': typeof AuthenticatedFavoriteRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/recurring': typeof AuthenticatedRecurringRoute
   '/rides': typeof AuthenticatedRidesRouteWithChildren
+  '/transport': typeof AuthenticatedTransportRoute
   '/wallet': typeof AuthenticatedWalletRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
+  '/admin/content-reports': typeof AuthenticatedAdminContentReportsRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/admin/monitoring': typeof AuthenticatedAdminMonitoringRoute
@@ -296,12 +353,16 @@ export interface FileRoutesByFullPath {
   '/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
   '/driver/private-clients': typeof AuthenticatedDriverPrivateClientsRoute
   '/driver/profile': typeof AuthenticatedDriverProfileRoute
+  '/driver/reservations': typeof AuthenticatedDriverReservationsRoute
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
+  '/api/public/jobs/live-activity-expiry': typeof ApiPublicJobsLiveActivityExpiryRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
+  '/api/public/native/$': typeof ApiPublicNativeSplatRoute
+  '/api/public/native/live-activity-token': typeof ApiPublicNativeLiveActivityTokenRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -314,13 +375,17 @@ export interface FileRoutesByTo {
   '/recover-account': typeof RecoverAccountRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/become-driver': typeof AuthenticatedBecomeDriverRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/favorite': typeof AuthenticatedFavoriteRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/recurring': typeof AuthenticatedRecurringRoute
   '/rides': typeof AuthenticatedRidesRouteWithChildren
+  '/transport': typeof AuthenticatedTransportRoute
   '/wallet': typeof AuthenticatedWalletRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
+  '/admin/content-reports': typeof AuthenticatedAdminContentReportsRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/admin/monitoring': typeof AuthenticatedAdminMonitoringRoute
@@ -336,12 +401,16 @@ export interface FileRoutesByTo {
   '/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
   '/driver/private-clients': typeof AuthenticatedDriverPrivateClientsRoute
   '/driver/profile': typeof AuthenticatedDriverProfileRoute
+  '/driver/reservations': typeof AuthenticatedDriverReservationsRoute
   '/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
+  '/api/public/jobs/live-activity-expiry': typeof ApiPublicJobsLiveActivityExpiryRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
+  '/api/public/native/$': typeof ApiPublicNativeSplatRoute
+  '/api/public/native/live-activity-token': typeof ApiPublicNativeLiveActivityTokenRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -356,13 +425,17 @@ export interface FileRoutesById {
   '/recover-account': typeof RecoverAccountRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/become-driver': typeof AuthenticatedBecomeDriverRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/favorite': typeof AuthenticatedFavoriteRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/recurring': typeof AuthenticatedRecurringRoute
   '/_authenticated/rides': typeof AuthenticatedRidesRouteWithChildren
+  '/_authenticated/transport': typeof AuthenticatedTransportRoute
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
   '/_authenticated/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/_authenticated/admin/chat-evidence': typeof AuthenticatedAdminChatEvidenceRoute
+  '/_authenticated/admin/content-reports': typeof AuthenticatedAdminContentReportsRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/drivers': typeof AuthenticatedAdminDriversRoute
   '/_authenticated/admin/monitoring': typeof AuthenticatedAdminMonitoringRoute
@@ -378,12 +451,16 @@ export interface FileRoutesById {
   '/_authenticated/driver/preferences': typeof AuthenticatedDriverPreferencesRoute
   '/_authenticated/driver/private-clients': typeof AuthenticatedDriverPrivateClientsRoute
   '/_authenticated/driver/profile': typeof AuthenticatedDriverProfileRoute
+  '/_authenticated/driver/reservations': typeof AuthenticatedDriverReservationsRoute
   '/_authenticated/driver/trips': typeof AuthenticatedDriverTripsRoute
   '/_authenticated/driver/wallet': typeof AuthenticatedDriverWalletRoute
   '/_authenticated/rides/$id': typeof AuthenticatedRidesIdRoute
   '/api/public/jobs/chat-retention': typeof ApiPublicJobsChatRetentionRoute
+  '/api/public/jobs/live-activity-expiry': typeof ApiPublicJobsLiveActivityExpiryRoute
   '/api/public/jobs/weekly-payouts': typeof ApiPublicJobsWeeklyPayoutsRoute
   '/api/public/jobs/withdrawal-notifications': typeof ApiPublicJobsWithdrawalNotificationsRoute
+  '/api/public/native/$': typeof ApiPublicNativeSplatRoute
+  '/api/public/native/live-activity-token': typeof ApiPublicNativeLiveActivityTokenRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -398,13 +475,17 @@ export interface FileRouteTypes {
     | '/recover-account'
     | '/signup'
     | '/terms'
+    | '/become-driver'
     | '/dashboard'
     | '/favorite'
     | '/profile'
+    | '/recurring'
     | '/rides'
+    | '/transport'
     | '/wallet'
     | '/admin/alerts'
     | '/admin/chat-evidence'
+    | '/admin/content-reports'
     | '/admin/dashboard'
     | '/admin/drivers'
     | '/admin/monitoring'
@@ -420,12 +501,16 @@ export interface FileRouteTypes {
     | '/driver/preferences'
     | '/driver/private-clients'
     | '/driver/profile'
+    | '/driver/reservations'
     | '/driver/trips'
     | '/driver/wallet'
     | '/rides/$id'
     | '/api/public/jobs/chat-retention'
+    | '/api/public/jobs/live-activity-expiry'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
+    | '/api/public/native/$'
+    | '/api/public/native/live-activity-token'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -438,13 +523,17 @@ export interface FileRouteTypes {
     | '/recover-account'
     | '/signup'
     | '/terms'
+    | '/become-driver'
     | '/dashboard'
     | '/favorite'
     | '/profile'
+    | '/recurring'
     | '/rides'
+    | '/transport'
     | '/wallet'
     | '/admin/alerts'
     | '/admin/chat-evidence'
+    | '/admin/content-reports'
     | '/admin/dashboard'
     | '/admin/drivers'
     | '/admin/monitoring'
@@ -460,12 +549,16 @@ export interface FileRouteTypes {
     | '/driver/preferences'
     | '/driver/private-clients'
     | '/driver/profile'
+    | '/driver/reservations'
     | '/driver/trips'
     | '/driver/wallet'
     | '/rides/$id'
     | '/api/public/jobs/chat-retention'
+    | '/api/public/jobs/live-activity-expiry'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
+    | '/api/public/native/$'
+    | '/api/public/native/live-activity-token'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -479,13 +572,17 @@ export interface FileRouteTypes {
     | '/recover-account'
     | '/signup'
     | '/terms'
+    | '/_authenticated/become-driver'
     | '/_authenticated/dashboard'
     | '/_authenticated/favorite'
     | '/_authenticated/profile'
+    | '/_authenticated/recurring'
     | '/_authenticated/rides'
+    | '/_authenticated/transport'
     | '/_authenticated/wallet'
     | '/_authenticated/admin/alerts'
     | '/_authenticated/admin/chat-evidence'
+    | '/_authenticated/admin/content-reports'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/drivers'
     | '/_authenticated/admin/monitoring'
@@ -501,12 +598,16 @@ export interface FileRouteTypes {
     | '/_authenticated/driver/preferences'
     | '/_authenticated/driver/private-clients'
     | '/_authenticated/driver/profile'
+    | '/_authenticated/driver/reservations'
     | '/_authenticated/driver/trips'
     | '/_authenticated/driver/wallet'
     | '/_authenticated/rides/$id'
     | '/api/public/jobs/chat-retention'
+    | '/api/public/jobs/live-activity-expiry'
     | '/api/public/jobs/weekly-payouts'
     | '/api/public/jobs/withdrawal-notifications'
+    | '/api/public/native/$'
+    | '/api/public/native/live-activity-token'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -522,8 +623,11 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   ApiPublicJobsChatRetentionRoute: typeof ApiPublicJobsChatRetentionRoute
+  ApiPublicJobsLiveActivityExpiryRoute: typeof ApiPublicJobsLiveActivityExpiryRoute
   ApiPublicJobsWeeklyPayoutsRoute: typeof ApiPublicJobsWeeklyPayoutsRoute
   ApiPublicJobsWithdrawalNotificationsRoute: typeof ApiPublicJobsWithdrawalNotificationsRoute
+  ApiPublicNativeSplatRoute: typeof ApiPublicNativeSplatRoute
+  ApiPublicNativeLiveActivityTokenRoute: typeof ApiPublicNativeLiveActivityTokenRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -599,6 +703,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/become-driver': {
+      id: '/_authenticated/become-driver'
+      path: '/become-driver'
+      fullPath: '/become-driver'
+      preLoaderRoute: typeof AuthenticatedBecomeDriverRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -620,11 +731,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/recurring': {
+      id: '/_authenticated/recurring'
+      path: '/recurring'
+      fullPath: '/recurring'
+      preLoaderRoute: typeof AuthenticatedRecurringRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/rides': {
       id: '/_authenticated/rides'
       path: '/rides'
       fullPath: '/rides'
       preLoaderRoute: typeof AuthenticatedRidesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/transport': {
+      id: '/_authenticated/transport'
+      path: '/transport'
+      fullPath: '/transport'
+      preLoaderRoute: typeof AuthenticatedTransportRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/wallet': {
@@ -646,6 +771,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/chat-evidence'
       fullPath: '/admin/chat-evidence'
       preLoaderRoute: typeof AuthenticatedAdminChatEvidenceRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/content-reports': {
+      id: '/_authenticated/admin/content-reports'
+      path: '/admin/content-reports'
+      fullPath: '/admin/content-reports'
+      preLoaderRoute: typeof AuthenticatedAdminContentReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/dashboard': {
@@ -753,6 +885,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDriverProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/driver/reservations': {
+      id: '/_authenticated/driver/reservations'
+      path: '/driver/reservations'
+      fullPath: '/driver/reservations'
+      preLoaderRoute: typeof AuthenticatedDriverReservationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/driver/trips': {
       id: '/_authenticated/driver/trips'
       path: '/driver/trips'
@@ -781,6 +920,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsChatRetentionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/live-activity-expiry': {
+      id: '/api/public/jobs/live-activity-expiry'
+      path: '/api/public/jobs/live-activity-expiry'
+      fullPath: '/api/public/jobs/live-activity-expiry'
+      preLoaderRoute: typeof ApiPublicJobsLiveActivityExpiryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/weekly-payouts': {
       id: '/api/public/jobs/weekly-payouts'
       path: '/api/public/jobs/weekly-payouts'
@@ -793,6 +939,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/jobs/withdrawal-notifications'
       fullPath: '/api/public/jobs/withdrawal-notifications'
       preLoaderRoute: typeof ApiPublicJobsWithdrawalNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/native/$': {
+      id: '/api/public/native/$'
+      path: '/api/public/native/$'
+      fullPath: '/api/public/native/$'
+      preLoaderRoute: typeof ApiPublicNativeSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/native/live-activity-token': {
+      id: '/api/public/native/live-activity-token'
+      path: '/api/public/native/live-activity-token'
+      fullPath: '/api/public/native/live-activity-token'
+      preLoaderRoute: typeof ApiPublicNativeLiveActivityTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/payments/webhook': {
@@ -817,13 +977,17 @@ const AuthenticatedRidesRouteWithChildren =
   AuthenticatedRidesRoute._addFileChildren(AuthenticatedRidesRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedBecomeDriverRoute: typeof AuthenticatedBecomeDriverRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFavoriteRoute: typeof AuthenticatedFavoriteRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedRecurringRoute: typeof AuthenticatedRecurringRoute
   AuthenticatedRidesRoute: typeof AuthenticatedRidesRouteWithChildren
+  AuthenticatedTransportRoute: typeof AuthenticatedTransportRoute
   AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
   AuthenticatedAdminAlertsRoute: typeof AuthenticatedAdminAlertsRoute
   AuthenticatedAdminChatEvidenceRoute: typeof AuthenticatedAdminChatEvidenceRoute
+  AuthenticatedAdminContentReportsRoute: typeof AuthenticatedAdminContentReportsRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminDriversRoute: typeof AuthenticatedAdminDriversRoute
   AuthenticatedAdminMonitoringRoute: typeof AuthenticatedAdminMonitoringRoute
@@ -839,18 +1003,23 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDriverPreferencesRoute: typeof AuthenticatedDriverPreferencesRoute
   AuthenticatedDriverPrivateClientsRoute: typeof AuthenticatedDriverPrivateClientsRoute
   AuthenticatedDriverProfileRoute: typeof AuthenticatedDriverProfileRoute
+  AuthenticatedDriverReservationsRoute: typeof AuthenticatedDriverReservationsRoute
   AuthenticatedDriverTripsRoute: typeof AuthenticatedDriverTripsRoute
   AuthenticatedDriverWalletRoute: typeof AuthenticatedDriverWalletRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedBecomeDriverRoute: AuthenticatedBecomeDriverRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFavoriteRoute: AuthenticatedFavoriteRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedRecurringRoute: AuthenticatedRecurringRoute,
   AuthenticatedRidesRoute: AuthenticatedRidesRouteWithChildren,
+  AuthenticatedTransportRoute: AuthenticatedTransportRoute,
   AuthenticatedWalletRoute: AuthenticatedWalletRoute,
   AuthenticatedAdminAlertsRoute: AuthenticatedAdminAlertsRoute,
   AuthenticatedAdminChatEvidenceRoute: AuthenticatedAdminChatEvidenceRoute,
+  AuthenticatedAdminContentReportsRoute: AuthenticatedAdminContentReportsRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
   AuthenticatedAdminDriversRoute: AuthenticatedAdminDriversRoute,
   AuthenticatedAdminMonitoringRoute: AuthenticatedAdminMonitoringRoute,
@@ -867,6 +1036,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDriverPrivateClientsRoute:
     AuthenticatedDriverPrivateClientsRoute,
   AuthenticatedDriverProfileRoute: AuthenticatedDriverProfileRoute,
+  AuthenticatedDriverReservationsRoute: AuthenticatedDriverReservationsRoute,
   AuthenticatedDriverTripsRoute: AuthenticatedDriverTripsRoute,
   AuthenticatedDriverWalletRoute: AuthenticatedDriverWalletRoute,
 }
@@ -886,9 +1056,12 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   ApiPublicJobsChatRetentionRoute: ApiPublicJobsChatRetentionRoute,
+  ApiPublicJobsLiveActivityExpiryRoute: ApiPublicJobsLiveActivityExpiryRoute,
   ApiPublicJobsWeeklyPayoutsRoute: ApiPublicJobsWeeklyPayoutsRoute,
   ApiPublicJobsWithdrawalNotificationsRoute:
     ApiPublicJobsWithdrawalNotificationsRoute,
+  ApiPublicNativeSplatRoute: ApiPublicNativeSplatRoute,
+  ApiPublicNativeLiveActivityTokenRoute: ApiPublicNativeLiveActivityTokenRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport

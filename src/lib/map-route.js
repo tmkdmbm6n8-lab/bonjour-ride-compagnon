@@ -1,10 +1,7 @@
 const rendered = new WeakMap();
 const drawing = new WeakSet();
 const layers = [
-  { id: 'route-halo', paint: { 'line-color': '#f4c96b', 'line-width': 25, 'line-opacity': 0.35, 'line-blur': 6 } },
-  { id: 'route-casing', paint: { 'line-color': '#111923', 'line-width': 17, 'line-opacity': 1 } },
-  { id: 'route-line', paint: { 'line-color': '#e9b95c', 'line-width': 10 } },
-  { id: 'route-core', paint: { 'line-color': '#ffe4a0', 'line-width': 3 } },
+  { id: 'route-line', paint: { 'line-color': '#d4af37', 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 10, 1.5, 13, 2.5, 15, 4, 16, 6, 17, 9, 18, 14, 19, 22, 20, 32, 22, 60], 'line-opacity': 1 } },
 ];
 
 /** Recover missing layers even when the GeoJSON source already exists. */

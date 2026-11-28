@@ -3,11 +3,13 @@ import { accountView } from "@/lib/account-mode";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useSession } from "@/lib/archive-auth";
 import { apiFetch } from "@/lib/archive-fetch";
+import { watchRefresh } from "@/lib/live-refresh";
 const SocketContext = createContext({ socket: null, isConnected: false });
 export function SocketProvider({ children }) {
   const view = accountView(usePathname());
   const { data: session, status } = useSession(),
     [socket, setSocket] = useState(null);
+  const [connected, setConnected] = useState(false);
   useEffect(() => {
     if (status !== "authenticated") return;
     const listeners = new Map();
@@ -32,12 +34,14 @@ export function SocketProvider({ children }) {
       },
     };
     setSocket(instance);
-    async function tick() {
+    async function tick(active, signal) {
       if (stopped || inFlight) return;
       inFlight = true;
       try {
         if (view === "driver" && (session.user.role === "driver" || session.user.canDrive)) {
-          const res = await apiFetch("/api/drivers/offers");
+          const res = await apiFetch("/api/drivers/offers", { signal });
+          if (stopped) return;
+          if (!res.ok) { setConnected(false); return; }
           const j = await res.json();
           const key = j.offer ? `${j.offer.rideId}:${j.offer.phase || ""}` : null;
           if (j.offer) {
@@ -60,13 +64,16 @@ export function SocketProvider({ children }) {
           }
         }
         if (view === "admin" && session.user.role === "admin") {
+          setConnected(true);
           fire("ride:updated", {});
           return;
         }
         const res = await apiFetch(
-          `/api/rides/active?view=${view === "driver" ? "driver" : "rider"}`,
+          `/api/rides/active?view=${view === "driver" ? "driver" : "rider"}`, { signal },
         );
-        if (!res.ok) return;
+        if (stopped) return;
+        if (!res.ok) { setConnected(false); return; }
+        setConnected(true);
         const { ride } = await res.json();
         if (ride) {
           if (ride.status !== previous?.status) {
@@ -83,7 +90,7 @@ export function SocketProvider({ children }) {
           for (const m of (ride.messages || []).slice(oldCount))
             fire("ride:message", { rideId: ride.id, ...m });
         } else if (previous) {
-          const detail = await apiFetch(`/api/rides/${previous.id}`);
+          const detail = await apiFetch(`/api/rides/${previous.id}`, { signal });
           const j = await detail.json();
           if (j.ride?.status === "completed")
             fire("ride:completed", { fare: j.ride.fare, payment: j.ride.payment });
@@ -92,20 +99,21 @@ export function SocketProvider({ children }) {
         }
         previous = ride;
       } catch {
+        if (!stopped) setConnected(false);
       } finally {
         inFlight = false;
       }
     }
-    tick();
-    const timer = setInterval(tick, 2500);
+    const stopRefresh = watchRefresh(tick, 2500);
     return () => {
       stopped = true;
-      clearInterval(timer);
+      stopRefresh();
+      setConnected(false);
       setSocket(null);
     };
   }, [status, session?.user?.id, session?.user?.role, session?.user?.canDrive, view]);
   return (
-    <SocketContext.Provider value={{ socket, isConnected: Boolean(socket) }}>
+    <SocketContext.Provider value={{ socket, isConnected: Boolean(socket) && connected }}>
       {children}
     </SocketContext.Provider>
   );

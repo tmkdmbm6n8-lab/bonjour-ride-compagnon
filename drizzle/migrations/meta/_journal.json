@@ -162,6 +162,13 @@
       "when": 1795099354439,
       "tag": "0022_favorite_driver_activation",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795807912885,
+      "tag": "0023_scope_live_activity_tokens_to_device",
+      "breakpoints": true
     }
   ]
 }

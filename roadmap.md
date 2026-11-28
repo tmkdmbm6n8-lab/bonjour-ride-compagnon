@@ -1,4 +1,19 @@
 # StrasDrive — import fidèle de l’archive
+
+# Application native React Native
+- [x] Ajouter et tester les points de connexion/renouvellement publics sans ouvrir les accès métier (connexion réelle, renouvellement et relecture du compte validés).
+- [x] Ajouter la passerelle HTTP authentifiée qui réutilise les contrôles métier existants.
+- [x] Brancher le transport React Native sur cette passerelle sans embarquer de secret.
+- [x] Vérifier les accès, les erreurs et le contrat réseau par des tests automatisés et une vraie session temporaire.
+- [ ] Valider la connexion et une lecture de compte depuis un iPhone et un Android réels après publication.
+
+## Corrections demandées le 24 novembre
+- [x] Valider la protection des paiements sans modifier les tarifs (5 contrôles réussis).
+- [x] Corriger les résultats d’adresse vides et le contrôle des QR expirés.
+- [x] Restaurer Découvrir et sortir du chargement en cas d’échec Gold.
+- [x] Corriger les erreurs de vérification existantes (96 tests réussis, build OK).
+- [ ] Vérifier le parcours sur un compte chauffeur réel — la session temporaire fournie ne permet pas de charger les pages connectées ; aucun compte chauffeur autorisé disponible.
+
 - [x] Importer le code source sans secrets ni fichiers générés ; conserver une copie originale non exécutée.
 - [x] Restaurer les écrans et les styles d’origine dans l’aperçu Lovable.
 - [x] Traduire les textes en français et afficher les euros, sans conversion des montants.
@@ -30,7 +45,7 @@
 - [x] Carte : déplacement/zoom uniquement à deux doigts (Voyager et Conduire)
 - [x] Client : voir les chauffeurs proches et zoom automatique dessus après l'adresse
 - [x] Suggestions d'adresse en temps réel sous le champ
-- [x] Son de notification (style Uber, distinct par type)
+- [x] Son de notification (distinct par type)
 
 # Itinéraire en temps réel (demande du 14/11)
 - [x] Itinéraire calculé par Google Routes avec trafic en temps réel (OSRM en secours)
@@ -50,6 +65,17 @@
 - [x] Notification push d’offre de course quand l’app Android est en arrière-plan (bannière visible, son)
 - [ ] Nouvel APK avec les notifications — en attente du fichier google-services.json de Firebase
 - [ ] App iPhone (IPA) — reportée à la demande de l'utilisateur
+
+# Dynamic Island iOS — vraies offres (27 novembre)
+- [x] Corriger la fermeture native des activités démarrées par Apple et la remontée du jeton sans écran web ; 31 tests réussis (acceptation/refus, jeton tardif, secours classique). Compilation Swift et validation réelle iPhone restent à faire sur le Mac.
+- [x] Aligner le pont Capacitor et le format Apple sur `capacitor-live-activity` / `GenericAttributes`.
+- [x] Enregistrer les jetons de démarrage et de fermeture pour Tata (`world.poker74@gmail.com`) et le bon appareil, avec déconnexion et changement de compte.
+- [x] Fermer la bulle au refus, à l’acceptation par un chauffeur et à l’expiration sans ouverture de l’app.
+- [x] Autoriser les vraies offres et éviter deux alertes sur un même appareil, sans supprimer le secours classique.
+- [x] Corriger la remontée du jeton de fermeture et fermer les activités périmées au retour dans l’app (code et tests).
+- [x] Vérifier les tests et documenter séparément la synchronisation Xcode et la publication.
+- [x] Adapter le widget réellement installé affichant « Course » — fichier Swift reçu ; remplacement préparé avec le même nom, gain et compte à rebours.
+- [ ] Validation sur iPhone depuis l’écran d’accueil après publication autorisée et synchronisation Xcode — test utilisateur requis.
 
 # Vocaux façon Snapchat (17/11)
 - [x] Bouton micro à droite, bulle qui suit le doigt, glisser à gauche = corbeille

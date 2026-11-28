@@ -416,7 +416,7 @@ function EvidencePage() {
   );
 }
 
-export const Route = createFileRoute("/_authenticated/admin/chat-evidence")({
+export const Route = createFileRoute("/_authenticated/admin/chat-evidence")({head: () => ({ meta: [{"title": "Signalements et échanges · StrasDrive"}, {"name": "description", "content": "Examen administratif des signalements et échanges de courses StrasDrive."}, {"property": "og:title", "content": "Signalements et échanges · StrasDrive"}, {"property": "og:description", "content": "Examen administratif des signalements et échanges de courses StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }),
   component: () => (
     <AdminLayout>
       <EvidencePage />

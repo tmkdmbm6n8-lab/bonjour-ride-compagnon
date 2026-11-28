@@ -5,7 +5,7 @@ const minutes = (seconds) => Number.isFinite(seconds) && seconds >= 0 ? Math.max
 export function driverOfferActivity(offer) {
   if (!offer || typeof offer.rideId !== 'string' || !offer.rideId) return null;
   if (!Number.isFinite(offer.receivedAt) || !Number.isFinite(offer.expiresInSeconds) || offer.expiresInSeconds <= 0) return null;
-  const expiresAt = offer.receivedAt + offer.expiresInSeconds * 1000;
+  const expiresAt = offer.expiresAt ? Date.parse(offer.expiresAt) : offer.receivedAt + offer.expiresInSeconds * 1000;
   if (!Number.isFinite(expiresAt)) return null;
   return {
     kind: 'driver_offer',

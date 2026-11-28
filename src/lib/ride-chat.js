@@ -1,3 +1,5 @@
+import { rejectInappropriateMessage } from "./message-moderation";
+
 export const CHAT_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
 export const CHAT_ACTIVE_STATUSES = ['accepted', 'arrived', 'in_progress'];
 export const CHAT_NOTICE = 'Textes, vocaux, images et positions sont supprimés à la fin de la course. En cas de signalement avant la fin, ils sont conservés 14 jours à compter du signalement, accessibles à l’administration, puis supprimés.';
@@ -23,6 +25,7 @@ export function newChatMessage(body, from, now = new Date().toISOString()) {
   }
   if (typeof body.text !== 'string' || !body.text.trim() || body.text.length > 500) throw new Error('Message invalide');
   rejectUnsafeChatText(body.text);
+  rejectInappropriateMessage(body.text);
   return { ...common, type: 'text', text: body.text.trim() };
 }
 export function decodeChatAttachment(body) {

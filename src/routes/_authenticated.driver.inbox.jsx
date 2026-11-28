@@ -357,7 +357,7 @@ function InboxPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/driver/inbox")({
-  head: () => ({ meta: [{ title: "Inbox · StrasDrive" }] }),
+  head: () => ({ meta: [{"title": "Inbox · StrasDrive"}, {"name": "description", "content": "Messagerie d’assistance entre les chauffeurs et l’administration StrasDrive."}, {"property": "og:title", "content": "Inbox · StrasDrive"}, {"property": "og:description", "content": "Messagerie d’assistance entre les chauffeurs et l’administration StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }),
   component: () => (
     <DriverLayout>
       <InboxPage />

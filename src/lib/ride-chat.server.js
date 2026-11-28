@@ -1,7 +1,9 @@
+import { moderateMessageText } from "./message-moderation.server";
 import {
   getRideDecision,
   recordAdminDecision,
   getDriverDecisions,
+  recordDriverAccess,
 } from "./driver-warnings.server";
 import { countActiveWarnings, WARNING_DEGREES } from "./driver-warnings";
 import { newSupportThread } from "./vtc-support";
@@ -196,7 +198,11 @@ export async function purgeRideChats(admin) {
 }
 export async function sendChatMessage(admin, ride, uid, body) {
   const from = ride.rider_id === uid ? "rider" : "driver";
-  await appendChat(admin, ride.id, uid, newChatMessage(body, from));
+  const message = newChatMessage(body, from);
+  if (![ride.rider_id, ride.driver_id].includes(uid) || !CHAT_ACTIVE_STATUSES.includes(ride.status))
+    throw new Error("Discussion fermée");
+  if (message.type === "text") await moderateMessageText(message.text);
+  await appendChat(admin, ride.id, uid, message);
 }
 let bucketReady = false;
 export async function sendChatAttachment(admin, ride, uid, body) {
@@ -470,7 +476,7 @@ export async function handleAdminReportAction(admin, body) {
   }
 
   if (action === "suspend_driver") {
-    await admin
+    required(await admin
       .from("drivers")
       .update({
         is_approved: false,
@@ -478,18 +484,20 @@ export async function handleAdminReportAction(admin, body) {
         documents_override: false,
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", driverId);
+      .eq("user_id", driverId));
+    await recordDriverAccess(admin, driverId, true);
     return { ok: true, message: "Chauffeur suspendu avec succès." };
   }
 
   if (action === "unsuspend_driver") {
-    await admin
+    required(await admin
       .from("drivers")
       .update({
         is_approved: true,
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", driverId);
+      .eq("user_id", driverId));
+    await recordDriverAccess(admin, driverId, false);
     return { ok: true, message: "Suspension levée, chauffeur réactivé." };
   }
 

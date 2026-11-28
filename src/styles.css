@@ -3,6 +3,20 @@
    Ink & stone palette · gold accent · soft depth · quiet motion
    ═══════════════════════════════════════════════════════════════ */
 
+.native-startup-logo {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  background: #0e0f12;
+}
+.native-startup-unresolved > .native-startup-logo,
+.capacitor-native .native-startup-unresolved > .landing-page {
+  display: none;
+}
+.capacitor-native .native-startup-unresolved > .native-startup-logo {
+  display: grid;
+}
+
 :root {
   /* ── Ink (brand neutrals) ── */
   --ink-950: #0c0a09;
@@ -117,6 +131,13 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* App mobile : fond sombre unique pendant tout le démarrage et les
+   changements d'écran, pour éviter le flash blanc entre le logo et l'accueil. */
+html.capacitor-native,
+html.capacitor-native body {
+  background: #0e0f12;
 }
 
 img,
@@ -3130,6 +3151,47 @@ a.activity-pill:hover {
   background: radial-gradient(ellipse at 100% 0%, #30271b 0%, transparent 60%), #151619;
   color: #f7f3ea;
 }
+
+
+/* Swipeable Gold duration cards; six months is intentionally the best monthly value. */
+.driver-gold-plan-intro { color: #e6cb91; font-size: .82rem; margin-bottom: 12px !important; }
+.driver-gold-plan-scroll {
+  display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+  overscroll-behavior-inline: contain; padding: 6px 2px 14px;
+  scrollbar-width: thin; scrollbar-color: #a88b55 transparent;
+}
+.driver-gold-plan {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start;
+  flex: 0 0 min(78%, 260px); min-height: 202px; gap: 9px; text-align: left;
+  padding: 20px 16px 14px; border-radius: 17px; border: 1px solid #5a4a31;
+  background: linear-gradient(145deg,#26221d,#17181b); color: #f7f3ea;
+  scroll-snap-align: center; cursor: pointer; font: inherit;
+}
+.driver-gold-plan.selected { border: 2px solid #e6cb91; padding: 19px 15px 13px; box-shadow: 0 0 0 1px #e6cb9140; }
+.driver-gold-plan.featured { background: linear-gradient(145deg,#40311e,#1c1b1b); }
+.driver-gold-plan-badge { align-self: flex-start; background: #e6cb91; color: #241b10; font-size: .67rem; font-weight: 750; padding: 5px 8px; border-radius: 20px; }
+.driver-gold-plan-term { font-size: .94rem; font-weight: 700; }
+.driver-gold-plan-total { font-size: 1.75rem; letter-spacing: -.045em; line-height: 1.1; }
+.driver-gold-plan-monthly { color: #d5cec1; font-size: .8rem; }
+.driver-gold-plan-saving { color: #e6cb91; font-weight: 650; font-size: .79rem; }
+.driver-gold-plan-availability { color: #bcb7ae; font-size: .71rem; margin-top: auto; }
+.driver-gold-plan-hint { color: #bcb7ae; font-size: .78rem; line-height: 1.45; margin-top: 5px !important; }
+.driver-gold-plan:focus-visible { outline: 2px solid #e6cb91; outline-offset: 3px; }
+@media (min-width: 850px) { .driver-gold-plan { flex-basis: calc((100% - 24px)/3); } }
+
+
+/* Exactly one Gold plan visible: arrows on the sides and three navigation dots. */
+.driver-gold-plan-navigation { display: grid; grid-template-columns: 32px minmax(0,1fr) 32px; gap: 5px; align-items: center; width: 100%; min-width: 0; }
+.driver-gold-plan-nav-slot { display: flex; justify-content: center; min-width: 0; }
+.driver-gold-plan-arrow { display: grid; place-items: center; width: 32px; height: 40px; padding: 0; border: 1px solid #e6cb91; border-radius: 50%; background: #241e16; color: #e6cb91; cursor: pointer; box-shadow: 0 0 10px #e6cb9140; }
+.driver-gold-plan-arrow:focus-visible, .driver-gold-plan-dots button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.driver-gold-plan-single { flex: initial; width: 100%; min-width: 0; min-height: 225px; cursor: default; scroll-snap-align: unset; border: 2px solid #e6cb91; padding: 19px 14px 14px; box-shadow: 0 0 0 1px #e6cb9130; }
+.driver-gold-plan-single .driver-gold-plan-total { font-size: clamp(1.45rem, 6vw, 2rem); }
+.driver-gold-plan-single .driver-gold-plan-badge { max-width: 100%; line-height: 1.25; }
+.driver-gold-plan-dots { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 12px 0 2px; }
+.driver-gold-plan-dots button { width: 10px; height: 10px; border: 0; padding: 0; border-radius: 50%; background: #65615c; cursor: pointer; }
+.driver-gold-plan-dots button.active { background: #e6cb91; transform: scale(1.15); }
+@media (min-width: 600px) { .driver-gold-plan-navigation { grid-template-columns: 44px minmax(0,1fr) 44px; gap: 12px; } .driver-gold-plan-arrow { width: 42px; height: 42px; } }
 
 .driver-gold-meta {
   display: flex;
@@ -6937,8 +6999,7 @@ a.activity-pill:hover {
 .modern-map .maplibregl-ctrl-attrib a {
   color: #d5dfe6;
 }
-.modern-map .marker-driver,
-.modern-map .marker-pin {
+.modern-map .marker-driver {
   background: #17212d;
   color: #f4cf85;
   border: 2px solid #e9be70;
@@ -6946,14 +7007,25 @@ a.activity-pill:hover {
     0 3px 12px #080f1c80,
     0 0 0 4px #f4cf8512;
 }
+.modern-map .marker-pin {
+  width: 16px;
+  height: 16px;
+  box-shadow: none;
+  border: 2px solid #d4af37;
+  background: #17212d;
+  color: #d4af37;
+}
 .modern-map .marker-pin.pickup {
-  background: #f4cf85;
-  color: #17212d;
+  background: #17212d;
+  color: #d4af37;
 }
 .modern-map .marker-pin.dropoff {
-  background: #edf3f7;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: #d4af37;
   color: #17212d;
-  border-color: #fff;
+  border-color: #17212d;
 }
 .driver-dark-map.modern-map .maplibregl-marker:not(.marker-pin):not(.marker-car),
 .driver-dark-map .modern-map .maplibregl-marker:not(.marker-pin):not(.marker-car) {
@@ -6990,6 +7062,40 @@ a.activity-pill:hover {
   background: #8cc8f0 !important;
   border: 3px solid #f0f7fc !important;
   box-shadow: 0 0 0 7px #8cc8f025 !important;
+}
+
+.modern-map .marker-dot-simple svg {
+  display: none;
+}
+
+/* Repère de géolocalisation client avec icône compte */
+.shell-rider .modern-map .marker-dot-simple {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  background: #17212d !important;
+  color: #e9be70 !important;
+  border: 2.5px solid #e9be70 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 6px rgba(233, 190, 112, 0.18);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  animation: sd-rider-gps-glow 2s ease-in-out infinite;
+}
+
+@keyframes sd-rider-gps-glow {
+  0%, 100% { box-shadow: 0 0 5px #e9be7033; }
+  50% { box-shadow: 0 0 20px #e9be70aa; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-rider .modern-map .marker-dot-simple {
+    animation: none;
+  }
+}
+
+.shell-rider .modern-map .marker-dot-simple svg {
+  display: block;
 }
 
 /* Desktop passenger workspace: keep these changes separate from the mobile UI. */
@@ -7357,32 +7463,55 @@ a.activity-pill:hover {
 }
 .shell-rider .rider-payment-options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
 }
 .shell-rider .rider-payment-options .rider-payment-option {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
+  text-align: center;
   gap: 6px;
   min-width: 0;
-  min-height: 68px;
-  padding: 10px;
+  min-height: 76px;
+  padding: 12px 8px;
   border-radius: 14px;
   border: 1px solid #3b4656;
   background: #1c2532;
   color: #f1f5f9;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 .shell-rider .rider-payment-options .rider-payment-option[aria-checked="true"] {
   background: #30291b;
   color: #ffe0a3;
   border-color: #e9be70;
-  box-shadow: inset 0 0 0 1px #e9be70;
+  box-shadow: inset 0 0 0 1.5px #e9be70, 0 4px 12px rgba(233, 190, 112, 0.15);
 }
-.rider-payment-detail {
-  color: #bac6d5;
+.shell-rider .rider-payment-option-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  max-width: 100%;
+  white-space: nowrap;
+  font-size: clamp(0.7rem, 3.15vw, 0.86rem);
+  line-height: 1.3;
+  font-weight: 600;
+}
+.shell-rider .rider-payment-option-title svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+.shell-rider .rider-payment-detail {
+  color: #94a3b8;
+  font-size: clamp(0.62rem, 2.55vw, 0.75rem);
+  line-height: 1.35;
+  white-space: nowrap;
+  max-width: 100%;
 }
 .rider-payment-option:focus-visible,
 .rider-cancel-button:focus-visible {
@@ -8155,6 +8284,29 @@ a.activity-pill:hover {
 }
 
 /* Critical ride confirmations sit outside the dock, above navigation on iOS. */
+/* The chat composer must sit above the active-ride navigation (z-index: 50). */
+.mobile-ride-chat {
+  z-index: 1000;
+}
+
+/* Give the chat the full visible area while typing, right down to Safari's toolbar. */
+.mobile-ride-chat:has(form input:focus) {
+  height: calc(var(--ride-chat-visible-height, 100dvh) - 8px) !important;
+  bottom: auto;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+
+/* Paint the page canvas when Safari shifts the visible area for the keyboard. */
+html:has(.mobile-ride-chat input:focus) {
+  color-scheme: dark;
+  background-color: #08090c;
+}
+body:has(.mobile-ride-chat input:focus) {
+  background-color: #08090c;
+}
+
 .modal-portal-root .modal-portal-overlay {
   z-index: 1000;
   overscroll-behavior: none;
@@ -9247,19 +9399,12 @@ a.activity-pill:hover {
 .landing-hero {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 28px 24px 72px;
-}
-
-/* Plein écran sur PC : la section suivante n'apparaît qu'au premier scroll */
-@media (min-width: 1024px) {
-  .landing-hero {
-    min-height: calc(100vh - 70px);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 20px 24px 40px;
-    box-sizing: border-box;
-  }
+  padding: 24px 20px 60px;
+  min-height: calc(100dvh - 64px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
 }
 .strasbourg-skyline {
   width: 100%;
@@ -10434,6 +10579,43 @@ a.activity-pill:hover {
   gap: 16px;
   margin-bottom: 12px;
 }
+.private-qr-launch {
+  flex-shrink: 0;
+}
+
+.private-qr-preview[open] {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: min(440px, calc(100vw - 40px), calc(100dvh - 48px));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 12px;
+  border: 1px solid #8e733d;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #332a1b, #15151a 65%);
+  box-shadow: 0 24px 70px #0009;
+  animation: private-qr-present 240ms cubic-bezier(.2, .75, .25, 1) both;
+}
+
+.private-qr-preview::backdrop {
+  background: #08090cbd;
+  backdrop-filter: blur(12px);
+}
+
+.private-qr-preview img { display: block; width: 100%; height: auto; border-radius: 17px; }
+
+@keyframes private-qr-present {
+  from { opacity: 0; transform: translateY(28px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .private-qr-preview[open] { animation: none; }
+}
+
 .driver-account-heading > :first-child {
   min-width: 0;
 }
@@ -11074,3 +11256,578 @@ a.activity-pill:hover {
     0 0 0 3px rgba(234, 179, 8, 0.07),
     0 0 16px rgba(234, 179, 8, 0.16);
 }
+
+
+/* Gold subscription visual matched to approved reference: one centered offer. */
+.driver-gold-card { --gold-card-accent: #f0cd75; gap: 17px; border-color: #66502b; border-radius: 30px; background: radial-gradient(ellipse at 82% 20%,#382a1b 0%,transparent 62%),#111215; box-shadow: inset 0 0 22px #b58a2510; overflow: hidden; }
+.driver-gold-meta .driver-gold-inactive { display: none; }
+.driver-gold-header h2 span { white-space: nowrap; }
+.driver-gold-crown { display: inline-block; vertical-align: middle; fill: #e9c45c; color: #f9d980; filter: drop-shadow(0 0 9px #ffcf5caa); }
+.driver-gold-pricing { border-top: 0; padding-top: 0; min-width: 0; }
+.driver-gold-plan-intro { font-size: clamp(.85rem,3.5vw,1rem); color: #f0ece5; margin: 0 0 16px !important; }
+.driver-gold-plan-navigation { grid-template-columns: 31px minmax(0,1fr) 31px; gap: 4px; }
+.driver-gold-plan-single { box-sizing: border-box; display: flex; align-items: center; text-align: center; width: 100%; min-height: 0; gap: 9px; padding: 19px 11px 14px; border: 2px solid #e8c469; border-radius: 25px; background: radial-gradient(ellipse at 95% 100%,#48321b 0%,transparent 55%),linear-gradient(145deg,#25211d,#141518); box-shadow: 0 0 13px #efc76380, inset 0 0 14px #eac45a22; }
+.driver-gold-plan-single.featured { background: radial-gradient(ellipse at 90% 100%,#53371d,transparent 58%),#1b1918; }
+.driver-gold-plan-single .driver-gold-plan-badge { align-self: center; text-align: center; font-size: .63rem; padding: 5px 10px; }
+.driver-gold-plan-single .driver-gold-plan-term { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg,#ffe49a,#dbad46); color: #211709; padding: 9px 17px; border-radius: 999px; box-shadow: 0 3px 13px #e9bd4b6b; font-size: .88rem; }
+.driver-gold-plan-single .driver-gold-plan-total { font-size: clamp(1.9rem,9vw,3.2rem); line-height: 1.13; font-weight: 800; letter-spacing: -.045em; color: #fff; overflow-wrap: anywhere; }
+.driver-gold-plan-single .driver-gold-plan-monthly { font-size: .85rem; color: #d1c9bf; }
+.driver-gold-plan-single .driver-gold-plan-saving { font-size: .73rem; color: #f4d078; }
+.driver-gold-plan-divider { width: 100%; height: 1px; background: #ffffff22; margin: 7px 0; }
+.driver-gold-plan-features { display: grid; gap: 10px; align-self: stretch; list-style: none; margin: 0; padding: 0 3px; text-align: left; }
+.driver-gold-plan-features li { display: flex; gap: 9px; align-items: center; color: #f5f0e9; font-size: clamp(.72rem,2.8vw,.88rem); line-height: 1.25; }
+.driver-gold-plan-features svg { flex: 0 0 19px; width: 19px; height: 19px; padding: 3px; border-radius: 50%; background: #f0cd75; color: #201707; stroke-width: 3; }
+.driver-gold-plan-choose { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; min-height: 47px; margin-top: 8px; padding: 10px 7px; border: 1px solid #ffe6a2; border-radius: 999px; background: linear-gradient(120deg,#ffe29b,#e5b747); color: #1b1408; font: inherit; font-size: clamp(.74rem,3vw,.96rem); font-weight: 800; box-shadow: 0 3px 12px #ffcc55a6; cursor: pointer; }
+.driver-gold-plan-choose:disabled { opacity: .75; cursor: wait; }
+.driver-gold-plan-choose:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+.driver-gold-plan-arrow { width: 31px; height: 31px; border: 2px solid #f0cd75; border-radius: 50%; color: #f8d782; background: #191712; box-shadow: 0 0 11px #ffd66b9c; }
+.driver-gold-plan-dots { padding: 13px 0 6px; }
+.driver-gold-plan-dots button { width: 9px; height: 9px; }
+.driver-gold-plan-dots button.active { background: #f6c52e; }
+.driver-gold-card .driver-gold-trial { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 11px; padding: 9px 7px; border: 1px solid #6a512b; border-radius: 999px; color: #f0ce79; background: #201c16; text-align: center; font-size: clamp(.72rem,3vw,.9rem); }
+.driver-gold-trial svg { flex-shrink: 0; }
+.driver-gold-benefits { gap: 16px; }
+.driver-gold-benefits li { gap: 12px; }
+.driver-gold-benefits li > svg { flex: 0 0 36px; width: 36px; height: 36px; padding: 9px; border: 1px solid #71572d; border-radius: 12px; background: linear-gradient(145deg,#41331e,#211d16); color: #f2cf77; }
+.driver-gold-benefits strong { font-size: .9rem; }
+.driver-gold-benefits p { font-size: .79rem; }
+.driver-gold-plan-hint { text-align: center; }
+@media (min-width: 600px) { .driver-gold-plan-navigation { grid-template-columns: 45px minmax(0,1fr) 45px; gap: 12px; } .driver-gold-plan-arrow { width: 42px; height: 42px; } .driver-gold-plan-single { max-width: 420px; margin-inline: auto; padding: 25px; } }
+
+/* Align Gold crown with the word baseline/visual center on all screen sizes. */
+.driver-gold-header h2 span { display: inline-flex; align-items: center; vertical-align: baseline; gap: 5px; }
+.driver-gold-header h2 .driver-gold-crown { display: block; flex: none; width: .72em; height: .72em; vertical-align: unset; transform: translateY(-.10em); }
+
+
+/* Chauffeur menu: compact Gold status with neon red/green state. */
+.drv-menu-gold-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.drv-menu-gold-status > strong { font-size: clamp(.9rem, 3.8vw, 1.1rem); line-height: 1.3; }
+.drv-menu-gold-badge { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 84px; padding: 8px 13px; border: 1px solid; border-radius: 999px; font-weight: 800; font-size: .85rem; letter-spacing: .02em; }
+.drv-menu-gold-badge.is-inactive { color: #ff666d; border-color: #fa3847; background: #ff30451b; box-shadow: 0 0 12px #ff304578, inset 0 0 8px #ff304529; text-shadow: 0 0 8px #ff3045aa; }
+.drv-menu-gold-badge.is-active { color: #61ff9a; border-color: #27d86a; background: #25e56b1a; box-shadow: 0 0 12px #20ed7178, inset 0 0 8px #20ed7129; text-shadow: 0 0 8px #20ed71aa; }
+.drv-menu-gold-badge.is-unknown { color: #c7c7c7; border-color: #686868; background: #ffffff0b; }
+
+
+/* Passenger -> driver application, matching StrasDrive's black and gold theme. */
+.sd-become-driver-menu-link { display: flex; align-items: center; gap: 12px; padding: 17px 18px; margin: 0 0 18px; border: 1px solid #8c6a33; border-radius: 18px; background: linear-gradient(125deg,#252019,#101115); color: #f5d78e; text-decoration: none; box-shadow: 0 0 14px #c18e321b; }
+.sd-become-driver-menu-link > span { flex: 1; color: #f9f3e7; font-weight: 750; }
+.sd-become-driver-menu-link small { display: block; color: #bcb6a9; font-weight: 400; margin-top: 3px; }
+.sd-become-driver-page { max-width: 680px; margin-inline: auto; padding-bottom: 110px; }
+.sd-become-driver-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.sd-become-driver-kicker { color: #d6b76d; font-size: .75rem; letter-spacing: .12em; font-weight: 750; }
+.sd-become-driver-panel { border: 1px solid #8b6937; border-radius: 28px; padding: clamp(22px,6vw,38px); text-align: center; background: radial-gradient(ellipse at 90% 8%,#3a2b1d 0%,transparent 57%),#101116; box-shadow: 0 0 20px #c99c3926; }
+.sd-become-driver-icon { width: 72px; height: 72px; display: grid; place-items: center; margin: 0 auto 20px; color: #f2d18b; border: 1px solid #b48b46; border-radius: 21px; background: #30251a; box-shadow: 0 0 20px #e1ac4940; }
+.sd-become-driver-panel h1 { font-size: clamp(1.7rem,6vw,2.3rem); line-height: 1.15; color: #fff; font-weight: 800; }
+.sd-become-driver-panel h1 span { color: #edc66e; }
+.sd-become-driver-lead { color: #d1c9bb; line-height: 1.6; margin: 15px 0 24px; }
+.sd-become-driver-features { text-align: left; display: grid; gap: 17px; padding: 22px 0; border-block: 1px solid #ffffff20; margin-bottom: 22px; }
+.sd-become-driver-features p { display: flex; align-items: center; gap: 12px; color: #f0ede6; font-size: .93rem; }
+.sd-become-driver-features svg { color: #edc66e; flex-shrink: 0; }
+.sd-become-driver-submit { display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; min-height: 53px; border: 1px solid #f8db96; border-radius: 999px; background: linear-gradient(110deg,#ffe29c,#dcae4c); color: #241a0b; text-decoration: none; font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 0 16px #d7a74480; }
+.sd-become-driver-submit:disabled { opacity: .65; cursor: wait; }
+.sd-become-driver-status { padding: 18px; border-radius: 16px; background: #252017; border: 1px solid #86683a; color: #f4dfaa; }
+.sd-become-driver-status p { color: #ded5c4; line-height: 1.5; margin: 9px 0 15px; }
+.sd-become-driver-footnote { color: #a9a397; font-size: .78rem; line-height: 1.45; margin-top: 20px; }
+.sd-driver-application-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 13px 0; border-top: 1px solid #ffffff20; }
+.sd-driver-application-row p { margin-top: 3px; }
+
+
+/* Required VTC document acknowledgments before driver application. */
+.sd-become-driver-checklist { margin: 0 0 24px; text-align: left; }
+.sd-become-driver-checklist h2 { color: #f4d78f; font-size: 1.15rem; font-weight: 800; margin-bottom: 8px; }
+.sd-become-driver-checklist-intro { color: #c9c1b1; font-size: .89rem; line-height: 1.5; margin-bottom: 12px; }
+.sd-become-driver-checklist-progress { color: #f1ce80; font-size: .85rem; font-weight: 700; margin: 0 0 12px; }
+.sd-become-driver-check-row { display: flex; gap: 13px; align-items: flex-start; padding: 13px 12px; border: 1px solid #5c4c32; border-radius: 13px; margin-bottom: 9px; background: #ffffff08; cursor: pointer; }
+.sd-become-driver-check-row:has(input:checked) { border-color: #bb934b; background: #d6a94d14; }
+.sd-become-driver-check-row input { flex-shrink: 0; width: 20px; height: 20px; margin-top: 2px; accent-color: #e6bb65; }
+.sd-become-driver-check-row span { display: block; flex: 1; min-width: 0; }
+.sd-become-driver-check-row strong { display: block; color: #f5f0e7; font-size: .94rem; }
+.sd-become-driver-check-row small { display: block; color: #bdb6a9; font-size: .79rem; line-height: 1.4; margin-top: 5px; }
+.sd-become-driver-submit:disabled { box-shadow: none; opacity: .5; cursor: not-allowed; }
+
+
+/* One-at-a-time ride category selector, with compact navigation arrows. */
+.shell-rider .rider-vehicle-carousel {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.shell-rider .rider-vehicle-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-height: 48px;
+  padding: 0;
+  color: #e9be70;
+  border: 1px solid #6b5733;
+  border-radius: 12px;
+  background: #30291b;
+  cursor: pointer;
+}
+.shell-rider .rider-vehicle-arrow:disabled { opacity: .25; cursor: default; }
+.shell-rider .rider-vehicle-arrow:focus-visible { outline: 2px solid #e9be70; outline-offset: 2px; }
+.shell-rider .rider-vehicle-carousel-card {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  cursor: default;
+}
+.shell-rider .rider-vehicle-carousel-count {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+
+/* Keep the full booking form reachable on short phones, tablets and desktops. */
+.shell-rider .rider-trip-panel {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+}
+.shell-rider .rider-trip-panel > .rider-booking-card {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  .shell-rider .rider-workspace > .rider-trip-panel {
+    box-sizing: border-box;
+    max-height: max(120px, calc(100dvh - 118px - env(safe-area-inset-bottom)));
+    padding-bottom: 2px;
+  }
+  .shell-rider .rider-trip-panel .rider-booking-card {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+@media (max-height: 680px) and (max-width: 900px) {
+  .shell-rider .rider-trip-panel .rider-booking-card {
+    padding: 14px;
+  }
+  .shell-rider .rider-vehicle-carousel-card {
+    padding: 10px 8px;
+  }
+}
+
+
+/* Expanded fare sheet: reserve a real scrollable viewport above bottom navigation.
+   The dashboard also sets inline top:auto/maxHeight, hence explicit overrides here. */
+@media (max-width: 900px) {
+  .shell-rider .rider-workspace > .rider-trip-panel.has-estimate:not(.is-editing) {
+    position: fixed !important;
+    top: max(8px, env(safe-area-inset-top)) !important;
+    bottom: calc(86px + env(safe-area-inset-bottom)) !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    z-index: 45;
+  }
+  .shell-rider .rider-trip-panel.has-estimate > .rider-booking-card {
+    flex-shrink: 0;
+    height: max-content;
+    overflow: visible;
+  }
+}
+
+
+/* Compact booking estimate without hiding the booking action. */
+.shell-rider .rider-trip-panel.has-estimate .rider-booking-card {
+  padding: 14px 16px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.shell-rider .rider-route-summary-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #394250;
+  border-radius: 12px;
+  background: #1c2532;
+}
+.shell-rider .rider-route-summary-addresses { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 3px; }
+.shell-rider .rider-route-summary-pickup,
+.shell-rider .rider-route-summary-dropoff { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shell-rider .rider-route-summary-pickup { font-weight: 700; color: #f1f5f9; font-size: .85rem; }
+.shell-rider .rider-route-summary-dropoff { color: #9ca9bd; font-size: .77rem; }
+.shell-rider .rider-route-summary-edit {
+  flex: 0 0 auto; border: 1px solid #6b7380; border-radius: 9px;
+  background: #242d3a; color: #f1f5f9; font-size: .78rem;
+  padding: 8px 10px; cursor: pointer;
+}
+.shell-rider .rider-route-summary-edit:focus-visible { outline: 2px solid #9cc9ff; outline-offset: 2px; }
+
+/* Two compact payment cards, with distinct neon blue/card and neon green/cash states. */
+.shell-rider .rider-payment-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.shell-rider .rider-payment-options .rider-payment-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 8px 7px;
+  border-radius: 12px;
+  border: 1px solid #3b4656;
+  background: #1c2532;
+  color: #f1f5f9;
+  cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease, color .2s ease;
+}
+.shell-rider .rider-payment-options .rider-payment-option--card:hover,
+.shell-rider .rider-payment-options .rider-payment-option--card[aria-checked="true"] {
+  background: #0a2032;
+  color: #8bdcff;
+  border-color: #20c6ff;
+  box-shadow: inset 0 0 0 1px #20c6ff, 0 0 14px #20c6ff30;
+}
+.shell-rider .rider-payment-options .rider-payment-option--cash:hover,
+.shell-rider .rider-payment-options .rider-payment-option--cash[aria-checked="true"] {
+  background: #0d291d;
+  color: #a5ffd1;
+  border-color: #31ef93;
+  box-shadow: inset 0 0 0 1px #31ef93, 0 0 14px #31ef9330;
+}
+.shell-rider .rider-payment-options .rider-payment-option--card:focus-visible { outline: 2px solid #20c6ff; outline-offset: 2px; }
+.shell-rider .rider-payment-options .rider-payment-option--cash:focus-visible { outline: 2px solid #31ef93; outline-offset: 2px; }
+.shell-rider .rider-payment-options .rider-payment-detail {
+  color: #94a3b8;
+  font-size: clamp(.62rem, 2.55vw, .72rem);
+  white-space: nowrap;
+}
+.shell-rider .rider-payment-options .rider-payment-option--card[aria-checked="true"] .rider-payment-detail { color: #8bc9e6; }
+.shell-rider .rider-payment-options .rider-payment-option--cash[aria-checked="true"] .rider-payment-detail { color: #9cddb9; }
+@media (hover: none) {
+  .shell-rider .rider-payment-options .rider-payment-option--card:not([aria-checked="true"]):hover,
+  .shell-rider .rider-payment-options .rider-payment-option--cash:not([aria-checked="true"]):hover {
+    background: #1c2532;
+    color: #f1f5f9;
+    border-color: #3b4656;
+    box-shadow: none;
+  }
+}
+
+
+/* Center the floating booking sheet exactly within the viewport on mobile. */
+@media (max-width: 900px) {
+  .shell-rider .rider-workspace > .rider-trip-panel,
+  .shell-rider .rider-workspace > .rider-trip-panel.has-estimate:not(.is-editing) {
+    box-sizing: border-box;
+    left: 50vw !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    width: calc(100vw - 24px) !important;
+    max-width: 560px !important;
+    margin-inline: 0 !important;
+  }
+}
+
+
+/* Driver payment badges — same neon blue/card and neon green/cash as rider. */
+.drv-payment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.drv-payment-badge svg {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+}
+.drv-payment-badge--card {
+  background: #0a2032;
+  color: #8bdcff;
+  border: 1px solid #20c6ff;
+  box-shadow: inset 0 0 0 1px #20c6ff, 0 0 14px #20c6ff30;
+}
+.drv-payment-badge--cash {
+  background: #0d291d;
+  color: #a5ffd1;
+  border: 1px solid #31ef93;
+  box-shadow: inset 0 0 0 1px #31ef93, 0 0 14px #31ef9330;
+}
+
+
+/* Driver payment method: icon only, no oversized pill. */
+.drv-payment-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  vertical-align: middle;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.drv-payment-icon svg { width: 40px; height: 40px; stroke-width: 2; }
+.drv-payment-icon--card { color: #20c6ff; filter: drop-shadow(0 0 3px #20c6ff55); }
+.drv-payment-icon--cash { color: #31ef93; filter: drop-shadow(0 0 3px #31ef9355); }
+
+/* Driver offer: dismiss at upper-right, payment symbol in former dismiss position. */
+.drv-offer-top-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+}
+.drv-offer-top-close > button {
+  background: #15171e;
+}
+.drv-payment-icon--card,
+.drv-payment-icon--cash {
+  filter: none !important;
+  text-shadow: none !important;
+}
+.drv-payment-icon svg {
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+
+/* StrasDrive — foldables and Android tablets.
+   Layout follows available CSS width, not manufacturer/device model.
+   Narrow folded cover displays keep the existing phone layout. */
+@media (min-width: 901px) and (max-width: 1366px) {
+  .shell { min-width: 0; }
+  .shell > :not(.sidebar) { min-width: 0; }
+  .sidebar { max-width: min(var(--sidebar-w), 25vw); }
+  .ride-page { min-width: 0; min-height: 100dvh; }
+  .ride-panel {
+    width: clamp(320px, 34vw, 440px);
+    max-width: calc(100% - 32px);
+    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+  .shell-rider .rider-workspace { min-width: 0; }
+  .shell-rider .rider-workspace > .rider-trip-panel {
+    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Unfolded portrait devices are often 600–900 CSS px wide. Keep the
+   mobile navigation but allow the booking sheet to use a comfortable width. */
+@media (min-width: 600px) and (max-width: 900px) {
+  .shell-rider .rider-workspace > .rider-trip-panel,
+  .shell-rider .rider-workspace > .rider-trip-panel.has-estimate:not(.is-editing) {
+    width: min(560px, calc(100vw - 32px)) !important;
+    max-width: calc(100vw - 32px) !important;
+  }
+}
+
+/* Tablet/foldable landscape: don't force the booking sheet to cover
+   almost the entire map on a short, wide viewport. */
+@media (min-width: 600px) and (max-height: 600px) and (orientation: landscape) {
+  .shell-rider .rider-workspace > .rider-trip-panel,
+  .shell-rider .rider-workspace > .rider-trip-panel.has-estimate:not(.is-editing) {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Respect Android gesture/navigation insets and avoid accidental
+   horizontal overflow from long fare/address labels. */
+.shell-rider .rider-route-summary-compact,
+.shell-rider .rider-payment-options,
+.ride-panel { box-sizing: border-box; min-width: 0; }
+.shell-rider .rider-route-summary-addresses { min-width: 0; }
+@media (max-width: 900px) {
+  .shell-rider .rider-workspace > .rider-trip-panel {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Remove the Android/WebView tap flash across the app. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Online waiting status and half-height availability sheet. */
+.drv-online-status {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(440px, calc(100% - 32px));
+  padding: 16px 20px;
+  border: 1px solid #ffffff18;
+  border-radius: 22px;
+  background: linear-gradient(120deg, #14221f, #11171d);
+  color: #f1f7f5;
+  box-shadow: 0 12px 32px #0006;
+  cursor: pointer;
+  text-align: left;
+}
+.drv-online-copy { display: grid; gap: 4px; flex: 1; }
+.drv-online-copy strong { font-size: 16px; font-weight: 650; }
+.drv-online-copy small { font-size: 12px; color: #a4b8b0; }
+.drv-online-signal {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #72ddb514;
+  color: #86e4bb;
+}
+.drv-online-status.is-searching .drv-online-signal,
+.drv-online-sheet-waiting .drv-online-signal {
+  animation: drvWaitingBreath 3s ease-in-out infinite;
+}
+@keyframes drvWaitingBreath {
+  0%, 100% { box-shadow: 0 0 0 0 #86e4bb00; opacity: .7; }
+  50% { box-shadow: 0 0 0 7px #86e4bb0c; opacity: 1; }
+}
+.modal-portal-overlay:has(.drv-online-sheet) {
+  align-items: flex-end;
+  padding: 0;
+  backdrop-filter: none;
+  background: #0004;
+}
+.modal-portal-root .drv-online-sheet {
+  display: flex;
+  flex-direction: column;
+  height: 50vh;
+  height: 50dvh;
+  max-height: 50dvh;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #ffffff18;
+  border-bottom: 0;
+  border-radius: 26px 26px 0 0;
+  background: #11191d;
+  color: #f1f7f5;
+  animation: slide-up 260ms ease-out;
+}
+.modal-portal-root .drv-online-sheet .modal-header {
+  margin: 0;
+  padding: 18px 20px;
+  flex-shrink: 0;
+  background: transparent;
+}
+.modal-portal-root .drv-online-sheet .modal-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 12px 24px max(24px, env(safe-area-inset-bottom, 0px));
+}
+.drv-online-sheet-waiting { margin: auto 0; padding: 12px 0 24px; text-align: center; }
+.drv-online-sheet-waiting .drv-online-signal { margin: 0 auto 20px; width: 56px; height: 56px; }
+.drv-online-sheet-waiting h4 { margin: 0 0 8px; font-size: 17px; }
+.drv-online-sheet-waiting p { margin: 0; font-size: 13px; color: #a4b8b0; }
+.drv-online-stop { width: 100%; justify-content: center; flex-shrink: 0; margin-top: auto; box-shadow: 0 0 22px #ef44442e; }
+.drv-online-stop:disabled { opacity: .55; cursor: wait; }
+.drv-online-status:focus-visible { outline: 2px solid #86e4bb; outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .drv-online-status.is-searching .drv-online-signal,
+  .drv-online-sheet-waiting .drv-online-signal,
+  .modal-portal-root .drv-online-sheet { animation: none; }
+}
+
+.app-update-notice {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #ffffff24;
+  border-radius: 16px;
+  background: #14221f;
+  color: #f1f7f5;
+  box-shadow: 0 8px 24px #0005;
+  font-size: 13px;
+}
+.app-update-notice button { border: 0; border-radius: 8px; padding: 8px 12px; background: #86e4bb; color: #10231b; font-weight: 700; cursor: pointer; }
+
+.drv-status-loading { padding: 14px 24px; border-radius: 24px; background: #14221f; color: #b4c4bd; font-size: 13px; }
+.modal-portal-root .driver-incoming-modal { background: #090c12; color: #fff; }
+.modal-portal-root .driver-incoming-modal > .modal-body { display: flex; padding: max(20px, env(safe-area-inset-top, 0px)) 18px max(24px, env(safe-area-inset-bottom, 0px)); }
+.driver-incoming-card { width: 100%; max-width: 440px; margin: auto; padding: 24px 20px; border: 1px solid #d4a01740; border-radius: 24px; background: linear-gradient(180deg,#13151f,#0a0b10); box-shadow: 0 24px 60px #0008, 0 0 30px #d4a01712; }
+.driver-incoming-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.driver-incoming-heading > span:first-child { display: inline-flex; align-items: center; gap: 8px; color: #facc15; font-size: 15px; font-weight: 700; flex: 1; }
+.driver-incoming-payment { color: #31baff; }
+.driver-incoming-payment.is-cash { color: #39ff88; }
+.driver-incoming-price { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; padding: 12px 14px; margin-bottom: 20px; background: #d4a01714; border: 1px solid #d4a01740; border-radius: 14px; }
+.driver-incoming-price > span { font-size: 13px; color: #a8b2c3; }
+.driver-incoming-price strong { font-size: 26px; font-weight: 800; color: #39ff88; }
+.driver-incoming-date { margin: 0 0 20px; font-size: 20px; font-weight: 700; }
+.driver-incoming-approach, .driver-incoming-distance { margin: 0 0 20px; font-size: 13px; color: #a8b2c3; }
+.driver-incoming-address { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+.driver-incoming-address > svg { color: #39ff88; flex-shrink: 0; margin-top: 2px; }
+.driver-incoming-address.is-destination > svg { color: #ff657c; }
+.driver-incoming-address small { color: #a8b2c3; font-size: 12px; }
+.driver-incoming-address p { margin: 5px 0 0; font-size: 16px; overflow-wrap: anywhere; }
+.driver-incoming-actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; margin-top: 24px; }
+.driver-incoming-actions button { min-height: 52px; border-radius: 12px; font-weight: 750; cursor: pointer; }
+.driver-incoming-refuse { border: 1px solid #ff335c; background: #ff264f14; color: #ff4567; box-shadow: 0 0 12px #ff264f20; }
+.driver-incoming-accept { position: relative; isolation: isolate; overflow: hidden; border: 1px solid #21d46a; background: #10251b; color: #fff; }
+.driver-incoming-progress { position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg,#10a34c,#32e67c); transition: width .25s linear; }
+.driver-incoming-actions button:disabled { opacity: .5; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .driver-incoming-progress { transition: none; } }
+
+.pickup-wait-timer {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.pickup-wait-timer progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--gold-600, #ca9d43);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pickup-wait-timer progress::-webkit-progress-value {
+    transition: width 1s linear;
+  }
+}
+
+/* Bandeau discret hors connexion (non bloquant) */
+.sd-offline-banner { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 9999; padding: 6px 12px; text-align: center; font-size: 13px; background: var(--drv-surface, #17212d); color: var(--drv-gold, #eab308); pointer-events: none; }

@@ -2,6 +2,7 @@
 
 import {
   Gauge,
+  CalendarDays,
   Route as RouteIcon,
   Wallet,
   MessagesSquare,
@@ -11,16 +12,19 @@ import {
   ShieldAlert,
   LogOut,
 } from "lucide-react";
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, createContext, useContext } from "react";
 import Link from "@/lib/archive-navigation";
 import useDriverData from "@/hooks/useDriverData";
 import AppShell from "@/components/shell/AppShell";
 import { registerDriverPush } from "@/lib/native-push";
 import { apiFetch as fetch } from "@/lib/archive-fetch";
-import { signOut } from "@/lib/archive-auth";
+import { signOut, useSession } from "@/lib/archive-auth";
+import { prefetchDriverAssets } from "@/lib/offline-prefetch";
+import { useRouter as useTanstackRouter } from "@tanstack/react-router";
 
 const NAV = [
   { href: "/driver/dashboard", label: "Accueil", icon: Gauge },
+  { href: "/driver/reservations", label: "Réservations", icon: CalendarDays },
   { href: "/driver/private-clients", label: "Clients", icon: QrCode },
   { href: "/driver/discover", label: "Trafic", icon: RouteIcon },
   { href: "/driver/earnings", label: "Revenus", icon: Wallet },
@@ -30,60 +34,23 @@ const NAV = [
 
 const GoldContext = createContext(null);
 export const useDriverGold = () => useContext(GoldContext);
-const STANDARD_NAV = [NAV[0], { href: "/driver/private-clients", label: "SDGold", icon: Gem }, ...NAV.slice(3)];
-
-// Cache persistant pour conserver le statut Gold entre les changements d'onglets
-let cachedGold = null;
-try {
-  if (typeof window !== "undefined") {
-    const raw = sessionStorage.getItem("sd_driver_gold_cache");
-    if (raw) cachedGold = JSON.parse(raw);
-  }
-} catch {}
+const GoldLoadContext = createContext({ loading: true, error: "", reload: () => {} });
+export const useDriverGoldLoad = () => useContext(GoldLoadContext);
+const STANDARD_NAV = [NAV[0], NAV[1], { href: "/driver/discover", label: "Découvrir", icon: RouteIcon }, ...NAV.slice(4, 6), { href: "/driver/private-clients", label: "SDGold", icon: Gem }, NAV[6]];
 
 export default function DriverLayout({ children }) {
-  const { data: goldData } = useDriverData("/api/drivers/me/gold", 15000);
+  const router = useTanstackRouter();
+  const { data: goldData, error: goldError, reload: reloadGold } = useDriverData("/api/drivers/me/gold", 15000);
+  const { live } = useSession();
+  const gold = goldData?.gold;
+  const isSuspended = live?.suspended && !live?.hasDriverRide;
+  const { data: reservationData } = useDriverData("/api/drivers/me/accepted-reservations", 5000);
+  const reservationBadge = (reservationData?.reservations || []).filter(item => item.status === "modified_pending").length;
+  const navWithBadges = (gold?.active ? NAV : STANDARD_NAV).map(item =>
+    item.href === "/driver/reservations" ? {...item,badge:reservationBadge} : item
+  );
 
-  // Mémoriser le statut dès réception de la réponse serveur
-  if (goldData?.gold !== undefined) {
-    cachedGold = goldData.gold;
-    try {
-      sessionStorage.setItem("sd_driver_gold_cache", JSON.stringify(goldData.gold));
-    } catch {}
-  }
-
-  // Utiliser immédiatement le cache si la requête est en cours
-  const gold = goldData?.gold ?? cachedGold;
-  const [isSuspended, setIsSuspended] = useState(false);
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
-    registerDriverPush();
-
-    // Vérifier l'état de suspension du compte
-    let ignore = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/drivers/me");
-        if (res.ok) {
-          const data = await res.json();
-          const d = data.driver;
-          // Un chauffeur est suspendu si isApproved est faux (ou s'il a été suspendu par signalement / modération)
-          if (d && (d.isApproved === false || d.isReportSuspended)) {
-            if (!ignore) setIsSuspended(true);
-          }
-        }
-      } catch {
-        // En cas d'erreur réseau, ne pas bloquer
-      } finally {
-        if (!ignore) setChecked(true);
-      }
-    })();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  useEffect(() => { registerDriverPush(); }, []);
 
   // Keep online time observed while using any driver tab, including when stationary.
   useEffect(() => {
@@ -110,6 +77,14 @@ export default function DriverLayout({ children }) {
     };
   }, []);
 
+  // Préchargement automatique de tous les onglets en arrière-plan comme Uber
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void prefetchDriverAssets(router);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [router]);
+
   // Écran de bannissement total : bloque l'accès à toute l'application
   if (isSuspended) {
     return (
@@ -120,7 +95,7 @@ export default function DriverLayout({ children }) {
           </div>
           <h1>Compte suspendu</h1>
           <p className="driver-banned-message">
-            Votre compte a été suspendu définitivement. Si vous pensez qu’il s’agit d’une erreur, contactez
+            Votre accès chauffeur a été suspendu. Si vous pensez qu’il s’agit d’une erreur, contactez
             l’assistance.
           </p>
           <div className="driver-banned-actions">
@@ -139,9 +114,11 @@ export default function DriverLayout({ children }) {
 
   return (
     <GoldContext.Provider value={gold}>
-      <AppShell nav={gold?.active ? NAV : STANDARD_NAV} variant="driver">
+      <GoldLoadContext.Provider value={{ loading: !goldData && !goldError, error: goldError || (goldData && !gold ? "Votre abonnement n’a pas pu être chargé." : ""), reload: reloadGold }}>
+      <AppShell nav={navWithBadges} variant="driver">
         {children}
       </AppShell>
+      </GoldLoadContext.Provider>
     </GoldContext.Provider>
   );
 }

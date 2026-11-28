@@ -155,7 +155,7 @@ function EarningsPage() {
   );
 }
 export const Route = createFileRoute("/_authenticated/driver/earnings")({
-  head: () => ({ meta: [{ title: "Revenus · StrasDrive" }] }),
+  head: () => ({ meta: [{"title": "Revenus · StrasDrive"}, {"name": "description", "content": "Consultez vos gains, courses et versements chauffeur StrasDrive."}, {"property": "og:title", "content": "Revenus · StrasDrive"}, {"property": "og:description", "content": "Consultez vos gains, courses et versements chauffeur StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }),
   component: () => (
     <DriverLayout>
       <EarningsPage />

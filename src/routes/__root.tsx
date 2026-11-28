@@ -11,8 +11,10 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import fontCss from "../fonts.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import Providers from '@/components/providers';
+import { registerOfflineShell } from '@/lib/offline-shell';
 import PaymentTestModeBanner from '@/components/payments/PaymentTestModeBanner';
 
 function NotFoundComponent() {
@@ -92,9 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" },
+      { rel: "stylesheet", href: fontCss },
       {
         rel: "stylesheet",
         href: appCss,
@@ -112,6 +112,9 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html:
+          'if (window.Capacitor?.isNativePlatform?.()) document.documentElement.classList.add("capacitor-native")',
+        }} />
         <HeadContent />
       </head>
       <body>
@@ -124,6 +127,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => { registerOfflineShell(); }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

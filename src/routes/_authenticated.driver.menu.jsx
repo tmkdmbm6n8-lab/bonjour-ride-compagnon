@@ -1,10 +1,12 @@
-import { goldPeriodText, goldStatusLabel } from "@/components/private-clients/DriverGoldCard";
+
+import DriverGoldCard from "@/components/private-clients/DriverGoldCard";
 import DriverProfileOverview from "@/components/driver/DriverProfileOverview";
 import AccountModeSwitch from '@/components/shell/AccountModeSwitch';
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   ShieldCheck,
+  Crown,
   SlidersHorizontal,
   Car,
   FileText,
@@ -17,7 +19,7 @@ import {
   LogOut,
 } from "lucide-react";
 import DriverLayout from "@/components/DriverLayout";
-import Link from "@/lib/archive-navigation";
+import Link, { useSearchParams } from "@/lib/archive-navigation";
 import { signOut, useSession } from "@/lib/archive-auth";
 import useDriverData from "@/hooks/useDriverData";
 import { Avatar } from "@/components/ui/bits";
@@ -28,7 +30,11 @@ function DriverMenuPage() {
   const { data: session } = useSession();
   const { data } = useDriverData("/api/users/me?view=driver", 0);
   const { data: driverData } = useDriverData("/api/drivers/me", 0);
-  const { data: goldData } = useDriverData("/api/drivers/me/gold", 15000);
+  const goldReturn = useSearchParams().get("gold");
+  const waitingForStripe = goldReturn === "return";
+  const { data: goldData, error: goldError, reload: reloadGold } =
+    useDriverData("/api/drivers/me/gold", waitingForStripe ? 5000 : 15000);
+  const [goldOpen, setGoldOpen] = useState(null);
   const [panel, setPanel] = useState(null);
   const [waybill, setWaybill] = useState(false);
   const [overviewOpen, setOverviewOpen] = useState(false);
@@ -57,21 +63,16 @@ function DriverMenuPage() {
 
       <AccountModeSwitch mode="rider"/>
 
-      {goldData?.gold && (
-        <div className="card card-pad driver-notice">
-          <strong>{goldStatusLabel(goldData.gold)}</strong>
-          {goldData.gold.active && <p className="small mt-2">{goldPeriodText(goldData.gold)}</p>}
-          {!goldData.gold.active && !goldData.gold.unavailable && (
-            <Link href="/driver/private-clients" className="btn btn-secondary mt-2">
-              {goldData.gold.trialAvailable ? "Découvrir StrasDrive Gold" : "Réactiver StrasDrive Gold"}
-            </Link>
-          )}
-        </div>
-      )}
-
       {/* ── Grille 2x2 des outils essentiels ── */}
       <h2 className="drv-grid-title">Espace de conduite</h2>
+      <Link href="/contact?topic=fleet" className="btn btn-secondary mb-4">Ma flotte et mon véhicule</Link>
       <div className="drv-tiles-grid">
+        <button type="button" className="drv-tile" onClick={() => setGoldOpen(true)}>
+          <div className="drv-tile-icon"><Crown size={22} /></div>
+          <strong>StrasDrive Gold</strong>
+          <span>Gérer mon abonnement</span>
+          <ChevronRight size={16} className="drv-tile-arrow" />
+        </button>
         <Link href="/driver/profile" className="drv-tile">
           <div className="drv-tile-icon">
             <Car size={22} />
@@ -135,11 +136,28 @@ function DriverMenuPage() {
       {/* ── Déconnexion ── */}
       <div className="drv-logout-wrap">
         <button className="drv-logout-btn" onClick={() => signOut({ callbackUrl: "/" })}>
-          <LogOut size={16} /> Se déconnecter ({user.email || ""})
+          <LogOut size={16} /> Se déconnecter
         </button>
       </div>
 
       <DriverProfileOverview open={overviewOpen} onClose={() => setOverviewOpen(false)} />
+      <Modal
+        open={goldOpen ?? (waitingForStripe || goldReturn === "manage")}
+        onClose={() => setGoldOpen(false)}
+        title="StrasDrive Gold"
+        portal
+        sheetOnMobile={false}
+        maxWidth={620}
+      >
+        {goldError ? (
+          <div role="alert">
+            <p>Impossible de charger votre abonnement.</p>
+            <button type="button" className="btn btn-secondary mt-2" onClick={reloadGold}>Réessayer</button>
+          </div>
+        ) : goldData?.gold ? (
+          <DriverGoldCard gold={goldData.gold} waitingForStripe={waitingForStripe} />
+        ) : <p role="status">Chargement de votre abonnement…</p>}
+      </Modal>
       <Waybill open={waybill} onClose={() => setWaybill(false)} />
       <Modal open={panel !== null} onClose={() => setPanel(null)} title="Sécurité & Assistance">
         <div className="flex-col gap-3">
@@ -156,7 +174,7 @@ function DriverMenuPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/driver/menu")({
-  head: () => ({ meta: [{ title: "Menu chauffeur · StrasDrive" }] }),
+  head: () => ({ meta: [{"title": "Menu chauffeur · StrasDrive"}, {"name": "description", "content": "Votre profil, documents, préférences et assistance chauffeur StrasDrive."}, {"property": "og:title", "content": "Menu chauffeur · StrasDrive"}, {"property": "og:description", "content": "Votre profil, documents, préférences et assistance chauffeur StrasDrive."}, {"property": "og:type", "content": "website"}, {"name": "twitter:card", "content": "summary"}] }),
   component: () => (
     <DriverLayout>
       <DriverMenuPage />

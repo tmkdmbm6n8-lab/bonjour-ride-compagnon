@@ -1,3 +1,4 @@
+import { FleetActivation } from "@/components/FleetWorkspace";
 import WithdrawalRequests from '@/components/admin/WithdrawalRequests';
 import {createFileRoute} from '@tanstack/react-router';
 import AdminLayout from '@/components/AdminLayout';
@@ -221,4 +222,4 @@ function AdminDashboard() {
   );
 }
 
-export const Route=createFileRoute('/_authenticated/admin/dashboard')({head:()=>({meta:[{title:"Vue d’ensemble · StrasDrive"},{name:'description',content:"StrasDrive — vue d’ensemble, service de mise en relation VTC et tarifs en euros."},{property:'og:title',content:"Vue d’ensemble · StrasDrive"},{property:'og:description',content:"StrasDrive — vue d’ensemble, service de mise en relation VTC et tarifs en euros."},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:() => <AdminLayout><AdminDashboard/></AdminLayout>});
+export const Route=createFileRoute('/_authenticated/admin/dashboard')({head:()=>({meta:[{title:"Vue d’ensemble · StrasDrive"},{name:'description',content:"StrasDrive — vue d’ensemble, service de mise en relation VTC et tarifs en euros."},{property:'og:title',content:"Vue d’ensemble · StrasDrive"},{property:'og:description',content:"StrasDrive — vue d’ensemble, service de mise en relation VTC et tarifs en euros."},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary_large_image'}]}),component:() => <AdminLayout><AdminDashboard/><FleetActivation /></AdminLayout>});
