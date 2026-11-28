@@ -104,23 +104,14 @@ describe('une alerte par appareil', () => {
       : liveRows ? [{ token: 'ef'.repeat(32), user_id: LIVE_ACTIVITY_TEST_DRIVER_ID, device_id: deviceId }] : []) })) };
     return admin;
   }
-  it('évite la bannière classique sur le même iPhone mais la garde sur un autre téléphone', async () => {
+  it('envoie une notification classique à chaque téléphone, jamais une bulle d’offre', async () => {
     await pushRideOffer(await setup(), ride, [LIVE_ACTIVITY_TEST_DRIVER_ID]);
     expect(fetch).toHaveBeenCalledTimes(2);
-    const channels = fetch.mock.calls.map(([, init]) => init.headers['apns-push-type']);
-    expect(channels).toEqual(['liveactivity', 'alert']);
-    expect(fetch.mock.calls.some(([url]) => url.endsWith(`/device/${token}`))).toBe(false);
-    expect(fetch.mock.calls.some(([url]) => url.endsWith(`/device/${'cd'.repeat(32)}`))).toBe(true);
+    expect(fetch.mock.calls.every(([, init]) => init.headers['apns-push-type'] === 'alert')).toBe(true);
   });
   it('conserve les notifications classiques sans activité compatible', async () => {
     await pushRideOffer(await setup(false), ride, [LIVE_ACTIVITY_TEST_DRIVER_ID]);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(fetch.mock.calls.every(([, init]) => init.headers['apns-push-type'] === 'alert')).toBe(true);
-  });
-  it('rétablit la notification classique si Apple rejette le démarrage', async () => {
-    fetch.mockResolvedValueOnce(new Response('{"reason":"BadDeviceToken"}', { status: 400 }));
-    await pushRideOffer(await setup(), ride, [LIVE_ACTIVITY_TEST_DRIVER_ID]);
-    expect(fetch).toHaveBeenCalledTimes(3);
-    expect(fetch.mock.calls.filter(([, init]) => init.headers['apns-push-type'] === 'alert')).toHaveLength(2);
   });
 });
