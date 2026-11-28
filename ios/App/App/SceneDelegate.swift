@@ -16,7 +16,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         controller.webView?.isOpaque = false
         controller.webView?.backgroundColor = background
         controller.webView?.scrollView.backgroundColor = background
-        // Keep the existing static launch artwork above the remote WebView.
+
+        // Splash écran de lancement au-dessus de la WebView
         let splash = UIView()
         let logo = UIImageView(image: UIImage(named: "Splash"))
         logo.contentMode = .scaleAspectFit
@@ -48,11 +49,23 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
+        // Retour dans l'app : la flèche s'éteint immédiatement
         StrasDriveOnlineArrow.hide()
     }
 
     func sceneWillResignActive(_ scene: UIScene) {
+        // LAISSÉ VIDE EXPRÈS : quand vous glissez vers le haut pour fermer l'app,
+        // la flèche ne s'allume pas !
+    }
+
+    func sceneDidEnterBackground(_ scene: UIScene) {
+        // S'allume uniquement si le chauffeur est réellement parti en arrière-plan (écran d'accueil, Waze...)
         StrasDriveOnlineArrow.show()
+    }
+
+    func sceneDidDisconnect(_ scene: UIScene) {
+        // Si l'app est fermée depuis le multitâche
+        StrasDriveOnlineArrow.hide()
     }
 
     private func waitForStartupContent(_ controller: CAPBridgeViewController, splash: UIView, deadline: Date) {
@@ -69,7 +82,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
         let script = """
         (() => {
-          // Local offline page (no network at launch): show it right away instead of waiting 15 s.
           if (location.protocol !== 'https:' || document.querySelector('[data-native-ready]')) return document.readyState !== 'loading';
           const logo = document.querySelector('.native-startup-logo');
           if (!logo || document.querySelector('.native-startup-unresolved')) return false;
