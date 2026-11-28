@@ -1,20 +1,12 @@
 // Pure rules for ride-offer push notifications (unit-tested in src/test/vtc-push.test.ts).
 import { canSeeOffer } from "./vtc-dispatch";
 import { formatEuro } from "./vtc-pricing";
-import { passengerDisplayName } from "./passenger-name";
 
 /** Android channel shown as a heads-up banner with sound; created by the app on first launch. */
 export const OFFER_CHANNEL_ID = "ride_offers";
 export const OFFER_PATH = "/driver/dashboard";
 export const APPLE_BUNDLE_ID = "fr.strasdrive.app";
 export const isApnsHexToken = (token) => /^[0-9a-f]{64,200}$/i.test(String(token || "").trim());
-
-const VEHICLE_LABELS = {
-  economy: "StrasDrive Go",
-  comfort: "StrasDrive Comfort",
-  pet: "StrasDrive Pet",
-  xl: "StrasDrive XL",
-};
 
 /** Drivers who can see the ride after a dispatch step but could not before: each gets exactly one push per step. */
 export function newlyOfferedDriverIds(before, after, pool, now = Date.now()) {
@@ -50,16 +42,6 @@ export function buildOfferMessage(ride, now = Date.now()) {
   const amount = Number(ride?.fare?.driverEarnings);
   const title = Number.isFinite(amount) ? `Nouvelle course · ${formatEuro(amount)}` : "Nouvelle course";
 
-  // 1. Passager, note et gamme (affiché en sous-titre)
-  const rawName = ride?.rider_name || ride?.rider?.name;
-  const name = rawName ? passengerDisplayName(rawName) : null;
-  const ratingVal = Number(ride?.rider_rating ?? ride?.rider?.rating);
-  const ratingStr = Number.isFinite(ratingVal) && ratingVal > 0 ? `★ ${ratingVal.toFixed(1).replace(".", ",")}` : null;
-  const vehicleName = VEHICLE_LABELS[ride?.vehicle_type] || "StrasDrive Go";
-
-  const riderInfo = [name, ratingStr].filter(Boolean).join(" ");
-  const subtitle = riderInfo ? `${riderInfo} · ${vehicleName}` : vehicleName;
-
   // 2. Départ : adresse + distance / temps d'approche du chauffeur
   const pickup = cleanAddress(ride?.pickup?.address || ride?.pickup_address);
   let pickupMetrics = null;
@@ -91,7 +73,7 @@ export function buildOfferMessage(ride, now = Date.now()) {
   return {
     notification: {
       title,
-      body: `${subtitle}\n${body}`,
+      body,
     },
     data: {
       type: "ride_offer",
@@ -109,7 +91,6 @@ export function buildOfferMessage(ride, now = Date.now()) {
         aps: {
           alert: {
             title,
-            subtitle,
             body,
           },
           sound: "default",
