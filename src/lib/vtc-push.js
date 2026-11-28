@@ -62,6 +62,14 @@ export function buildOfferMessage(ride, now = Date.now()) {
   const lines = [];
   if (pickupMetrics) lines.push(`Approche : ${pickupMetrics}`);
   if (tripMetrics) lines.push(`Trajet : ${tripMetrics}`);
+  const rawName = ride?.rider_name || ride?.rider?.name;
+  const firstName = typeof rawName === "string" ? rawName.trim().split(/\s+/)[0] : "";
+  const rating = Number(ride?.rider_rating ?? ride?.rider?.rating);
+  const ratingLabel = Number.isFinite(rating) && rating > 0 && rating <= 5
+    ? `★ ${rating.toFixed(2).replace(".", ",")}`
+    : "";
+  const passenger = [firstName, ratingLabel].filter(Boolean).join(" · ");
+  if (passenger) lines.push(passenger);
   const addresses = [pickup, dropoff].filter(Boolean).join(" → ");
   if (addresses) lines.push(addresses);
   const body = lines.length > 0 ? lines.join("\n") : "Ouvrez StrasDrive pour voir la course";
